@@ -39,6 +39,7 @@ export interface SimulationInfo {
   references?: ReferenceMaterial[];
 }
 
+// A INTERFACE SUMMARY FOI ATUALIZADA COM OS NOVOS CAMPOS
 export interface Summary {
   id: string;
   firebaseId?: string;
@@ -48,6 +49,12 @@ export interface Summary {
   type: 'summary' | 'script' | 'other';
   isFolder?: boolean;
   date: string;
+  // Novos campos:
+  title?: string;
+  author?: string;
+  description?: string;
+  size?: string;
+  createdAt?: any;
 }
 
 export interface QuizResult {

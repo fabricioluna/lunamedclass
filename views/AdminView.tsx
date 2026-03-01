@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
-import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial } from '../types.ts';
 import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope } from 'lucide-react';
+
+// IMPORTAÇÕES NOVAS DO FIREBASE (FIRESTORE E STORAGE)
+import { firestoreDB, storage } from '../firebase.ts';
+import { collection, query, onSnapshot, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref as storageRef, deleteObject } from 'firebase/storage';
 
 interface AdminViewProps {
   questions: Question[];
   osceStations: OsceStation[];
   disciplines: SimulationInfo[];
-  summaries: Summary[];
+  summaries: Summary[]; // Mantido para compatibilidade do App.tsx, mas usaremos liveMaterials
   quizResults: QuizResult[];
   onAddSummary: (s: Summary) => void;
   onRemoveSummary: (id: string) => void;
@@ -51,12 +56,8 @@ const AdminView: React.FC<AdminViewProps> = ({
   questions,
   osceStations,
   disciplines,
-  summaries,
   quizResults,
-  onAddSummary,
-  onRemoveSummary,
   onAddQuestions,
-  onUpdateQuestion, 
   onAddOsceStations, 
   onRemoveQuestion,
   onRemoveOsceStation,
@@ -64,7 +65,6 @@ const AdminView: React.FC<AdminViewProps> = ({
   onClearResults,
   onClearQuestions,
   onClearOsce,
-  onClearMaterials,
   onAddTheme,
   onRemoveTheme,
   onUpdateReferences,
@@ -82,7 +82,6 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
 
   const [discFilterMat, setDiscFilterMat] = useState(''); 
-
   const [selectedDiscId, setSelectedDiscId] = useState('');
   const [newTheme, setNewTheme] = useState('');
   
@@ -102,9 +101,26 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   const [matDisc, setMatDisc] = useState('');
   const [matType, setMatType] = useState<'summary' | 'script' | 'other'>('summary');
-  const [matLabel, setMatLabel] = useState('');
+  const [matTitle, setMatTitle] = useState('');
   const [matUrl, setMatUrl] = useState('');
-  const [isFolder, setIsFolder] = useState(false);
+
+  // ESTADO PARA OS MATERIAIS AO VIVO DO FIRESTORE
+  const [liveMaterials, setLiveMaterials] = useState<Summary[]>([]);
+
+  // Buscar materiais em tempo real do Firestore
+  useEffect(() => {
+    const q = query(collection(firestoreDB, "materials"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Summary[];
+      const sortedDocs = docs.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+      setLiveMaterials(sortedDocs);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,6 +170,75 @@ const AdminView: React.FC<AdminViewProps> = ({
     onUpdateReferences(selectedDiscId, updatedRefs);
   };
 
+  // --- FUNÇÕES DE MATERIAIS COM FIRESTORE E STORAGE --- //
+  const handlePublishAdminMaterial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!matDisc || !matTitle || !matUrl) return;
+
+    try {
+      await addDoc(collection(firestoreDB, "materials"), {
+        title: matTitle,
+        author: "Administração",
+        description: "Adicionado via Painel Admin",
+        type: matType,
+        disciplineId: matDisc,
+        url: matUrl,
+        date: new Date().toLocaleDateString('pt-BR'),
+        label: 'LINK',
+        size: 'Nuvem',
+        createdAt: serverTimestamp()
+      });
+      setMatTitle(''); setMatUrl('');
+      alert('Material publicado com sucesso!');
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao publicar material.');
+    }
+  };
+
+  const handleDeleteLiveMaterial = async (mat: Summary) => {
+    if (!confirm(`Excluir permanentemente o material "${mat.title || mat.label}"?`)) return;
+    
+    try {
+      // 1. Apaga do banco de dados (Firestore)
+      await deleteDoc(doc(firestoreDB, "materials", mat.id));
+      
+      // 2. Se for um PDF hospedado no Storage, apaga o arquivo físico também
+      if (mat.url && mat.url.includes("firebasestorage")) {
+        try {
+          const fileRef = storageRef(storage, mat.url);
+          await deleteObject(fileRef);
+        } catch (storageErr) {
+          console.log("Arquivo físico não encontrado ou já deletado.");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao deletar:", error);
+      alert("Erro ao excluir o material.");
+    }
+  };
+
+  const handleClearLiveMaterials = async () => {
+    const pass = prompt(`⚠️ AÇÃO DESTRUTIVA: Apagar os materiais ${discFilterMat ? 'da disciplina selecionada' : 'de TODAS as disciplinas'} e DESTRUIR OS ARQUIVOS PDFs DO SERVIDOR?\nDigite a senha (fmst8) para confirmar:`);
+    if (pass === 'fmst8') {
+      try {
+        const matsToDelete = liveMaterials.filter(m => !discFilterMat || m.disciplineId === discFilterMat);
+        for (const mat of matsToDelete) {
+          await deleteDoc(doc(firestoreDB, "materials", mat.id));
+          if (mat.url && mat.url.includes("firebasestorage")) {
+            try { await deleteObject(storageRef(storage, mat.url)); } catch (e) {}
+          }
+        }
+        alert("✅ Todos os materiais e arquivos foram apagados com sucesso.");
+      } catch (error) {
+        alert("Erro ao limpar materiais.");
+      }
+    } else if (pass !== null) {
+      alert("❌ Senha incorreta.");
+    }
+  };
+
+  // --- RESTO DAS FUNÇÕES (QUESTÕES / OSCE) --- //
   const handleQuestionImport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!qFile || !qDiscipline || !qTheme) return;
@@ -619,25 +704,12 @@ const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
-      {/* VIEW: MATERIAIS */}
+      {/* VIEW: MATERIAIS CONECTADO AO FIRESTORE */}
       {activeTab === 'materials' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
           <div className="lg:col-span-4 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
             <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Publicar Material</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (!matDisc || !matLabel || !matUrl) return;
-              onAddSummary({
-                id: `mat_${Date.now()}`,
-                disciplineId: matDisc,
-                label: matLabel,
-                url: matUrl,
-                type: matType, 
-                isFolder: isFolder,
-                date: new Date().toLocaleDateString('pt-BR')
-              });
-              setMatLabel(''); setMatUrl(''); alert('Material publicado!');
-            }} className="space-y-4">
+            <form onSubmit={handlePublishAdminMaterial} className="space-y-4">
               <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required>
                 <option value="">Disciplina...</option>
                 {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
@@ -649,30 +721,21 @@ const AdminView: React.FC<AdminViewProps> = ({
                 <option value="other">Outro / Material Extra</option>
               </select>
 
-              <input type="text" placeholder="Título do Material" value={matLabel} onChange={e => setMatLabel(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required />
-              <input type="url" placeholder="Link Google Drive" value={matUrl} onChange={e => setMatUrl(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required />
-              <div onClick={() => setIsFolder(!isFolder)} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer">
-                <div className={`w-4 h-4 rounded border-2 ${isFolder ? 'bg-[#003366] border-[#003366]' : 'bg-white border-gray-200'}`}></div>
-                <span className="text-[9px] font-black uppercase text-[#003366]">Link de Pasta Coletiva</span>
-              </div>
+              <input type="text" placeholder="Título do Material" value={matTitle} onChange={e => setMatTitle(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required />
+              <input type="url" placeholder="Link (Drive, Youtube...)" value={matUrl} onChange={e => setMatUrl(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required />
+              
               <button type="submit" className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all">Publicar Material 🚀</button>
             </form>
           </div>
           <div className="lg:col-span-8 bg-white p-8 rounded-[2.5rem] border shadow-sm">
              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Gestão de Materiais</h3>
+                  <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Gestão de Materiais em Nuvem</h3>
                   <button
-                    onClick={() => {
-                      const pass = prompt(`⚠️ AÇÃO DESTRUTIVA: Apagar os materiais ${discFilterMat ? 'da disciplina selecionada' : 'de TODAS as disciplinas'}?\nDigite a senha (fmst8) para confirmar:`);
-                      if (pass === 'fmst8') {
-                        onClearMaterials(discFilterMat || undefined);
-                        alert("✅ Materiais apagados com sucesso.");
-                      } else if (pass !== null) alert("❌ Senha incorreta.");
-                    }}
-                    className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit"
+                    onClick={handleClearLiveMaterials}
+                    className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit shadow-sm"
                   >
-                    Apagar {discFilterMat ? 'da Disciplina' : 'Tudo'} 🗑️
+                    Apagar {discFilterMat ? 'da Disciplina' : 'Tudo'} (INCLUI ARQUIVOS) 🗑️
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -684,23 +747,23 @@ const AdminView: React.FC<AdminViewProps> = ({
              </div>
              
              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                {summaries.filter(s => !discFilterMat || s.disciplineId === discFilterMat).map(s => (
+                {liveMaterials.filter(s => !discFilterMat || s.disciplineId === discFilterMat).map(s => (
                   <div key={s.id} className="p-4 bg-gray-50 rounded-2xl border flex justify-between items-center group hover:border-red-100 transition-all">
-                    <div className="flex items-center gap-3">
-                       <span className="text-2xl">{s.isFolder ? '📂' : '📑'}</span>
+                    <div className="flex items-center gap-4">
+                       <span className="text-2xl">{s.label === 'LINK' ? '🔗' : '📄'}</span>
                        <div>
-                          <p className="text-xs font-bold text-[#003366]">{s.label}</p>
-                          <p className="text-[8px] font-black uppercase text-gray-400">
-                            {s.disciplineId} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date}
+                          <p className="text-sm font-bold text-[#003366]">{s.title || s.label}</p>
+                          <p className="text-[9px] font-black uppercase text-gray-400 mt-1">
+                            {s.disciplineId} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date} {s.author ? `• por ${s.author}` : ''}
                           </p>
                        </div>
                     </div>
-                    <button onClick={() => confirm("Excluir material?") && onRemoveSummary(s.id)} className="text-red-300 hover:text-red-500 transition-colors">
-                      <Trash2 size={18}/>
+                    <button onClick={() => handleDeleteLiveMaterial(s)} className="text-red-300 hover:text-red-500 transition-colors p-2">
+                      <Trash2 size={20}/>
                     </button>
                   </div>
                 ))}
-                {summaries.filter(s => !discFilterMat || s.disciplineId === discFilterMat).length === 0 && (
+                {liveMaterials.filter(s => !discFilterMat || s.disciplineId === discFilterMat).length === 0 && (
                   <p className="text-center py-10 text-gray-300 italic font-bold">Nenhum material encontrado.</p>
                 )}
              </div>
