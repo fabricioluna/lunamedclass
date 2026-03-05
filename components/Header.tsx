@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { ViewState } from '../types';
+import { ArrowLeft } from 'lucide-react'; // Importamos o ícone de voltar
 
 interface HeaderProps {
   onNavigate: (view: ViewState) => void;
+  onBack: () => void;
+  canGoBack: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigateTo = (view: ViewState) => {
@@ -18,25 +21,39 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-4 md:h-28 gap-2">
           
-          {/* Lado Esquerdo: Logo e Identidade */}
-          <div 
-            className="flex items-center cursor-pointer group min-w-0 flex-shrink" 
-            onClick={() => navigateTo('home')}
-          >
-            <div className="bg-white p-1 md:p-2 rounded-lg md:rounded-xl w-16 h-8 sm:w-24 sm:h-10 md:w-48 md:h-16 flex items-center justify-center overflow-hidden border-2 border-[#D4A017] shadow-lg transition-transform group-hover:scale-105 flex-shrink-0">
-              <img 
-                src="https://medicinadosertao.com.br/wp-content/uploads/2021/03/logo-fms-colorido.png" 
-                alt="Logo FMS" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div className="ml-2 md:ml-4 flex flex-col justify-center min-w-0">
-              <h1 className="text-[10px] sm:text-xs md:text-base font-black tracking-widest leading-tight text-white uppercase truncate">
-                MONITORIA VIRTUAL
-              </h1>
-              <h2 className="text-[7px] sm:text-[9px] md:text-[10px] font-bold text-[#D4A017] uppercase tracking-widest opacity-90 truncate">
-                Desenvolvido por Fabrício Luna
-              </h2>
+          {/* Lado Esquerdo: Botão Voltar + Logo e Identidade */}
+          <div className="flex items-center gap-3 md:gap-4 flex-shrink min-w-0">
+            
+            {/* O Botão de Voltar Global */}
+            {canGoBack && (
+              <button 
+                onClick={onBack}
+                className="bg-white/10 hover:bg-[#D4A017] text-white hover:text-[#003366] p-2.5 md:p-3 rounded-xl transition-all shadow-sm flex-shrink-0 border border-white/5"
+                title="Página Anterior"
+              >
+                <ArrowLeft size={20} className="md:w-6 md:h-6" />
+              </button>
+            )}
+
+            <div 
+              className="flex items-center cursor-pointer group min-w-0 flex-shrink" 
+              onClick={() => navigateTo('home')}
+            >
+              <div className="bg-white p-1 md:p-2 rounded-lg md:rounded-xl w-14 h-8 sm:w-24 sm:h-10 md:w-48 md:h-16 flex items-center justify-center overflow-hidden border-2 border-[#D4A017] shadow-lg transition-transform group-hover:scale-105 flex-shrink-0">
+                <img 
+                  src="https://medicinadosertao.com.br/wp-content/uploads/2021/03/logo-fms-colorido.png" 
+                  alt="Logo FMS" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="ml-2 md:ml-4 flex flex-col justify-center min-w-0">
+                <h1 className="text-[10px] sm:text-xs md:text-base font-black tracking-widest leading-tight text-white uppercase truncate">
+                  MONITORIA VIRTUAL
+                </h1>
+                <h2 className="text-[7px] sm:text-[9px] md:text-[10px] font-bold text-[#D4A017] uppercase tracking-widest opacity-90 truncate">
+                  Desenvolvido por Fabrício Luna
+                </h2>
+              </div>
             </div>
           </div>
 

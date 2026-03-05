@@ -17,10 +17,13 @@ import { ViewState, Summary, Question, SimulationInfo, OsceStation, QuizResult, 
 import { INITIAL_QUESTIONS, SIMULATIONS } from './constants.tsx';
 import { db, ref, onValue, push, remove, set } from './firebase.ts';
 
-const APP_VERSION = "5.3.0 - UX Central de Materiais";
+const APP_VERSION = "5.4.0 - Global Back Navigation";
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('home');
+  // NOVO: Histórico de navegação inteligente!
+  const [viewHistory, setViewHistory] = useState<ViewState[]>(['home']);
+  
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
   const [quizFilteredQuestions, setQuizFilteredQuestions] = useState<Question[]>([]);
   
@@ -36,13 +39,10 @@ const App: React.FC = () => {
   const [osceStations, setOsceStations] = useState<OsceStation[]>([]);
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
 
-  // ==========================================
-  // NOVA FUNÇÃO: ROLAR PARA O TOPO AO MUDAR DE TELA
-  // ==========================================
+  // Rolar para o topo ao mudar de tela
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView]);
-  // ==========================================
 
   useEffect(() => {
     if (!db) {
@@ -95,6 +95,36 @@ const App: React.FC = () => {
     setTimeout(() => setIsLoading(false), 2000);
   }, []);
 
+  // --- FUNÇÕES DE NAVEGAÇÃO INTELIGENTE ---
+  const handleNavigate = (view: ViewState) => {
+    if (view === currentView) return; 
+    
+    if (view === 'home') {
+      setSelectedDisciplineId(null);
+      setViewHistory(['home']); // Reseta o histórico se for para o início
+    } else {
+      setViewHistory(prev => [...prev, view]); // Adiciona a nova página na pilha
+    }
+    setCurrentView(view);
+  };
+
+  const handleBack = () => {
+    setViewHistory(prev => {
+      if (prev.length <= 1) return prev; // Se já está na home, não faz nada
+      
+      const newHistory = [...prev];
+      newHistory.pop(); // Remove a tela atual
+      const prevView = newHistory[newHistory.length - 1]; // Pega a anterior
+      
+      setCurrentView(prevView);
+      if (prevView === 'home') {
+        setSelectedDisciplineId(null);
+      }
+      return newHistory;
+    });
+  };
+
+  // --- FUNÇÕES DE ADMINISTRAÇÃO ---
   const handleAddTheme = (disciplineId: string, themeName: string) => {
     const disc = disciplines.find(d => d.id === disciplineId);
     if (!disc) return;
@@ -115,7 +145,7 @@ const App: React.FC = () => {
 
   const handleSelectDiscipline = (id: string) => {
     setSelectedDisciplineId(id);
-    setCurrentView('discipline');
+    handleNavigate('discipline');
   };
 
   if (isLoading) {
@@ -131,10 +161,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
-      <Header onNavigate={(view) => {
-        setCurrentView(view);
-        if (view === 'home') setSelectedDisciplineId(null);
-      }} />
+      <Header 
+        onNavigate={handleNavigate} 
+        onBack={handleBack}
+        canGoBack={viewHistory.length > 1}
+      />
 
       <div className={`py-1 px-4 flex justify-center items-center gap-2 border-b transition-all duration-700 ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
         <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
@@ -145,38 +176,38 @@ const App: React.FC = () => {
 
       <div className="flex-grow">
         {currentView === 'home' && <HomeView disciplines={disciplines} onSelectDiscipline={handleSelectDiscipline} />}
-        {currentView === 'career-quiz' && <CareerQuiz onBack={() => setCurrentView('home')} />}
+        {currentView === 'career-quiz' && <CareerQuiz onBack={handleBack} />}
         
         {currentView === 'discipline' && selectedDisciplineId && (
           <DisciplineView 
             disciplineId={selectedDisciplineId} 
             disciplines={disciplines}
             summaries={summaries}
-            onBack={() => setCurrentView('home')} 
-            onSelectOption={(type) => setCurrentView(type as ViewState)}
+            onBack={handleBack} 
+            onSelectOption={(type) => handleNavigate(type as ViewState)}
           />
         )}
         
-        {currentView === 'references-view' && currentDiscipline && <ReferencesView discipline={currentDiscipline} onBack={() => setCurrentView('discipline')} />}
-        {currentView === 'share-material' && currentDiscipline && <ShareMaterialView discipline={currentDiscipline} onShare={(s) => db && push(ref(db, 'summaries'), s)} onBack={() => setCurrentView('summaries-list')} />}
+        {currentView === 'references-view' && currentDiscipline && <ReferencesView discipline={currentDiscipline} onBack={handleBack} />}
+        {currentView === 'share-material' && currentDiscipline && <ShareMaterialView discipline={currentDiscipline} onShare={(s) => db && push(ref(db, 'summaries'), s)} onBack={handleBack} />}
         
         {currentView === 'quiz-setup' && selectedDisciplineId && (
           <QuizSetupView 
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
             availableQuestions={questions}
-            onBack={() => setCurrentView('discipline')}
-            onStart={(filtered) => { setQuizFilteredQuestions(filtered); setCurrentView('quiz'); }}
+            onBack={handleBack}
+            onStart={(filtered) => { setQuizFilteredQuestions(filtered); handleNavigate('quiz'); }}
           />
         )}
-        {currentView === 'quiz' && <QuizView questions={quizFilteredQuestions} discipline={currentDiscipline!} onBack={() => setCurrentView('quiz-setup')} onSaveResult={(score, total) => db && push(ref(db, 'quizResults'), { score, total, date: new Date().toLocaleString(), discipline: currentDiscipline?.title })} />}
+        {currentView === 'quiz' && <QuizView questions={quizFilteredQuestions} discipline={currentDiscipline!} onBack={handleBack} onSaveResult={(score, total) => db && push(ref(db, 'quizResults'), { score, total, date: new Date().toLocaleString(), discipline: currentDiscipline?.title })} />}
         
         {currentView === 'summaries-list' && selectedDisciplineId && (
           <SummariesListView 
             disciplineId={selectedDisciplineId} 
             disciplines={disciplines} 
             summaries={summaries} 
-            onBack={() => setCurrentView('discipline')}
-            onShareClick={() => setCurrentView('share-material')} 
+            onBack={handleBack}
+            onShareClick={() => handleNavigate('share-material')} 
           />
         )}
         
@@ -184,24 +215,24 @@ const App: React.FC = () => {
           <OsceSetupView 
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
             availableStations={osceStations.filter(s => s.disciplineId === selectedDisciplineId)}
-            onBack={() => setCurrentView('discipline')}
-            onStart={(station) => { setCurrentOsceStation(station); setCurrentView('osce-quiz'); }}
+            onBack={handleBack}
+            onStart={(station) => { setCurrentOsceStation(station); handleNavigate('osce-quiz'); }}
           />
         )}
-        {currentView === 'osce-quiz' && currentOsceStation && <OsceView station={currentOsceStation} onBack={() => setCurrentView('osce-setup')} />}
+        {currentView === 'osce-quiz' && currentOsceStation && <OsceView station={currentOsceStation} onBack={handleBack} />}
 
         {currentView === 'osce-ai-setup' && selectedDisciplineId && (
           <OsceSetupView 
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
             availableStations={osceStations.filter(s => s.disciplineId === selectedDisciplineId)}
-            onBack={() => setCurrentView('discipline')}
-            onStart={(station) => { setCurrentOsceAIStation(station); setCurrentView('osce-ai-quiz'); }}
+            onBack={handleBack}
+            onStart={(station) => { setCurrentOsceAIStation(station); handleNavigate('osce-ai-quiz'); }}
             isAIMode={true}
           />
         )}
-        {currentView === 'osce-ai-quiz' && currentOsceAIStation && <OsceAIView station={currentOsceAIStation} onBack={() => setCurrentView('osce-ai-setup')} />}
+        {currentView === 'osce-ai-quiz' && currentOsceAIStation && <OsceAIView station={currentOsceAIStation} onBack={handleBack} />}
 
-        {currentView === 'calculators' && <CalculatorsView onBack={() => setCurrentView('home')} />}
+        {currentView === 'calculators' && <CalculatorsView onBack={handleBack} />}
         
         {currentView === 'admin' && (
           <AdminView 
@@ -256,7 +287,7 @@ const App: React.FC = () => {
             onAddTheme={handleAddTheme}
             onRemoveTheme={handleRemoveTheme}
             onUpdateReferences={handleUpdateReferences}
-            onBack={() => setCurrentView('home')}
+            onBack={handleBack}
           />
         )}
       </div>
