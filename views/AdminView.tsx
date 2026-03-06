@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial, LabSimulation, LabQuestion } from '../types.ts';
 import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Loader2 } from 'lucide-react';
 
-// IMPORTAÇÕES NOVAS DO FIREBASE (FIRESTORE E STORAGE) E DA IA
+// IMPORTAÇÕES NOVAS DO FIREBASE (FIRESTORE E STORAGE)
 import { firestoreDB, storage } from '../firebase.ts';
 import { collection, query, onSnapshot, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { generateLabTips } from '../services/aiService.ts';
 
 interface AdminViewProps {
   questions: Question[];
@@ -188,6 +187,7 @@ const AdminView: React.FC<AdminViewProps> = ({
     onUpdateReferences(selectedDiscId, updatedRefs);
   };
 
+  // --- FUNÇÕES DE MATERIAIS COM FIRESTORE E STORAGE --- //
   const handlePublishAdminMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!matDisc || !matTitle || !matUrl) return;
@@ -252,7 +252,7 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
-  // --- NOVA FUNÇÃO: O PROCESSAMENTO INTELIGENTE DO LABORATÓRIO COM BUSCA FLEXÍVEL DE EXTENSÃO ---
+  // --- NOVA FUNÇÃO: O PROCESSAMENTO DO LABORATÓRIO (LENDO 6 COLUNAS DO CSV DIRETAMENTE) ---
   const handleLabImport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!labCsvFile || !labImageFiles || labImageFiles.length === 0 || !labDisc || !labTitle || !labAuthor) {
@@ -264,28 +264,32 @@ const AdminView: React.FC<AdminViewProps> = ({
     try {
       const filesArray = Array.from(labImageFiles as FileList); 
       
-      setLabUploadProgress('Lendo o arquivo CSV...');
+      setLabUploadProgress('Lendo o arquivo CSV completo...');
       const csvText = await labCsvFile.text();
-      const lines = parseResilientCSV(csvText, 3); // Formato: NomeArquivo ; Pergunta ; Resposta
+      // Lê 6 colunas: Imagem ; Pergunta ; Resposta ; Identificacao ; Localizacao ; Funcao
+      const lines = parseResilientCSV(csvText, 6); 
 
       const parsedLines = lines.slice(1).map(line => {
         const parts = line.split(';');
         return {
-          filename: parts[0]?.trim(), // Agora pode ser '001' ou '001.jpg'
+          filename: parts[0]?.trim(), // '001' ou '001.jpg'
           question: parts[1]?.trim(),
-          answer: parts[2]?.trim()
+          answer: parts[2]?.trim(),
+          identification: parts[3]?.trim() || 'N/A',
+          location: parts[4]?.trim() || 'N/A',
+          functions: parts[5]?.trim() || 'N/A'
         };
       }).filter(l => l.filename && l.question && l.answer);
 
-      if (parsedLines.length === 0) throw new Error("CSV vazio ou fora do formato (Identificador_Imagem ; Pergunta ; Resposta).");
+      if (parsedLines.length === 0) throw new Error("CSV vazio ou fora do formato esperado de 6 colunas.");
 
       const finalQuestions: LabQuestion[] = [];
 
       for (let i = 0; i < parsedLines.length; i++) {
         const item = parsedLines[i];
-        setLabUploadProgress(`Processando ${i + 1} de ${parsedLines.length}: ${item.filename}`);
+        setLabUploadProgress(`Fazendo upload da imagem ${i + 1} de ${parsedLines.length}: ${item.filename}`);
 
-        // A MÁGICA: Achar a imagem com ou sem a extensão!
+        // Acha a imagem com ou sem a extensão
         const imageFile = filesArray.find(f => {
           const nameWithoutExt = f.name.substring(0, f.name.lastIndexOf('.')) || f.name;
           return f.name === item.filename || nameWithoutExt === item.filename;
@@ -299,21 +303,18 @@ const AdminView: React.FC<AdminViewProps> = ({
         const snap = await uploadBytes(sRef, imageFile as File); 
         const imageUrl = await getDownloadURL(snap.ref);
 
-        setLabUploadProgress(`Gerando dicas de IA para: ${item.answer}...`);
-        const aiTips = await generateLabTips(item.answer, item.question);
-
         finalQuestions.push({
           id: `lab_q_${Date.now()}_${i}`,
           imageUrl: imageUrl,
           question: item.question,
           answer: item.answer,
-          aiIdentification: aiTips.identification,
-          aiLocation: aiTips.location,
-          aiFunctions: aiTips.functions
+          aiIdentification: item.identification,
+          aiLocation: item.location,
+          aiFunctions: item.functions
         });
       }
 
-      setLabUploadProgress('Salvando Simulado no banco...');
+      setLabUploadProgress('Salvando Simulado no banco de dados...');
       const newSim: LabSimulation = {
         id: `lab_sim_${Date.now()}`,
         disciplineId: labDisc,
@@ -325,7 +326,7 @@ const AdminView: React.FC<AdminViewProps> = ({
       };
 
       if (onAddLabSimulation) onAddLabSimulation(newSim);
-      alert(`✅ Sucesso! Simulado de Laboratório com ${finalQuestions.length} peças publicado. A IA gerou as dicas e as imagens foram hospedadas!`);
+      alert(`✅ Sucesso! Simulado de Laboratório com ${finalQuestions.length} peças publicado perfeitamente!`);
       
       setLabCsvFile(null); setLabImageFiles(null); setLabTitle(''); setLabDesc('');
       const imgInput = document.getElementById('labImageInput') as HTMLInputElement;
@@ -497,7 +498,7 @@ const AdminView: React.FC<AdminViewProps> = ({
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
           { id: 'questions', label: 'Questões', icon: <FileText size={16}/> },
           { id: 'osce', label: 'OSCE', icon: <Stethoscope size={16}/> },
-          { id: 'lab', label: 'Laboratório IA', icon: <Microscope size={16}/> },
+          { id: 'lab', label: 'Lab Virtual', icon: <Microscope size={16}/> },
           { id: 'references', label: 'Referências', icon: <BookOpen size={16}/> },
           { id: 'materials', label: 'Materiais', icon: <ClipboardList size={16}/> },
         ].map(tab => (
@@ -536,15 +537,20 @@ const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
-      {/* VIEW: NOVO LABORATÓRIO IA */}
+      {/* VIEW: NOVO LABORATÓRIO VIRTUAL */}
       {activeTab === 'lab' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
           <div className="lg:col-span-5 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
-            <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Criar Lab com IA</h3>
-            <p className="text-[10px] font-bold text-gray-400 mb-6 leading-relaxed">
-              1. Selecione o CSV. A coluna de imagens pode ter apenas o nome (Ex: <b>001</b> ou <b>001.jpg</b>).<br/>
-              2. Selecione TODAS as imagens do computador.<br/>
-              A Inteligência Artificial vai gerar as dicas baseadas nas suas respostas!
+            <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Criar Lab Virtual</h3>
+            <p className="text-[10px] font-bold text-gray-500 mb-6 leading-relaxed bg-gray-50 p-3 rounded-xl border">
+              <b>DICA:</b> Gere o conteúdo no ChatGPT e salve como CSV.<br/><br/>
+              <b>Colunas do CSV (6 colunas):</b><br/>
+              1. Imagem (ex: 001.jpg ou 001)<br/>
+              2. Pergunta<br/>
+              3. Resposta<br/>
+              4. Identificação (Gerado por IA local)<br/>
+              5. Localização (Gerado por IA local)<br/>
+              6. Funções (Gerado por IA local)
             </p>
             
             <form onSubmit={handleLabImport} className="space-y-4">
@@ -557,7 +563,7 @@ const AdminView: React.FC<AdminViewProps> = ({
               <textarea placeholder="Descrição para os alunos..." value={labDesc} onChange={e => setLabDesc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none resize-none" rows={2} disabled={isLabUploading}></textarea>
               
               <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-200">
-                <label className="block text-[10px] font-black uppercase text-[#003366] mb-2">1. Selecione o arquivo CSV</label>
+                <label className="block text-[10px] font-black uppercase text-[#003366] mb-2">1. Selecione o arquivo CSV Completo</label>
                 <input id="labCsvInput" type="file" accept=".csv" onChange={e => setLabCsvFile(e.target.files ? e.target.files[0] : null)} className="w-full text-xs text-gray-700 font-bold" required disabled={isLabUploading} />
               </div>
 
@@ -569,7 +575,7 @@ const AdminView: React.FC<AdminViewProps> = ({
 
               <button type="submit" disabled={isLabUploading || !labCsvFile || !labImageFiles} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50 flex justify-center items-center gap-2">
                 {isLabUploading ? <Loader2 size={16} className="animate-spin"/> : <Microscope size={16}/>}
-                {isLabUploading ? 'Processando com IA...' : 'Enviar Simulado Mágico'}
+                {isLabUploading ? 'Fazendo Upload Seguro...' : 'Enviar Simulado Lab'}
               </button>
 
               {isLabUploading && (
