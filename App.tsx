@@ -13,15 +13,18 @@ import CalculatorsView from './views/CalculatorsView.tsx';
 import CareerQuiz from './components/CareerQuiz.tsx';
 import ReferencesView from './views/ReferencesView.tsx';
 import ShareMaterialView from './views/ShareMaterialView.tsx';
-import { ViewState, Summary, Question, SimulationInfo, OsceStation, QuizResult, ReferenceMaterial } from './types.ts';
+// IMPORTAÇÃO DAS NOVAS TELAS DE LABORATÓRIO (que vamos criar)
+import LabListView from './views/LabListView.tsx';
+import LabQuizView from './views/LabQuizView.tsx';
+
+import { ViewState, Summary, Question, SimulationInfo, OsceStation, QuizResult, ReferenceMaterial, LabSimulation } from './types.ts';
 import { INITIAL_QUESTIONS, SIMULATIONS } from './constants.tsx';
 import { db, ref, onValue, push, remove, set } from './firebase.ts';
 
-const APP_VERSION = "5.4.0 - Global Back Navigation";
+const APP_VERSION = "6.0.0 - Lab Virtual IA";
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('home');
-  // NOVO: Histórico de navegação inteligente!
   const [viewHistory, setViewHistory] = useState<ViewState[]>(['home']);
   
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
@@ -29,6 +32,7 @@ const App: React.FC = () => {
   
   const [currentOsceStation, setCurrentOsceStation] = useState<OsceStation | null>(null);
   const [currentOsceAIStation, setCurrentOsceAIStation] = useState<OsceStation | null>(null);
+  const [currentLabSimulation, setCurrentLabSimulation] = useState<LabSimulation | null>(null); // NOVO: Guarda o simulado de lab atual
   
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
@@ -38,6 +42,7 @@ const App: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>(INITIAL_QUESTIONS);
   const [osceStations, setOsceStations] = useState<OsceStation[]>([]);
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
+  const [labSimulations, setLabSimulations] = useState<LabSimulation[]>([]); // NOVO: Armazena os laboratórios do Firebase
 
   // Rolar para o topo ao mudar de tela
   useEffect(() => {
@@ -71,11 +76,13 @@ const App: React.FC = () => {
       }
     });
 
+    // LISTA DE COLEÇÕES DO BANCO REALTIME
     const collections = [
       { path: 'questions', setter: (data: any) => setQuestions([...INITIAL_QUESTIONS, ...Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))]) },
       { path: 'summaries', setter: (data: any) => setSummaries(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))) },
       { path: 'osce', setter: (data: any) => setOsceStations(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))) },
-      { path: 'quizResults', setter: (data: any) => setQuizResults(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], id: k }))) }
+      { path: 'quizResults', setter: (data: any) => setQuizResults(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], id: k }))) },
+      { path: 'labSimulations', setter: (data: any) => setLabSimulations(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))) } // NOVO
     ];
 
     collections.forEach(col => {
@@ -88,6 +95,7 @@ const App: React.FC = () => {
           if (col.path === 'summaries') setSummaries([]);
           if (col.path === 'osce') setOsceStations([]);
           if (col.path === 'quizResults') setQuizResults([]);
+          if (col.path === 'labSimulations') setLabSimulations([]); // NOVO
         }
       });
     });
@@ -101,20 +109,20 @@ const App: React.FC = () => {
     
     if (view === 'home') {
       setSelectedDisciplineId(null);
-      setViewHistory(['home']); // Reseta o histórico se for para o início
+      setViewHistory(['home']);
     } else {
-      setViewHistory(prev => [...prev, view]); // Adiciona a nova página na pilha
+      setViewHistory(prev => [...prev, view]);
     }
     setCurrentView(view);
   };
 
   const handleBack = () => {
     setViewHistory(prev => {
-      if (prev.length <= 1) return prev; // Se já está na home, não faz nada
+      if (prev.length <= 1) return prev; 
       
       const newHistory = [...prev];
-      newHistory.pop(); // Remove a tela atual
-      const prevView = newHistory[newHistory.length - 1]; // Pega a anterior
+      newHistory.pop(); 
+      const prevView = newHistory[newHistory.length - 1]; 
       
       setCurrentView(prevView);
       if (prevView === 'home') {
@@ -234,6 +242,19 @@ const App: React.FC = () => {
 
         {currentView === 'calculators' && <CalculatorsView onBack={handleBack} />}
         
+        {/* NAVEGAÇÃO DO NOVO LABORATÓRIO VIRTUAL */}
+        {currentView === 'lab-list' && selectedDisciplineId && (
+          <LabListView 
+            disciplineId={selectedDisciplineId} 
+            disciplines={disciplines} 
+            simulations={labSimulations} 
+            onStart={(sim) => { setCurrentLabSimulation(sim); handleNavigate('lab-quiz'); }} 
+          />
+        )}
+        {currentView === 'lab-quiz' && currentLabSimulation && (
+          <LabQuizView simulation={currentLabSimulation} onBack={handleBack} />
+        )}
+
         {currentView === 'admin' && (
           <AdminView 
             questions={questions}
@@ -241,11 +262,27 @@ const App: React.FC = () => {
             disciplines={disciplines}
             summaries={summaries}
             quizResults={quizResults}
+            labSimulations={labSimulations} // Passamos os Labs para o Admin
+            
             onAddSummary={(s) => db && push(ref(db, 'summaries'), s)}
             onRemoveSummary={(id) => { const s = summaries.find(item => item.id === id); if (db && s?.firebaseId) remove(ref(db, `summaries/${s.firebaseId}`)); }}
             onAddQuestions={(qs) => db && qs.forEach(q => push(ref(db, 'questions'), q))}
             onUpdateQuestion={() => {}}
             onAddOsceStations={(os) => db && os.forEach(o => push(ref(db, 'osce'), o))}
+            
+            // NOVOS EVENTOS DO ADMIN PARA O LAB
+            onAddLabSimulation={(sim) => db && push(ref(db, 'labSimulations'), sim)}
+            onRemoveLabSimulation={(id) => { const sim = labSimulations.find(item => item.id === id); if (db && sim?.firebaseId) remove(ref(db, `labSimulations/${sim.firebaseId}`)); }}
+            onClearLab={(discId) => {
+              if (db) {
+                if (discId) {
+                  labSimulations.filter(s => s.disciplineId === discId).forEach(s => s.firebaseId && remove(ref(db, `labSimulations/${s.firebaseId}`)));
+                } else {
+                  remove(ref(db, 'labSimulations'));
+                }
+              }
+            }}
+
             onRemoveQuestion={(id) => { const q = questions.find(item => item.id === id); if (db && q?.firebaseId) remove(ref(db, `questions/${q.firebaseId}`)); }}
             onRemoveOsceStation={(id) => { const o = osceStations.find(item => item.id === id); if (db && o?.firebaseId) remove(ref(db, `osce/${o.firebaseId}`)); }}
             onClearDatabase={() => {
@@ -254,6 +291,7 @@ const App: React.FC = () => {
                 remove(ref(db, 'summaries'));
                 remove(ref(db, 'osce'));
                 remove(ref(db, 'discipline_config'));
+                remove(ref(db, 'labSimulations')); // Reset inclui apagar labs
               }
             }}
             onClearResults={() => db && remove(ref(db, 'quizResults'))}

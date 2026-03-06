@@ -56,8 +56,12 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
           <p className="text-xs text-gray-500 font-medium">Avalie seus conhecimentos com questões de múltipla escolha.</p>
         </button>
 
-        {/* BOTÃO PRÁTICO INTELIGENTE (OSCE vs LABORATÓRIO) */}
-        <button onClick={() => onSelectOption('osce-setup')} className="bg-white p-6 md:p-8 rounded-[2rem] text-left hover:shadow-xl transition-all group border-2 border-transparent hover:border-[#D4A017]">
+        {/* BOTÃO PRÁTICO INTELIGENTE (LABORATÓRIO vs OSCE) */}
+        <button 
+          // A MÁGICA ESTÁ AQUI: Se for UC chama o Lab, senão chama o OSCE.
+          onClick={() => onSelectOption(isUC ? 'lab-list' : 'osce-setup')} 
+          className="bg-white p-6 md:p-8 rounded-[2rem] text-left hover:shadow-xl transition-all group border-2 border-transparent hover:border-[#D4A017]"
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-blue-50 text-[#003366] rounded-xl flex items-center justify-center text-2xl group-hover:bg-[#003366] group-hover:text-white transition-colors">
               {isUC ? '🔬' : '🩺'}
@@ -65,11 +69,11 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
             <div className="text-gray-300 group-hover:text-[#D4A017] transition-colors">→</div>
           </div>
           <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tight">
-            {isUC ? 'Simulado de Laboratório' : 'Simulado Prático (OSCE)'}
+            {isUC ? 'Laboratório Virtual IA' : 'Simulado Prático (OSCE)'}
           </h3>
           <p className="text-xs text-gray-500 font-medium">
             {isUC 
-              ? 'Treine a identificação de lâminas histológicas e peças anatômicas.' 
+              ? 'Treine a identificação visual de lâminas e peças com dicas geradas por IA.' 
               : 'Treine o passo a passo de exames clínicos de forma gamificada.'}
           </p>
         </button>

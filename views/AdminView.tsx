@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial } from '../types.ts';
-import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope } from 'lucide-react';
+import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial, LabSimulation, LabQuestion } from '../types.ts';
+import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Loader2 } from 'lucide-react';
 
-// IMPORTAÇÕES NOVAS DO FIREBASE (FIRESTORE E STORAGE)
+// IMPORTAÇÕES NOVAS DO FIREBASE (FIRESTORE E STORAGE) E DA IA
 import { firestoreDB, storage } from '../firebase.ts';
 import { collection, query, onSnapshot, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref as storageRef, deleteObject } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { generateLabTips } from '../services/aiService.ts';
 
 interface AdminViewProps {
   questions: Question[];
   osceStations: OsceStation[];
   disciplines: SimulationInfo[];
-  summaries: Summary[]; // Mantido para compatibilidade do App.tsx, mas usaremos liveMaterials
+  summaries: Summary[];
   quizResults: QuizResult[];
+  labSimulations?: LabSimulation[];
   onAddSummary: (s: Summary) => void;
   onRemoveSummary: (id: string) => void;
   onAddQuestions: (qs: Question[]) => void;
   onUpdateQuestion: (q: Question) => void;
   onAddOsceStations: (os: OsceStation[]) => void;
+  onAddLabSimulation?: (sim: LabSimulation) => void;
+  onRemoveLabSimulation?: (id: string) => void;
   onRemoveQuestion: (id: string) => void;
   onRemoveOsceStation: (id: string) => void;
   onClearDatabase: () => void;
@@ -25,6 +29,7 @@ interface AdminViewProps {
   onClearQuestions: (disciplineId?: string) => void;
   onClearOsce: (disciplineId?: string) => void;
   onClearMaterials: (disciplineId?: string) => void;
+  onClearLab?: (disciplineId?: string) => void;
   onAddTheme: (disciplineId: string, themeName: string) => void;
   onRemoveTheme: (disciplineId: string, themeName: string) => void;
   onUpdateReferences: (disciplineId: string, refs: ReferenceMaterial[]) => void;
@@ -57,14 +62,18 @@ const AdminView: React.FC<AdminViewProps> = ({
   osceStations,
   disciplines,
   quizResults,
+  labSimulations = [],
   onAddQuestions,
-  onAddOsceStations, 
+  onAddOsceStations,
+  onAddLabSimulation, 
   onRemoveQuestion,
   onRemoveOsceStation,
+  onRemoveLabSimulation,
   onClearDatabase,
   onClearResults,
   onClearQuestions,
   onClearOsce,
+  onClearLab,
   onAddTheme,
   onRemoveTheme,
   onUpdateReferences,
@@ -73,7 +82,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('fms_admin_auth') === 'true');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'references' | 'materials' | 'themes'>('stats');
+  const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'references' | 'materials' | 'themes' | 'lab'>('stats');
   
   const [discFilter, setDiscFilter] = useState(''); 
   const [themeFilter, setThemeFilter] = useState('');
@@ -82,6 +91,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
 
   const [discFilterMat, setDiscFilterMat] = useState(''); 
+  const [discFilterLab, setDiscFilterLab] = useState('');
   const [selectedDiscId, setSelectedDiscId] = useState('');
   const [newTheme, setNewTheme] = useState('');
   
@@ -104,10 +114,18 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [matTitle, setMatTitle] = useState('');
   const [matUrl, setMatUrl] = useState('');
 
-  // ESTADO PARA OS MATERIAIS AO VIVO DO FIRESTORE
   const [liveMaterials, setLiveMaterials] = useState<Summary[]>([]);
 
-  // Buscar materiais em tempo real do Firestore
+  // === ESTADOS ESPECÍFICOS DO LABORATÓRIO ===
+  const [labDisc, setLabDisc] = useState('');
+  const [labTitle, setLabTitle] = useState('');
+  const [labAuthor, setLabAuthor] = useState('');
+  const [labDesc, setLabDesc] = useState('');
+  const [labCsvFile, setLabCsvFile] = useState<File | null>(null);
+  const [labImageFiles, setLabImageFiles] = useState<FileList | null>(null);
+  const [isLabUploading, setIsLabUploading] = useState(false);
+  const [labUploadProgress, setLabUploadProgress] = useState('');
+
   useEffect(() => {
     const q = query(collection(firestoreDB, "materials"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -170,7 +188,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     onUpdateReferences(selectedDiscId, updatedRefs);
   };
 
-  // --- FUNÇÕES DE MATERIAIS COM FIRESTORE E STORAGE --- //
   const handlePublishAdminMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!matDisc || !matTitle || !matUrl) return;
@@ -200,10 +217,7 @@ const AdminView: React.FC<AdminViewProps> = ({
     if (!confirm(`Excluir permanentemente o material "${mat.title || mat.label}"?`)) return;
     
     try {
-      // 1. Apaga do banco de dados (Firestore)
       await deleteDoc(doc(firestoreDB, "materials", mat.id));
-      
-      // 2. Se for um PDF hospedado no Storage, apaga o arquivo físico também
       if (mat.url && mat.url.includes("firebasestorage")) {
         try {
           const fileRef = storageRef(storage, mat.url);
@@ -238,7 +252,110 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
-  // --- RESTO DAS FUNÇÕES (QUESTÕES / OSCE) --- //
+  // --- NOVA FUNÇÃO: O PROCESSAMENTO INTELIGENTE DO LABORATÓRIO COM BUSCA FLEXÍVEL DE EXTENSÃO ---
+  const handleLabImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!labCsvFile || !labImageFiles || labImageFiles.length === 0 || !labDisc || !labTitle || !labAuthor) {
+      return alert("Preencha todos os campos e selecione o CSV e as Imagens!");
+    }
+    
+    setIsLabUploading(true);
+
+    try {
+      const filesArray = Array.from(labImageFiles as FileList); 
+      
+      setLabUploadProgress('Lendo o arquivo CSV...');
+      const csvText = await labCsvFile.text();
+      const lines = parseResilientCSV(csvText, 3); // Formato: NomeArquivo ; Pergunta ; Resposta
+
+      const parsedLines = lines.slice(1).map(line => {
+        const parts = line.split(';');
+        return {
+          filename: parts[0]?.trim(), // Agora pode ser '001' ou '001.jpg'
+          question: parts[1]?.trim(),
+          answer: parts[2]?.trim()
+        };
+      }).filter(l => l.filename && l.question && l.answer);
+
+      if (parsedLines.length === 0) throw new Error("CSV vazio ou fora do formato (Identificador_Imagem ; Pergunta ; Resposta).");
+
+      const finalQuestions: LabQuestion[] = [];
+
+      for (let i = 0; i < parsedLines.length; i++) {
+        const item = parsedLines[i];
+        setLabUploadProgress(`Processando ${i + 1} de ${parsedLines.length}: ${item.filename}`);
+
+        // A MÁGICA: Achar a imagem com ou sem a extensão!
+        const imageFile = filesArray.find(f => {
+          const nameWithoutExt = f.name.substring(0, f.name.lastIndexOf('.')) || f.name;
+          return f.name === item.filename || nameWithoutExt === item.filename;
+        });
+
+        if (!imageFile) {
+          throw new Error(`A imagem referente a "${item.filename}" não foi encontrada. Certifique-se de que selecionou todas as imagens.`);
+        }
+
+        const sRef = storageRef(storage, `lab_images/${labDisc}/${Date.now()}_${imageFile.name}`);
+        const snap = await uploadBytes(sRef, imageFile as File); 
+        const imageUrl = await getDownloadURL(snap.ref);
+
+        setLabUploadProgress(`Gerando dicas de IA para: ${item.answer}...`);
+        const aiTips = await generateLabTips(item.answer, item.question);
+
+        finalQuestions.push({
+          id: `lab_q_${Date.now()}_${i}`,
+          imageUrl: imageUrl,
+          question: item.question,
+          answer: item.answer,
+          aiIdentification: aiTips.identification,
+          aiLocation: aiTips.location,
+          aiFunctions: aiTips.functions
+        });
+      }
+
+      setLabUploadProgress('Salvando Simulado no banco...');
+      const newSim: LabSimulation = {
+        id: `lab_sim_${Date.now()}`,
+        disciplineId: labDisc,
+        title: labTitle,
+        author: labAuthor,
+        description: labDesc,
+        questions: finalQuestions,
+        createdAt: Date.now()
+      };
+
+      if (onAddLabSimulation) onAddLabSimulation(newSim);
+      alert(`✅ Sucesso! Simulado de Laboratório com ${finalQuestions.length} peças publicado. A IA gerou as dicas e as imagens foram hospedadas!`);
+      
+      setLabCsvFile(null); setLabImageFiles(null); setLabTitle(''); setLabDesc('');
+      const imgInput = document.getElementById('labImageInput') as HTMLInputElement;
+      if(imgInput) imgInput.value = '';
+      const csvInput = document.getElementById('labCsvInput') as HTMLInputElement;
+      if(csvInput) csvInput.value = '';
+
+    } catch (err: any) { 
+      alert('Erro no Upload: ' + err.message); 
+    } finally {
+      setIsLabUploading(false);
+      setLabUploadProgress('');
+    }
+  };
+
+  const handleDeleteLab = async (simId: string) => {
+    if (!confirm("Excluir este simulado e TODAS as imagens vinculadas a ele do servidor?")) return;
+    const sim = labSimulations.find(s => s.id === simId);
+    if (!sim) return;
+
+    if (onRemoveLabSimulation) onRemoveLabSimulation(simId);
+
+    sim.questions.forEach(async (q) => {
+      if (q.imageUrl && q.imageUrl.includes('firebasestorage')) {
+        try { await deleteObject(storageRef(storage, q.imageUrl)); } catch (e) { console.log('Imagem já apagada'); }
+      }
+    });
+  };
+
+  // --- FUNÇÕES DE IMPORTAÇÃO (QUESTÕES / OSCE) --- //
   const handleQuestionImport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!qFile || !qDiscipline || !qTheme) return;
@@ -380,6 +497,7 @@ const AdminView: React.FC<AdminViewProps> = ({
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
           { id: 'questions', label: 'Questões', icon: <FileText size={16}/> },
           { id: 'osce', label: 'OSCE', icon: <Stethoscope size={16}/> },
+          { id: 'lab', label: 'Laboratório IA', icon: <Microscope size={16}/> },
           { id: 'references', label: 'Referências', icon: <BookOpen size={16}/> },
           { id: 'materials', label: 'Materiais', icon: <ClipboardList size={16}/> },
         ].map(tab => (
@@ -412,8 +530,81 @@ const AdminView: React.FC<AdminViewProps> = ({
              <h4 className="text-5xl font-black text-[#003366]">{osceStations.length}</h4>
           </div>
           <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Disciplinas Ativas</p>
-             <h4 className="text-5xl font-black text-[#D4A017]">{disciplines.filter(d => d.status === 'active').length}</h4>
+             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Labs Virtuais</p>
+             <h4 className="text-5xl font-black text-[#D4A017]">{labSimulations.length}</h4>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW: NOVO LABORATÓRIO IA */}
+      {activeTab === 'lab' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
+          <div className="lg:col-span-5 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
+            <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Criar Lab com IA</h3>
+            <p className="text-[10px] font-bold text-gray-400 mb-6 leading-relaxed">
+              1. Selecione o CSV. A coluna de imagens pode ter apenas o nome (Ex: <b>001</b> ou <b>001.jpg</b>).<br/>
+              2. Selecione TODAS as imagens do computador.<br/>
+              A Inteligência Artificial vai gerar as dicas baseadas nas suas respostas!
+            </p>
+            
+            <form onSubmit={handleLabImport} className="space-y-4">
+              <select value={labDisc} onChange={e => setLabDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required disabled={isLabUploading}>
+                <option value="">Selecione a Disciplina...</option>
+                {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+              </select>
+              <input type="text" placeholder="Título (Ex: P1 Histologia)" value={labTitle} onChange={e => setLabTitle(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" required disabled={isLabUploading} />
+              <input type="text" placeholder="Autor (Seu Nome)" value={labAuthor} onChange={e => setLabAuthor(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" required disabled={isLabUploading} />
+              <textarea placeholder="Descrição para os alunos..." value={labDesc} onChange={e => setLabDesc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none resize-none" rows={2} disabled={isLabUploading}></textarea>
+              
+              <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-200">
+                <label className="block text-[10px] font-black uppercase text-[#003366] mb-2">1. Selecione o arquivo CSV</label>
+                <input id="labCsvInput" type="file" accept=".csv" onChange={e => setLabCsvFile(e.target.files ? e.target.files[0] : null)} className="w-full text-xs text-gray-700 font-bold" required disabled={isLabUploading} />
+              </div>
+
+              <div className="bg-emerald-50/50 p-4 rounded-xl border-2 border-dashed border-emerald-200">
+                <label className="block text-[10px] font-black uppercase text-emerald-700 mb-2">2. Selecione TODAS as Imagens</label>
+                <input id="labImageInput" type="file" accept="image/*" multiple onChange={e => setLabImageFiles(e.target.files)} className="w-full text-xs text-emerald-700 font-bold" required disabled={isLabUploading} />
+                {labImageFiles && <p className="text-[9px] font-black mt-2 text-emerald-600">{labImageFiles.length} imagens selecionadas.</p>}
+              </div>
+
+              <button type="submit" disabled={isLabUploading || !labCsvFile || !labImageFiles} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50 flex justify-center items-center gap-2">
+                {isLabUploading ? <Loader2 size={16} className="animate-spin"/> : <Microscope size={16}/>}
+                {isLabUploading ? 'Processando com IA...' : 'Enviar Simulado Mágico'}
+              </button>
+
+              {isLabUploading && (
+                <div className="bg-blue-50 text-[#003366] p-3 rounded-xl text-xs font-bold text-center animate-pulse border border-blue-200">
+                  {labUploadProgress}
+                </div>
+              )}
+            </form>
+          </div>
+          
+          <div className="lg:col-span-7 bg-white p-8 rounded-[2.5rem] border shadow-sm">
+             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Labs em Nuvem</h3>
+                  <button onClick={() => { if (prompt(`⚠️ Apagar Labs?\nSenha (fmst8):`) === 'fmst8') onClearLab && onClearLab(discFilterLab || undefined); }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit">Apagar {discFilterLab ? 'da Disciplina' : 'Tudo'} 🗑️</button>
+                </div>
+                <select value={discFilterLab} onChange={e => setDiscFilterLab(e.target.value)} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                  <option value="">Todas Disciplinas</option>
+                  {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+                </select>
+             </div>
+             <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
+                {labSimulations.filter(s => !discFilterLab || s.disciplineId === discFilterLab).map(s => (
+                  <div key={s.id} className="p-5 bg-emerald-50/40 rounded-[1.5rem] border border-emerald-100 flex justify-between items-center group transition-all hover:border-red-100">
+                    <div>
+                      <h4 className="font-bold text-[#003366] text-sm mb-1">{s.title} <span className="text-gray-400 font-medium text-xs">({s.questions.length} peças)</span></h4>
+                      <p className="text-[9px] font-black uppercase text-[#D4A017] tracking-widest">{s.disciplineId} • Por {s.author}</p>
+                    </div>
+                    <button onClick={() => handleDeleteLab(s.id)} className="text-red-300 hover:text-red-500 transition-colors p-2" title="Deletar Simulado e Imagens do Servidor">
+                      <Trash2 size={20}/>
+                    </button>
+                  </div>
+                ))}
+                {labSimulations.filter(s => !discFilterLab || s.disciplineId === discFilterLab).length === 0 && <p className="text-center py-10 text-gray-300 italic font-bold">Nenhum simulado de laboratório cadastrado.</p>}
+             </div>
           </div>
         </div>
       )}
