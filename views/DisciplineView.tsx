@@ -58,7 +58,6 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
 
         {/* BOTÃO PRÁTICO INTELIGENTE (LABORATÓRIO vs OSCE) */}
         <button 
-          // A MÁGICA ESTÁ AQUI: Se for UC chama o Lab, senão chama o OSCE.
           onClick={() => onSelectOption(isUC ? 'lab-list' : 'osce-setup')} 
           className="bg-white p-6 md:p-8 rounded-[2rem] text-left hover:shadow-xl transition-all group border-2 border-transparent hover:border-[#D4A017]"
         >
@@ -69,11 +68,11 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
             <div className="text-gray-300 group-hover:text-[#D4A017] transition-colors">→</div>
           </div>
           <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tight">
-            {isUC ? 'Laboratório Virtual IA' : 'Simulado Prático (OSCE)'}
+            {isUC ? 'Laboratório Virtual' : 'Simulado Prático (OSCE)'}
           </h3>
           <p className="text-xs text-gray-500 font-medium">
             {isUC 
-              ? 'Treine a identificação visual de lâminas e peças com dicas geradas por IA.' 
+              ? 'Treine a identificação visual de lâminas histológicas e peças anatômicas.' 
               : 'Treine o passo a passo de exames clínicos de forma gamificada.'}
           </p>
         </button>
