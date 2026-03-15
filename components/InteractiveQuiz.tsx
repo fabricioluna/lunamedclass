@@ -1,14 +1,15 @@
-
 import React, { useState } from 'react';
 import { Question } from '../types';
-import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface InteractiveQuizProps {
   questions: Question[];
   onFinish: (score: number, answers: Record<string, number>) => void;
+  // NOVO: Evento disparado no EXATO MOMENTO em que o aluno responde
+  onAnswerQuestion?: (questionId: string, isCorrect: boolean, theme: string) => void;
 }
 
-const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish }) => {
+const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, onAnswerQuestion }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [score, setScore] = useState(0);
@@ -17,9 +18,16 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish }
     if (answers[questionId] !== undefined) return;
 
     setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+    const isCorrect = optionIndex === correctIndex;
     
-    if (optionIndex === correctIndex) {
+    if (isCorrect) {
       setScore(prev => prev + 1);
+    }
+
+    // AVISAR A BASE DE DADOS IMEDIATAMENTE ("Gota a Gota")
+    if (onAnswerQuestion) {
+      const q = questions.find(x => x.id === questionId);
+      if (q) onAnswerQuestion(questionId, isCorrect, q.theme);
     }
   };
 
@@ -212,7 +220,7 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish }
                 onClick={() => onFinish(score, answers)}
                 className="bg-[#D4A017] text-[#003366] px-8 py-3.5 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-all shadow-xl"
               >
-                Concluir
+                Ver Relatório
               </button>
             ) : (
               <div className="pr-4 text-right">

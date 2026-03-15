@@ -1,24 +1,45 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InteractiveQuiz from '../components/InteractiveQuiz';
-import { Question, SimulationInfo } from '../types';
+import { Question, SimulationInfo, QuizDetail } from '../types';
 
 interface QuizViewProps {
   questions: Question[];
   discipline: SimulationInfo;
   onBack: () => void;
-  onSaveResult: (score: number, total: number) => void;
+  // Agora temos a gravação global (quando ele acaba) e a Parcial (gota a gota)
+  onSaveResult: (score: number, total: number, quizTitle?: string, type?: 'teorico' | 'laboratorio' | 'osce', timeSpent?: number, details?: QuizDetail[]) => void;
 }
 
 const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSaveResult }) => {
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [themeStats, setThemeStats] = useState<{theme: string, correct: number, total: number}[]>([]);
+  const [startTime] = useState(Date.now()); 
 
+  // GRAVAÇÃO PARCIAL (GOTA A GOTA)
+  // Quando o aluno clica numa alternativa, disparamos um pacote para o Firebase de imediato.
+  // Assim, mesmo que ele saia do ecrã, o resultado daquela questão já está na base de dados!
+  const handlePartialAnswer = (questionId: string, isCorrect: boolean, theme: string) => {
+    const uniqueTitles = Array.from(new Set(questions.map(q => q.quizTitle).filter(Boolean)));
+    const quizName = uniqueTitles.length === 1 ? uniqueTitles[0] : 'Simulado Misto';
+
+    // Grava UM ÚNICO PONTO no Firebase em tempo real
+    onSaveResult(
+      isCorrect ? 1 : 0, // Score parcial 
+      1,                 // Total parcial avaliado 
+      quizName, 
+      'teorico', 
+      0,                 // Tempo parcial ignorado (senão estragaria a média geral)
+      [{ questionId, isCorrect, theme }]
+    );
+  };
+
+  // QUANDO ELE FINALIZA OFICIALMENTE PARA VER O RELATÓRIO
+  // Como já fomos gravando gota a gota, não precisamos gravar os resultados de novo no Firebase (senão duplicaria!).
+  // O handleFinish agora serve só para fechar o ecrã e mostrar a taça de campeão para ele.
   const handleFinish = (score: number, answers: Record<string, number>) => {
     setFinalScore(score);
     
-    // Analisar por tema
     const themes = Array.from(new Set(questions.map(q => q.theme)));
     const stats = themes.map(theme => {
       const themeQs = questions.filter(q => q.theme === theme);
@@ -28,7 +49,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     
     setThemeStats(stats);
     setIsFinished(true);
-    onSaveResult(score, questions.length);
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -57,15 +78,18 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
         <button onClick={onBack} className="text-[#003366] font-bold hover:text-[#D4A017] transition-colors">← Voltar</button>
         <div className="text-right">
           <h2 className="text-xl font-black text-[#003366] uppercase">{discipline.title}</h2>
-          <p className="text-[8px] text-gray-400 uppercase font-black">{questions.length} Questões Avaliadas</p>
+          <p className="text-[8px] text-gray-400 uppercase font-black">{questions.length} Questões</p>
         </div>
       </div>
 
       {!isFinished ? (
-        <InteractiveQuiz questions={questions} onFinish={(score, ans) => handleFinish(score, ans)} />
+        <InteractiveQuiz 
+          questions={questions} 
+          onFinish={(score, ans) => handleFinish(score, ans)} 
+          onAnswerQuestion={handlePartialAnswer} // Injeta a função gota-a-gota aqui!
+        />
       ) : (
         <div className="space-y-8 animate-in zoom-in duration-500 pb-20">
-          {/* Card de Resultado Geral */}
           <div className="bg-white p-12 md:p-16 rounded-[3rem] shadow-2xl text-center border border-gray-100">
             <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">🏆</div>
             <h3 className="text-3xl font-black text-[#003366] mb-8 uppercase tracking-tighter">Desempenho no Simulado</h3>
@@ -79,9 +103,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
             <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Aproveitamento: {Math.round((finalScore/questions.length)*100)}%</p>
           </div>
 
-          {/* Análise por Eixo */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Ponto Forte */}
             <div className="bg-green-50 p-8 rounded-[2.5rem] border-2 border-green-100 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl">🌟</span>
@@ -91,7 +113,6 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
               <p className="text-xs text-green-700 font-medium leading-relaxed">Parabéns! Você demonstrou domínio sólido neste eixo. Mantenha revisões periódicas para fixação.</p>
             </div>
 
-            {/* Recomendação de Estudo */}
             <div className="bg-orange-50 p-8 rounded-[2.5rem] border-2 border-orange-100 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl">📚</span>
@@ -105,7 +126,6 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
             </div>
           </div>
 
-          {/* Lista de Temas Detalhada */}
           <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100">
             <h4 className="text-[10px] font-black uppercase text-gray-400 mb-8 tracking-[0.3em] text-center">Desempenho Detalhado por Eixo</h4>
             <div className="space-y-6">

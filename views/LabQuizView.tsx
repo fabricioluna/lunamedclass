@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { LabSimulation, LabQuestion } from '../types.ts';
+import { LabSimulation, LabQuestion, QuizDetail } from '../types';
 import { Microscope, MapPin, Activity, ChevronRight, ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal, Image as ImageIcon } from 'lucide-react';
 
 interface Props {
   simulation: LabSimulation;
   onBack: () => void;
+  // NOVO: A propriedade que envia os dados gota a gota para o Analytics
+  onSaveResult?: (score: number, total: number, timeSpent?: number, details?: QuizDetail[]) => void;
 }
 
 // Função utilitária para pegar o nome da imagem (ex: "040") e tirar a extensão (.jpg) se houver
 const getDisplayImageName = (q: LabQuestion, index: number) => {
   if (q.imageName) return q.imageName.replace(/\.[^/.]+$/, ""); 
   
-  // Fallback caso o upload tenha sido feito na versão anterior sem o campo imageName
   try {
     const decoded = decodeURIComponent(q.imageUrl);
     const parts = decoded.split('/');
@@ -23,7 +24,7 @@ const getDisplayImageName = (q: LabQuestion, index: number) => {
   return `Imagem ${index + 1}`;
 };
 
-const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
+const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult }) => {
   // ==========================================
   // ESTADOS DE CONFIGURAÇÃO (SETUP)
   // ==========================================
@@ -38,10 +39,14 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
   const [activeQuestions, setActiveQuestions] = useState<LabQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
+  
+  // NOVO: Estado para obrigar o aluno a registar se acertou ou errou antes de avançar
+  const [answerRecorded, setAnswerRecorded] = useState<'correct' | 'incorrect' | null>(null);
 
-  // Limpa a resposta revelada ao trocar de imagem
+  // Limpa a resposta revelada e o registo ao trocar de imagem
   useEffect(() => {
     setIsRevealed(false);
+    setAnswerRecorded(null);
   }, [currentIndex]);
 
   // Função que inicia o simulado com base nas escolhas do aluno
@@ -51,24 +56,42 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
     if (mode === 'range') {
       const s = Math.max(1, rangeStart);
       const e = Math.min(qs.length, rangeEnd);
-      // Fatiamos o array (lembrando que no código o índice começa em 0)
       qs = qs.slice(s - 1, e); 
     }
 
     if (mode === 'random') {
-      // Embaralha as questões selecionadas
       qs = qs.sort(() => Math.random() - 0.5);
     }
 
     if (qs.length === 0) {
-      alert("Intervalo inválido! Nenhuma questão selecionada.");
+      alert("Intervalo inválido! Nenhuma imagem selecionada.");
       return;
     }
 
     setActiveQuestions(qs);
     setCurrentIndex(0);
     setIsRevealed(false);
+    setAnswerRecorded(null);
     setIsSetupMode(false);
+  };
+
+  // NOVO: Função que regista o Acerto/Erro gota a gota no Firebase
+  const handleRecordAnswer = (isCorrect: boolean) => {
+    setAnswerRecorded(isCorrect ? 'correct' : 'incorrect');
+    
+    if (onSaveResult) {
+      const q = activeQuestions[currentIndex];
+      onSaveResult(
+        isCorrect ? 1 : 0, 
+        1, // Total avaliado neste momento
+        0, // Tempo ignorado no gota a gota para não corromper a média global
+        [{
+          questionId: q.id,
+          isCorrect: isCorrect,
+          theme: 'Laboratório Virtual' // Usamos a flag de Lab como tema para os gráficos
+        }]
+      );
+    }
   };
 
   const handleNext = () => { if (currentIndex < activeQuestions.length - 1) setCurrentIndex(currentIndex + 1); };
@@ -86,12 +109,12 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
 
         <div className="text-center mb-10">
           <div className="w-20 h-20 bg-blue-50 text-[#003366] rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 shadow-sm"><Microscope size={40}/></div>
-          <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Configurar Simulado</h2>
-          <p className="text-[#D4A017] font-black text-xs uppercase tracking-[0.2em]">{simulation.title} • {simulation.questions.length} Imagens Totais</p>
+          <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Configurar Lab</h2>
+          <p className="text-[#D4A017] font-black text-xs uppercase tracking-[0.2em]">{simulation.title} • {simulation.questions.length} Peças</p>
         </div>
 
         <div className="bg-white p-6 md:p-10 rounded-[3rem] shadow-xl border border-gray-100">
-          <h3 className="font-black text-[#003366] mb-6 uppercase tracking-widest text-xs text-center border-b pb-4">Como você deseja estudar?</h3>
+          <h3 className="font-black text-[#003366] mb-6 uppercase tracking-widest text-xs text-center border-b pb-4">Como você deseja treinar?</h3>
           
           <div className="grid gap-4 mb-8">
             <button onClick={() => setMode('sequential')} className={`p-6 rounded-2xl border-2 text-left flex items-center gap-4 transition-all ${mode === 'sequential' ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
@@ -119,7 +142,6 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
             </button>
           </div>
 
-          {/* Opção para digitar o intervalo de imagens */}
           {mode === 'range' && (
             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 animate-in zoom-in duration-300">
                <p className="text-center text-[10px] font-black uppercase text-gray-500 tracking-widest mb-4">Defina o intervalo desejado</p>
@@ -146,7 +168,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
   }
 
   // ==========================================
-  // TELA 2: O SIMULADO EM EXECUÇÃO
+  // TELA 2: O SIMULADO DE LAB EM EXECUÇÃO
   // ==========================================
   const q = activeQuestions[currentIndex];
   if (!q) return null;
@@ -173,15 +195,12 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
 
       <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-xl border border-gray-100">
         
-        {/* CONTAINER DA IMAGEM COM O NOME FLUTUANTE */}
+        {/* CONTAINER DA IMAGEM */}
         <div className="w-full h-72 md:h-[450px] bg-black rounded-[1.5rem] mb-8 overflow-hidden shadow-inner flex items-center justify-center relative">
-          
-          {/* Label com o Nome da Imagem (Ex: 040) */}
           <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm text-[#003366] px-4 py-2 rounded-xl shadow-lg border border-white/20 flex items-center gap-2">
             <ImageIcon size={16} className="text-[#D4A017]" />
             <span className="font-black tracking-widest uppercase text-sm">{displayName}</span>
           </div>
-
           <img 
             src={q.imageUrl} 
             alt={displayName}
@@ -192,6 +211,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
 
         <h3 className="text-2xl font-black text-[#003366] text-center mb-8">{q.question}</h3>
 
+        {/* ANTES DE REVELAR */}
         {!isRevealed ? (
           <button 
             onClick={() => setIsRevealed(true)}
@@ -207,7 +227,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
               <p className="text-2xl font-black text-green-800">{q.answer}</p>
             </div>
 
-            {/* Dicas só aparecem se não forem "N/A" nem vazias */}
+            {/* Dicas Geradas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {q.aiIdentification && q.aiIdentification !== 'N/A' && (
                 <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col items-start shadow-sm">
@@ -231,22 +251,62 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack }) => {
                 </div>
               )}
             </div>
+
+            {/* BLOCO DE AUTOAVALIAÇÃO (GOTA A GOTA DO ANALYTICS) */}
+            {!answerRecorded ? (
+              <div className="mt-8 bg-blue-50/50 border-2 border-blue-100 p-6 rounded-2xl flex flex-col items-center animate-in zoom-in duration-300">
+                <p className="text-[10px] font-black uppercase text-blue-800 tracking-widest mb-4">Seja sincero: Você acertou a identificação?</p>
+                <div className="flex gap-4 w-full md:w-2/3">
+                  <button onClick={() => handleRecordAnswer(true)} className="flex-1 bg-green-500 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 hover:scale-105 transition-all shadow-md">
+                    👍 Acertei
+                  </button>
+                  <button onClick={() => handleRecordAnswer(false)} className="flex-1 bg-red-500 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 hover:scale-105 transition-all shadow-md">
+                    👎 Errei
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-8 bg-gray-50 border-2 border-gray-100 p-4 rounded-2xl flex justify-center items-center animate-in fade-in">
+                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
+                  {answerRecorded === 'correct' ? '✅ Acerto Registrado nas Estatísticas!' : '❌ Erro Registrado para Revisão'}
+                </p>
+              </div>
+            )}
+
           </div>
         )}
       </div>
 
       {/* Navegação entre as imagens */}
-      <div className="flex justify-between items-center mt-8">
-        <button onClick={handlePrev} disabled={currentIndex === 0} className="bg-white p-4 md:px-6 rounded-2xl shadow-sm border border-gray-100 text-[#003366] disabled:opacity-30 flex items-center gap-2 font-black uppercase text-[10px] hover:bg-gray-50 transition-all">
+      <div className="flex justify-between items-center mt-8 gap-4">
+        <button 
+          onClick={handlePrev} 
+          disabled={currentIndex === 0} 
+          className="bg-white p-4 md:px-6 rounded-2xl shadow-sm border border-gray-100 text-[#003366] disabled:opacity-30 flex items-center gap-2 font-black uppercase text-[10px] hover:bg-gray-50 transition-all"
+        >
           <ChevronLeft size={16}/> Anterior
         </button>
         
-        {currentIndex === activeQuestions.length - 1 && isRevealed ? (
-          <button onClick={() => setIsSetupMode(true)} className="bg-[#D4A017] text-[#003366] px-8 py-4 rounded-2xl shadow-lg border border-transparent font-black uppercase text-[10px] hover:scale-105 transition-all tracking-widest">
+        {/* Se for a última questão, mostra o botão Finalizar. Caso contrário, botão Próxima. 
+            Ambos estão desativados se a resposta não tiver sido revelada E registada. */}
+        {currentIndex === activeQuestions.length - 1 ? (
+          <button 
+            onClick={() => setIsSetupMode(true)} 
+            disabled={!isRevealed || !answerRecorded}
+            className={`px-8 py-4 rounded-2xl shadow-lg border border-transparent font-black uppercase text-[10px] tracking-widest transition-all
+              ${(!isRevealed || !answerRecorded) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-[#D4A017] text-[#003366] hover:scale-105'}
+            `}
+          >
             Finalizar e Voltar
           </button>
         ) : (
-          <button onClick={handleNext} disabled={currentIndex === activeQuestions.length - 1} className="bg-white p-4 md:px-6 rounded-2xl shadow-sm border border-gray-100 text-[#003366] disabled:opacity-30 flex items-center gap-2 font-black uppercase text-[10px] hover:bg-gray-50 transition-all">
+          <button 
+            onClick={handleNext} 
+            disabled={!isRevealed || !answerRecorded} 
+            className={`bg-white p-4 md:px-6 rounded-2xl shadow-sm border flex items-center gap-2 font-black uppercase text-[10px] transition-all
+              ${(!isRevealed || !answerRecorded) ? 'border-gray-100 text-gray-300 cursor-not-allowed opacity-50' : 'border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white'}
+            `}
+          >
             Próxima <ChevronRight size={16}/>
           </button>
         )}
