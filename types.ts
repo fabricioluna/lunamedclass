@@ -1,5 +1,12 @@
 export type ViewState = 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz';
 
+// NOVO: Para gravar os detalhes de cada questão respondida no Analytics
+export interface QuizDetail {
+  questionId: string;
+  isCorrect: boolean;
+  theme: string;
+}
+
 export interface Question {
   id: string;
   firebaseId?: string;
@@ -11,8 +18,8 @@ export interface Question {
   explanation: string;
   tag: string;
   isPractical: boolean;
-  quizTitle?: string; // NOVO: Guarda o título do simulado teórico
-  author?: string;    // NOVO: Guarda o autor do simulado
+  quizTitle?: string; 
+  author?: string;    
 }
 
 export interface OsceStation {
@@ -55,6 +62,7 @@ export interface Summary {
   description?: string;
   size?: string;
   createdAt?: any;
+  views?: number; // NOVO: Contador de cliques/visualizações no material
 }
 
 export interface QuizResult {
@@ -63,6 +71,10 @@ export interface QuizResult {
   total: number;
   date: string;
   discipline?: string;
+  quizTitle?: string; // NOVO: Nome do simulado
+  type?: 'teorico' | 'laboratorio' | 'osce'; // NOVO: Tipo de simulado
+  timeSpent?: number; // NOVO: Tempo gasto em segundos
+  details?: QuizDetail[]; // NOVO: Mapeamento de acertos/erros por questão
 }
 
 export interface ReferenceMaterial {
@@ -93,4 +105,5 @@ export interface LabSimulation {
   description: string;
   questions: LabQuestion[];
   createdAt?: number;
+  views?: number; // NOVO: Contador de quantas vezes o laboratório foi aberto
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial, LabSimulation, LabQuestion } from '../types.ts';
 import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Loader2 } from 'lucide-react';
 
@@ -274,7 +274,7 @@ const AdminView: React.FC<AdminViewProps> = ({
       const parsedLines = lines.slice(1).map(line => {
         const parts = line.split(';');
         return {
-          filename: parts[0]?.trim(), // '001' ou '001.jpg'
+          filename: parts[0]?.trim(), 
           question: parts[1]?.trim(),
           answer: parts[2]?.trim(),
           identification: parts[3]?.trim() || 'N/A',
@@ -307,7 +307,7 @@ const AdminView: React.FC<AdminViewProps> = ({
         finalQuestions.push({
           id: `lab_q_${Date.now()}_${i}`,
           imageUrl: imageUrl,
-          imageName: item.filename, // Salva o nome exato (ex: 001) no banco
+          imageName: item.filename, 
           question: item.question,
           answer: item.answer,
           aiIdentification: item.identification,
@@ -469,6 +469,74 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
+  // =========================================================================
+  // MÁQUINA DE ANALYTICS AVANÇADA (PROCESSAMENTO DOS DADOS)
+  // =========================================================================
+  const analytics = useMemo(() => {
+    let totalQuestionsAnswered = 0;
+    let totalCorrectAnswers = 0;
+    let totalTimeSpent = 0;
+    let timeEntriesCount = 0;
+
+    const themeStats: Record<string, { correct: number, total: number }> = {};
+    const questionStats: Record<string, { misses: number, total: number }> = {};
+
+    quizResults.forEach(qr => {
+      // Agrega os volumes gerais
+      totalQuestionsAnswered += (qr.total || 0);
+      totalCorrectAnswers += (qr.score || 0);
+
+      if (qr.timeSpent && qr.timeSpent > 0) {
+        totalTimeSpent += qr.timeSpent;
+        timeEntriesCount++;
+      }
+
+      // Se houver detalhes guardados, mapeia os temas e a "Lista Negra"
+      if (qr.details) {
+        qr.details.forEach(d => {
+          // Desempenho por Tema
+          if (!themeStats[d.theme]) themeStats[d.theme] = { correct: 0, total: 0 };
+          themeStats[d.theme].total++;
+          if (d.isCorrect) themeStats[d.theme].correct++;
+
+          // Ranking de Dificuldade (Lista Negra)
+          if (!questionStats[d.questionId]) questionStats[d.questionId] = { misses: 0, total: 0 };
+          questionStats[d.questionId].total++;
+          if (!d.isCorrect) questionStats[d.questionId].misses++;
+        });
+      }
+    });
+
+    const globalAccuracy = totalQuestionsAnswered > 0 ? Math.round((totalCorrectAnswers / totalQuestionsAnswered) * 100) : 0;
+    const avgTimeSeconds = timeEntriesCount > 0 ? Math.round(totalTimeSpent / timeEntriesCount) : 0;
+    const avgTimeFormatted = `${Math.floor(avgTimeSeconds / 60)}m ${avgTimeSeconds % 60}s`;
+
+    // Converte os stats de temas para array e ordena do melhor para o pior
+    const themePerformance = Object.keys(themeStats).map(t => ({
+      theme: t,
+      accuracy: Math.round((themeStats[t].correct / themeStats[t].total) * 100),
+      total: themeStats[t].total
+    })).sort((a, b) => b.accuracy - a.accuracy);
+
+    // Converte os stats de questões (Lista Negra) e puxa o texto da questão
+    const hardestQuestions = Object.keys(questionStats).map(qid => {
+      const qObj = questions.find(q => q.id === qid);
+      return {
+        id: qid,
+        text: qObj ? qObj.q : 'Questão excluída ou não encontrada',
+        misses: questionStats[qid].misses,
+        total: questionStats[qid].total,
+        errorRate: Math.round((questionStats[qid].misses / questionStats[qid].total) * 100)
+      };
+    })
+    .filter(x => x.misses > 0) // Só mostra as que alguém errou
+    .sort((a, b) => b.errorRate - a.errorRate) // Ordena da maior taxa de erro para a menor
+    .slice(0, 10); // Pega apenas o Top 10 Piores
+
+    return { totalQuestionsAnswered, globalAccuracy, avgTimeFormatted, themePerformance, hardestQuestions };
+  }, [quizResults, questions]);
+
+
   if (!isAuthorized) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4">
@@ -524,25 +592,100 @@ const AdminView: React.FC<AdminViewProps> = ({
         ))}
       </nav>
 
-      {/* VIEW: ESTATÍSTICAS */}
+      {/* ==================================================================== */}
+      {/* VIEW: DASHBOARD DE ESTATÍSTICAS E ANALYTICS */}
+      {/* ==================================================================== */}
       {activeTab === 'stats' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">
-          <div className="bg-[#003366] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
-             <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">📝</div>
-             <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-2">Simulados Realizados</p>
-             <h4 className="text-5xl font-black">{quizResults.length}</h4>
+        <div className="animate-in fade-in duration-500 space-y-8">
+          
+          {/* BLOCO SUPERIOR: 4 CARDS DE RESUMO */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-[#003366] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
+               <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">📝</div>
+               <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-2">Simulados Realizados</p>
+               <h4 className="text-5xl font-black">{quizResults.length}</h4>
+            </div>
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden">
+               <div className="absolute -right-4 -bottom-4 text-6xl opacity-5">✅</div>
+               <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Questões Respondidas</p>
+               <h4 className="text-5xl font-black text-[#003366]">{analytics.totalQuestionsAnswered}</h4>
+            </div>
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden">
+               <div className="absolute -right-4 -bottom-4 text-6xl opacity-5">🎯</div>
+               <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Taxa de Acerto Global</p>
+               <h4 className="text-5xl font-black text-emerald-600">{analytics.globalAccuracy}%</h4>
+            </div>
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden">
+               <div className="absolute -right-4 -bottom-4 text-6xl opacity-5">⏱️</div>
+               <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Tempo Médio/Simulado</p>
+               <h4 className="text-4xl font-black text-[#D4A017] pt-2">{analytics.avgTimeFormatted}</h4>
+            </div>
           </div>
-          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Total de Questões</p>
-             <h4 className="text-5xl font-black text-[#003366]">{questions.length}</h4>
-          </div>
-          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Estações OSCE</p>
-             <h4 className="text-5xl font-black text-[#003366]">{osceStations.length}</h4>
-          </div>
-          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Labs Virtuais</p>
-             <h4 className="text-5xl font-black text-[#D4A017]">{labSimulations?.length || 0}</h4>
+
+          {/* BLOCO INFERIOR: GRÁFICOS E LISTA NEGRA */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            {/* DESEMPENHO POR EIXO TEMÁTICO */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter mb-6 border-b pb-4">
+                Desempenho por Eixo Temático
+              </h3>
+              {analytics.themePerformance.length > 0 ? (
+                <div className="space-y-6">
+                  {analytics.themePerformance.map((theme, idx) => (
+                    <div key={idx}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-gray-700 truncate pr-4">{theme.theme}</span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md
+                          ${theme.accuracy >= 70 ? 'bg-emerald-100 text-emerald-700' : theme.accuracy >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}
+                        `}>
+                          {theme.accuracy}% ({theme.total}Q)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                        <div 
+                          className={`h-2.5 rounded-full ${theme.accuracy >= 70 ? 'bg-emerald-500' : theme.accuracy >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                          style={{ width: `${theme.accuracy}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-10 text-gray-400 font-medium italic text-xs">Ainda não há dados suficientes detalhados por tema. Garanta que a nova versão do quiz está sendo usada pelos alunos.</p>
+              )}
+            </div>
+
+            {/* LISTA NEGRA: TOP 10 QUESTÕES MAIS ERRADAS */}
+            <div className="bg-red-50 p-8 rounded-[2.5rem] border border-red-100 shadow-sm">
+              <h3 className="text-xl font-black text-red-800 uppercase tracking-tighter mb-6 border-b border-red-200 pb-4">
+                Top 10: Questões Mais Erradas
+              </h3>
+              {analytics.hardestQuestions.length > 0 ? (
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                  {analytics.hardestQuestions.map((q, idx) => (
+                    <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-red-100 flex items-start gap-4">
+                      <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 font-black flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-700 leading-snug line-clamp-2" title={q.text}>{q.text}</p>
+                        <div className="flex gap-3 mt-2">
+                          <span className="text-[9px] font-black uppercase text-red-600 tracking-widest">⚠️ Erro: {q.errorRate}%</span>
+                          <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">• Errada {q.misses} vezes</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-48 opacity-50">
+                  <span className="text-5xl mb-2">🎉</span>
+                  <p className="text-center text-red-800 font-black text-xs uppercase">Nenhum erro registrado ainda!</p>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       )}
