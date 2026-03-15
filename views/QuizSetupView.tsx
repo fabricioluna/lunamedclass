@@ -10,9 +10,9 @@ interface QuizSetupViewProps {
 
 const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQuestions, onStart, onBack }) => {
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
-  const [selectedQuizTitles, setSelectedQuizTitles] = useState<string[]>([]); // NOVO: Filtro por simulado específico
+  const [selectedQuizTitles, setSelectedQuizTitles] = useState<string[]>([]); 
   const [quantity, setQuantity] = useState(10);
-  const [orderMode, setOrderMode] = useState<'random' | 'sequential'>('random'); // NOVO: Ordem das questões
+  const [orderMode, setOrderMode] = useState<'random' | 'sequential'>('random'); 
 
   // Identifica todos os títulos de simulados únicos nesta disciplina
   const uniqueQuizTitles = useMemo(() => {
@@ -127,12 +127,12 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQues
                   <button
                     key={title}
                     onClick={() => toggleQuizTitle(title)}
-                    className={`p-4 rounded-2xl text-left transition-all border-2 flex justify-between items-center group shadow-sm
+                    className={`p-4 rounded-2xl text-left transition-all border-2 flex justify-between items-start gap-3 group shadow-sm
                       ${isSelected ? 'border-blue-600 bg-blue-600 text-white shadow-lg scale-[1.02]' : 'border-blue-100 bg-white text-blue-900 hover:border-blue-300'}
                     `}
                   >
-                    <span className="text-xs font-black uppercase tracking-tight truncate pr-2">📄 {title}</span>
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'}`}>{count} Q</span>
+                    <span className="text-xs font-black uppercase tracking-tight leading-snug">📄 {title}</span>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${isSelected ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'}`}>{count} Q</span>
                   </button>
                 );
               })}
@@ -158,12 +158,12 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQues
                 <button
                   key={theme}
                   onClick={() => toggleTheme(theme)}
-                  className={`p-4 rounded-2xl text-left transition-all border-2 flex justify-between items-center group
+                  className={`p-4 rounded-2xl text-left transition-all border-2 flex justify-between items-start gap-3 group
                     ${isSelected ? 'border-[#003366] bg-[#003366] text-white shadow-lg' : 'border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200'}
                   `}
                 >
-                  <span className="text-xs font-bold uppercase tracking-tight truncate pr-2">{theme}</span>
-                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{count} Q</span>
+                  <span className="text-xs font-bold uppercase tracking-tight leading-snug">{theme}</span>
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{count} Q</span>
                 </button>
               );
             })}
