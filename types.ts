@@ -11,6 +11,8 @@ export interface Question {
   explanation: string;
   tag: string;
   isPractical: boolean;
+  quizTitle?: string; // NOVO: Guarda o título do simulado teórico
+  author?: string;    // NOVO: Guarda o autor do simulado
 }
 
 export interface OsceStation {
@@ -39,7 +41,6 @@ export interface SimulationInfo {
   references?: ReferenceMaterial[];
 }
 
-// A INTERFACE SUMMARY FOI ATUALIZADA COM OS NOVOS CAMPOS
 export interface Summary {
   id: string;
   firebaseId?: string;
@@ -49,7 +50,6 @@ export interface Summary {
   type: 'summary' | 'script' | 'other';
   isFolder?: boolean;
   date: string;
-  // Novos campos:
   title?: string;
   author?: string;
   description?: string;
@@ -73,16 +73,15 @@ export interface ReferenceMaterial {
   url?: string;
 }
 
-// === NOVAS INTERFACES: LABORATÓRIO VIRTUAL ===
 export interface LabQuestion {
   id: string;
-  imageUrl: string;          // Vai guardar o link da imagem no Firebase Storage
-  imageName?: string;        // NOVO: Guarda o nome original do arquivo (ex: 001) para mostrar na tela
+  imageUrl: string;          
+  imageName?: string;        
   question: string;
   answer: string;
-  aiIdentification?: string; // Dica 
-  aiLocation?: string;       // Dica 
-  aiFunctions?: string;      // Dica 
+  aiIdentification?: string; 
+  aiLocation?: string;       
+  aiFunctions?: string;      
 }
 
 export interface LabSimulation {
