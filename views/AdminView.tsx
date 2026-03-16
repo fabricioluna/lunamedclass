@@ -126,7 +126,6 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   const [liveMaterials, setLiveMaterials] = useState<Summary[]>([]);
 
-  // === ESTADOS ESPECÍFICOS DO LABORATÓRIO ===
   const [labDisc, setLabDisc] = useState('');
   const [labTitle, setLabTitle] = useState('');
   const [labAuthor, setLabAuthor] = useState('');
@@ -474,7 +473,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   };
 
   // =========================================================================
-  // MÁQUINA DE ANALYTICS BLINDADA (Protege Histórico e Calcula Pacing)
+  // MÁQUINA DE ANALYTICS BLINDADA (Agrupamento Legado por Hora)
   // =========================================================================
   
   const availableStatTitles = useMemo(() => {
@@ -511,15 +510,12 @@ const AdminView: React.FC<AdminViewProps> = ({
     let totalQuestionsAnswered = 0;
     let totalCorrectAnswers = 0;
     
-    // Controle de Pacing (Tempo)
     let totalTimeSpentSecs = 0;
     let timeEntriesCount = 0;
 
-    // Estruturas de Agrupamento
     const themeStats: Record<string, { correct: number, total: number }> = {};
     const questionStats: Record<string, { misses: number, total: number }> = {};
     
-    // Agrupador de Sessões para resolver o "Quantidade de Questões = Simulados"
     const sessionTracker = new Set<string>();
     let historicalFullSims = 0;
 
@@ -528,24 +524,39 @@ const AdminView: React.FC<AdminViewProps> = ({
       totalQuestionsAnswered += qTotal;
       totalCorrectAnswers += (qr.score || 0);
 
-      // --- MÁGICA 1: CONTAGEM REAL DE SIMULADOS ---
+      // --- MÁGICA 1: CORREÇÃO DO AGRUPAMENTO (Ignorando os milissegundos) ---
       const sessId = (qr.details?.[0] as any)?.sessionId;
+      
       if (sessId) {
-        // Novo sistema (Gota a Gota + Session ID)
+        // Novo sistema já tem ID único gerado ao abrir o simulado
         sessionTracker.add(sessId);
       } else if (qTotal > 1) {
-        // Sistema muito antigo (1 doc = Várias Questões)
+        // Simulados fechados enviados em 1 único bloco
         historicalFullSims++;
       } else {
-        // Sistema gota a gota antigo (Sem Session ID) -> Agrupamos por Data + Título
-        const dateKey = (qr as any).date || (qr as any).createdAt || 'past';
-        sessionTracker.add(`legacy_${qr.quizTitle}_${dateKey}`);
+        // Questões antigas do "Gota a Gota" - Extraindo apenas Dia/Mês/Ano e HORA
+        let timeStr = 'legacy_unknown';
+        
+        let timeInMillis = qr.createdAt;
+        // Tratamento caso venha como Firebase Timestamp
+        if (timeInMillis && typeof timeInMillis === 'object' && (timeInMillis as any).seconds) {
+          timeInMillis = (timeInMillis as any).seconds * 1000;
+        }
+
+        if (timeInMillis) {
+          const d = new Date(timeInMillis as number);
+          // Agrupa tudo que foi respondido na mesma hora do dia num único "simulado"
+          timeStr = `${d.getDate()}_${d.getMonth()}_${d.getFullYear()}_${d.getHours()}h`;
+        } else if ((qr as any).date) {
+          timeStr = (qr as any).date;
+        }
+        
+        sessionTracker.add(`legacy_${qr.quizTitle}_${timeStr}`);
       }
 
-      // --- MÁGICA 2: CONTROLE DE TEMPO (PACING) ---
+      // --- MÁGICA 2: TEMPO ---
       if (qr.timeSpent && qr.timeSpent > 0) {
         totalTimeSpentSecs += qr.timeSpent;
-        // Se for um simulado antigo completo, cresce de forma proporcional
         timeEntriesCount += qTotal; 
       }
 
@@ -566,7 +577,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     const totalSimulations = sessionTracker.size + historicalFullSims;
     const globalAccuracy = totalQuestionsAnswered > 0 ? Math.round((totalCorrectAnswers / totalQuestionsAnswered) * 100) : 0;
     
-    // PACING CALC: Média de Segundos GASTOS POR QUESTÃO
     const avgTimePerQuestion = timeEntriesCount > 0 ? Math.round(totalTimeSpentSecs / timeEntriesCount) : 0;
     const avgTimeFormatted = avgTimePerQuestion > 60 
         ? `${Math.floor(avgTimePerQuestion / 60)}m ${avgTimePerQuestion % 60}s`
