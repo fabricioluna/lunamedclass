@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial, LabSimulation, LabQuestion } from '../types.ts';
 import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Loader2 } from 'lucide-react';
 
-// IMPORTAÇÕES NOVAS DO FIREBASE (FIRESTORE E STORAGE)
+// IMPORTAÇÕES DO FIREBASE
 import { firestoreDB, storage } from '../firebase.ts';
 import { collection, query, onSnapshot, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -23,7 +23,7 @@ interface AdminViewProps {
   onRemoveLabSimulation?: (id: string) => void;
   onRemoveQuestion: (id: string) => void;
   onRemoveOsceStation: (id: string) => void;
-  onRemoveQuiz: (quizTitle: string, disciplineId?: string) => void; // NOVO: Prop para remover simulado inteiro
+  onRemoveQuiz: (quizTitle: string, disciplineId?: string) => void; 
   onClearDatabase: () => void;
   onClearResults: () => void;
   onClearQuestions: (disciplineId?: string) => void;
@@ -69,7 +69,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   onRemoveQuestion,
   onRemoveOsceStation,
   onRemoveLabSimulation,
-  onRemoveQuiz, // NOVO
+  onRemoveQuiz, 
   onClearDatabase,
   onClearResults,
   onClearQuestions,
@@ -92,7 +92,7 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   const [discFilter, setDiscFilter] = useState(''); 
   const [themeFilter, setThemeFilter] = useState('');
-  const [quizFilter, setQuizFilter] = useState(''); // NOVO: Filtro para o simulado exato
+  const [quizFilter, setQuizFilter] = useState(''); 
   
   const [discFilterOsce, setDiscFilterOsce] = useState(''); 
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
@@ -198,7 +198,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     onUpdateReferences(selectedDiscId, updatedRefs);
   };
 
-  // --- FUNÇÕES DE MATERIAIS COM FIRESTORE E STORAGE --- //
   const handlePublishAdminMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!matDisc || !matTitle || !matUrl) return;
@@ -263,7 +262,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
-  // --- NOVA FUNÇÃO: O PROCESSAMENTO DO LABORATÓRIO ---
   const handleLabImport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!labCsvFile || !labImageFiles || labImageFiles.length === 0 || !labDisc || !labTitle || !labAuthor) {
@@ -366,7 +364,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     });
   };
 
-  // --- FUNÇÕES DE IMPORTAÇÃO (QUESTÕES TEÓRICAS) --- //
   const handleQuestionImport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!qFile || !qDiscipline || !qTheme || !qTitle) {
@@ -407,7 +404,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     reader.readAsText(qFile);
   };
 
-  // --- OSCE PREVIEW ---
   const handleOsceReadPreview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!osceFile || !osceDiscipline || !osceTheme) return;
@@ -478,10 +474,9 @@ const AdminView: React.FC<AdminViewProps> = ({
   };
 
   // =========================================================================
-  // MÁQUINA DE ANALYTICS AVANÇADA (PROCESSAMENTO DOS DADOS COM FILTROS)
+  // MÁQUINA DE ANALYTICS BLINDADA (Protege Histórico e Calcula Pacing)
   // =========================================================================
   
-  // Títulos disponíveis para o filtro atual de estatísticas
   const availableStatTitles = useMemo(() => {
     const titles = new Set<string>();
     quizResults.forEach(qr => {
@@ -494,7 +489,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     return Array.from(titles);
   }, [quizResults, statsDiscFilter, statsTypeFilter]);
 
-  // Lista única de nomes de Simulados Teóricos (para a aba Questões)
   const uniqueQuizzes = useMemo(() => {
     const titles = new Set<string>();
     questions.forEach(q => {
@@ -516,19 +510,43 @@ const AdminView: React.FC<AdminViewProps> = ({
 
     let totalQuestionsAnswered = 0;
     let totalCorrectAnswers = 0;
-    let totalTimeSpent = 0;
+    
+    // Controle de Pacing (Tempo)
+    let totalTimeSpentSecs = 0;
     let timeEntriesCount = 0;
 
+    // Estruturas de Agrupamento
     const themeStats: Record<string, { correct: number, total: number }> = {};
     const questionStats: Record<string, { misses: number, total: number }> = {};
+    
+    // Agrupador de Sessões para resolver o "Quantidade de Questões = Simulados"
+    const sessionTracker = new Set<string>();
+    let historicalFullSims = 0;
 
     filteredResults.forEach(qr => {
-      totalQuestionsAnswered += (qr.total || 0);
+      const qTotal = qr.total || 1;
+      totalQuestionsAnswered += qTotal;
       totalCorrectAnswers += (qr.score || 0);
 
+      // --- MÁGICA 1: CONTAGEM REAL DE SIMULADOS ---
+      const sessId = (qr.details?.[0] as any)?.sessionId;
+      if (sessId) {
+        // Novo sistema (Gota a Gota + Session ID)
+        sessionTracker.add(sessId);
+      } else if (qTotal > 1) {
+        // Sistema muito antigo (1 doc = Várias Questões)
+        historicalFullSims++;
+      } else {
+        // Sistema gota a gota antigo (Sem Session ID) -> Agrupamos por Data + Título
+        const dateKey = (qr as any).date || (qr as any).createdAt || 'past';
+        sessionTracker.add(`legacy_${qr.quizTitle}_${dateKey}`);
+      }
+
+      // --- MÁGICA 2: CONTROLE DE TEMPO (PACING) ---
       if (qr.timeSpent && qr.timeSpent > 0) {
-        totalTimeSpent += qr.timeSpent;
-        timeEntriesCount++;
+        totalTimeSpentSecs += qr.timeSpent;
+        // Se for um simulado antigo completo, cresce de forma proporcional
+        timeEntriesCount += qTotal; 
       }
 
       if (qr.details) {
@@ -545,9 +563,14 @@ const AdminView: React.FC<AdminViewProps> = ({
       }
     });
 
+    const totalSimulations = sessionTracker.size + historicalFullSims;
     const globalAccuracy = totalQuestionsAnswered > 0 ? Math.round((totalCorrectAnswers / totalQuestionsAnswered) * 100) : 0;
-    const avgTimeSeconds = timeEntriesCount > 0 ? Math.round(totalTimeSpent / timeEntriesCount) : 0;
-    const avgTimeFormatted = `${Math.floor(avgTimeSeconds / 60)}m ${avgTimeSeconds % 60}s`;
+    
+    // PACING CALC: Média de Segundos GASTOS POR QUESTÃO
+    const avgTimePerQuestion = timeEntriesCount > 0 ? Math.round(totalTimeSpentSecs / timeEntriesCount) : 0;
+    const avgTimeFormatted = avgTimePerQuestion > 60 
+        ? `${Math.floor(avgTimePerQuestion / 60)}m ${avgTimePerQuestion % 60}s`
+        : `${avgTimePerQuestion}s`;
 
     const themePerformance = Object.keys(themeStats).map(t => ({
       theme: t,
@@ -580,7 +603,7 @@ const AdminView: React.FC<AdminViewProps> = ({
     .sort((a, b) => b.errorRate - a.errorRate) 
     .slice(0, 10); 
 
-    return { totalSimulations: filteredResults.length, totalQuestionsAnswered, globalAccuracy, avgTimeFormatted, themePerformance, hardestQuestions };
+    return { totalSimulations, totalQuestionsAnswered, globalAccuracy, avgTimeFormatted, themePerformance, hardestQuestions };
   }, [quizResults, questions, labSimulations, statsDiscFilter, statsTypeFilter, statsQuizTitleFilter]);
 
 
@@ -689,10 +712,12 @@ const AdminView: React.FC<AdminViewProps> = ({
                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Taxa de Acerto Média</p>
                <h4 className="text-5xl font-black text-emerald-600">{analytics.globalAccuracy}%</h4>
             </div>
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden">
-               <div className="absolute -right-4 -bottom-4 text-6xl opacity-5">⏱️</div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Tempo Médio Gasto</p>
-               <h4 className="text-4xl font-black text-[#D4A017] pt-2">{analytics.avgTimeFormatted}</h4>
+            <div className="bg-[#D4A017] p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden text-[#003366]">
+               <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">⏱️</div>
+               <p className="text-[9px] font-black uppercase tracking-widest mb-2 opacity-80 flex items-center gap-1">
+                 Tempo P/ Questão (Pacing)
+               </p>
+               <h4 className="text-4xl font-black pt-2">{analytics.avgTimeFormatted}</h4>
             </div>
           </div>
 

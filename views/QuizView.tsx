@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import InteractiveQuiz from '../components/InteractiveQuiz';
 import { Question, SimulationInfo, QuizDetail } from '../types';
 
@@ -16,7 +16,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
 
   // Lista de questões ativas (pode ser total ou só as erradas)
   const [activeQuestions, setActiveQuestions] = useState<Question[]>(questions);
-  const [quizKey, setQuizKey] = useState(0); // Usada para "resetar" o InteractiveQuiz
+  const [quizKey, setQuizKey] = useState(0); 
   const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
 
   const [isFinished, setIsFinished] = useState(false);
@@ -29,13 +29,28 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Atualiza as activeQuestions se as questions originais (vindas do Setup) mudarem
+  // IDENTIFICADORES ANALÍTICOS (Novo: Session ID e Controle de Tempo)
+  const [sessionId] = useState(() => `sess_${Date.now()}_${Math.random().toString(36).substring(2,9)}`);
+  const lastQuestionTimeRef = useRef(Date.now());
+
+  // Atualiza as activeQuestions se as questions originais mudarem
   useEffect(() => {
     setActiveQuestions(questions);
   }, [questions]);
 
-  // GRAVAÇÃO PARCIAL (GOTA A GOTA)
+  // GRAVAÇÃO PARCIAL (GOTA A GOTA COM ANALYTICS)
   const handlePartialAnswer = (questionId: string, isCorrect: boolean, theme: string) => {
+    const now = Date.now();
+    
+    // Calcula o tempo exato gasto nesta questão (em segundos)
+    let timeSpentSecs = Math.floor((now - lastQuestionTimeRef.current) / 1000);
+    
+    // Teto de segurança: se o aluno foi almoçar (mais de 10 min), limitamos a 3 min para não distorcer as médias globais
+    if (timeSpentSecs > 600) timeSpentSecs = 180; 
+    
+    // Reseta o cronômetro para a próxima questão
+    lastQuestionTimeRef.current = now;
+
     const uniqueTitles = Array.from(new Set(activeQuestions.map(q => q.quizTitle).filter(Boolean)));
     const quizName = uniqueTitles.length === 1 ? uniqueTitles[0] : 'Simulado Misto';
 
@@ -44,8 +59,8 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
       1,                 
       quizName, 
       'teorico', 
-      0,                 
-      [{ questionId, isCorrect, theme }]
+      timeSpentSecs, // Enviando o tempo real desta questão
+      [{ questionId, isCorrect, theme, sessionId } as any] // Injetando o Session ID silenciosamente
     );
   };
 
@@ -63,32 +78,30 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     setThemeStats(stats);
     setIsFinished(true);
     
-    // Limpa a memória de andamento, afinal o simulado foi concluído!
     localStorage.removeItem(storageKey);
     localStorage.removeItem(questionsKey);
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // BOTÃO: Refazer todo o simulado
   const handleRetakeAll = () => {
-    localStorage.setItem(questionsKey, JSON.stringify(questions)); // Salva a lista inteira de volta
-    setSavedState(null); // Reseta qualquer state antigo
+    localStorage.setItem(questionsKey, JSON.stringify(questions)); 
+    setSavedState(null); 
     localStorage.removeItem(storageKey);
     
     setActiveQuestions(questions);
-    setQuizKey(k => k + 1); // Força o InteractiveQuiz a montar do zero
+    setQuizKey(k => k + 1); 
     setIsFinished(false);
     setFinalScore(0);
+    lastQuestionTimeRef.current = Date.now(); // Reseta o relógio
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // BOTÃO: Refazer apenas as que errou
   const handleRetakeWrong = () => {
     const wrongQ = activeQuestions.filter(q => userAnswers[q.id] !== q.answer);
     if (wrongQ.length === 0) return;
 
-    localStorage.setItem(questionsKey, JSON.stringify(wrongQ)); // Salva a nova lista mais curta
+    localStorage.setItem(questionsKey, JSON.stringify(wrongQ)); 
     setSavedState(null);
     localStorage.removeItem(storageKey);
     
@@ -96,6 +109,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     setQuizKey(k => k + 1);
     setIsFinished(false);
     setFinalScore(0);
+    lastQuestionTimeRef.current = Date.now(); // Reseta o relógio
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -128,7 +142,6 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
         </div>
       </div>
 
-      {/* QUIZ INTERATIVO (Agora aceita ActiveQuestions e usa Key para resetar) */}
       {!isFinished && (
         <InteractiveQuiz 
           key={quizKey}
@@ -140,7 +153,6 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
         />
       )}
 
-      {/* RELATÓRIO FINAL E NOVOS BOTÕES DE REVISÃO */}
       {isFinished && (
         <div className="space-y-8 animate-in zoom-in duration-500 pb-20">
           <div className="bg-white p-12 md:p-16 rounded-[3rem] shadow-2xl text-center border border-gray-100">
@@ -206,27 +218,10 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
             </div>
           </div>
 
-          {/* BOTÕES DE NAVEGAÇÃO E REVISÃO */}
           <div className="flex flex-col sm:flex-row gap-4 mt-8">
-            <button 
-              onClick={onBack} 
-              className="flex-1 bg-white border-2 border-gray-100 text-gray-400 py-5 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest hover:border-[#003366] hover:text-[#003366] transition-all"
-            >
-              Voltar ao Menu
-            </button>
-            <button 
-              onClick={handleRetakeAll} 
-              className="flex-1 bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest hover:bg-[#D4A017] transition-all shadow-xl"
-            >
-              🔄 Refazer Completo
-            </button>
-            <button 
-              onClick={handleRetakeWrong} 
-              disabled={wrongCount === 0}
-              className="flex-1 bg-[#D4A017] text-[#003366] py-5 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest hover:scale-105 transition-all shadow-xl disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
-            >
-              🎯 Refazer Erradas
-            </button>
+            <button onClick={onBack} className="flex-1 bg-white border-2 border-gray-100 text-gray-400 py-5 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest hover:border-[#003366] hover:text-[#003366] transition-all">Voltar ao Menu</button>
+            <button onClick={handleRetakeAll} className="flex-1 bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest hover:bg-[#D4A017] transition-all shadow-xl">🔄 Refazer Completo</button>
+            <button onClick={handleRetakeWrong} disabled={wrongCount === 0} className="flex-1 bg-[#D4A017] text-[#003366] py-5 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest hover:scale-105 transition-all shadow-xl disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed">🎯 Refazer Erradas</button>
           </div>
         </div>
       )}
