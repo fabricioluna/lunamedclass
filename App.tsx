@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header.tsx';
+import RoomSelectionView from './views/RoomSelectionView.tsx';
 import HomeView from './views/HomeView.tsx';
 import DisciplineView from './views/DisciplineView.tsx';
 import QuizSetupView from './views/QuizSetupView.tsx';
@@ -16,16 +17,17 @@ import ShareMaterialView from './views/ShareMaterialView.tsx';
 import LabListView from './views/LabListView.tsx';
 import LabQuizView from './views/LabQuizView.tsx';
 
-import { ViewState, Summary, Question, SimulationInfo, OsceStation, QuizResult, ReferenceMaterial, LabSimulation, QuizDetail } from './types.ts';
-import { INITIAL_QUESTIONS, SIMULATIONS } from './constants.tsx';
+import { ViewState, Summary, Question, SimulationInfo, OsceStation, QuizResult, ReferenceMaterial, LabSimulation } from './types.ts';
+import { INITIAL_QUESTIONS, SIMULATIONS, ROOMS } from './constants.tsx';
 import { db, ref, onValue, push, remove, set } from './firebase.ts';
 
 const APP_VERSION = "6.2.0 - Gestão de Simulados";
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<ViewState>('home');
-  const [viewHistory, setViewHistory] = useState<ViewState[]>(['home']);
+  const [currentView, setCurrentView] = useState<ViewState>('room-selection');
+  const [viewHistory, setViewHistory] = useState<ViewState[]>(['room-selection']);
   
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
   const [quizFilteredQuestions, setQuizFilteredQuestions] = useState<Question[]>([]);
   
@@ -100,11 +102,26 @@ const App: React.FC = () => {
     setTimeout(() => setIsLoading(false), 2000);
   }, []);
 
+  // Nova função dedicada apenas para garantir a seleção da sala sem conflitos
+  const handleSelectRoom = (roomId: string) => {
+    setSelectedRoomId(roomId);
+    setCurrentView('home');
+    setViewHistory(['room-selection', 'home']);
+  };
+
   const handleNavigate = (view: ViewState) => {
     if (view === currentView) return; 
-    if (view === 'home') {
+
+    if (view === 'room-selection') {
       setSelectedDisciplineId(null);
-      setViewHistory(['home']);
+      setSelectedRoomId(null);
+      setViewHistory(['room-selection']);
+    } else if (view === 'home') {
+      setSelectedDisciplineId(null);
+      setViewHistory(prev => {
+        if (prev[prev.length - 1] === 'home') return prev;
+        return [...prev, 'home'];
+      });
     } else {
       setViewHistory(prev => [...prev, view]);
     }
@@ -121,6 +138,10 @@ const App: React.FC = () => {
       setCurrentView(prevView);
       if (prevView === 'home') {
         setSelectedDisciplineId(null);
+      }
+      if (prevView === 'room-selection') {
+        setSelectedDisciplineId(null);
+        setSelectedRoomId(null);
       }
       return newHistory;
     });
@@ -158,7 +179,9 @@ const App: React.FC = () => {
     );
   }
 
+  const currentRoom = ROOMS.find(r => r.id === selectedRoomId);
   const currentDiscipline = disciplines.find(s => s.id === selectedDisciplineId);
+  const roomDisciplines = disciplines.filter(d => d.roomId === selectedRoomId);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
@@ -166,6 +189,7 @@ const App: React.FC = () => {
         onNavigate={handleNavigate} 
         onBack={handleBack}
         canGoBack={viewHistory.length > 1}
+        hasRoomSelected={!!selectedRoomId}
       />
 
       <div className={`py-1 px-4 flex justify-center items-center gap-2 border-b transition-all duration-700 ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
@@ -176,7 +200,21 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex-grow">
-        {currentView === 'home' && <HomeView disciplines={disciplines} onSelectDiscipline={handleSelectDiscipline} />}
+        {currentView === 'room-selection' && (
+          <RoomSelectionView 
+            rooms={ROOMS} 
+            onSelectRoom={handleSelectRoom} 
+          />
+        )}
+
+        {currentView === 'home' && currentRoom && (
+          <HomeView 
+            room={currentRoom} 
+            disciplines={roomDisciplines} 
+            onSelectDiscipline={handleSelectDiscipline} 
+          />
+        )}
+        
         {currentView === 'career-quiz' && <CareerQuiz onBack={handleBack} />}
         
         {currentView === 'discipline' && selectedDisciplineId && (
@@ -334,7 +372,6 @@ const App: React.FC = () => {
             onRemoveQuestion={(id) => { const q = questions.find(item => item.id === id); if (db && q?.firebaseId) remove(ref(db, `questions/${q.firebaseId}`)); }}
             onRemoveOsceStation={(id) => { const o = osceStations.find(item => item.id === id); if (db && o?.firebaseId) remove(ref(db, `osce/${o.firebaseId}`)); }}
             
-            // NOVO: Exclusão global de um Simulado Teórico inteiro
             onRemoveQuiz={(quizTitle, discId) => {
               if (db) {
                 questions.forEach(q => {
@@ -392,12 +429,9 @@ const App: React.FC = () => {
 
       <footer className="bg-white border-t py-8 flex flex-col items-center gap-2 mt-auto text-center px-4">
         <div className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">© 2026 Luna MedClass</div>
-        
-        {/* Aviso de portal independente */}
         <div className="text-gray-500 text-[9px] font-medium uppercase max-w-md my-1">
           Produção independente. Este portal não é um canal ou ferramenta oficial de nenhuma instituição de ensino.
         </div>
-        
         <div className="text-[#D4A017] text-[11px] font-black uppercase tracking-[0.2em] mb-1">Desenvolvido por Fabrício Luna</div>
         <div className="text-[8px] text-gray-300 font-black uppercase tracking-tighter">Build {APP_VERSION}</div>
       </footer>

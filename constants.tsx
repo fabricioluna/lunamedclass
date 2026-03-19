@@ -1,4 +1,4 @@
-import { Question, SimulationInfo } from './types';
+import { Question, SimulationInfo, Room } from './types';
 
 export const THEME = {
   primary: '#003366',
@@ -8,9 +8,31 @@ export const THEME = {
   text: '#333333'
 };
 
+// NOVO: Definição das Salas
+export const ROOMS: Room[] = [
+  {
+    id: 'turma8',
+    name: 'Turma VIII - FMS',
+    description: '2º Período - Ciclo da Homeostase e Prática Clínica Básica.',
+    semester: '2026.1',
+    workload: '610h',
+    icon: '🎓'
+  },
+  {
+    id: 'turma9',
+    name: 'Turma IX / HabMed 1',
+    description: '1º Período - Introdução à Medicina, Locomoção e Habilidades Básicas.',
+    semester: '2026.1',
+    workload: '420h',
+    icon: '🌱'
+  }
+];
+
 export const SIMULATIONS: SimulationInfo[] = [
+  // --- SALA: TURMA 8 ---
   {
     id: 'uciv',
+    roomId: 'turma8',
     title: 'UCIV - Funções Biológicas',
     description: 'Controle neuroendócrino, cardiovascular, respiratório, renal, digestório e equilíbrio ácido-básico.',
     meta: '110h • Ciclo da Homeostase',
@@ -25,59 +47,18 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Biofísica e Bioquímica'
     ],
     references: [
-      { 
-        id: 'ref_fisio1', 
-        title: 'Tratado de Fisiologia Médica (Guyton & Hall)', 
-        author: 'John E. Hall', 
-        type: 'link', 
-        url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214483' 
-      },
-      { 
-        id: 'ref_fisio2', 
-        title: 'Fisiologia (Linda Costanzo)', 
-        author: 'Linda S. Costanzo', 
-        type: 'link', 
-        url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214442' 
-      },
-      { 
-        id: 'ref_anato1', 
-        title: 'Anatomia Orientada para a Clínica (Moore)', 
-        author: 'Keith L. Moore', 
-        type: 'link', 
-        url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214507' 
-      },
-      { 
-        id: 'ref_anato2', 
-        title: 'Atlas de Anatomia Humana (Netter)', 
-        author: 'Frank H. Netter', 
-        type: 'link', 
-        url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214509' 
-      },
-      { 
-        id: 'ref_bioq1', 
-        title: 'Princípios de Bioquímica (Lehninger)', 
-        author: 'David L. Nelson', 
-        type: 'link', 
-        url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/213429' 
-      },
-      { 
-        id: 'ref_histo1', 
-        title: 'Histologia Básica (Junqueira & Carneiro)', 
-        author: 'L.C. Junqueira', 
-        type: 'link', 
-        url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214487' 
-      },
-      { 
-        id: 'ref_embrio1', 
-        title: 'Embriologia Clínica (Moore)', 
-        author: 'Keith L. Moore', 
-        type: 'link', 
-        url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214458' 
-      }
+      { id: 'ref_fisio1', title: 'Tratado de Fisiologia Médica (Guyton & Hall)', author: 'John E. Hall', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214483' },
+      { id: 'ref_fisio2', title: 'Fisiologia (Linda Costanzo)', author: 'Linda S. Costanzo', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214442' },
+      { id: 'ref_anato1', title: 'Anatomia Orientada para a Clínica (Moore)', author: 'Keith L. Moore', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214507' },
+      { id: 'ref_anato2', title: 'Atlas de Anatomia Humana (Netter)', author: 'Frank H. Netter', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214509' },
+      { id: 'ref_bioq1', title: 'Princípios de Bioquímica (Lehninger)', author: 'David L. Nelson', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/213429' },
+      { id: 'ref_histo1', title: 'Histologia Básica (Junqueira & Carneiro)', author: 'L.C. Junqueira', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214487' },
+      { id: 'ref_embrio1', title: 'Embriologia Clínica (Moore)', author: 'Keith L. Moore', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/214458' }
     ]
   },
   {
     id: 'hm2',
+    roomId: 'turma8',
     title: 'HM2 - Habilidades Médicas II',
     description: 'Relacionamento médico-paciente, semiologia, anamnese e exame físico geral.',
     meta: '120h • Prática Clínica',
@@ -98,6 +79,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'iesc2',
+    roomId: 'turma8',
     title: 'IESC2 - Saúde na Comunidade II',
     description: 'Vigilância em saúde, acolhimento na UBS, índices epidemiológicos e fluxos de referência.',
     meta: '80h • Gestão e Sociedade',
@@ -118,6 +100,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'uccg2_3',
+    roomId: 'turma8',
     title: 'UCCG2-3 - Análise Social e Relações Étnico-Raciais',
     description: 'Conceitos de sociologia, diversidade, racismo estrutural, e determinantes sociais da saúde.',
     meta: '60h • Ciências Humanas',
@@ -136,6 +119,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'uccg2_4',
+    roomId: 'turma8',
     title: 'UCCG2-4 - Hist., Sociedade e Cultura Afro e Indígena',
     description: 'Contexto histórico e cultural das populações afro-brasileiras e indígenas e seus impactos na saúde.',
     meta: '60h • Cultura e Saúde',
@@ -153,6 +137,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'ucv',
+    roomId: 'turma8',
     title: 'UCV - Mecanismos de Agressão e Defesa',
     description: 'Agentes agressores, imunidade inata e adquirida, inflamação, lesão celular e hipersensibilidade.',
     meta: '110h • Mecanismos de Lesão',
@@ -169,6 +154,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'ucvi',
+    roomId: 'turma8',
     title: 'UCVI - Percepção, Consciência e Emoção',
     description: 'Neuroanatomia, neurofisiologia e bases biológicas do comportamento humano, psiquiatria e neurologia.',
     meta: '110h • Neurociências',
@@ -179,6 +165,40 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Neurofisiologia da Consciência',
       'Bases da Emoção e Comportamento',
       'Psicofarmacologia Básica'
+    ],
+    references: []
+  },
+
+  // --- SALA: TURMA 9 / HABMED 1 ---
+  {
+    id: 'hm1',
+    roomId: 'turma9',
+    title: 'HM1 - Habilidades Médicas I',
+    description: 'Introdução à prática médica, sinais vitais e bases da relação médico-paciente.',
+    meta: '120h • Prática Clínica',
+    icon: '🩺',
+    status: 'active',
+    themes: [
+      'Aferição de Sinais Vitais',
+      'Lavagem de Mãos e Biossegurança',
+      'Introdução à Anamnese',
+      'Apresentação Profissional'
+    ],
+    references: []
+  },
+  {
+    id: 'uc3',
+    roomId: 'turma9',
+    title: 'UCIII - Locomoção e Preensão',
+    description: 'Anatomia e fisiologia do sistema musculoesquelético e tecidos conjuntivos.',
+    meta: '110h • Sistema Locomotor',
+    icon: '🦴',
+    status: 'active',
+    themes: [
+      'Osteologia Básica',
+      'Miologia e Articulações',
+      'Nervos Periféricos',
+      'Histologia do Osso e Músculo'
     ],
     references: []
   }

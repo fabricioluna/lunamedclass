@@ -1,6 +1,15 @@
-export type ViewState = 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz';
+export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz';
 
-// NOVO: Para gravar os detalhes de cada questão respondida no Analytics
+// NOVO: Interface para as Salas (Turmas)
+export interface Room {
+  id: string;
+  name: string;
+  description: string;
+  semester: string;
+  workload: string;
+  icon: string;
+}
+
 export interface QuizDetail {
   questionId: string;
   isCorrect: boolean;
@@ -39,6 +48,7 @@ export interface OsceStation {
 
 export interface SimulationInfo {
   id: string;
+  roomId: string; // NOVO: Relaciona a disciplina a uma sala específica
   title: string;
   description: string;
   meta: string;
@@ -62,7 +72,7 @@ export interface Summary {
   description?: string;
   size?: string;
   createdAt?: any;
-  views?: number; // NOVO: Contador de cliques/visualizações no material
+  views?: number; 
 }
 
 export interface QuizResult {
@@ -71,10 +81,10 @@ export interface QuizResult {
   total: number;
   date: string;
   discipline?: string;
-  quizTitle?: string; // NOVO: Nome do simulado
-  type?: 'teorico' | 'laboratorio' | 'osce'; // NOVO: Tipo de simulado
-  timeSpent?: number; // NOVO: Tempo gasto em segundos
-  details?: QuizDetail[]; // NOVO: Mapeamento de acertos/erros por questão
+  quizTitle?: string; 
+  type?: 'teorico' | 'laboratorio' | 'osce'; 
+  timeSpent?: number; 
+  details?: QuizDetail[]; 
 }
 
 export interface ReferenceMaterial {
@@ -105,5 +115,5 @@ export interface LabSimulation {
   description: string;
   questions: LabQuestion[];
   createdAt?: number;
-  views?: number; // NOVO: Contador de quantas vezes o laboratório foi aberto
+  views?: number; 
 }

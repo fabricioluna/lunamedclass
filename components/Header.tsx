@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { ViewState } from '../types';
-import { ArrowLeft } from 'lucide-react'; // Importamos o ícone de voltar
+import { ViewState } from '../types.ts';
+import { ArrowLeft } from 'lucide-react';
 
 interface HeaderProps {
   onNavigate: (view: ViewState) => void;
   onBack: () => void;
   canGoBack: boolean;
+  hasRoomSelected?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack, hasRoomSelected }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigateTo = (view: ViewState) => {
@@ -59,6 +60,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack }) => {
 
           {/* Menu Desktop */}
           <nav className="hidden md:flex items-center gap-4">
+            {hasRoomSelected && (
+              <button 
+                onClick={() => navigateTo('room-selection')}
+                className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-white/10 text-white px-5 py-2 rounded-lg hover:bg-white hover:text-[#003366] transition-all whitespace-nowrap"
+              >
+                🚪 TROCAR SALA
+              </button>
+            )}
             <button 
               onClick={() => navigateTo('career-quiz')}
               className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] px-5 py-2 rounded-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all whitespace-nowrap shadow-sm"
@@ -99,6 +108,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack }) => {
       {isMenuOpen && (
         <div className="md:hidden bg-[#002244] border-t border-[#D4A017]/20 p-4 animate-in slide-in-from-top duration-300">
           <div className="flex flex-col gap-3">
+            {hasRoomSelected && (
+              <button 
+                onClick={() => navigateTo('room-selection')}
+                className="w-full text-left py-3 px-4 text-sm font-black bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+              >
+                🚪 TROCAR DE SALA
+              </button>
+            )}
             <button 
               onClick={() => navigateTo('career-quiz')}
               className="w-full text-left py-3 px-4 text-sm font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] rounded-lg hover:bg-[#D4A017]/10 transition-all"
