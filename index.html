@@ -3,19 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="icon" type="image/jpeg" media="(prefers-color-scheme: light)" href="/icoclaro.jpg" />
+    <link rel="icon" type="image/jpeg" media="(prefers-color-scheme: dark)" href="/icoescuro.jpg" />
     
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/icoclaro.jpg" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Luna MedClass - Portal acadêmico independente de suporte à medicina. Simulados, OSCE e calculadoras." />
     
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#003366" />
-    
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Luna MedClass" />
     <link rel="apple-touch-icon" href="/logo.png" />
 
     <title>Luna MedClass - Seu Monitor Virtual</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+      /* Prevenção de flashes brancos durante o carregamento */
+      body {
+        background-color: #f4f7f6;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
