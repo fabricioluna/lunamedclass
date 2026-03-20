@@ -77,7 +77,8 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
           </p>
         </button>
 
-        {disciplineId === 'hm2' && (
+        {/* PACIENTE VIRTUAL (HM2 ou HM1) */}
+        {(disciplineId === 'hm2' || disciplineId === 'hm1') && (
           <button onClick={() => onSelectOption('osce-ai-setup')} className="bg-gradient-to-br from-[#003366] to-[#001f3f] text-white p-6 md:p-8 rounded-[2rem] text-left hover:scale-105 transition-all shadow-xl group relative overflow-hidden md:col-span-2">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
             <div className="flex items-center justify-between mb-4 relative z-10">
