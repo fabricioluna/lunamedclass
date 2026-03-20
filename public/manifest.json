@@ -8,15 +8,15 @@
   "description": "Portal de estudos, simulados e OSCE.",
   "icons": [
     {
-      "src": "/img/logo.png",
+      "src": "/icoclaro.jpg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     },
     {
-      "src": "/img/logo.png",
+      "src": "/icoclaro.jpg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]
