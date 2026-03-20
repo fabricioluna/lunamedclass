@@ -187,14 +187,14 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Abordagem Inicial em Urgências (ABCDE)'
     ],
     references: [
-      { id: 'ref1', title: 'Normas, rotinas e técnicas de enfermagem (5ª ed.)', author: 'MOTTA AL', type: 'book' },
-      { id: 'ref2', title: 'Avaliação nutricional de coletividades (4ª ed.)', author: 'VASCONCELOS FAG', type: 'book' },
-      { id: 'ref3', title: 'Avaliação antropométrica em Pediatria: guia prático para profissionais da saúde', author: 'BARROS SP et al.', type: 'book' },
-      { id: 'ref4', title: 'Curso básico de controle de infecção hospitalar (E-book)', author: 'BRASIL. Ministério da Saúde', type: 'book' },
-      { id: 'ref5', title: 'Metodologia científica (6ª ed.)', author: 'CERVO AL et al.', type: 'book' },
-      { id: 'ref6', title: 'Semiologia para enfermagem: conceitos e prática clínica', author: 'JENSEN S', type: 'book' },
-      { id: 'ref7', title: 'Suporte básico de vida: primeiro atendimento na emergência para profissionais da saúde', author: 'QUILICI AP et al.', type: 'book' },
-      { id: 'ref8', title: 'Vigilância Epidemiológica das infecções hospitalares no estado de São Paulo', author: 'Governo de São Paulo. Coord. de Controle de Doenças.', type: 'article' }
+      { id: 'ref1', title: 'Normas, rotinas e técnicas de enfermagem (5ª ed.)', author: 'MOTTA AL', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/212535' },
+      { id: 'ref2', title: 'Avaliação nutricional de coletividades (4ª ed.)', author: 'VASCONCELOS FAG', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/43630' },
+      { id: 'ref3', title: 'Avaliação antropométrica em Pediatria: guia prático para profissionais da saúde', author: 'BARROS SP et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/43628' },
+      { id: 'ref4', title: 'Curso básico de controle de infecção hospitalar (E-book)', author: 'BRASIL. Ministério da Saúde', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/58548' },
+      { id: 'ref5', title: 'Metodologia científica (6ª ed.)', author: 'CERVO AL et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/83454' },
+      { id: 'ref6', title: 'Semiologia para enfermagem: conceitos e prática clínica', author: 'JENSEN S', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/209547' },
+      { id: 'ref7', title: 'Suporte básico de vida: primeiro atendimento na emergência para profissionais da saúde', author: 'QUILICI AP et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/209736' },
+      { id: 'ref8', title: 'Vigilância Epidemiológica das infecções hospitalares no estado de São Paulo', author: 'Governo de São Paulo. Coord. de Controle de Doenças.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/58605' }
     ]
   }
 ];

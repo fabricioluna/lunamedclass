@@ -102,11 +102,23 @@ const App: React.FC = () => {
     setTimeout(() => setIsLoading(false), 2000);
   }, []);
 
-  // Nova função dedicada apenas para garantir a seleção da sala sem conflitos
+  // LÓGICA ATUALIZADA: Pula a Home se houver apenas 1 disciplina
   const handleSelectRoom = (roomId: string) => {
     setSelectedRoomId(roomId);
-    setCurrentView('home');
-    setViewHistory(['room-selection', 'home']);
+    
+    // Verifica quantas disciplinas existem para a sala selecionada
+    const roomDiscs = disciplines.filter(d => d.roomId === roomId);
+    
+    if (roomDiscs.length === 1) {
+      // Se tiver apenas 1 disciplina, pula a tela 'home' e vai direto pro conteúdo da disciplina
+      setSelectedDisciplineId(roomDiscs[0].id);
+      setCurrentView('discipline');
+      setViewHistory(['room-selection', 'discipline']);
+    } else {
+      // Se tiver mais de uma, fluxo normal indo para a tela 'home'
+      setCurrentView('home');
+      setViewHistory(['room-selection', 'home']);
+    }
   };
 
   const handleNavigate = (view: ViewState) => {

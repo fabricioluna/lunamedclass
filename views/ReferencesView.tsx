@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { SimulationInfo } from '../types';
+import { SimulationInfo } from '../types.ts';
+import { SIMULATIONS } from '../constants.tsx'; // Importamos as simulações locais
 
 interface ReferencesViewProps {
   discipline: SimulationInfo;
@@ -8,7 +8,10 @@ interface ReferencesViewProps {
 }
 
 const ReferencesView: React.FC<ReferencesViewProps> = ({ discipline, onBack }) => {
-  const refs = discipline.references || [];
+  // 💡 A MÁGICA ACONTECE AQUI: 
+  // Ignoramos a versão do Firebase e forçamos a leitura do ficheiro constants.tsx atualizado!
+  const localDiscipline = SIMULATIONS.find(d => d.id === discipline.id);
+  const refs = localDiscipline?.references || discipline.references || [];
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -37,7 +40,7 @@ const ReferencesView: React.FC<ReferencesViewProps> = ({ discipline, onBack }) =
         className="group flex items-center text-[#003366] font-bold mb-12 transition-all hover:text-[#D4A017]"
       >
         <span className="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
-        Voltar para {discipline.id.toUpperCase()}
+        Voltar para {discipline.title}
       </button>
 
       <div className="mb-12">
@@ -58,10 +61,10 @@ const ReferencesView: React.FC<ReferencesViewProps> = ({ discipline, onBack }) =
           refs.map((ref) => (
             <div 
               key={ref.id}
-              className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex items-center justify-between group gap-6"
+              className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex items-center justify-between group gap-6 flex-wrap md:flex-nowrap"
             >
               <div className="flex items-center gap-6">
-                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shrink-0">
                   {getIcon(ref.type)}
                 </div>
                 <div>
@@ -80,9 +83,9 @@ const ReferencesView: React.FC<ReferencesViewProps> = ({ discipline, onBack }) =
                   href={ref.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="bg-[#003366] text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#D4A017] hover:text-[#003366] transition-all shadow-lg whitespace-nowrap"
+                  className="bg-[#003366] text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#D4A017] hover:text-[#003366] transition-all shadow-lg whitespace-nowrap mt-4 md:mt-0 w-full md:w-auto text-center"
                 >
-                  Acessar Link
+                  Acessar Acervo
                 </a>
               )}
             </div>
