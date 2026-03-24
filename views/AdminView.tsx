@@ -130,10 +130,11 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [oscePreview, setOscePreview] = useState<OsceStation[] | null>(null);
 
   // ESTADOS DO PAINEL DE MATERIAIS EVOLUÍDO
+  const [matRoom, setMatRoom] = useState(''); // NOVO: Filtro de Sala no envio
   const [matDisc, setMatDisc] = useState('');
   const [matType, setMatType] = useState<'summary' | 'script' | 'other'>('summary');
   const [matTitle, setMatTitle] = useState('');
-  const [matAuthor, setMatAuthor] = useState(''); // NOVO: Campo de Autor
+  const [matAuthor, setMatAuthor] = useState('');
   const [matUrl, setMatUrl] = useState('');
   const [matUploadMode, setMatUploadMode] = useState<'file' | 'link'>('link');
   const [matFile, setMatFile] = useState<File | null>(null);
@@ -1425,9 +1426,17 @@ const AdminView: React.FC<AdminViewProps> = ({
             <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Publicar Material Oficial</h3>
             <form onSubmit={handlePublishAdminMaterial} className="space-y-4">
               
-              <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
+              {/* NOVO CAMPO: SALA */}
+              <select value={matRoom} onChange={e => { setMatRoom(e.target.value); setMatDisc(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
+                <option value="">Sala / Turma...</option>
+                {ROOMS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+
+              <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading || !matRoom}>
                 <option value="">Disciplina...</option>
-                {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+                {disciplines
+                  .filter(d => !matRoom || d.roomId === matRoom)
+                  .map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
               </select>
               
               <select value={matType} onChange={e => setMatType(e.target.value as any)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
@@ -1438,7 +1447,6 @@ const AdminView: React.FC<AdminViewProps> = ({
 
               <input type="text" placeholder="Título do Material" value={matTitle} onChange={e => setMatTitle(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading} />
               
-              {/* NOVO CAMPO: AUTOR */}
               <input type="text" placeholder="Autor (ex: João Silva)" value={matAuthor} onChange={e => setMatAuthor(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" disabled={isMatUploading} />
 
               <div className="flex p-1 bg-gray-100 rounded-xl mb-2 shadow-inner">
