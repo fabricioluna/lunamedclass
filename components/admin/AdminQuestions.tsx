@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Question, SimulationInfo } from '../../types';
 import { Trash2, Edit3, X } from 'lucide-react';
-import { parseResilientCSV } from '../../utils/csvHelper'; // <-- IMPORTAÇÃO AQUI
+import { parseResilientCSV } from '../../utils/csvHelper'; // Função agora vem exclusivamente do utilitário
 
 interface AdminQuestionsProps {
   questions: Question[];
@@ -67,6 +67,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
+        // Usa a função do csvHelper
         const lines = parseResilientCSV(text, 8); 
         
         const newQs: Question[] = lines.slice(1).map((line, idx) => {

@@ -69,7 +69,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'references' | 'materials' | 'themes' | 'lab'>('stats');
   
-  // ESTADOS GLOBAIS DE FILTRO DE ESTATÍSTICAS (Repassados para o AdminStats para manter o estado ao trocar de abas)
+  // ESTADOS GLOBAIS DE FILTRO DE ESTATÍSTICAS (Repassados para o AdminStats para manter estado ao mudar de aba)
   const [statsRoomFilter, setStatsRoomFilter] = useState(''); 
   const [statsDiscFilter, setStatsDiscFilter] = useState('');
   const [statsTypeFilter, setStatsTypeFilter] = useState('');

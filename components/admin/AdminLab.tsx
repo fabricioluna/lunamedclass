@@ -3,7 +3,7 @@ import { SimulationInfo, LabSimulation, LabQuestion } from '../../types';
 import { Trash2, Microscope, Loader2 } from 'lucide-react';
 import { firestoreDB, storage } from '../../firebase';
 import { deleteObject, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { parseResilientCSV } from '../../utils/csvHelper'; // <-- IMPORTAÇÃO AQUI
+import { parseResilientCSV } from '../../utils/csvHelper'; // Usando a função global agora
 
 interface AdminLabProps {
   disciplines: SimulationInfo[];
