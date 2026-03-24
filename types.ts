@@ -7,7 +7,7 @@ export interface Room {
   semester: string;
   workload: string;
   icon: string;
-  crest?: string; // ESTA LINHA É A CHAVE PARA SUMIR O ERRO
+  crest?: string; 
 }
 
 export interface QuizDetail {
@@ -73,6 +73,7 @@ export interface Summary {
   size?: string;
   createdAt?: any;
   views?: number; 
+  isVerified?: boolean; // NOVO: Flag para materiais postados/revisados por Monitores ou Admin
 }
 
 export interface QuizResult {

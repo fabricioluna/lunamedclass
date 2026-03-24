@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Loader2, Search, Plus, FileCheck, X, User, CheckCircle2, Link as LinkIcon, Cloud } from 'lucide-react';
+import { Download, Loader2, Search, Plus, FileCheck, X, User, CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck } from 'lucide-react';
 import { firestoreDB as db, storage } from '../firebase.ts';
 import { collection, addDoc, query, where, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -96,7 +96,8 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
           date: new Date().toLocaleDateString('pt-BR'),
           label: selectedFile.name.split('.').pop()?.toUpperCase() || 'PDF',
           size: fileSize,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          isVerified: false // Material de aluno não é verificado por padrão
         });
 
       } else {
@@ -113,7 +114,8 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
           date: new Date().toLocaleDateString('pt-BR'),
           label: 'LINK',
           size: 'Nuvem Externa',
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          isVerified: false // Material de aluno não é verificado por padrão
         });
       }
 
@@ -224,16 +226,23 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
       </div>
 
       <div className="space-y-4 text-left">
-        {summaries.filter(s => s.title.toLowerCase().includes(searchTerm.toLowerCase())).map((s) => (
-          <div key={s.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 flex items-start justify-between group hover:border-[#D4A017] transition-all shadow-sm">
+        {summaries.filter(s => s.title?.toLowerCase().includes(searchTerm.toLowerCase())).map((s) => (
+          <div key={s.id} className={`bg-white p-6 rounded-[2.5rem] border flex items-start justify-between group transition-all shadow-sm ${s.isVerified ? 'border-emerald-200 bg-emerald-50/10' : 'border-gray-100 hover:border-[#D4A017]'}`}>
             <div className="flex items-start gap-5">
-              <div className="w-14 h-14 bg-[#003366]/5 rounded-2xl flex items-center justify-center text-[#003366] group-hover:bg-[#003366] group-hover:text-white transition-all shrink-0">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${s.isVerified ? 'bg-emerald-100 text-emerald-700' : 'bg-[#003366]/5 text-[#003366] group-hover:bg-[#003366] group-hover:text-white'}`}>
                 {s.label === 'LINK' ? <LinkIcon size={28} /> : <FileCheck size={28} />}
               </div>
               <div>
-                <h3 className="font-black text-[#003366] text-lg leading-tight">{s.title}</h3>
+                <div className="flex items-center gap-3 mb-1 flex-wrap">
+                  <h3 className="font-black text-[#003366] text-lg leading-tight">{s.title}</h3>
+                  {s.isVerified && (
+                    <span className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest shadow-sm" title="Material Oficial / Revisado por Monitores">
+                      <BadgeCheck size={12} /> Revisado
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
-                  <div className="flex items-center gap-1 text-[10px] font-black text-[#D4A017] uppercase tracking-wider"><User size={12} /> {s.author}</div>
+                  <div className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-wider ${s.isVerified ? 'text-emerald-600' : 'text-[#D4A017]'}`}><User size={12} /> {s.author}</div>
                   <span className="text-gray-300">|</span>
                   <span className="text-[10px] font-bold text-gray-400 uppercase">{s.date}</span>
                   
@@ -251,7 +260,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
                 {s.description && <div className="bg-gray-50 p-3 rounded-xl text-xs text-gray-500 italic">"{s.description}"</div>}
               </div>
             </div>
-            <a href={s.url} target="_blank" rel="noreferrer" className="bg-gray-50 hover:bg-[#D4A017] text-[#003366] hover:text-white p-4 rounded-xl transition-all shrink-0">
+            <a href={s.url} target="_blank" rel="noreferrer" className={`p-4 rounded-xl transition-all shrink-0 ${s.isVerified ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white' : 'bg-gray-50 hover:bg-[#D4A017] text-[#003366] hover:text-white'}`}>
               {s.label === 'LINK' ? <Cloud size={24} /> : <Download size={24} />}
             </a>
           </div>

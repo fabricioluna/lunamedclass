@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial, LabSimulation, LabQuestion } from '../types.ts';
-import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Loader2, Edit3, X, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Loader2, Edit3, X, TrendingUp, AlertTriangle, BadgeCheck } from 'lucide-react';
 
 // IMPORTAÇÕES DO FIREBASE E CONSTANTES
 import { firestoreDB, storage } from '../firebase.ts';
@@ -56,6 +56,14 @@ const parseResilientCSV = (text: string, expectedColumns: number) => {
   }
   if (currentLine) mergedLines.push(currentLine);
   return mergedLines;
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
 const AdminView: React.FC<AdminViewProps> = ({
@@ -121,10 +129,16 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [osceFile, setOsceFile] = useState<File | null>(null);
   const [oscePreview, setOscePreview] = useState<OsceStation[] | null>(null);
 
+  // ESTADOS DO PAINEL DE MATERIAIS EVOLUÍDO
   const [matDisc, setMatDisc] = useState('');
   const [matType, setMatType] = useState<'summary' | 'script' | 'other'>('summary');
   const [matTitle, setMatTitle] = useState('');
+  const [matAuthor, setMatAuthor] = useState(''); // NOVO: Campo de Autor
   const [matUrl, setMatUrl] = useState('');
+  const [matUploadMode, setMatUploadMode] = useState<'file' | 'link'>('link');
+  const [matFile, setMatFile] = useState<File | null>(null);
+  const [matIsVerified, setMatIsVerified] = useState(true);
+  const [isMatUploading, setIsMatUploading] = useState(false);
 
   const [liveMaterials, setLiveMaterials] = useState<Summary[]>([]);
 
@@ -213,26 +227,74 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   const handlePublishAdminMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!matDisc || !matTitle || !matUrl) return;
+    if (!matDisc || !matTitle) return alert("Preencha a disciplina e o título.");
+
+    const finalAuthor = matAuthor.trim() !== '' 
+      ? matAuthor 
+      : (matIsVerified ? "Monitoria / Equipe Luna" : "Administração");
 
     try {
-      await addDoc(collection(firestoreDB, "materials"), {
-        title: matTitle,
-        author: "Administração",
-        description: "Adicionado via Painel Admin",
-        type: matType,
-        disciplineId: matDisc,
-        url: matUrl,
-        date: new Date().toLocaleDateString('pt-BR'),
-        label: 'LINK',
-        size: 'Nuvem',
-        createdAt: serverTimestamp()
-      });
-      setMatTitle(''); setMatUrl('');
-      alert('Material publicado com sucesso!');
+      setIsMatUploading(true);
+
+      if (matUploadMode === 'file') {
+        if (!matFile) {
+          setIsMatUploading(false);
+          return alert("Selecione um arquivo para enviar.");
+        }
+
+        const sRef = storageRef(storage, `materials/${matDisc}/${Date.now()}_${matFile.name}`);
+        const snap = await uploadBytes(sRef, matFile);
+        const url = await getDownloadURL(snap.ref);
+        const fileSize = formatFileSize(matFile.size);
+
+        await addDoc(collection(firestoreDB, "materials"), {
+          title: matTitle,
+          author: finalAuthor,
+          description: "Adicionado via Painel Admin",
+          type: matType,
+          disciplineId: matDisc,
+          url: url,
+          date: new Date().toLocaleDateString('pt-BR'),
+          label: matFile.name.split('.').pop()?.toUpperCase() || 'ARQUIVO',
+          size: fileSize,
+          createdAt: serverTimestamp(),
+          isVerified: matIsVerified 
+        });
+
+      } else {
+        if (!matUrl) {
+          setIsMatUploading(false);
+          return alert("Insira o link de compartilhamento.");
+        }
+
+        await addDoc(collection(firestoreDB, "materials"), {
+          title: matTitle,
+          author: finalAuthor,
+          description: "Adicionado via Painel Admin",
+          type: matType,
+          disciplineId: matDisc,
+          url: matUrl,
+          date: new Date().toLocaleDateString('pt-BR'),
+          label: 'LINK',
+          size: 'Nuvem Externa',
+          createdAt: serverTimestamp(),
+          isVerified: matIsVerified 
+        });
+      }
+
+      setMatTitle(''); 
+      setMatAuthor('');
+      setMatUrl(''); 
+      setMatFile(null);
+      alert(`Material ${matIsVerified ? 'Oficial ' : ''}publicado com sucesso!`);
+      const fileInput = document.getElementById('adminFileInput') as HTMLInputElement;
+      if(fileInput) fileInput.value = '';
+
     } catch (error) {
       console.error(error);
-      alert('Erro ao publicar material.');
+      alert('Erro ao publicar material. Verifique a conexão com o Firebase.');
+    } finally {
+      setIsMatUploading(false);
     }
   };
 
@@ -1360,23 +1422,52 @@ const AdminView: React.FC<AdminViewProps> = ({
       {activeTab === 'materials' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
           <div className="lg:col-span-4 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
-            <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Publicar Material</h3>
+            <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Publicar Material Oficial</h3>
             <form onSubmit={handlePublishAdminMaterial} className="space-y-4">
-              <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required>
+              
+              <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
                 <option value="">Disciplina...</option>
                 {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
               </select>
               
-              <select value={matType} onChange={e => setMatType(e.target.value as any)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required>
+              <select value={matType} onChange={e => setMatType(e.target.value as any)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
                 <option value="summary">Resumo Teórico</option>
                 <option value="script">Roteiro de Prática</option>
                 <option value="other">Outro / Material Extra</option>
               </select>
 
-              <input type="text" placeholder="Título do Material" value={matTitle} onChange={e => setMatTitle(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required />
-              <input type="url" placeholder="Link (Drive, Youtube...)" value={matUrl} onChange={e => setMatUrl(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" required />
+              <input type="text" placeholder="Título do Material" value={matTitle} onChange={e => setMatTitle(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading} />
               
-              <button type="submit" className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all">Publicar Material 🚀</button>
+              {/* NOVO CAMPO: AUTOR */}
+              <input type="text" placeholder="Autor (ex: João Silva)" value={matAuthor} onChange={e => setMatAuthor(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" disabled={isMatUploading} />
+
+              <div className="flex p-1 bg-gray-100 rounded-xl mb-2 shadow-inner">
+                <button type="button" onClick={() => setMatUploadMode('link')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${matUploadMode === 'link' ? 'bg-white text-[#003366] shadow-sm' : 'text-gray-500 hover:text-[#003366]'}`} disabled={isMatUploading}>Link (Nuvem)</button>
+                <button type="button" onClick={() => setMatUploadMode('file')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${matUploadMode === 'file' ? 'bg-white text-[#003366] shadow-sm' : 'text-gray-500 hover:text-[#003366]'}`} disabled={isMatUploading}>Arquivo Local</button>
+              </div>
+
+              {matUploadMode === 'link' ? (
+                <input type="url" placeholder="Link Compartilhado (Drive, Youtube...)" value={matUrl} onChange={e => setMatUrl(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading} />
+              ) : (
+                <div className="bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
+                  <label className="block text-[10px] font-black uppercase text-[#003366] mb-2 cursor-pointer">
+                    Selecionar Arquivo PDF / DOCX
+                    <input id="adminFileInput" type="file" onChange={e => setMatFile(e.target.files ? e.target.files[0] : null)} className="w-full text-xs text-gray-700 mt-2" required disabled={isMatUploading} />
+                  </label>
+                </div>
+              )}
+
+              <label className="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl cursor-pointer border border-emerald-100 transition-all hover:bg-emerald-100 mt-2">
+                <input type="checkbox" checked={matIsVerified} onChange={e => setMatIsVerified(e.target.checked)} className="w-5 h-5 accent-emerald-600" disabled={isMatUploading}/>
+                <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest flex items-center gap-1">
+                  Selo de Verificado <BadgeCheck size={14}/>
+                </span>
+              </label>
+
+              <button type="submit" disabled={isMatUploading} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all flex justify-center items-center gap-2 mt-4">
+                {isMatUploading ? <Loader2 size={16} className="animate-spin"/> : null}
+                {isMatUploading ? 'Enviando...' : 'Publicar Material 🚀'}
+              </button>
             </form>
           </div>
           <div className="lg:col-span-8 bg-white p-8 rounded-[2.5rem] border shadow-sm">
@@ -1404,7 +1495,10 @@ const AdminView: React.FC<AdminViewProps> = ({
                     <div className="flex items-center gap-4">
                        <span className="text-2xl">{s.label === 'LINK' ? '🔗' : '📄'}</span>
                        <div>
-                          <p className="text-sm font-bold text-[#003366]">{s.title || s.label}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-[#003366]">{s.title || s.label}</p>
+                            {s.isVerified && <BadgeCheck size={14} className="text-emerald-500" title="Material Verificado"/>}
+                          </div>
                           <p className="text-[9px] font-black uppercase text-gray-400 mt-1">
                             {s.disciplineId} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date} {s.author ? `• por ${s.author}` : ''}
                           </p>
