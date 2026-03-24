@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Question, OsceStation, SimulationInfo, Summary, QuizResult, ReferenceMaterial, LabSimulation, LabQuestion } from '../types.ts';
-import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Loader2, Edit3, X, TrendingUp, AlertTriangle, BadgeCheck } from 'lucide-react';
+import { Trash2, Plus, BookOpen, Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Loader2, Edit3, X, BadgeCheck } from 'lucide-react';
+
+// IMPORTAÇÕES DE COMPONENTES MODULARIZADOS
+import AdminStats from '../components/admin/AdminStats.tsx';
+import AdminMaterials from '../components/admin/AdminMaterials.tsx';
 
 // IMPORTAÇÕES DO FIREBASE E CONSTANTES
-import { firestoreDB, storage } from '../firebase.ts';
-import { collection, query, onSnapshot, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { storage } from '../firebase.ts';
 import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { ROOMS } from '../constants.tsx';
 
 interface AdminViewProps {
   questions: Question[];
@@ -58,14 +60,6 @@ const parseResilientCSV = (text: string, expectedColumns: number) => {
   return mergedLines;
 };
 
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-};
-
 const AdminView: React.FC<AdminViewProps> = ({
   questions,
   osceStations,
@@ -95,7 +89,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'references' | 'materials' | 'themes' | 'lab'>('stats');
   
-  // ESTADOS DE FILTRO DE ESTATÍSTICAS
+  // ESTADOS GLOBAIS DE FILTRO DE ESTATÍSTICAS (Repassados para AdminStats)
   const [statsRoomFilter, setStatsRoomFilter] = useState(''); 
   const [statsDiscFilter, setStatsDiscFilter] = useState('');
   const [statsTypeFilter, setStatsTypeFilter] = useState('');
@@ -108,8 +102,6 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [discFilterOsce, setDiscFilterOsce] = useState(''); 
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
 
-  const [discFilterMat, setDiscFilterMat] = useState(''); 
-  const [discFilterLab, setDiscFilterLab] = useState('');
   const [selectedDiscId, setSelectedDiscId] = useState('');
   const [newTheme, setNewTheme] = useState('');
   
@@ -128,20 +120,6 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [osceTheme, setOsceTheme] = useState('');
   const [osceFile, setOsceFile] = useState<File | null>(null);
   const [oscePreview, setOscePreview] = useState<OsceStation[] | null>(null);
-
-  // ESTADOS DO PAINEL DE MATERIAIS EVOLUÍDO
-  const [matRoom, setMatRoom] = useState(''); // NOVO: Filtro de Sala no envio
-  const [matDisc, setMatDisc] = useState('');
-  const [matType, setMatType] = useState<'summary' | 'script' | 'other'>('summary');
-  const [matTitle, setMatTitle] = useState('');
-  const [matAuthor, setMatAuthor] = useState('');
-  const [matUrl, setMatUrl] = useState('');
-  const [matUploadMode, setMatUploadMode] = useState<'file' | 'link'>('link');
-  const [matFile, setMatFile] = useState<File | null>(null);
-  const [matIsVerified, setMatIsVerified] = useState(true);
-  const [isMatUploading, setIsMatUploading] = useState(false);
-
-  const [liveMaterials, setLiveMaterials] = useState<Summary[]>([]);
 
   const [labDisc, setLabDisc] = useState('');
   const [labTitle, setLabTitle] = useState('');
@@ -163,20 +141,6 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [mqOptions, setMqOptions] = useState<string[]>(['', '', '', '']);
   const [mqAnswer, setMqAnswer] = useState(0);
   const [mqExplanation, setMqExplanation] = useState('');
-
-  useEffect(() => {
-    const q = query(collection(firestoreDB, "materials"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Summary[];
-      const sortedDocs = docs.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
-      setLiveMaterials(sortedDocs);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,118 +188,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     if (!currentDisc) return;
     const updatedRefs = (currentDisc.references || []).filter(r => r.id !== refId);
     onUpdateReferences(selectedDiscId, updatedRefs);
-  };
-
-  const handlePublishAdminMaterial = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!matDisc || !matTitle) return alert("Preencha a disciplina e o título.");
-
-    const finalAuthor = matAuthor.trim() !== '' 
-      ? matAuthor 
-      : (matIsVerified ? "Monitoria / Equipe Luna" : "Administração");
-
-    try {
-      setIsMatUploading(true);
-
-      if (matUploadMode === 'file') {
-        if (!matFile) {
-          setIsMatUploading(false);
-          return alert("Selecione um arquivo para enviar.");
-        }
-
-        const sRef = storageRef(storage, `materials/${matDisc}/${Date.now()}_${matFile.name}`);
-        const snap = await uploadBytes(sRef, matFile);
-        const url = await getDownloadURL(snap.ref);
-        const fileSize = formatFileSize(matFile.size);
-
-        await addDoc(collection(firestoreDB, "materials"), {
-          title: matTitle,
-          author: finalAuthor,
-          description: "Adicionado via Painel Admin",
-          type: matType,
-          disciplineId: matDisc,
-          url: url,
-          date: new Date().toLocaleDateString('pt-BR'),
-          label: matFile.name.split('.').pop()?.toUpperCase() || 'ARQUIVO',
-          size: fileSize,
-          createdAt: serverTimestamp(),
-          isVerified: matIsVerified 
-        });
-
-      } else {
-        if (!matUrl) {
-          setIsMatUploading(false);
-          return alert("Insira o link de compartilhamento.");
-        }
-
-        await addDoc(collection(firestoreDB, "materials"), {
-          title: matTitle,
-          author: finalAuthor,
-          description: "Adicionado via Painel Admin",
-          type: matType,
-          disciplineId: matDisc,
-          url: matUrl,
-          date: new Date().toLocaleDateString('pt-BR'),
-          label: 'LINK',
-          size: 'Nuvem Externa',
-          createdAt: serverTimestamp(),
-          isVerified: matIsVerified 
-        });
-      }
-
-      setMatTitle(''); 
-      setMatAuthor('');
-      setMatUrl(''); 
-      setMatFile(null);
-      alert(`Material ${matIsVerified ? 'Oficial ' : ''}publicado com sucesso!`);
-      const fileInput = document.getElementById('adminFileInput') as HTMLInputElement;
-      if(fileInput) fileInput.value = '';
-
-    } catch (error) {
-      console.error(error);
-      alert('Erro ao publicar material. Verifique a conexão com o Firebase.');
-    } finally {
-      setIsMatUploading(false);
-    }
-  };
-
-  const handleDeleteLiveMaterial = async (mat: Summary) => {
-    if (!confirm(`Excluir permanentemente o material "${mat.title || mat.label}"?`)) return;
-    
-    try {
-      await deleteDoc(doc(firestoreDB, "materials", mat.id));
-      if (mat.url && mat.url.includes("firebasestorage")) {
-        try {
-          const fileRef = storageRef(storage, mat.url);
-          await deleteObject(fileRef);
-        } catch (storageErr) {
-          console.log("Arquivo físico não encontrado ou já deletado.");
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao deletar:", error);
-      alert("Erro ao excluir o material.");
-    }
-  };
-
-  const handleClearLiveMaterials = async () => {
-    const pass = prompt(`⚠️ AÇÃO DESTRUTIVA: Apagar os materiais ${discFilterMat ? 'da disciplina selecionada' : 'de TODAS as disciplinas'} e DESTRUIR OS ARQUIVOS PDFs DO SERVIDOR?\nDigite a senha (fmst8) para confirmar:`);
-    if (pass === 'fmst8') {
-      try {
-        const matsToDelete = liveMaterials.filter(m => !discFilterMat || m.disciplineId === discFilterMat);
-        for (const mat of matsToDelete) {
-          await deleteDoc(doc(firestoreDB, "materials", mat.id));
-          if (mat.url && mat.url.includes("firebasestorage")) {
-            try { await deleteObject(storageRef(storage, mat.url)); } catch (e) {}
-          }
-        }
-        alert("✅ Todos os materiais e arquivos foram apagados com sucesso.");
-      } catch (error) {
-        alert("Erro ao limpar materiais.");
-      }
-    } else if (pass !== null) {
-      alert("❌ Senha incorreta.");
-    }
   };
 
   const handleLabImport = async (e: React.FormEvent) => {
@@ -619,23 +471,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     setIsQuestionModalOpen(false);
   };
 
-  // =========================================================================
-  // MÁQUINA DE ANALYTICS EVOLUÍDA (Com Sala e Time-Series)
-  // =========================================================================
-  const availableStatTitles = useMemo(() => {
-    const titles = new Set<string>();
-    quizResults.forEach(qr => {
-      const discDaSala = statsRoomFilter ? disciplines.find(d => d.id === qr.discipline)?.roomId === statsRoomFilter : true;
-      const matchDisc = !statsDiscFilter || qr.discipline === statsDiscFilter;
-      const matchType = !statsTypeFilter || qr.type === statsTypeFilter;
-      
-      if (qr.quizTitle && matchDisc && matchType && discDaSala) {
-        titles.add(qr.quizTitle);
-      }
-    });
-    return Array.from(titles);
-  }, [quizResults, statsRoomFilter, statsDiscFilter, statsTypeFilter, disciplines]);
-
   const uniqueQuizzes = useMemo(() => {
     const titles = new Set<string>();
     questions.forEach(q => {
@@ -645,146 +480,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     });
     return Array.from(titles).sort();
   }, [questions, discFilter]);
-
-  const analytics = useMemo(() => {
-    const filteredResults = quizResults.filter(qr => {
-      if (statsRoomFilter) {
-        const disc = disciplines.find(d => d.id === qr.discipline);
-        if (!disc || disc.roomId !== statsRoomFilter) return false;
-      }
-      if (statsDiscFilter && qr.discipline !== statsDiscFilter) return false;
-      if (statsTypeFilter && qr.type !== statsTypeFilter) return false;
-      if (statsQuizTitleFilter && qr.quizTitle !== statsQuizTitleFilter) return false;
-      return true;
-    });
-
-    let totalQuestionsAnswered = 0;
-    let totalCorrectAnswers = 0;
-    let totalTimeSpentSecs = 0;
-    let timeEntriesCount = 0;
-
-    const themeStats: Record<string, { correct: number, total: number }> = {};
-    const questionStats: Record<string, { misses: number, total: number }> = {};
-    const monthlyStats: Record<string, { correct: number, total: number, label: string }> = {};
-    
-    const sessionTracker = new Set<string>();
-    let historicalFullSims = 0;
-
-    filteredResults.forEach(qr => {
-      const qTotal = qr.total || 1;
-      totalQuestionsAnswered += qTotal;
-      totalCorrectAnswers += (qr.score || 0);
-
-      // Controle de Sessão
-      const sessId = (qr.details?.[0] as any)?.sessionId;
-      if (sessId) {
-        sessionTracker.add(sessId);
-      } else if (qTotal > 1) {
-        historicalFullSims++;
-      } else {
-        let timeStr = 'legacy_unknown';
-        let timeInMillis = qr.createdAt;
-        if (timeInMillis && typeof timeInMillis === 'object' && (timeInMillis as any).seconds) {
-          timeInMillis = (timeInMillis as any).seconds * 1000;
-        }
-        if (timeInMillis) {
-          const d = new Date(timeInMillis as number);
-          timeStr = `${d.getDate()}_${d.getMonth()}_${d.getFullYear()}`;
-        } else if ((qr as any).date) {
-          timeStr = String((qr as any).date).split(/[\s,T]+/)[0];
-        }
-        sessionTracker.add(`legacy_${qr.quizTitle || 'Misto'}_${timeStr}`);
-      }
-
-      // Agrupamento Mensal (Evolução Temporal)
-      let timeInMillisForMonth = qr.createdAt;
-      if (timeInMillisForMonth && typeof timeInMillisForMonth === 'object' && (timeInMillisForMonth as any).seconds) {
-        timeInMillisForMonth = (timeInMillisForMonth as any).seconds * 1000;
-      }
-      const dateObj = new Date((timeInMillisForMonth as number) || Date.now());
-      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      const monthLabel = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-      const sortKey = `${dateObj.getFullYear()}${String(dateObj.getMonth()).padStart(2, '0')}`;
-
-      if (!monthlyStats[sortKey]) monthlyStats[sortKey] = { correct: 0, total: 0, label: monthLabel };
-      monthlyStats[sortKey].total += qTotal;
-      monthlyStats[sortKey].correct += (qr.score || 0);
-
-      // Pacing
-      if (qr.timeSpent && qr.timeSpent > 0) {
-        totalTimeSpentSecs += qr.timeSpent;
-        timeEntriesCount += qTotal; 
-      }
-
-      // Detalhes por Questão e Tema
-      if (qr.details) {
-        qr.details.forEach(d => {
-          const themeName = d.theme || 'Desconhecido';
-          if (!themeStats[themeName]) themeStats[themeName] = { correct: 0, total: 0 };
-          themeStats[themeName].total++;
-          if (d.isCorrect) themeStats[themeName].correct++;
-
-          if (!questionStats[d.questionId]) questionStats[d.questionId] = { misses: 0, total: 0 };
-          questionStats[d.questionId].total++;
-          if (!d.isCorrect) questionStats[d.questionId].misses++;
-        });
-      }
-    });
-
-    const totalSimulations = sessionTracker.size + historicalFullSims;
-    const globalAccuracy = totalQuestionsAnswered > 0 ? Math.round((totalCorrectAnswers / totalQuestionsAnswered) * 100) : 0;
-    
-    const avgTimePerQuestion = timeEntriesCount > 0 ? Math.round(totalTimeSpentSecs / timeEntriesCount) : 0;
-    const avgTimeFormatted = avgTimePerQuestion > 60 
-        ? `${Math.floor(avgTimePerQuestion / 60)}m ${avgTimePerQuestion % 60}s`
-        : `${avgTimePerQuestion}s`;
-
-    // Processar Temas e Separar por Risco
-    const allThemes = Object.keys(themeStats).map(t => ({
-      theme: t,
-      accuracy: Math.round((themeStats[t].correct / themeStats[t].total) * 100),
-      total: themeStats[t].total
-    })).sort((a, b) => b.accuracy - a.accuracy);
-
-    const masteredThemes = allThemes.filter(t => t.accuracy >= 75);
-    const attentionThemes = allThemes.filter(t => t.accuracy >= 50 && t.accuracy < 75);
-    const criticalThemes = allThemes.filter(t => t.accuracy < 50);
-
-    // Evolução Temporal Array
-    const temporalTrend = Object.keys(monthlyStats).sort().map(k => ({
-      label: monthlyStats[k].label,
-      accuracy: Math.round((monthlyStats[k].correct / monthlyStats[k].total) * 100),
-      total: monthlyStats[k].total
-    })).slice(-6); // Pega apenas os últimos 6 meses com dados
-
-    const hardestQuestions = Object.keys(questionStats).map(qid => {
-      let qText = questions.find(q => q.id === qid)?.q;
-      if (!qText) {
-         for (const sim of labSimulations || []) {
-            const labQ = sim.questions.find(lq => lq.id === qid);
-            if (labQ) {
-              qText = `[Lab] ${labQ.question} - Imagem: ${labQ.imageName || 'N/A'}`;
-              break;
-            }
-         }
-      }
-      return {
-        id: qid,
-        text: qText || 'Questão arquivada ou excluída',
-        misses: questionStats[qid].misses,
-        total: questionStats[qid].total,
-        errorRate: Math.round((questionStats[qid].misses / questionStats[qid].total) * 100)
-      };
-    })
-    .filter(x => x.misses > 0) 
-    .sort((a, b) => b.errorRate - a.errorRate) 
-    .slice(0, 10); 
-
-    return { 
-      totalSimulations, totalQuestionsAnswered, globalAccuracy, avgTimeFormatted, 
-      masteredThemes, attentionThemes, criticalThemes, hardestQuestions, temporalTrend 
-    };
-  }, [quizResults, questions, labSimulations, statsRoomFilter, statsDiscFilter, statsTypeFilter, statsQuizTitleFilter, disciplines]);
 
 
   if (!isAuthorized) {
@@ -842,250 +537,28 @@ const AdminView: React.FC<AdminViewProps> = ({
         ))}
       </nav>
 
-      {/* ==================================================================== */}
-      {/* VIEW: DASHBOARD DE ESTATÍSTICAS E ANALYTICS */}
-      {/* ==================================================================== */}
+      {/* RENDERIZAÇÃO DOS COMPONENTES MODULARIZADOS */}
       {activeTab === 'stats' && (
-        <div className="animate-in fade-in duration-500 space-y-8">
-          
-          <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex flex-wrap gap-4 items-end">
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Filtrar por Sala/Turma</label>
-              <select 
-                value={statsRoomFilter} 
-                onChange={e => { setStatsRoomFilter(e.target.value); setStatsDiscFilter(''); setStatsQuizTitleFilter(''); }} 
-                className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors"
-              >
-                <option value="">Todas as Salas (Global)</option>
-                {ROOMS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Filtrar por Disciplina</label>
-              <select 
-                value={statsDiscFilter} 
-                onChange={e => { setStatsDiscFilter(e.target.value); setStatsQuizTitleFilter(''); }} 
-                className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors"
-              >
-                <option value="">Todas as Disciplinas</option>
-                {disciplines
-                  .filter(d => !statsRoomFilter || d.roomId === statsRoomFilter)
-                  .map(d => <option key={d.id} value={d.id}>{d.title}</option>)
-                }
-              </select>
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Tipo de Simulado</label>
-              <select value={statsTypeFilter} onChange={e => { setStatsTypeFilter(e.target.value); setStatsQuizTitleFilter(''); }} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors">
-                <option value="">Todas as Modalidades</option>
-                <option value="teorico">Simulado Teórico</option>
-                <option value="laboratorio">Laboratório Virtual</option>
-                <option value="osce">OSCE Clínico</option>
-              </select>
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Simulado Específico</label>
-              <select value={statsQuizTitleFilter} onChange={e => setStatsQuizTitleFilter(e.target.value)} disabled={availableStatTitles.length === 0} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="">Todos os Simulados</option>
-                {availableStatTitles.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* MÉTRICAS PRINCIPAIS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-[#003366] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
-               <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">📝</div>
-               <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-2">Simulados Feitos</p>
-               <h4 className="text-5xl font-black">{analytics.totalSimulations}</h4>
-            </div>
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden">
-               <div className="absolute -right-4 -bottom-4 text-6xl opacity-5">✅</div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Questões Analisadas</p>
-               <h4 className="text-5xl font-black text-[#003366]">{analytics.totalQuestionsAnswered}</h4>
-            </div>
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden">
-               <div className="absolute -right-4 -bottom-4 text-6xl opacity-5">🎯</div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Taxa de Acerto Média</p>
-               <h4 className="text-5xl font-black text-emerald-600">{analytics.globalAccuracy}%</h4>
-            </div>
-            <div className="bg-[#D4A017] p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden text-[#003366]">
-               <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">⏱️</div>
-               <p className="text-[9px] font-black uppercase tracking-widest mb-2 opacity-80">Tempo P/ Questão (Pacing)</p>
-               <h4 className="text-4xl font-black pt-2">{analytics.avgTimeFormatted}</h4>
-            </div>
-          </div>
-
-          {/* EVOLUÇÃO TEMPORAL E RADAR DE RISCO */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter mb-6 flex items-center gap-2">
-                <TrendingUp size={24} className="text-[#D4A017]" /> Curva de Aprendizado
-              </h3>
-              {analytics.temporalTrend.length > 0 ? (
-                <div className="h-48 flex items-end justify-between gap-2 mt-8 px-2">
-                  {analytics.temporalTrend.map((monthData, idx) => (
-                    <div key={idx} className="flex flex-col items-center flex-1 group">
-                      <span className="text-[10px] font-black text-[#003366] mb-2 opacity-0 group-hover:opacity-100 transition-opacity">{monthData.accuracy}%</span>
-                      <div 
-                        className={`w-full rounded-t-xl transition-all duration-500 ${monthData.accuracy >= 70 ? 'bg-emerald-400 hover:bg-emerald-500' : monthData.accuracy >= 50 ? 'bg-amber-400 hover:bg-amber-500' : 'bg-red-400 hover:bg-red-500'}`}
-                        style={{ height: `${Math.max(monthData.accuracy, 10)}%` }} // min height for visibility
-                      ></div>
-                      <span className="text-[8px] font-black uppercase tracking-widest text-gray-400 mt-3 text-center">{monthData.label.split(' ')[0]}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-gray-400 font-medium italic text-xs py-10">Sem histórico mensal suficiente.</p>
-              )}
-            </div>
-
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter mb-6 flex items-center gap-2">
-                <Layers size={24} className="text-[#003366]" /> Radar de Domínio (Temas)
-              </h3>
-              <div className="space-y-4 max-h-[220px] overflow-y-auto pr-2">
-                {analytics.criticalThemes.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-600 mb-2 flex items-center gap-1"><AlertTriangle size={12}/> Alerta Crítico (&lt; 50%)</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {analytics.criticalThemes.map(t => <span key={t.theme} className="bg-red-50 border border-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-lg">{t.theme} ({t.accuracy}%)</span>)}
-                    </div>
-                  </div>
-                )}
-                {analytics.attentionThemes.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-2 mt-4">🟡 Zona de Atenção (50 - 75%)</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {analytics.attentionThemes.map(t => <span key={t.theme} className="bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-bold px-3 py-1 rounded-lg">{t.theme} ({t.accuracy}%)</span>)}
-                    </div>
-                  </div>
-                )}
-                {analytics.masteredThemes.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2 mt-4">🟢 Temas Dominados (&gt; 75%)</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {analytics.masteredThemes.map(t => <span key={t.theme} className="bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-bold px-3 py-1 rounded-lg">{t.theme} ({t.accuracy}%)</span>)}
-                    </div>
-                  </div>
-                )}
-                {(analytics.criticalThemes.length + analytics.attentionThemes.length + analytics.masteredThemes.length) === 0 && (
-                  <p className="text-center text-gray-400 font-medium italic text-xs py-10">Nenhum tema analisado ainda.</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-red-50 p-8 rounded-[2.5rem] border border-red-100 shadow-sm mt-8">
-            <h3 className="text-xl font-black text-red-800 uppercase tracking-tighter mb-6 border-b border-red-200 pb-4">
-              Top 10: Maior Taxa de Erro (Déficit de Turma)
-            </h3>
-            {analytics.hardestQuestions.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
-                {analytics.hardestQuestions.map((q, idx) => (
-                  <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-red-100 flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 font-black flex items-center justify-center shrink-0 text-lg">
-                      {idx + 1}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-700 leading-relaxed line-clamp-3" title={q.text}>{q.text}</p>
-                      <div className="flex gap-3 mt-3">
-                        <span className="text-[9px] font-black uppercase bg-red-50 text-red-600 px-2 py-1 rounded tracking-widest">Taxa Erro: {q.errorRate}%</span>
-                        <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest pt-1">• Errada {q.misses}x no total</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-32 opacity-50">
-                <span className="text-5xl mb-2">🎉</span>
-                <p className="text-center text-red-800 font-black text-xs uppercase">Nenhum erro registrado neste filtro!</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <AdminStats 
+          quizResults={quizResults}
+          questions={questions}
+          labSimulations={labSimulations}
+          disciplines={disciplines}
+          statsRoomFilter={statsRoomFilter}
+          statsDiscFilter={statsDiscFilter}
+          statsTypeFilter={statsTypeFilter}
+          statsQuizTitleFilter={statsQuizTitleFilter}
+          setStatsRoomFilter={setStatsRoomFilter}
+          setStatsDiscFilter={setStatsDiscFilter}
+          setStatsTypeFilter={setStatsTypeFilter}
+          setStatsQuizTitleFilter={setStatsQuizTitleFilter}
+        />
       )}
 
-      {/* VIEW: NOVO LABORATÓRIO VIRTUAL */}
-      {activeTab === 'lab' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
-          <div className="lg:col-span-5 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
-            <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Criar Lab Virtual</h3>
-            <p className="text-[10px] font-bold text-gray-500 mb-6 leading-relaxed bg-gray-50 p-3 rounded-xl border">
-              <b>DICA:</b> Gere o conteúdo no ChatGPT e salve como CSV.<br/><br/>
-              <b>Colunas do CSV (6 colunas):</b><br/>
-              1. Imagem (ex: 001.jpg ou 001)<br/>
-              2. Pergunta<br/>
-              3. Resposta<br/>
-              4. Identificação (Gerado por IA local)<br/>
-              5. Localização (Gerado por IA local)<br/>
-              6. Funções (Gerado por IA local)
-            </p>
-            
-            <form onSubmit={handleLabImport} className="space-y-4">
-              <select value={labDisc} onChange={e => setLabDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required disabled={isLabUploading}>
-                <option value="">Selecione a Disciplina...</option>
-                {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
-              </select>
-              <input type="text" placeholder="Título (Ex: P1 Histologia)" value={labTitle} onChange={e => setLabTitle(e.target.value)} maxLength={50} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" required disabled={isLabUploading} />
-              <input type="text" placeholder="Autor (Seu Nome)" value={labAuthor} onChange={e => setLabAuthor(e.target.value)} maxLength={30} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" required disabled={isLabUploading} />
-              <textarea placeholder="Descrição para os alunos..." value={labDesc} onChange={e => setLabDesc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none resize-none" rows={2} disabled={isLabUploading}></textarea>
-              
-              <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-200">
-                <label className="block text-[10px] font-black uppercase text-[#003366] mb-2">1. Selecione o arquivo CSV Completo</label>
-                <input id="labCsvInput" type="file" accept=".csv" onChange={e => setLabCsvFile(e.target.files ? e.target.files[0] : null)} className="w-full text-xs text-gray-700 font-bold" required disabled={isLabUploading} />
-              </div>
-
-              <div className="bg-emerald-50/50 p-4 rounded-xl border-2 border-dashed border-emerald-200">
-                <label className="block text-[10px] font-black uppercase text-emerald-700 mb-2">2. Selecione TODAS as Imagens</label>
-                <input id="labImageInput" type="file" accept="image/*" multiple onChange={e => setLabImageFiles(e.target.files)} className="w-full text-xs text-emerald-700 font-bold" required disabled={isLabUploading} />
-                {labImageFiles && <p className="text-[9px] font-black mt-2 text-emerald-600">{labImageFiles.length} imagens selecionadas.</p>}
-              </div>
-
-              <button type="submit" disabled={isLabUploading || !labCsvFile || !labImageFiles} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50 flex justify-center items-center gap-2">
-                {isLabUploading ? <Loader2 size={16} className="animate-spin"/> : <Microscope size={16}/>}
-                {isLabUploading ? 'Fazendo Upload Seguro...' : 'Enviar Simulado Lab'}
-              </button>
-
-              {isLabUploading && (
-                <div className="bg-blue-50 text-[#003366] p-3 rounded-xl text-xs font-bold text-center animate-pulse border border-blue-200">
-                  {labUploadProgress}
-                </div>
-              )}
-            </form>
-          </div>
-          
-          <div className="lg:col-span-7 bg-white p-8 rounded-[2.5rem] border shadow-sm">
-             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Labs em Nuvem</h3>
-                  <button onClick={() => { if (prompt(`⚠️ Apagar Labs?\nSenha (fmst8):`) === 'fmst8') onClearLab && onClearLab(discFilterLab || undefined); }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit">Apagar {discFilterLab ? 'da Disciplina' : 'Tudo'} 🗑️</button>
-                </div>
-                <select value={discFilterLab} onChange={e => setDiscFilterLab(e.target.value)} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
-                  <option value="">Todas Disciplinas</option>
-                  {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
-                </select>
-             </div>
-             <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
-                {(labSimulations || []).filter(s => !discFilterLab || s.disciplineId === discFilterLab).map(s => (
-                  <div key={s.id} className="p-5 bg-emerald-50/40 rounded-[1.5rem] border border-emerald-100 flex justify-between items-center group transition-all hover:border-red-100">
-                    <div>
-                      <h4 className="font-bold text-[#003366] text-sm mb-1">{s.title} <span className="text-gray-400 font-medium text-xs">({s.questions.length} peças)</span></h4>
-                      <p className="text-[9px] font-black uppercase text-[#D4A017] tracking-widest">{s.disciplineId} • Por {s.author}</p>
-                    </div>
-                    <button onClick={() => handleDeleteLab(s.id)} className="text-red-300 hover:text-red-500 transition-colors p-2" title="Deletar Simulado e Imagens do Servidor">
-                      <Trash2 size={20}/>
-                    </button>
-                  </div>
-                ))}
-                {(labSimulations || []).filter(s => !discFilterLab || s.disciplineId === discFilterLab).length === 0 && <p className="text-center py-10 text-gray-300 italic font-bold">Nenhum simulado de laboratório cadastrado.</p>}
-             </div>
-          </div>
-        </div>
+      {activeTab === 'materials' && (
+        <AdminMaterials 
+          disciplines={disciplines} 
+        />
       )}
 
       {/* VIEW: TEMAS */}
@@ -1415,112 +888,6 @@ const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </>
             ) : <p className="text-center py-20 text-gray-300 font-bold italic">Selecione uma disciplina ao lado.</p>}
-          </div>
-        </div>
-      )}
-
-      {/* VIEW: MATERIAIS CONECTADO AO FIRESTORE */}
-      {activeTab === 'materials' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
-          <div className="lg:col-span-4 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
-            <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Publicar Material Oficial</h3>
-            <form onSubmit={handlePublishAdminMaterial} className="space-y-4">
-              
-              {/* NOVO CAMPO: SALA */}
-              <select value={matRoom} onChange={e => { setMatRoom(e.target.value); setMatDisc(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
-                <option value="">Sala / Turma...</option>
-                {ROOMS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-
-              <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading || !matRoom}>
-                <option value="">Disciplina...</option>
-                {disciplines
-                  .filter(d => !matRoom || d.roomId === matRoom)
-                  .map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
-              </select>
-              
-              <select value={matType} onChange={e => setMatType(e.target.value as any)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
-                <option value="summary">Resumo Teórico</option>
-                <option value="script">Roteiro de Prática</option>
-                <option value="other">Outro / Material Extra</option>
-              </select>
-
-              <input type="text" placeholder="Título do Material" value={matTitle} onChange={e => setMatTitle(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading} />
-              
-              <input type="text" placeholder="Autor (ex: João Silva)" value={matAuthor} onChange={e => setMatAuthor(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" disabled={isMatUploading} />
-
-              <div className="flex p-1 bg-gray-100 rounded-xl mb-2 shadow-inner">
-                <button type="button" onClick={() => setMatUploadMode('link')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${matUploadMode === 'link' ? 'bg-white text-[#003366] shadow-sm' : 'text-gray-500 hover:text-[#003366]'}`} disabled={isMatUploading}>Link (Nuvem)</button>
-                <button type="button" onClick={() => setMatUploadMode('file')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${matUploadMode === 'file' ? 'bg-white text-[#003366] shadow-sm' : 'text-gray-500 hover:text-[#003366]'}`} disabled={isMatUploading}>Arquivo Local</button>
-              </div>
-
-              {matUploadMode === 'link' ? (
-                <input type="url" placeholder="Link Compartilhado (Drive, Youtube...)" value={matUrl} onChange={e => setMatUrl(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading} />
-              ) : (
-                <div className="bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
-                  <label className="block text-[10px] font-black uppercase text-[#003366] mb-2 cursor-pointer">
-                    Selecionar Arquivo PDF / DOCX
-                    <input id="adminFileInput" type="file" onChange={e => setMatFile(e.target.files ? e.target.files[0] : null)} className="w-full text-xs text-gray-700 mt-2" required disabled={isMatUploading} />
-                  </label>
-                </div>
-              )}
-
-              <label className="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl cursor-pointer border border-emerald-100 transition-all hover:bg-emerald-100 mt-2">
-                <input type="checkbox" checked={matIsVerified} onChange={e => setMatIsVerified(e.target.checked)} className="w-5 h-5 accent-emerald-600" disabled={isMatUploading}/>
-                <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest flex items-center gap-1">
-                  Selo de Verificado <BadgeCheck size={14}/>
-                </span>
-              </label>
-
-              <button type="submit" disabled={isMatUploading} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all flex justify-center items-center gap-2 mt-4">
-                {isMatUploading ? <Loader2 size={16} className="animate-spin"/> : null}
-                {isMatUploading ? 'Enviando...' : 'Publicar Material 🚀'}
-              </button>
-            </form>
-          </div>
-          <div className="lg:col-span-8 bg-white p-8 rounded-[2.5rem] border shadow-sm">
-             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Gestão de Materiais em Nuvem</h3>
-                  <button
-                    onClick={handleClearLiveMaterials}
-                    className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit shadow-sm"
-                  >
-                    Apagar {discFilterMat ? 'da Disciplina' : 'Tudo'} (INCLUI ARQUIVOS) 🗑️
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    <select value={discFilterMat} onChange={e => setDiscFilterMat(e.target.value)} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
-                      <option value="">Todas Disciplinas</option>
-                      {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
-                    </select>
-                </div>
-             </div>
-             
-             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                {liveMaterials.filter(s => !discFilterMat || s.disciplineId === discFilterMat).map(s => (
-                  <div key={s.id} className="p-4 bg-gray-50 rounded-2xl border flex justify-between items-center group hover:border-red-100 transition-all">
-                    <div className="flex items-center gap-4">
-                       <span className="text-2xl">{s.label === 'LINK' ? '🔗' : '📄'}</span>
-                       <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-[#003366]">{s.title || s.label}</p>
-                            {s.isVerified && <BadgeCheck size={14} className="text-emerald-500" title="Material Verificado"/>}
-                          </div>
-                          <p className="text-[9px] font-black uppercase text-gray-400 mt-1">
-                            {s.disciplineId} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date} {s.author ? `• por ${s.author}` : ''}
-                          </p>
-                       </div>
-                    </div>
-                    <button onClick={() => handleDeleteLiveMaterial(s)} className="text-red-300 hover:text-red-500 transition-colors p-2">
-                      <Trash2 size={20}/>
-                    </button>
-                  </div>
-                ))}
-                {liveMaterials.filter(s => !discFilterMat || s.disciplineId === discFilterMat).length === 0 && (
-                  <p className="text-center py-10 text-gray-300 italic font-bold">Nenhum material encontrado.</p>
-                )}
-             </div>
           </div>
         </div>
       )}
