@@ -1,6 +1,7 @@
 import React from 'react';
 import DisciplineCard from '../components/DisciplineCard.tsx';
 import { SimulationInfo, Room } from '../types.ts';
+import { Lock } from 'lucide-react'; // <-- IMPORTAÇÃO DO ÍCONE DE CADEADO
 
 interface HomeViewProps {
   room: Room;
@@ -47,7 +48,25 @@ const HomeView: React.FC<HomeViewProps> = ({ room, disciplines, onSelectDiscipli
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {activeDisciplines.map(disc => (
-              <DisciplineCard key={disc.id} info={disc} onSelect={onSelectDiscipline} />
+              <div key={disc.id} className={`relative transition-all duration-300 ${disc.isHidden ? 'opacity-60 grayscale' : ''}`}>
+                
+                {/* O card fica insensível a cliques se estiver bloqueado */}
+                <div className={disc.isHidden ? 'pointer-events-none' : ''}>
+                  <DisciplineCard info={disc} onSelect={onSelectDiscipline} />
+                </div>
+
+                {/* Película de bloqueio por cima do card */}
+                {disc.isHidden && (
+                  <div
+                    className="absolute inset-0 z-10 flex items-center justify-center cursor-not-allowed rounded-[2.5rem]"
+                    onClick={() => alert("Este módulo está temporariamente bloqueado pela administração.")}
+                  >
+                    <div className="bg-red-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-2xl flex items-center gap-2">
+                      <Lock size={16} /> Bloqueado
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}

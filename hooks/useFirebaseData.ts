@@ -25,7 +25,7 @@ export const useFirebaseData = () => {
       setIsOnline(snap.val() === true);
     });
 
-    // Carregar configurações das disciplinas (temas, referências extras)
+    // Carregar configurações das disciplinas (temas, referências extras e BLOQUEIOS)
     onValue(ref(db, 'discipline_config'), (snap) => {
       const config = snap.val();
       if (config) {
@@ -35,7 +35,8 @@ export const useFirebaseData = () => {
             return {
               ...disc,
               themes: Array.isArray(dConf.themes) ? dConf.themes : disc.themes,
-              references: Array.isArray(dConf.references) ? dConf.references : disc.references
+              references: Array.isArray(dConf.references) ? dConf.references : disc.references,
+              isHidden: dConf.isHidden === true // <-- LÊ O STATUS DE BLOQUEIO
             };
           }
           return disc;

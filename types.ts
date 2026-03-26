@@ -56,6 +56,7 @@ export interface SimulationInfo {
   status: 'active' | 'locked';
   themes: string[];
   references?: ReferenceMaterial[];
+  isHidden?: boolean; // NOVO: Flag para controlar se a disciplina está bloqueada
 }
 
 export interface Summary {
@@ -73,7 +74,7 @@ export interface Summary {
   size?: string;
   createdAt?: any;
   views?: number; 
-  isVerified?: boolean; // NOVO: Flag para materiais postados/revisados por Monitores ou Admin
+  isVerified?: boolean; 
 }
 
 export interface QuizResult {

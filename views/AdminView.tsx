@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial } from '../types.ts';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen } from 'lucide-react';
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock } from 'lucide-react'; // <-- NOVO: Import do Lock
 
 // IMPORTAÇÃO DA NOSSA "NUVEM" DE DADOS E FIREBASE
 import { useData } from '../contexts/DataContext.tsx';
@@ -14,6 +14,7 @@ import AdminLab from '../components/admin/AdminLab.tsx';
 import AdminOsce from '../components/admin/AdminOsce.tsx';
 import AdminThemes from '../components/admin/AdminThemes.tsx';
 import AdminReferences from '../components/admin/AdminReferences.tsx';
+import AdminDisciplines from '../components/admin/AdminDisciplines.tsx'; // <-- NOVO: Componente de Acessos
 
 interface AdminViewProps {
   onBack: () => void; // A ÚNICA prop que o Admin precisa receber agora!
@@ -26,7 +27,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('fms_admin_auth') === 'true');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'references' | 'materials' | 'themes' | 'lab'>('stats');
+  
+  // NOVO: Adicionado 'access' ao activeTab
+  const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'references' | 'materials' | 'themes' | 'lab' | 'access'>('stats');
   
   // ESTADOS GLOBAIS DE FILTRO DE ESTATÍSTICAS
   const [statsRoomFilter, setStatsRoomFilter] = useState(''); 
@@ -45,7 +48,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   };
 
   // =========================================================================
-  // 2. FUNÇÕES DE BANCO DE DADOS (Trazidas do App.tsx para cá)
+  // 2. FUNÇÕES DE BANCO DE DADOS
   // =========================================================================
   
   const handleGlobalReset = () => {
@@ -124,6 +127,11 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     }
   };
 
+  // NOVO: Função para alternar visibilidade/bloqueio
+  const handleToggleVisibility = (disciplineId: string, currentIsHidden: boolean) => {
+    if (db) set(ref(db, `discipline_config/${disciplineId}/isHidden`), !currentIsHidden);
+  };
+
   // =========================================================================
 
   if (!isAuthorized) {
@@ -162,6 +170,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       <nav className="flex flex-wrap gap-2 mb-12">
         {[
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
+          { id: 'access', label: 'Acessos', icon: <Lock size={16}/> }, // <-- NOVO: Aba de acessos
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
           { id: 'questions', label: 'Questões', icon: <FileText size={16}/> },
           { id: 'osce', label: 'OSCE', icon: <Stethoscope size={16}/> },
@@ -196,6 +205,14 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           setStatsDiscFilter={setStatsDiscFilter}
           setStatsTypeFilter={setStatsTypeFilter}
           setStatsQuizTitleFilter={setStatsQuizTitleFilter}
+        />
+      )}
+
+      {/* NOVO: Renderiza aba de controle de acessos */}
+      {activeTab === 'access' && (
+        <AdminDisciplines 
+          disciplines={disciplines}
+          onToggleVisibility={handleToggleVisibility}
         />
       )}
 
