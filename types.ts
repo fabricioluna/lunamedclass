@@ -53,10 +53,9 @@ export interface SimulationInfo {
   description: string;
   meta: string;
   icon: string;
-  status: 'active' | 'locked';
+  status: 'active' | 'locked' | 'coming-soon'; // ÚNICA FONTE DE VERDADE AGORA
   themes: string[];
   references?: ReferenceMaterial[];
-  isHidden?: boolean; // NOVO: Flag para controlar se a disciplina está bloqueada
 }
 
 export interface Summary {

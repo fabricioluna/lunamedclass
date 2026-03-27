@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial } from '../types.ts';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock } from 'lucide-react'; // <-- NOVO: Import do Lock
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock } from 'lucide-react'; 
 
 // IMPORTAÇÃO DA NOSSA "NUVEM" DE DADOS E FIREBASE
 import { useData } from '../contexts/DataContext.tsx';
@@ -14,10 +14,10 @@ import AdminLab from '../components/admin/AdminLab.tsx';
 import AdminOsce from '../components/admin/AdminOsce.tsx';
 import AdminThemes from '../components/admin/AdminThemes.tsx';
 import AdminReferences from '../components/admin/AdminReferences.tsx';
-import AdminDisciplines from '../components/admin/AdminDisciplines.tsx'; // <-- NOVO: Componente de Acessos
+import AdminDisciplines from '../components/admin/AdminDisciplines.tsx'; 
 
 interface AdminViewProps {
-  onBack: () => void; // A ÚNICA prop que o Admin precisa receber agora!
+  onBack: () => void; 
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
@@ -28,7 +28,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   
-  // NOVO: Adicionado 'access' ao activeTab
   const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'references' | 'materials' | 'themes' | 'lab' | 'access'>('stats');
   
   // ESTADOS GLOBAIS DE FILTRO DE ESTATÍSTICAS
@@ -127,9 +126,10 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     }
   };
 
-  // NOVO: Função para alternar visibilidade/bloqueio
-  const handleToggleVisibility = (disciplineId: string, currentIsHidden: boolean) => {
-    if (db) set(ref(db, `discipline_config/${disciplineId}/isHidden`), !currentIsHidden);
+  // NOVO: Função que alterna o status oficial da disciplina
+  const handleToggleStatus = (disciplineId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'locked' : 'active';
+    if (db) set(ref(db, `discipline_config/${disciplineId}/status`), newStatus);
   };
 
   // =========================================================================
@@ -170,7 +170,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       <nav className="flex flex-wrap gap-2 mb-12">
         {[
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
-          { id: 'access', label: 'Acessos', icon: <Lock size={16}/> }, // <-- NOVO: Aba de acessos
+          { id: 'access', label: 'Acessos', icon: <Lock size={16}/> }, 
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
           { id: 'questions', label: 'Questões', icon: <FileText size={16}/> },
           { id: 'osce', label: 'OSCE', icon: <Stethoscope size={16}/> },
@@ -208,11 +208,11 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         />
       )}
 
-      {/* NOVO: Renderiza aba de controle de acessos */}
+      {/* Renderiza aba de controle de acessos */}
       {activeTab === 'access' && (
         <AdminDisciplines 
           disciplines={disciplines}
-          onToggleVisibility={handleToggleVisibility}
+          onToggleStatus={handleToggleStatus}
         />
       )}
 
