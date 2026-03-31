@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { db, ref, onValue } from '../firebase.ts';
-import { INITIAL_QUESTIONS, SIMULATIONS } from '../constants.tsx';
-import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation } from '../types.ts';
+// 1. A MÁGICA AQUI: Adicionamos o 'ROOMS' na importação das constantes
+import { INITIAL_QUESTIONS, SIMULATIONS, ROOMS } from '../constants.tsx';
+import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Room } from '../types.ts';
 
 export const useFirebaseData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
 
+  // 2. A MÁGICA AQUI: Criamos o estado das salas puxando as suas constantes
+  const [rooms, setRooms] = useState<Room[]>(ROOMS); 
   const [disciplines, setDisciplines] = useState<SimulationInfo[]>(SIMULATIONS);
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [questions, setQuestions] = useState<Question[]>(INITIAL_QUESTIONS);
@@ -37,7 +40,7 @@ export const useFirebaseData = () => {
               themes: Array.isArray(dConf.themes) ? dConf.themes : disc.themes,
               references: Array.isArray(dConf.references) ? dConf.references : disc.references,
               status: dConf.status ? dConf.status : disc.status,
-              lockedFeatures: Array.isArray(dConf.lockedFeatures) ? dConf.lockedFeatures : [] // <-- NOVO: Lê as funcionalidades bloqueadas
+              lockedFeatures: Array.isArray(dConf.lockedFeatures) ? dConf.lockedFeatures : [] 
             };
           }
           return disc;
@@ -75,6 +78,7 @@ export const useFirebaseData = () => {
   return {
     isLoading,
     isOnline,
+    rooms, // 3. A MÁGICA AQUI: Retornamos as salas para o seu portal inteiro poder ler!
     disciplines,
     summaries,
     questions,
