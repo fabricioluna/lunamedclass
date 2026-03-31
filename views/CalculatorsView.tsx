@@ -81,6 +81,26 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return { text: `Faltam ${missing} questões`, color: "text-[#003366]" };
   };
 
+  // --- FUNÇÕES DE CÁLCULO PARCIAL (HABMED) ---
+  const getHabMedN1 = () => {
+    return (parseFloat(habmedGrades.n1_formativa.replace(',', '.')) * 0.10 || 0) + 
+           (parseFloat(habmedGrades.n1_somativa.replace(',', '.')) * 0.25 || 0) + 
+           (parseFloat(habmedGrades.n1_teorica.replace(',', '.')) * 0.15 || 0);
+  };
+
+  const getHabMedN2 = () => {
+    return (parseFloat(habmedGrades.n2_formativa.replace(',', '.')) * 0.10 || 0) + 
+           (parseFloat(habmedGrades.n2_somativa.replace(',', '.')) * 0.25 || 0) + 
+           (parseFloat(habmedGrades.n2_teorica.replace(',', '.')) * 0.15 || 0);
+  };
+
+  const getHabMedStatus = () => {
+    const current = getHabMedN1() + getHabMedN2() + (parseFloat(extraPoints.replace(',', '.')) || 0);
+    if (current >= 7) return { text: "Média 7.0 Atingida! 🎉", color: "text-green-500" };
+    const missing = (7 - current).toFixed(2);
+    return { text: `Faltam ${missing} pontos para o 7.0`, color: "text-[#003366]" };
+  };
+
   // --- CÁLCULO AUTOMÁTICO (useEffect) ---
   useEffect(() => {
     let base = 0;
@@ -97,9 +117,7 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       const n2 = (parseFloat(uccgGrades.n2_teorica) * 0.25) + (parseFloat(uccgGrades.n2_extensao) * 0.25);
       base = n1 + n2;
     } else if (activeCalc === 'HabMed') {
-      const n1 = (parseFloat(habmedGrades.n1_formativa) * 0.10) + (parseFloat(habmedGrades.n1_somativa) * 0.25) + (parseFloat(habmedGrades.n1_teorica) * 0.15);
-      const n2 = (parseFloat(habmedGrades.n2_formativa) * 0.10) + (parseFloat(habmedGrades.n2_somativa) * 0.25) + (parseFloat(habmedGrades.n2_teorica) * 0.15);
-      base = n1 + n2;
+      base = getHabMedN1() + getHabMedN2();
     }
 
     setResult(parseFloat((base + extra).toFixed(2)));
@@ -127,7 +145,7 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  // --- CLASSES DE DESIGN (Adaptadas para a Turma VIII) ---
+  // --- CLASSES DE DESIGN ---
   const inputClass = "w-full bg-white text-[#003366] p-4 rounded-2xl border border-gray-200 focus:border-[#D4A017] outline-none font-bold text-center text-lg transition-all shadow-sm";
   const labelClass = "text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest ml-1";
   const sectionTitleClass = "text-[11px] font-black text-[#003366] uppercase tracking-[0.2em] mb-6 flex items-center justify-between gap-2 w-full";
@@ -165,6 +183,7 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           {/* MÓDULO: UNIDADE CURRICULAR (UC) */}
           {activeCalc === 'UC' && (
             <div className="space-y-8 animate-in fade-in duration-500">
+              {/* Conteúdo UC (Inalterado) */}
               <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
                 <div className={sectionTitleClass}>
                   <div className="flex items-center gap-3"><span className={numberBadge}>1</span> Tutoria (SPs)</div>
@@ -281,11 +300,16 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
           )}
 
-          {/* MÓDULO: HABMED */}
+          {/* MÓDULO: HABMED (Habilidades Médicas) */}
           {activeCalc === 'HabMed' && (
             <div className="space-y-8 animate-in fade-in duration-500">
               <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
-                <div className={sectionTitleClass}><div className="flex items-center gap-3"><span className={numberBadge}>N1</span></div></div>
+                <div className={sectionTitleClass}>
+                  <div className="flex items-center gap-3"><span className={numberBadge}>N1</span></div>
+                  <div className="bg-gray-50 px-4 py-1.5 rounded-xl text-[10px] font-black border border-gray-100">
+                    PARCIAL (0-5): <span className="text-[#D4A017]">{getHabMedN1().toFixed(2)}</span>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div><label className={labelClass}>Teórica (1.5)</label><input type="text" value={habmedGrades.n1_teorica} onChange={e => handleModuleInputChange(setHabmedGrades, 'n1_teorica', e.target.value)} placeholder="0-10" className={inputClass} /></div>
                   <div><label className={labelClass}>P. Formativa (1.0)</label><input type="text" value={habmedGrades.n1_formativa} onChange={e => handleModuleInputChange(setHabmedGrades, 'n1_formativa', e.target.value)} placeholder="0-10" className={inputClass} /></div>
@@ -293,11 +317,25 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 </div>
               </div>
               <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
-                <div className={sectionTitleClass}><div className="flex items-center gap-3"><span className={numberBadge}>N2</span></div></div>
+                <div className={sectionTitleClass}>
+                  <div className="flex items-center gap-3"><span className={numberBadge}>N2</span></div>
+                  <div className="bg-gray-50 px-4 py-1.5 rounded-xl text-[10px] font-black border border-gray-100">
+                    PARCIAL (0-5): <span className="text-[#D4A017]">{getHabMedN2().toFixed(2)}</span>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div><label className={labelClass}>Teórica (1.5)</label><input type="text" value={habmedGrades.n2_teorica} onChange={e => handleModuleInputChange(setHabmedGrades, 'n2_teorica', e.target.value)} placeholder="0-10" className={inputClass} /></div>
                   <div><label className={labelClass}>P. Formativa (1.0)</label><input type="text" value={habmedGrades.n2_formativa} onChange={e => handleModuleInputChange(setHabmedGrades, 'n2_formativa', e.target.value)} placeholder="0-10" className={inputClass} /></div>
                   <div><label className={labelClass}>P. Somativa (2.5)</label><input type="text" value={habmedGrades.n2_somativa} onChange={e => handleModuleInputChange(setHabmedGrades, 'n2_somativa', e.target.value)} placeholder="0-10" className={inputClass} /></div>
+                </div>
+              </div>
+              {/* FEEDBACK DE PONTOS FALTANTES PARA HABMED */}
+              <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
+                <div className="p-6 bg-[#D4A017]/5 rounded-[2rem] border border-[#D4A017]/20 flex flex-col items-center justify-center gap-2">
+                  <div className="text-[10px] font-black text-[#D4A017] uppercase tracking-[0.3em]">🎯 Objetivo para Média 7.0</div>
+                  <div className={`text-3xl font-black tracking-tighter ${getHabMedStatus().color}`}>
+                    {getHabMedStatus().text}
+                  </div>
                 </div>
               </div>
             </div>
