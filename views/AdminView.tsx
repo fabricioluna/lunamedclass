@@ -21,8 +21,8 @@ interface AdminViewProps {
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
-  // 1. PUXANDO DADOS DIRETO DA NUVEM (Fim do Prop Drilling)
-  const { questions, osceStations, disciplines, summaries, quizResults, labSimulations } = useData();
+  // 1. PUXANDO DADOS DIRETO DA NUVEM (Agora puxando as 'rooms' também)
+  const { rooms, questions, osceStations, disciplines, summaries, quizResults, labSimulations } = useData();
 
   const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('fms_admin_auth') === 'true');
   const [login, setLogin] = useState('');
@@ -131,7 +131,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     if (db) set(ref(db, `discipline_config/${disciplineId}/status`), newStatus);
   };
 
-  // NOVO: Função para alternar funcionalidades individuais
   const handleToggleFeature = (disciplineId: string, featureId: string, isCurrentlyLocked: boolean) => {
     const disc = disciplines.find(d => d.id === disciplineId);
     if (!disc) return;
@@ -139,10 +138,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     let newLockedFeatures = disc.lockedFeatures ? [...disc.lockedFeatures] : [];
 
     if (isCurrentlyLocked) {
-      // Se já estava bloqueado, removemos da lista de bloqueio (liberamos)
       newLockedFeatures = newLockedFeatures.filter(id => id !== featureId);
     } else {
-      // Se não estava na lista, adicionamos (bloqueamos)
       if (!newLockedFeatures.includes(featureId)) {
         newLockedFeatures.push(featureId);
       }
@@ -227,7 +224,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         />
       )}
 
-      {/* Renderiza aba de controle de acessos com as duas funções de toggle */}
       {activeTab === 'access' && (
         <AdminDisciplines 
           disciplines={disciplines}
@@ -262,8 +258,10 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         />
       )}
 
+      {/* --- REPARE QUE AGORA PASSAMOS AS 'ROOMS' PARA DENTRO DELES --- */}
       {activeTab === 'osce' && (
         <AdminOsce 
+          rooms={rooms}
           disciplines={disciplines}
           osceStations={osceStations}
           onAddOsceStations={(os) => db && os.forEach(o => push(ref(db, 'osce'), o))}
@@ -274,6 +272,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       
       {activeTab === 'themes' && (
         <AdminThemes 
+          rooms={rooms}
           disciplines={disciplines}
           onAddTheme={handleAddTheme}
           onRemoveTheme={handleRemoveTheme}

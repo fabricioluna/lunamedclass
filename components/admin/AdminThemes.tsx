@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
-import { SimulationInfo } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { SimulationInfo, Room } from '../../types';
 import { Trash2, Plus, Layers } from 'lucide-react';
 
 interface AdminThemesProps {
+  rooms?: Room[];
   disciplines: SimulationInfo[];
   onAddTheme: (disciplineId: string, themeName: string) => void;
   onRemoveTheme: (disciplineId: string, themeName: string) => void;
 }
 
-const AdminThemes: React.FC<AdminThemesProps> = ({ disciplines, onAddTheme, onRemoveTheme }) => {
+const AdminThemes: React.FC<AdminThemesProps> = ({ rooms = [], disciplines = [], onAddTheme, onRemoveTheme }) => {
+  const [selectedRoomId, setSelectedRoomId] = useState('');
   const [selectedDiscId, setSelectedDiscId] = useState('');
   const [newTheme, setNewTheme] = useState('');
+
+  const filteredDisciplines = useMemo(() => {
+    if (!selectedRoomId) return [];
+    return disciplines.filter(d => d.roomId === selectedRoomId);
+  }, [disciplines, selectedRoomId]);
 
   const handleAddTheme = () => {
     if (!selectedDiscId || !newTheme) return;
@@ -23,12 +30,20 @@ const AdminThemes: React.FC<AdminThemesProps> = ({ disciplines, onAddTheme, onRe
       <div className="lg:col-span-1 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
         <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Novo Eixo Temático</h3>
         <div className="space-y-4">
-          <select value={selectedDiscId} onChange={e => setSelectedDiscId(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]">
-            <option value="">Selecione a Disciplina...</option>
-            {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+          
+          <select value={selectedRoomId} onChange={e => { setSelectedRoomId(e.target.value); setSelectedDiscId(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]">
+            <option value="">Selecione a Sala/Turma...</option>
+            {(rooms || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
-          <input type="text" placeholder="Nome do Tema (ex: Fisiologia Renal)" value={newTheme} onChange={e => setNewTheme(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" />
-          <button onClick={handleAddTheme} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg flex items-center justify-center gap-2 hover:bg-[#D4A017] transition-all">
+
+          <select value={selectedDiscId} onChange={e => setSelectedDiscId(e.target.value)} disabled={!selectedRoomId} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017] disabled:opacity-50 disabled:cursor-not-allowed">
+            <option value="">Selecione a Disciplina...</option>
+            {filteredDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+          </select>
+
+          <input type="text" placeholder="Nome do Tema (ex: Fisiologia Renal)" value={newTheme} onChange={e => setNewTheme(e.target.value)} disabled={!selectedDiscId} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017] disabled:opacity-50" />
+          
+          <button onClick={handleAddTheme} disabled={!selectedDiscId || !newTheme} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg flex items-center justify-center gap-2 hover:bg-[#D4A017] transition-all disabled:opacity-50">
             <Plus size={16}/> Adicionar Tema
           </button>
         </div>

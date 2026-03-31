@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { OsceStation, SimulationInfo } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { OsceStation, SimulationInfo, Room } from '../../types';
 import { Trash2 } from 'lucide-react';
 
 interface AdminOsceProps {
+  rooms?: Room[]; // Opcional para evitar crash
   disciplines: SimulationInfo[];
   osceStations: OsceStation[];
   onAddOsceStations: (os: OsceStation[]) => void;
@@ -11,21 +12,35 @@ interface AdminOsceProps {
 }
 
 const AdminOsce: React.FC<AdminOsceProps> = ({
-  disciplines,
-  osceStations,
+  rooms = [], // Fallback garantido de array vazio
+  disciplines = [],
+  osceStations = [],
   onAddOsceStations,
   onRemoveOsceStation,
   onClearOsce
 }) => {
-  // ESTADOS DE FILTRO
+  // ESTADOS DE FILTRO DE VISUALIZAÇÃO
+  const [roomFilterOsce, setRoomFilterOsce] = useState('');
   const [discFilterOsce, setDiscFilterOsce] = useState(''); 
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
 
   // ESTADOS DE IMPORTAÇÃO
+  const [osceRoom, setOsceRoom] = useState('');
   const [osceDiscipline, setOsceDiscipline] = useState('');
   const [osceTheme, setOsceTheme] = useState('');
   const [osceFile, setOsceFile] = useState<File | null>(null);
   const [oscePreview, setOscePreview] = useState<OsceStation[] | null>(null);
+
+  // Memorizadores de Filtro
+  const filteredImportDisciplines = useMemo(() => {
+    if (!osceRoom) return [];
+    return disciplines.filter(d => d.roomId === osceRoom);
+  }, [disciplines, osceRoom]);
+
+  const filteredViewDisciplines = useMemo(() => {
+    if (!roomFilterOsce) return disciplines;
+    return disciplines.filter(d => d.roomId === roomFilterOsce);
+  }, [disciplines, roomFilterOsce]);
 
   const handleOsceReadPreview = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +58,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
         }
         
         const newStations: OsceStation[] = parsedData.map((item: any, idx: number) => ({
+          ...item,
           id: `osce_${Date.now()}_${idx}`,
           disciplineId: osceDiscipline,
           theme: osceTheme,
@@ -79,7 +95,13 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
         tip: station.tip || '',
         checklist: station.checklist.filter(Boolean),
         actionCloud: station.actionCloud.filter(Boolean),
-        correctOrderIndices: station.correctOrderIndices.filter((n: any) => n !== null && n !== undefined)
+        correctOrderIndices: station.correctOrderIndices.filter((n: any) => n !== null && n !== undefined),
+        mode: station.mode,
+        type: station.type,
+        inventory: station.inventory,
+        initialVitals: station.initialVitals,
+        initialPhaseId: station.initialPhaseId,
+        phases: station.phases
       }));
 
       const firebaseSafePayload = JSON.parse(JSON.stringify(sanitizedStations));
@@ -103,14 +125,22 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
             <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
               <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Importar OSCE (JSON)</h3>
               <form onSubmit={handleOsceReadPreview} className="space-y-4">
-                <select value={osceDiscipline} onChange={e => setOsceDiscipline(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
-                  <option value="">Disciplina...</option>
-                  {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+                
+                <select value={osceRoom} onChange={e => { setOsceRoom(e.target.value); setOsceDiscipline(''); setOsceTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
+                  <option value="">Sala/Turma...</option>
+                  {(rooms || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
-                <select value={osceTheme} onChange={e => setOsceTheme(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
+
+                <select value={osceDiscipline} onChange={e => { setOsceDiscipline(e.target.value); setOsceTheme(''); }} disabled={!osceRoom} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
+                  <option value="">Disciplina...</option>
+                  {filteredImportDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+                </select>
+
+                <select value={osceTheme} onChange={e => setOsceTheme(e.target.value)} disabled={!osceDiscipline} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
                   <option value="">Eixo Temático...</option>
                   {disciplines.find(d => d.id === osceDiscipline)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
+
                 <input type="file" accept=".json" onChange={e => setOsceFile(e.target.files ? e.target.files[0] : null)} className="w-full text-[10px] text-gray-400 font-black uppercase p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200" required />
                 <button type="submit" disabled={!osceFile} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50">
                   Visualizar Arquivo 👁️
@@ -147,6 +177,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                       <div className="flex gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                         <span className="bg-white px-3 py-1 rounded-md shadow-sm border">☁️ Nuvem: {station.actionCloud.length} itens</span>
                         <span className="bg-white px-3 py-1 rounded-md shadow-sm border">✅ Checklist: {station.correctOrderIndices.length} acertos</span>
+                        {station.type === 'rpg' && <span className="bg-red-100 text-red-700 px-3 py-1 rounded-md shadow-sm border border-red-200">🚀 LUNA ENGINE</span>}
                       </div>
                    </div>
                  ))}
@@ -172,12 +203,22 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                  </div>
                  <div className="flex flex-wrap gap-2">
                      <select 
-                       value={discFilterOsce} 
-                       onChange={e => { setDiscFilterOsce(e.target.value); setThemeFilterOsce(''); }} 
+                       value={roomFilterOsce} 
+                       onChange={e => { setRoomFilterOsce(e.target.value); setDiscFilterOsce(''); setThemeFilterOsce(''); }} 
                        className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]"
                      >
-                       <option value="">Todas Disciplinas</option>
-                       {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+                       <option value="">Todas as Salas</option>
+                       {(rooms || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                     </select>
+
+                     <select 
+                       value={discFilterOsce} 
+                       onChange={e => { setDiscFilterOsce(e.target.value); setThemeFilterOsce(''); }} 
+                       disabled={!roomFilterOsce}
+                       className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50"
+                     >
+                       <option value="">Disciplinas...</option>
+                       {filteredViewDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
                      </select>
                      
                      <select 
@@ -186,7 +227,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                        disabled={!discFilterOsce} 
                        className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50 disabled:cursor-not-allowed"
                      >
-                       <option value="">Todos os Temas</option>
+                       <option value="">Temas...</option>
                        {discFilterOsce && disciplines.find(d => d.id === discFilterOsce)?.themes?.map(t => (
                          <option key={t} value={t}>{t}</option>
                        ))}
@@ -196,6 +237,13 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
 
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                  {osceStations
+                   .filter(s => {
+                     if (roomFilterOsce) {
+                       const discDaEstacao = disciplines.find(d => d.id === s.disciplineId);
+                       if (discDaEstacao?.roomId !== roomFilterOsce) return false;
+                     }
+                     return true;
+                   })
                    .filter(s => (!discFilterOsce || s.disciplineId === discFilterOsce) && (!themeFilterOsce || s.theme === themeFilterOsce))
                    .map(station => (
                    <div key={station.id} className="p-5 bg-gray-50 rounded-[1.5rem] border flex justify-between items-center hover:border-red-100 group transition-all">
@@ -204,6 +252,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                         <div className="flex gap-2 mt-1">
                           <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">{station.disciplineId}</p>
                           <p className="text-[9px] font-black uppercase text-[#D4A017] tracking-widest">• {station.theme}</p>
+                          {station.type === 'rpg' && <p className="text-[9px] font-black uppercase text-red-500 tracking-widest bg-red-50 px-2 rounded">• LUNA ENGINE</p>}
                         </div>
                       </div>
                       <button onClick={() => confirm("Excluir esta estação?") && onRemoveOsceStation(station.id)} className="text-red-300 hover:text-red-500">
