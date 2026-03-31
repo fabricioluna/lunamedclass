@@ -40,6 +40,27 @@ export interface ClinicalState {
   status: string;   // Status visual/clínico (Ex: "cianótico", "estável", "inconsciente")
 }
 
+// === LUNA ENGINE 2.0: ESTRUTURAS DE FASES E TRANSIÇÕES ===
+export interface PhaseTransition {
+  triggers: string[];       // Palavras-chave ou condutas esperadas (Ex: ["garrote", "luvas"])
+  nextPhaseId: string;      // ID da próxima fase se o aluno acertar
+  feedbackText: string;     // Narrativa de sucesso que a IA deve falar
+  isFatalError?: boolean;   // Se for true, encerra o simulado (Ex: quebra grave de segurança)
+}
+
+export interface SimulationPhase {
+  phaseId: string;
+  narrative: string;              // Descrição do estado atual para a IA guiar o aluno
+  vitals: ClinicalState;          // Sinais vitais exatos desta fase
+  backgroundUrl?: string;         // Imagem de fundo imersiva para o ambiente atual
+  
+  // Controle de Tempo Real e Estresse
+  timeLimitSeconds?: number;      // Tempo limite em segundos
+  timeoutPhaseId?: string;        // Para qual fase o caso vai se o tempo esgotar (Piora)
+  
+  transitions: PhaseTransition[]; // Condutas possíveis para avançar
+}
+
 export interface OsceStation {
   id: string;
   firebaseId?: string;
@@ -54,9 +75,12 @@ export interface OsceStation {
   actionCloud: string[];
   correctOrderIndices: number[];
   
-  // === NOVOS CAMPOS OPCIONAIS PARA O MODO RPG ===
+  // === NOVOS CAMPOS OPCIONAIS PARA O MODO RPG (LUNA ENGINE 2.0) ===
   mode?: 'clinical' | 'rpg'; 
-  initialVitals?: ClinicalState; // Sinais vitais com os quais o paciente começa a estação
+  initialVitals?: ClinicalState;            // Sinais vitais com os quais o paciente começa a estação
+  inventory?: string[];                     // Inventário: O que o aluno tem disponível na sala
+  initialPhaseId?: string;                  // Qual fase iniciar (ex: "fase_1")
+  phases?: Record<string, SimulationPhase>; // Todas as fases do caso mapeadas por ID
 }
 
 export interface SimulationInfo {
