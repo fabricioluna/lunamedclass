@@ -31,6 +31,15 @@ export interface Question {
   author?: string;    
 }
 
+// === NOVA INTERFACE: ESTADO CLÍNICO DO PACIENTE (RPG) ===
+export interface ClinicalState {
+  hr: number;       // Heart Rate (Frequência Cardíaca)
+  bp: string;       // Blood Pressure (Pressão Arterial. Ex: "120/80")
+  sat: number;      // Saturação de O2 (%)
+  rr: number;       // Respiratory Rate (Frequência Respiratória)
+  status: string;   // Status visual/clínico (Ex: "cianótico", "estável", "inconsciente")
+}
+
 export interface OsceStation {
   id: string;
   firebaseId?: string;
@@ -44,6 +53,10 @@ export interface OsceStation {
   checklist: string[];
   actionCloud: string[];
   correctOrderIndices: number[];
+  
+  // === NOVOS CAMPOS OPCIONAIS PARA O MODO RPG ===
+  mode?: 'clinical' | 'rpg'; 
+  initialVitals?: ClinicalState; // Sinais vitais com os quais o paciente começa a estação
 }
 
 export interface SimulationInfo {
@@ -53,10 +66,10 @@ export interface SimulationInfo {
   description: string;
   meta: string;
   icon: string;
-  status: 'active' | 'locked' | 'coming-soon'; // ÚNICA FONTE DE VERDADE AGORA
+  status: 'active' | 'locked' | 'coming-soon'; 
   themes: string[];
   references?: ReferenceMaterial[];
-  lockedFeatures?: string[]; // NOVO: Controle granular de botões/funcionalidades bloqueadas
+  lockedFeatures?: string[]; 
 }
 
 export interface Summary {
@@ -119,3 +132,51 @@ export interface LabSimulation {
   createdAt?: number;
   views?: number; 
 }
+
+export const getAIResponse = async (prompt: string, context: string = "") => {
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, context }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro no servidor: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text; 
+
+  } catch (error) {
+    console.error("Erro na comunicação com a API segura:", error);
+    return "Desculpe, tive um problema ao processar a sua dúvida. Tente novamente em instantes.";
+  }
+};
+
+// === FUNÇÃO: GERAÇÃO DE DICAS PARA O LABORATÓRIO (INTACTA) ===
+export const generateLabTips = async (answer: string, question: string) => {
+  const prompt = `Você é um professor de medicina especialista em anatomia, histologia e patologia.
+  A pergunta do simulado de laboratório visual foi: "${question}"
+  A resposta correta esperada é: "${answer}"
+
+  Com base APENAS nesta resposta correta, retorne um objeto JSON ESTRITO com as seguintes chaves (em inglês):
+  "identification": "Dica prática e direta de como identificar visualmente essa estrutura na imagem (ex: formato, cor, características)",
+  "location": "Dica de localização topográfica ou contexto no órgão",
+  "functions": "Principais funções fisiológicas ou correlação clínica direta"
+
+  Não use formatação markdown (como \`\`\`json). Retorne APENAS o objeto JSON puro e válido.`;
+
+  try {
+    const responseText = await getAIResponse(prompt, "Geração de dicas estruturadas para laboratório virtual.");
+    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error("Erro ao gerar/processar as dicas da IA:", error);
+    return {
+      identification: "Dica visual não disponível no momento.",
+      location: "Erro ao processar localização.",
+      functions: "Verifique sua conexão e tente novamente."
+    };
+  }
+};
