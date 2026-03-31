@@ -98,7 +98,7 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const current = getHabMedN1() + getHabMedN2() + (parseFloat(extraPoints.replace(',', '.')) || 0);
     if (current >= 7) return { text: "Média 7.0 Atingida! 🎉", color: "text-green-500" };
     const missing = (7 - current).toFixed(2);
-    return { text: `Faltam ${missing} pontos para o 7.0`, color: "text-[#003366]" };
+    return { text: `Faltam ${missing} pontos na Média Geral`, color: "text-[#003366]" };
   };
 
   // --- CÁLCULO AUTOMÁTICO (useEffect) ---
@@ -183,7 +183,6 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           {/* MÓDULO: UNIDADE CURRICULAR (UC) */}
           {activeCalc === 'UC' && (
             <div className="space-y-8 animate-in fade-in duration-500">
-              {/* Conteúdo UC (Inalterado) */}
               <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
                 <div className={sectionTitleClass}>
                   <div className="flex items-center gap-3"><span className={numberBadge}>1</span> Tutoria (SPs)</div>
@@ -307,7 +306,7 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <div className={sectionTitleClass}>
                   <div className="flex items-center gap-3"><span className={numberBadge}>N1</span></div>
                   <div className="bg-gray-50 px-4 py-1.5 rounded-xl text-[10px] font-black border border-gray-100">
-                    PARCIAL (0-5): <span className="text-[#D4A017]">{getHabMedN1().toFixed(2)}</span>
+                    MÉDIA UNIDADE (0-10): <span className="text-[#D4A017]">{(getHabMedN1() * 2).toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -320,7 +319,7 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <div className={sectionTitleClass}>
                   <div className="flex items-center gap-3"><span className={numberBadge}>N2</span></div>
                   <div className="bg-gray-50 px-4 py-1.5 rounded-xl text-[10px] font-black border border-gray-100">
-                    PARCIAL (0-5): <span className="text-[#D4A017]">{getHabMedN2().toFixed(2)}</span>
+                    MÉDIA UNIDADE (0-10): <span className="text-[#D4A017]">{(getHabMedN2() * 2).toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
