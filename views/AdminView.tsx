@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial } from '../types.ts';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock } from 'lucide-react'; 
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit } from 'lucide-react'; 
 
 // IMPORTAÇÃO DA NOSSA "NUVEM" DE DADOS E FIREBASE
 import { useData } from '../contexts/DataContext.tsx';
@@ -15,22 +15,23 @@ import AdminOsce from '../components/admin/AdminOsce.tsx';
 import AdminThemes from '../components/admin/AdminThemes.tsx';
 import AdminReferences from '../components/admin/AdminReferences.tsx';
 import AdminDisciplines from '../components/admin/AdminDisciplines.tsx'; 
+import AdminAnalytics from '../components/admin/AdminAnalytics'; // <--- INTEGRADO
 
 interface AdminViewProps {
   onBack: () => void; 
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
-  // 1. PUXANDO DADOS DIRETO DA NUVEM (Agora puxando as 'rooms' também)
-  const { rooms, questions, osceStations, disciplines, summaries, quizResults, labSimulations } = useData();
+  // 1. PUXANDO DADOS (Incluso osceAnalytics para sua pesquisa)
+  const { rooms, questions, osceStations, disciplines, summaries, quizResults, labSimulations, osceAnalytics } = useData();
 
   const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('fms_admin_auth') === 'true');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   
-  const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'references' | 'materials' | 'themes' | 'lab' | 'access'>('stats');
+  // Adicionado 'analytics' no tipo da aba
+  const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access'>('stats');
   
-  // ESTADOS GLOBAIS DE FILTRO DE ESTATÍSTICAS
   const [statsRoomFilter, setStatsRoomFilter] = useState(''); 
   const [statsDiscFilter, setStatsDiscFilter] = useState('');
   const [statsTypeFilter, setStatsTypeFilter] = useState('');
@@ -59,6 +60,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         remove(ref(db, 'osce'));
         remove(ref(db, 'discipline_config'));
         remove(ref(db, 'labSimulations')); 
+        remove(ref(db, 'osceAnalytics')); // Resetar dados de pesquisa também
       }
       alert("✅ Banco de dados completamente resetado.");
     } else if (pass !== null) {
@@ -67,6 +69,14 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   };
 
   const handleClearResults = () => db && remove(ref(db, 'quizResults'));
+  
+  const handleClearAnalytics = () => {
+    const pass = prompt("Deseja apagar os dados brutos de pesquisa (Analytics)? Digite fmst8:");
+    if (pass === 'fmst8' && db) {
+        remove(ref(db, 'osceAnalytics'));
+        alert("Dados de analytics removidos.");
+    }
+  };
 
   const handleClearQuestions = (discId?: string) => {
     if (db) {
@@ -116,16 +126,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     if (db) set(ref(db, `discipline_config/${disciplineId}/references`), refsList);
   };
 
-  const handleRemoveQuiz = (quizTitle: string, discId?: string) => {
-    if (db) {
-      questions.forEach(q => {
-        if (q.quizTitle === quizTitle && (!discId || q.disciplineId === discId)) {
-          if (q.firebaseId) remove(ref(db, `questions/${q.firebaseId}`));
-        }
-      });
-    }
-  };
-
   const handleToggleStatus = (disciplineId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'locked' : 'active';
     if (db) set(ref(db, `discipline_config/${disciplineId}/status`), newStatus);
@@ -134,17 +134,12 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const handleToggleFeature = (disciplineId: string, featureId: string, isCurrentlyLocked: boolean) => {
     const disc = disciplines.find(d => d.id === disciplineId);
     if (!disc) return;
-
     let newLockedFeatures = disc.lockedFeatures ? [...disc.lockedFeatures] : [];
-
     if (isCurrentlyLocked) {
       newLockedFeatures = newLockedFeatures.filter(id => id !== featureId);
     } else {
-      if (!newLockedFeatures.includes(featureId)) {
-        newLockedFeatures.push(featureId);
-      }
+      if (!newLockedFeatures.includes(featureId)) newLockedFeatures.push(featureId);
     }
-
     if (db) set(ref(db, `discipline_config/${disciplineId}/lockedFeatures`), newLockedFeatures);
   };
 
@@ -178,6 +173,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
            </div>
         </div>
         <div className="flex gap-2">
+           <button onClick={handleClearAnalytics} className="bg-purple-100 text-purple-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-200 transition-all">Limpar Analytics</button>
            <button onClick={handleClearResults} className="bg-orange-100 text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-200 transition-all">Limpar Resultados</button>
            <button onClick={handleGlobalReset} className="bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg transition-all">Resetar Banco Total</button>
         </div>
@@ -186,6 +182,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       <nav className="flex flex-wrap gap-2 mb-12">
         {[
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
+          { id: 'analytics', label: 'Research Analytics', icon: <BrainCircuit size={16}/> }, // <--- NOVA ABA
           { id: 'access', label: 'Acessos', icon: <Lock size={16}/> }, 
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
           { id: 'questions', label: 'Questões', icon: <FileText size={16}/> },
@@ -206,7 +203,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         ))}
       </nav>
 
-      {/* RENDERIZAÇÃO DOS COMPONENTES MODULARIZADOS */}
+      {/* RENDERIZAÇÃO DOS COMPONENTES */}
       {activeTab === 'stats' && (
         <AdminStats 
           quizResults={quizResults}
@@ -221,6 +218,14 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           setStatsDiscFilter={setStatsDiscFilter}
           setStatsTypeFilter={setStatsTypeFilter}
           setStatsQuizTitleFilter={setStatsQuizTitleFilter}
+        />
+      )}
+
+      {/* NOVO DASHBOARD DE PESQUISA */}
+      {activeTab === 'analytics' && (
+        <AdminAnalytics 
+          analyticsData={osceAnalytics || []} 
+          disciplines={disciplines} 
         />
       )}
 
@@ -244,7 +249,15 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           onUpdateQuestion={(q) => { if (db && q.firebaseId) set(ref(db, `questions/${q.firebaseId}`), q); }}
           onRemoveQuestion={(id) => { const q = questions.find(item => item.id === id); if (db && q?.firebaseId) remove(ref(db, `questions/${q.firebaseId}`)); }}
           onClearQuestions={handleClearQuestions}
-          onRemoveQuiz={handleRemoveQuiz}
+          onRemoveQuiz={(title, discId) => {
+            if (db) {
+                questions.forEach(q => {
+                  if (q.quizTitle === title && (!discId || q.disciplineId === discId)) {
+                    if (q.firebaseId) remove(ref(db, `questions/${q.firebaseId}`));
+                  }
+                });
+              }
+          }}
         />
       )}
 
@@ -258,7 +271,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         />
       )}
 
-      {/* --- REPARE QUE AGORA PASSAMOS AS 'ROOMS' PARA DENTRO DELES --- */}
       {activeTab === 'osce' && (
         <AdminOsce 
           rooms={rooms}

@@ -25,10 +25,9 @@ import { db, ref, push } from './firebase.ts';
 
 import { DataProvider, useData } from './contexts/DataContext.tsx';
 
-const APP_VERSION = "7.7.0 - Luna Analytics Hybrid";
+const APP_VERSION = "7.8.0 - Luna Data Engine";
 
 const AppContent: React.FC = () => {
-  // LÓGICA DE NAVEGAÇÃO E TELAS
   const [currentView, setCurrentView] = useState<ViewState>('room-selection');
   const [viewHistory, setViewHistory] = useState<ViewState[]>(['room-selection']);
   
@@ -109,7 +108,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4f7f6] p-6">
         <div className="w-12 h-12 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-6"></div>
-        <h1 className="text-[#003366] font-black uppercase tracking-[0.3em] text-xs">Sincronizando Luna Analytics...</h1>
+        <h1 className="text-[#003366] font-black uppercase tracking-[0.3em] text-xs">Luna Analytics Engine Sincronizando...</h1>
       </div>
     );
   }
@@ -127,10 +126,11 @@ const AppContent: React.FC = () => {
         hasRoomSelected={!!selectedRoomId}
       />
 
+      {/* Barra de Status com foco em Dados */}
       <div className={`py-1 px-4 flex justify-center items-center gap-2 border-b transition-all duration-700 ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
         <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
         <span className={`text-[8px] font-black uppercase tracking-widest ${isOnline ? 'text-green-700' : 'text-red-700'}`}>
-          {isOnline ? 'Nuvem Ativa • Estatísticas Habilitadas' : 'Trabalhando Offline'}
+          {isOnline ? 'Conexão Segura • Captura de Dados Científicos Ativa' : 'Modo Offline • Sincronização Pendente'}
         </span>
       </div>
 
@@ -189,6 +189,7 @@ const AppContent: React.FC = () => {
           />
         )}
 
+        {/* ROTAS DE OSCE E PRÁTICA */}
         {currentView === 'osce-mode-selection' && (
           <OsceModeSelectionView 
             onBack={handleBack}
@@ -223,28 +224,27 @@ const AppContent: React.FC = () => {
           />
         )}
         
+        {/* === MOTOR HÍBRIDO OSCE (ESTÁTICO + RPG) === */}
         {currentView === 'osce-quiz' && currentOsceStation && (
           currentOsceStation.mode === 'rpg' ? (
             <DynamicOsceView 
               station={currentOsceStation} 
               onBack={handleBack} 
               onSaveResult={(score, total, timeSpent, analytics) => {
-                if(db) {
-                  // 1. NOTA NORMAL DO ALUNO (Para o histórico dele)
+                if (db) {
+                  // 1. Grava nota do aluno
                   push(ref(db, 'quizResults'), {
-                    score,
-                    total,
+                    score, total, timeSpent,
                     date: new Date().toLocaleString(),
                     discipline: currentOsceStation.disciplineId,
                     quizTitle: currentOsceStation.title,
-                    type: 'osce-rpg',
-                    timeSpent: timeSpent || 0
+                    type: 'osce-rpg'
                   });
-
-                  // 2. DADOS ESTATÍSTICOS (Para seus relatórios de pesquisa)
+                  // 2. Grava dados para pesquisa (Estatísticas do Admin)
                   push(ref(db, 'osceAnalytics'), {
                     ...analytics,
-                    date: new Date().toLocaleString()
+                    date: new Date().toLocaleString(),
+                    studentId: "anon_student" // Adicione ID se tiver sistema de login
                   });
                 }
               }}
@@ -253,14 +253,20 @@ const AppContent: React.FC = () => {
             <OsceView 
               station={currentOsceStation} 
               onBack={handleBack} 
-              onSaveResult={(score, total, timeSpent) => {
-                if(db) {
+              onSaveResult={(score, total, timeSpent, analytics) => {
+                if (db) {
+                  // 1. Grava nota do aluno
                   push(ref(db, 'quizResults'), {
-                    score, total, date: new Date().toLocaleString(),
+                    score, total, timeSpent,
+                    date: new Date().toLocaleString(),
                     discipline: currentOsceStation.disciplineId,
                     quizTitle: currentOsceStation.title,
-                    type: 'osce-estatico',
-                    timeSpent: timeSpent || 0
+                    type: 'osce-estatico'
+                  });
+                  // 2. Grava dados para pesquisa (Estatísticas do Admin)
+                  push(ref(db, 'osceAnalytics'), {
+                    ...analytics,
+                    date: new Date().toLocaleString()
                   });
                 }
               }}
