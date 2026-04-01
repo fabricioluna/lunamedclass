@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { OsceStation } from '../types';
+import { OsceStation, StaticOsceStation } from '../types';
 
 interface OsceViewProps {
   station: OsceStation;
@@ -12,11 +12,31 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack }) => {
   const [score, setScore] = useState(0);
   const [timer, setTimer] = useState(0);
 
-  // IDENTIFICADOR AUTOMÁTICO DE UC
-  const isUC = station.disciplineId.toLowerCase().startsWith('uc');
+  // === PROTEÇÃO DE MOTOR (TYPE GUARD) ===
+  // Se a estação for do modo RPG, esta view (estática) não deve processá-la.
+  // Isso evita erros de "undefined" ao tentar acessar actionCloud ou correctOrderIndices.
+  if (station.mode === 'rpg') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase">Estação em Modo RPG</h2>
+        <p className="text-gray-600 mb-8 font-medium">
+          Esta estação utiliza o motor Luna Engine 2.0 e deve ser aberta no simulador dinâmico.
+        </p>
+        <button onClick={onBack} className="bg-[#003366] text-white px-8 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest">
+          Voltar para Seleção
+        </button>
+      </div>
+    );
+  }
 
-  const safeActionCloud = station.actionCloud || [];
-  const safeOrderIndices = station.correctOrderIndices || [];
+  // A partir daqui, o TypeScript sabe que 'station' é uma StaticOsceStation
+  const staticStation = station as StaticOsceStation;
+
+  // IDENTIFICADOR AUTOMÁTICO DE UC
+  const isUC = staticStation.disciplineId.toLowerCase().startsWith('uc');
+
+  const safeActionCloud = staticStation.actionCloud || [];
+  const safeOrderIndices = staticStation.correctOrderIndices || [];
 
   useEffect(() => {
     let interval: any;
@@ -69,8 +89,8 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack }) => {
           <span>←</span> Sair da Estação
         </button>
         <div className="text-right">
-          <span className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">{station.theme}</span>
-          <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">{station.title}</h2>
+          <span className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">{staticStation.theme}</span>
+          <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">{staticStation.title}</h2>
         </div>
       </div>
 
@@ -81,27 +101,27 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack }) => {
             <h3 className="text-[10px] font-black text-[#003366] uppercase mb-4 tracking-widest flex items-center gap-2">
               <span>{isUC ? '🔬' : '📋'}</span> {isUC ? 'Contexto da Bancada' : 'Cenário Clínico'}
             </h3>
-            <p className="text-gray-700 leading-relaxed text-base md:text-lg font-medium mb-6">"{station.scenario}"</p>
+            <p className="text-gray-700 leading-relaxed text-base md:text-lg font-medium mb-6">"{staticStation.scenario}"</p>
             
-            {station.setting && (
+            {staticStation.setting && (
                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
                   <h4 className="text-[9px] font-black text-blue-800 uppercase mb-1 tracking-widest">📍 Ambiente</h4>
-                  <p className="text-xs text-blue-900 font-medium">{station.setting}</p>
+                  <p className="text-xs text-blue-900 font-medium">{staticStation.setting}</p>
                </div>
             )}
           </div>
 
           <div className="bg-[#003366] p-8 rounded-[2rem] shadow-xl text-white">
             <h3 className="text-[10px] font-black text-[#D4A017] uppercase mb-4 tracking-widest">🎯 Comandos</h3>
-            <p className="text-sm font-bold leading-relaxed">{station.task}</p>
+            <p className="text-sm font-bold leading-relaxed">{staticStation.task}</p>
           </div>
 
-          {station.tip && (
+          {staticStation.tip && (
             <div className="bg-yellow-50 p-6 rounded-[2rem] border border-yellow-200 shadow-sm animate-in fade-in duration-500">
               <h3 className="text-[10px] font-black text-yellow-600 uppercase mb-2 tracking-widest flex items-center gap-2">
                 <span>💡</span> Dica do Preceptor
               </h3>
-              <p className="text-sm font-medium text-yellow-800 leading-relaxed">{station.tip}</p>
+              <p className="text-sm font-medium text-yellow-800 leading-relaxed">{staticStation.tip}</p>
             </div>
           )}
 

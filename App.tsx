@@ -8,8 +8,10 @@ import QuizView from './views/QuizView.tsx';
 import AdminView from './views/AdminView.tsx';
 import SummariesListView from './views/SummariesListView.tsx';
 import OsceView from './views/OsceView.tsx';
+import DynamicOsceView from './views/DynamicOsceView.tsx'; // <-- ATIVADO: Motor RPG
 import OsceSetupView from './views/OsceSetupView.tsx';
 import OsceAIView from './views/OsceAIView.tsx';
+import OsceModeSelectionView from './views/OsceModeSelectionView'; 
 import CalculatorsView from './views/CalculatorsView.tsx';
 import CareerQuiz from './components/CareerQuiz.tsx';
 import ReferencesView from './views/ReferencesView.tsx';
@@ -21,13 +23,11 @@ import { ViewState, Question, OsceStation, LabSimulation } from './types.ts';
 import { ROOMS } from './constants.tsx';
 import { db, ref, push } from './firebase.ts';
 
-// IMPORTAÇÃO DO NOSSO CONTEXTO GLOBAL
 import { DataProvider, useData } from './contexts/DataContext.tsx';
 
-const APP_VERSION = "6.4.0 - Arquitetura de Contexto";
+const APP_VERSION = "7.6.0 - Luna Engine Hybrid";
 
 const AppContent: React.FC = () => {
-  // LÓGICA DE NAVEGAÇÃO E TELAS
   const [currentView, setCurrentView] = useState<ViewState>('room-selection');
   const [viewHistory, setViewHistory] = useState<ViewState[]>(['room-selection']);
   
@@ -39,7 +39,8 @@ const AppContent: React.FC = () => {
   const [currentOsceAIStation, setCurrentOsceAIStation] = useState<OsceStation | null>(null);
   const [currentLabSimulation, setCurrentLabSimulation] = useState<LabSimulation | null>(null); 
 
-  // CONSUMINDO OS DADOS DA NUVEM (CONTEXT API)
+  const [osceFilterMode, setOsceFilterMode] = useState<'static' | 'rpg' | 'all'>('all');
+
   const { 
     isLoading, 
     isOnline, 
@@ -56,9 +57,7 @@ const AppContent: React.FC = () => {
 
   const handleSelectRoom = (roomId: string) => {
     setSelectedRoomId(roomId);
-    
     const roomDiscs = disciplines.filter(d => d.roomId === roomId);
-    
     if (roomDiscs.length === 1) {
       setSelectedDisciplineId(roomDiscs[0].id);
       setCurrentView('discipline');
@@ -71,17 +70,13 @@ const AppContent: React.FC = () => {
 
   const handleNavigate = (view: ViewState) => {
     if (view === currentView) return; 
-
     if (view === 'room-selection') {
       setSelectedDisciplineId(null);
       setSelectedRoomId(null);
       setViewHistory(['room-selection']);
     } else if (view === 'home') {
       setSelectedDisciplineId(null);
-      setViewHistory(prev => {
-        if (prev[prev.length - 1] === 'home') return prev;
-        return [...prev, 'home'];
-      });
+      setViewHistory(prev => [...prev, 'home']);
     } else {
       setViewHistory(prev => [...prev, view]);
     }
@@ -94,11 +89,8 @@ const AppContent: React.FC = () => {
       const newHistory = [...prev];
       newHistory.pop(); 
       const prevView = newHistory[newHistory.length - 1]; 
-      
       setCurrentView(prevView);
-      if (prevView === 'home') {
-        setSelectedDisciplineId(null);
-      }
+      if (prevView === 'home') setSelectedDisciplineId(null);
       if (prevView === 'room-selection') {
         setSelectedDisciplineId(null);
         setSelectedRoomId(null);
@@ -116,7 +108,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4f7f6] p-6">
         <div className="w-12 h-12 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-6"></div>
-        <h1 className="text-[#003366] font-black uppercase tracking-[0.3em] text-xs">Sincronizando Dados...</h1>
+        <h1 className="text-[#003366] font-black uppercase tracking-[0.3em] text-xs">Luna Engine Sincronizando...</h1>
       </div>
     );
   }
@@ -142,23 +134,9 @@ const AppContent: React.FC = () => {
       </div>
 
       <div className="flex-grow">
-        {currentView === 'room-selection' && (
-          <RoomSelectionView 
-            rooms={ROOMS} 
-            onSelectRoom={handleSelectRoom} 
-          />
-        )}
-
-        {currentView === 'home' && currentRoom && (
-          <HomeView 
-            room={currentRoom} 
-            disciplines={roomDisciplines} 
-            onSelectDiscipline={handleSelectDiscipline} 
-          />
-        )}
-        
+        {currentView === 'room-selection' && <RoomSelectionView rooms={ROOMS} onSelectRoom={handleSelectRoom} />}
+        {currentView === 'home' && currentRoom && <HomeView room={currentRoom} disciplines={roomDisciplines} onSelectDiscipline={handleSelectDiscipline} />}
         {currentView === 'career-quiz' && <CareerQuiz onBack={handleBack} />}
-        
         {currentView === 'discipline' && selectedDisciplineId && (
           <DisciplineView 
             disciplineId={selectedDisciplineId} 
@@ -189,9 +167,7 @@ const AppContent: React.FC = () => {
             onSaveResult={(score, total, quizTitle, type, timeSpent, details) => {
               if (db) {
                 push(ref(db, 'quizResults'), { 
-                  score, 
-                  total, 
-                  date: new Date().toLocaleString(), 
+                  score, total, date: new Date().toLocaleString(), 
                   discipline: currentDiscipline?.id || 'Geral',
                   quizTitle: quizTitle || 'Misto',
                   type: type || 'teorico',
@@ -211,34 +187,64 @@ const AppContent: React.FC = () => {
             onShareClick={() => handleNavigate('share-material')} 
           />
         )}
+
+        {currentView === 'osce-mode-selection' && (
+          <OsceModeSelectionView 
+            onBack={handleBack}
+            onSelectMode={(mode) => {
+              if (mode === 'static') {
+                setOsceFilterMode('static');
+                handleNavigate('osce-setup');
+              } else if (mode === 'ai') {
+                handleNavigate('osce-ai-setup');
+              } else if (mode === 'rpg') {
+                setOsceFilterMode('rpg');
+                handleNavigate('osce-setup');
+              }
+            }}
+          />
+        )}
         
         {currentView === 'osce-setup' && selectedDisciplineId && (
           <OsceSetupView 
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
-            availableStations={osceStations.filter(s => s.disciplineId === selectedDisciplineId)}
+            availableStations={osceStations.filter(s => {
+              const isCorrectDisc = s.disciplineId === selectedDisciplineId;
+              if (osceFilterMode === 'static') return isCorrectDisc && s.mode !== 'rpg';
+              if (osceFilterMode === 'rpg') return isCorrectDisc && s.mode === 'rpg';
+              return isCorrectDisc;
+            })}
             onBack={handleBack}
-            onStart={(station) => { setCurrentOsceStation(station); handleNavigate('osce-quiz'); }}
+            onStart={(station) => { 
+              setCurrentOsceStation(station); 
+              handleNavigate('osce-quiz'); 
+            }}
           />
         )}
         
         {currentView === 'osce-quiz' && currentOsceStation && (
-          <OsceView 
-            station={currentOsceStation} 
-            onBack={handleBack} 
-            onSaveResult={(score, total, timeSpent) => {
-              if(db) {
-                push(ref(db, 'quizResults'), {
-                  score,
-                  total,
-                  date: new Date().toLocaleString(),
-                  discipline: currentOsceStation.disciplineId,
-                  quizTitle: currentOsceStation.title,
-                  type: 'osce',
-                  timeSpent: timeSpent || 0
-                });
-              }
-            }}
-          />
+          currentOsceStation.mode === 'rpg' ? (
+            <DynamicOsceView 
+              station={currentOsceStation} 
+              onBack={handleBack} 
+            />
+          ) : (
+            <OsceView 
+              station={currentOsceStation} 
+              onBack={handleBack} 
+              onSaveResult={(score, total, timeSpent) => {
+                if(db) {
+                  push(ref(db, 'quizResults'), {
+                    score, total, date: new Date().toLocaleString(),
+                    discipline: currentOsceStation.disciplineId,
+                    quizTitle: currentOsceStation.title,
+                    type: 'osce',
+                    timeSpent: timeSpent || 0
+                  });
+                }
+              }}
+            />
+          )
         )}
 
         {currentView === 'osce-ai-setup' && selectedDisciplineId && (
@@ -269,9 +275,7 @@ const AppContent: React.FC = () => {
             onSaveResult={(score, total, timeSpent, details) => {
               if (db) {
                 push(ref(db, 'quizResults'), {
-                  score,
-                  total,
-                  date: new Date().toLocaleString(),
+                  score, total, date: new Date().toLocaleString(),
                   discipline: currentLabSimulation.disciplineId,
                   quizTitle: currentLabSimulation.title,
                   type: 'laboratorio',
@@ -283,17 +287,13 @@ const AppContent: React.FC = () => {
           />
         )}
 
-        {/* OLHE A DIFERENÇA DO ADMINVIEW AGORA! */}
-        {currentView === 'admin' && (
-          <AdminView onBack={handleBack} />
-        )}
-
+        {currentView === 'admin' && <AdminView onBack={handleBack} />}
       </div>
 
       <footer className="bg-white border-t py-8 flex flex-col items-center gap-2 mt-auto text-center px-4">
-        <div className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">© 2026 Luna MedClass</div>
+        <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest">© 2026 Luna MedClass</div>
         <div className="text-gray-500 text-[9px] font-medium uppercase max-w-md my-1">
-          Produção independente. Este portal não é um canal ou ferramenta oficial de nenhuma instituição de ensino.
+          Simuladores de Alto Rendimento para Medicina.
         </div>
         <div className="text-[#D4A017] text-[11px] font-black uppercase tracking-[0.2em] mb-1">Desenvolvido por Fabrício Luna</div>
         <div className="text-[8px] text-gray-300 font-black uppercase tracking-tighter">Build {APP_VERSION}</div>
@@ -302,7 +302,6 @@ const AppContent: React.FC = () => {
   );
 };
 
-// Envolvendo o aplicativo com o Provedor de Dados
 const App: React.FC = () => {
   return (
     <DataProvider>

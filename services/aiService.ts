@@ -1,3 +1,9 @@
+// services/aiService.ts
+
+/**
+ * Função base para comunicação com a API de Chat da LunaMedClass.
+ * Realiza a chamada ao endpoint seguro para processamento de linguagem natural.
+ */
 export const getAIResponse = async (prompt: string, context: string = "") => {
   try {
     const response = await fetch('/api/chat', {
@@ -19,7 +25,11 @@ export const getAIResponse = async (prompt: string, context: string = "") => {
   }
 };
 
-// === NOVA FUNÇÃO: GERAÇÃO DE DICAS PARA O LABORATÓRIO ===
+/**
+ * GERAÇÃO DE DICAS PARA O LABORATÓRIO VIRTUAL
+ * Atua como um professor especialista para gerar metadados estruturados (JSON)
+ * sobre estruturas anatômicas, histológicas ou patológicas.
+ */
 export const generateLabTips = async (answer: string, question: string) => {
   const prompt = `Você é um professor de medicina especialista em anatomia, histologia e patologia.
   A pergunta do simulado de laboratório visual foi: "${question}"
@@ -33,16 +43,16 @@ export const generateLabTips = async (answer: string, question: string) => {
   Não use formatação markdown (como \`\`\`json). Retorne APENAS o objeto JSON puro e válido.`;
 
   try {
-    // Usamos a sua própria função segura para pedir a resposta!
+    // Usamos a função interna para solicitar a resposta à IA
     const responseText = await getAIResponse(prompt, "Geração de dicas estruturadas para laboratório virtual.");
     
-    // Limpamos possíveis formatações de markdown que a IA possa colocar por engano
+    // Limpeza de possíveis formatações markdown que a IA possa incluir por engano
     const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     
     return JSON.parse(cleanText);
   } catch (error) {
     console.error("Erro ao gerar/processar as dicas da IA:", error);
-    // Retorno de segurança caso algo falhe
+    // Retorno de segurança (Fallback) para evitar quebra da interface
     return {
       identification: "Dica visual não disponível no momento.",
       location: "Erro ao processar localização.",

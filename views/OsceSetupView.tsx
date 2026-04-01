@@ -12,7 +12,7 @@ interface OsceSetupViewProps {
 const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStations, onStart, onBack, isAIMode = false }) => {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
 
-  // IDENTIFICADOR AUTOMÁTICO DE UC
+  // IDENTIFICADOR AUTOMÁTICO DE UC (Baseado na Matriz Curricular FMS)
   const isUC = discipline.id.toLowerCase().startsWith('uc');
 
   const handleSurpriseAll = () => {
@@ -132,19 +132,31 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
                 <button
                   key={station.id}
                   onClick={() => onStart(station)}
-                  className="p-5 bg-gray-50 hover:bg-white rounded-[1.5rem] border-2 border-transparent hover:border-[#D4A017] transition-all flex items-center justify-between group shadow-sm hover:shadow-lg"
+                  className="p-5 bg-gray-50 hover:bg-white rounded-[1.5rem] border-2 border-transparent hover:border-[#D4A017] transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between group shadow-sm hover:shadow-lg"
                 >
                   <div className="flex items-center gap-5 text-left">
-                    <div className="w-10 h-10 rounded-full bg-[#003366] text-white flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-[#003366] text-white flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform">
                       {index + 1}
                     </div>
                     <div>
-                      <h3 className="text-md font-black text-[#003366] mb-1 group-hover:text-[#D4A017] transition-colors leading-tight pr-4">
+                      <h3 className="text-md font-black text-[#003366] group-hover:text-[#D4A017] transition-colors leading-tight pr-4">
                         {station.title}
                       </h3>
+                      {/* BADGES DE TIPO DE ESTAÇÃO (LUNA ENGINE 2.0) */}
+                      <div className="flex gap-2 mt-2">
+                        {station.mode === 'rpg' ? (
+                          <span className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
+                            ⚡ Luna Engine RPG
+                          </span>
+                        ) : (
+                          <span className="bg-blue-100 text-blue-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-blue-200">
+                            📋 Simulado Prático
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-[#D4A017] font-black text-xl opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all">
+                  <div className="text-[#D4A017] font-black text-xl opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all self-end sm:self-center mt-2 sm:mt-0">
                     →
                   </div>
                 </button>

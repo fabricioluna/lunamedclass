@@ -1,4 +1,4 @@
-export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz';
+export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'osce-mode-selection' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz';
 
 export interface Room {
   id: string;
@@ -31,7 +31,7 @@ export interface Question {
   author?: string;    
 }
 
-// === NOVA INTERFACE: ESTADO CLÍNICO DO PACIENTE (RPG) ===
+// === INTERFACES COMPARTILHADAS ===
 export interface ClinicalState {
   hr: number;       // Heart Rate (Frequência Cardíaca)
   bp: string;       // Blood Pressure (Pressão Arterial. Ex: "120/80")
@@ -40,28 +40,28 @@ export interface ClinicalState {
   status: string;   // Status visual/clínico (Ex: "cianótico", "estável", "inconsciente")
 }
 
-// === LUNA ENGINE 2.0: ESTRUTURAS DE FASES E TRANSIÇÕES ===
+// === LUNA ENGINE 2.0: ESTRUTURAS DE FASES E TRANSIÇÕES (RPG DINÂMICO) ===
 export interface PhaseTransition {
-  triggers: string[];       // Palavras-chave ou condutas esperadas (Ex: ["garrote", "luvas"])
-  nextPhaseId: string;      // ID da próxima fase se o aluno acertar
-  feedbackText: string;     // Narrativa de sucesso que a IA deve falar
-  isFatalError?: boolean;   // Se for true, encerra o simulado (Ex: quebra grave de segurança)
+  triggers: string[];       
+  nextPhaseId: string;      
+  feedbackText: string;     
+  isFatalError?: boolean;   
 }
 
 export interface SimulationPhase {
   phaseId: string;
-  narrative: string;              // Descrição do estado atual para a IA guiar o aluno
-  vitals: ClinicalState;          // Sinais vitais exatos desta fase
-  backgroundUrl?: string;         // Imagem de fundo imersiva para o ambiente atual
-  
-  // Controle de Tempo Real e Estresse
-  timeLimitSeconds?: number;      // Tempo limite em segundos
-  timeoutPhaseId?: string;        // Para qual fase o caso vai se o tempo esgotar (Piora)
-  
-  transitions: PhaseTransition[]; // Condutas possíveis para avançar
+  narrative: string;              
+  vitals: ClinicalState;          
+  backgroundUrl?: string;         
+  timeLimitSeconds?: number;      
+  timeoutPhaseId?: string;        
+  transitions: PhaseTransition[]; 
 }
 
-export interface OsceStation {
+// === INTERFACE 1: OSCE ESTÁTICO (Clássico - HM1) ===
+// Foco: Paramentação, Antropometria, SSVV - Checklist Sequencial
+export interface StaticOsceStation {
+  mode: 'clinical'; // Identificador para o modo estático/clássico
   id: string;
   firebaseId?: string;
   disciplineId: string;
@@ -74,14 +74,51 @@ export interface OsceStation {
   checklist: string[];
   actionCloud: string[];
   correctOrderIndices: number[];
-  
-  // === NOVOS CAMPOS OPCIONAIS PARA O MODO RPG (LUNA ENGINE 2.0) ===
-  mode?: 'clinical' | 'rpg'; 
-  initialVitals?: ClinicalState;            // Sinais vitais com os quais o paciente começa a estação
-  inventory?: string[];                     // Inventário: O que o aluno tem disponível na sala
-  initialPhaseId?: string;                  // Qual fase iniciar (ex: "fase_1")
-  phases?: Record<string, SimulationPhase>; // Todas as fases do caso mapeadas por ID
 }
+
+// === INTERFACE 2: OSCE DINÂMICO (RPG - Luna Engine 2.0 - HM2) ===
+// Foco: Árvore de Decisão, Protocolo SPIKES, Relação Médico-Paciente
+export interface RPGNodeOption {
+  texto_acao: string;
+  proximo_no: string;
+  feedback_oculto: string;
+  pontuacao_delta: {
+    Tecnica: number;
+    Comunicacao: number;
+    Biosseguranca: number;
+  };
+}
+
+export interface RPGNode {
+  id_no: string;
+  estado_paciente: string;
+  sinais_vitais_atuais: string | ClinicalState; 
+  opcoes_aluno: RPGNodeOption[];
+}
+
+export interface DynamicOsceStation {
+  mode: 'rpg'; // Identificador para o modo dinâmico/RPG
+  id: string;
+  firebaseId?: string;
+  disciplineId: string;
+  theme: string;
+  title: string;
+  scenario: string;
+  task: string;
+  
+  // Estrutura de Árvore de Decisão (Luna Engine 2.0)
+  initialPhaseId: string;
+  phases: Record<string, SimulationPhase>;
+  
+  // Campos de Suporte
+  initialVitals?: ClinicalState;
+  inventory?: string[];
+  setting?: string;
+  tip?: string;
+}
+
+// === UNIÃO DISCRIMINADA: O SISTEMA RECONHECE O FORMATO PELO 'mode' ===
+export type OsceStation = StaticOsceStation | DynamicOsceStation;
 
 export interface SimulationInfo {
   id: string;
@@ -156,51 +193,3 @@ export interface LabSimulation {
   createdAt?: number;
   views?: number; 
 }
-
-export const getAIResponse = async (prompt: string, context: string = "") => {
-  try {
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, context }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erro no servidor: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.text; 
-
-  } catch (error) {
-    console.error("Erro na comunicação com a API segura:", error);
-    return "Desculpe, tive um problema ao processar a sua dúvida. Tente novamente em instantes.";
-  }
-};
-
-// === FUNÇÃO: GERAÇÃO DE DICAS PARA O LABORATÓRIO (INTACTA) ===
-export const generateLabTips = async (answer: string, question: string) => {
-  const prompt = `Você é um professor de medicina especialista em anatomia, histologia e patologia.
-  A pergunta do simulado de laboratório visual foi: "${question}"
-  A resposta correta esperada é: "${answer}"
-
-  Com base APENAS nesta resposta correta, retorne um objeto JSON ESTRITO com as seguintes chaves (em inglês):
-  "identification": "Dica prática e direta de como identificar visualmente essa estrutura na imagem (ex: formato, cor, características)",
-  "location": "Dica de localização topográfica ou contexto no órgão",
-  "functions": "Principais funções fisiológicas ou correlação clínica direta"
-
-  Não use formatação markdown (como \`\`\`json). Retorne APENAS o objeto JSON puro e válido.`;
-
-  try {
-    const responseText = await getAIResponse(prompt, "Geração de dicas estruturadas para laboratório virtual.");
-    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanText);
-  } catch (error) {
-    console.error("Erro ao gerar/processar as dicas da IA:", error);
-    return {
-      identification: "Dica visual não disponível no momento.",
-      location: "Erro ao processar localização.",
-      functions: "Verifique sua conexão e tente novamente."
-    };
-  }
-};
