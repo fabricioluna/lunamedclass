@@ -8,7 +8,7 @@ import QuizView from './views/QuizView.tsx';
 import AdminView from './views/AdminView.tsx';
 import SummariesListView from './views/SummariesListView.tsx';
 import OsceView from './views/OsceView.tsx';
-import DynamicOsceView from './views/DynamicOsceView.tsx'; // <-- ATIVADO: Motor RPG
+import DynamicOsceView from './views/DynamicOsceView.tsx'; 
 import OsceSetupView from './views/OsceSetupView.tsx';
 import OsceAIView from './views/OsceAIView.tsx';
 import OsceModeSelectionView from './views/OsceModeSelectionView'; 
@@ -25,9 +25,10 @@ import { db, ref, push } from './firebase.ts';
 
 import { DataProvider, useData } from './contexts/DataContext.tsx';
 
-const APP_VERSION = "7.6.0 - Luna Engine Hybrid";
+const APP_VERSION = "7.7.0 - Luna Analytics Hybrid";
 
 const AppContent: React.FC = () => {
+  // LÓGICA DE NAVEGAÇÃO E TELAS
   const [currentView, setCurrentView] = useState<ViewState>('room-selection');
   const [viewHistory, setViewHistory] = useState<ViewState[]>(['room-selection']);
   
@@ -108,7 +109,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4f7f6] p-6">
         <div className="w-12 h-12 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-6"></div>
-        <h1 className="text-[#003366] font-black uppercase tracking-[0.3em] text-xs">Luna Engine Sincronizando...</h1>
+        <h1 className="text-[#003366] font-black uppercase tracking-[0.3em] text-xs">Sincronizando Luna Analytics...</h1>
       </div>
     );
   }
@@ -129,7 +130,7 @@ const AppContent: React.FC = () => {
       <div className={`py-1 px-4 flex justify-center items-center gap-2 border-b transition-all duration-700 ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
         <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
         <span className={`text-[8px] font-black uppercase tracking-widest ${isOnline ? 'text-green-700' : 'text-red-700'}`}>
-          {isOnline ? 'Conexão em Nuvem Ativa' : 'Trabalhando Offline'}
+          {isOnline ? 'Nuvem Ativa • Estatísticas Habilitadas' : 'Trabalhando Offline'}
         </span>
       </div>
 
@@ -227,6 +228,26 @@ const AppContent: React.FC = () => {
             <DynamicOsceView 
               station={currentOsceStation} 
               onBack={handleBack} 
+              onSaveResult={(score, total, timeSpent, analytics) => {
+                if(db) {
+                  // 1. NOTA NORMAL DO ALUNO (Para o histórico dele)
+                  push(ref(db, 'quizResults'), {
+                    score,
+                    total,
+                    date: new Date().toLocaleString(),
+                    discipline: currentOsceStation.disciplineId,
+                    quizTitle: currentOsceStation.title,
+                    type: 'osce-rpg',
+                    timeSpent: timeSpent || 0
+                  });
+
+                  // 2. DADOS ESTATÍSTICOS (Para seus relatórios de pesquisa)
+                  push(ref(db, 'osceAnalytics'), {
+                    ...analytics,
+                    date: new Date().toLocaleString()
+                  });
+                }
+              }}
             />
           ) : (
             <OsceView 
@@ -238,7 +259,7 @@ const AppContent: React.FC = () => {
                     score, total, date: new Date().toLocaleString(),
                     discipline: currentOsceStation.disciplineId,
                     quizTitle: currentOsceStation.title,
-                    type: 'osce',
+                    type: 'osce-estatico',
                     timeSpent: timeSpent || 0
                   });
                 }
