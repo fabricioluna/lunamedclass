@@ -9,7 +9,9 @@ import {
   ChevronRight, 
   RotateCcw, 
   Map,
-  Trophy
+  Trophy,
+  History,
+  FlaskConical
 } from 'lucide-react';
 
 interface OsceViewProps {
@@ -23,16 +25,15 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
   const [isFinished, setIsFinished] = useState(false);
   const [score, setScore] = useState(0);
   const [timer, setTimer] = useState(0);
-  const [startTime] = useState(Date.now());
 
   // === PROTEÇÃO DE MOTOR (TYPE GUARD) ===
-  if (station.mode === 'rpg') {
+  if (station.mode !== 'clinical') {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
         <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
-        <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase">Estação Incompatível</h2>
+        <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase">Modo Incompatível</h2>
         <p className="text-gray-600 mb-8 font-medium">
-          Esta estação requer o motor Luna Engine 2.0 (Dinâmico).
+          Esta estação requer o motor {station.mode === 'rpg' ? 'Luna Engine (RPG)' : 'Paciente Virtual (IA)'}.
         </p>
         <button onClick={onBack} className="bg-[#003366] text-white px-8 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-[#D4A017] transition-all">
           Voltar para Seleção
@@ -42,10 +43,11 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
   }
 
   const staticStation = station as StaticOsceStation;
+  // Identificação automática de disciplina laboratorial para mudar a interface
+  const isUC = staticStation.disciplineId.toLowerCase().startsWith('uc');
   const safeActionCloud = staticStation.actionCloud || [];
   const safeOrderIndices = staticStation.correctOrderIndices || [];
 
-  // Cronômetro
   useEffect(() => {
     let interval: any;
     if (!isFinished) {
@@ -71,18 +73,16 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
 
   const calculateDetailedScore = () => {
     let points = 0;
-    // Cada ação correta na ordem correta vale 1.5. Ação correta na ordem errada vale 1.0.
     const maxPoints = safeOrderIndices.length * 1.5;
 
     safeOrderIndices.forEach((correctIdx, position) => {
       const userIndex = selectedActions.indexOf(correctIdx);
       if (userIndex !== -1) {
-        points += 1.0; // Ganhou por escolher a ação certa
-        if (userIndex === position) points += 0.5; // Bônus por ordem correta
+        points += 1.0; 
+        if (userIndex === position) points += 0.5; 
       }
     });
 
-    // Penalidade leve por ações confundidoras (distratores)
     const errors = selectedActions.filter(i => !safeOrderIndices.includes(i)).length;
     points = Math.max(0, points - (errors * 0.5));
 
@@ -91,7 +91,6 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
     
     setScore(finalRounded);
 
-    // Preparar Analytics para seus relatórios científicos
     const analytics = {
       stationId: station.id,
       mode: 'static-cloud',
@@ -99,6 +98,7 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
       userSequence: selectedActions.map(idx => safeActionCloud[idx]),
       correctSequence: safeOrderIndices.map(idx => safeActionCloud[idx]),
       totalErrors: errors,
+      efficiency: (finalRounded / (timer || 1)).toFixed(4),
       grade: finalRounded
     };
 
@@ -112,10 +112,9 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 pb-40">
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-10 border-b pb-6">
         <button onClick={onBack} className="text-[#003366] font-black uppercase text-[10px] flex items-center gap-2 hover:text-[#D4A017] transition-colors">
-          <RotateCcw size={14} /> Abandonar Estação
+          <RotateCcw size={14} /> Sair da Estação
         </button>
         <div className="text-right">
           <span className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">{staticStation.theme}</span>
@@ -124,16 +123,15 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* COLUNA LATERAL: INFO */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white p-8 rounded-[2rem] shadow-xl border-t-8 border-[#003366]">
             <h3 className="text-[10px] font-black text-[#003366] uppercase mb-4 tracking-widest flex items-center gap-2">
-              <ClipboardList size={14} /> Cenário Clínico
+              {isUC ? <FlaskConical size={14}/> : <ClipboardList size={14} />} 
+              {isUC ? 'Contexto da Bancada' : 'Cenário Clínico'}
             </h3>
             <p className="text-gray-700 leading-relaxed font-medium mb-6">"{staticStation.scenario}"</p>
-            
-            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-4">
-              <h4 className="text-[9px] font-black text-blue-800 uppercase mb-1 tracking-widest">📍 Objetivo</h4>
+            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+              <h4 className="text-[9px] font-black text-blue-800 uppercase mb-1 tracking-widest">🎯 Missão</h4>
               <p className="text-xs text-blue-900 font-bold">{staticStation.task}</p>
             </div>
           </div>
@@ -141,7 +139,7 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
           {!isFinished && (
             <div className="bg-white p-6 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
               <span className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                <Timer size={14} /> Tempo de Prova
+                <Timer size={14} /> Cronômetro
               </span>
               <span className={`text-xl font-mono font-bold ${timer > 480 ? 'text-red-500 animate-pulse' : 'text-[#003366]'}`}>
                 {formatTime(timer)}
@@ -150,16 +148,16 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
           )}
         </div>
 
-        {/* COLUNA PRINCIPAL: A NUVEM */}
         <div className="lg:col-span-2">
           {!isFinished ? (
             <div className="space-y-8">
-              {/* ÁREA DE MONTAGEM DA SEQUÊNCIA */}
               <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-dashed border-blue-100">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4">Sua Linha de Conduta (Ordem Cronológica):</label>
-                <div className="flex flex-wrap gap-3 min-h-[100px] items-center">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4 flex items-center gap-2">
+                  <History size={12}/> Sua Sequência de Ações:
+                </label>
+                <div className="flex flex-wrap gap-3 min-h-[120px] items-start content-start">
                   {selectedActions.length === 0 && (
-                    <p className="text-gray-300 text-sm italic w-full text-center">Toque nas ações da nuvem abaixo para montar seu atendimento...</p>
+                    <p className="text-gray-300 text-sm italic w-full text-center py-8">Toque nas ações da nuvem abaixo na ordem correta...</p>
                   )}
                   {selectedActions.map((idx, i) => (
                     <div key={i} className="bg-white pl-2 pr-4 py-2 rounded-xl shadow-md border-2 border-[#003366] text-xs font-black text-[#003366] flex items-center gap-3 animate-in zoom-in">
@@ -171,9 +169,10 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
                 </div>
               </div>
 
-              {/* A NUVEM DE BOTÕES */}
               <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100">
-                <h3 className="text-[10px] font-black text-gray-400 uppercase mb-8 tracking-[0.2em] text-center">Nuvem de Ações e Condutas</h3>
+                <h3 className="text-[10px] font-black text-gray-400 uppercase mb-8 tracking-[0.2em] text-center">
+                  {isUC ? 'Nuvem de Itens e Procedimentos' : 'Nuvem de Ações e Condutas'}
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {safeActionCloud.map((action, idx) => (
                     <button
@@ -193,29 +192,25 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
               </div>
             </div>
           ) : (
-            /* TELA DE FEEDBACK E ESTATÍSTICA */
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
-              {/* SCORE CARD */}
-              <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center relative overflow-hidden">
+              <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-b-8 border-[#D4A017] relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-10 text-[#003366]"><Trophy size={120}/></div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Resultado da Estação</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Desempenho Técnico</p>
                 <h4 className="text-8xl font-black text-[#003366] tracking-tighter">{score.toFixed(1)}</h4>
                 <div className="mt-4 flex items-center justify-center gap-4">
                     <span className="px-4 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                        {formatTime(timer)} total
+                        Tempo: {formatTime(timer)}
                     </span>
                     <span className="px-4 py-1 bg-purple-50 text-purple-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                        {selectedActions.length} ações tomadas
+                        {selectedActions.length} Etapas Realizadas
                     </span>
                 </div>
               </div>
 
-              {/* ANÁLISE DE CONDUTA PASSO A PASSO */}
               <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
                 <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3">
-                  <Map size={20} className="text-[#D4A017]"/> Análise Cronológica
+                  <Map size={20} className="text-[#D4A017]"/> Análise de Performance
                 </h4>
-                
                 <div className="space-y-3">
                   {selectedActions.map((actionIdx, userPos) => {
                     const correctPos = safeOrderIndices.indexOf(actionIdx);
@@ -234,21 +229,9 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
                           </div>
                           <div>
                             <p className="text-sm font-bold text-gray-800">{safeActionCloud[actionIdx]}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                                {!isCorrect ? (
-                                    <span className="flex items-center gap-1 text-[9px] font-black text-red-600 uppercase tracking-tighter">
-                                        <XCircle size={10}/> Conduta Incorreta (Distrator)
-                                    </span>
-                                ) : onTime ? (
-                                    <span className="flex items-center gap-1 text-[9px] font-black text-green-700 uppercase tracking-tighter">
-                                        <CheckCircle2 size={10}/> Sequência Correta
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-1 text-[9px] font-black text-yellow-700 uppercase tracking-tighter">
-                                        <AlertCircle size={10}/> Ação correta, mas era o {correctPos + 1}º passo
-                                    </span>
-                                )}
-                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-tighter mt-1 block">
+                                {!isCorrect ? '❌ Conduta Incorreta' : onTime ? '✅ Na Ordem Correta' : `⚠️ Fora de Sequência (Deveria ser o ${correctPos + 1}º)`}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -257,26 +240,40 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
                 </div>
               </div>
 
-              {/* GABARITO PADRÃO-OURO (ESTATÍSTICA) */}
-              <div className="bg-[#003366] p-10 rounded-[3rem] shadow-2xl text-white">
-                <h4 className="text-lg font-black text-[#D4A017] uppercase mb-8 flex items-center gap-3 border-b border-white/10 pb-4">
-                  <CheckCircle2 size={20}/> Gabarito Padrão-Ouro
-                </h4>
-                <div className="space-y-4">
-                  {safeOrderIndices.map((idx, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10 group hover:bg-white/10 transition-all">
-                      <span className="text-[#D4A017] font-black text-xs bg-white/10 w-6 h-6 rounded flex items-center justify-center">{i + 1}</span>
-                      <p className="text-sm font-medium">{safeActionCloud[idx]}</p>
-                    </div>
-                  ))}
+              {/* GABARITO PADRÃO-OURO E CHECKLIST */}
+              <div className="grid grid-cols-1 gap-6">
+                <div className="bg-[#003366] p-10 rounded-[3rem] shadow-2xl text-white">
+                  <h4 className="text-lg font-black text-[#D4A017] uppercase mb-8 flex items-center gap-3 border-b border-white/10 pb-4">
+                    <CheckCircle2 size={20}/> Gabarito Oficial
+                  </h4>
+                  <div className="space-y-4">
+                    {safeOrderIndices.map((idx, i) => (
+                      <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                        <span className="text-[#D4A017] font-black text-xs bg-white/10 w-6 h-6 rounded flex items-center justify-center">{i + 1}</span>
+                        <p className="text-sm font-medium">{safeActionCloud[idx]}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+                
+                {staticStation.checklist && staticStation.checklist.length > 0 && (
+                  <div className="bg-white p-10 rounded-[3rem] border-2 border-gray-100 shadow-xl">
+                    <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3 border-b pb-4">
+                      <span>📋</span> Critérios de Avaliação
+                    </h4>
+                    <ul className="space-y-3">
+                      {staticStation.checklist.map((item, i) => (
+                        <li key={i} className="flex items-start gap-3 text-xs font-bold text-gray-500">
+                          <span className="text-[#D4A017]">●</span> {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="pt-6 flex justify-center">
-                <button 
-                  onClick={onBack}
-                  className="bg-[#D4A017] text-[#003366] px-16 py-5 rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-xl hover:scale-105 active:scale-95 transition-all"
-                >
+                <button onClick={onBack} className="bg-[#D4A017] text-[#003366] px-16 py-5 rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-xl hover:scale-105 active:scale-95 transition-all">
                   Finalizar Estação
                 </button>
               </div>
@@ -285,7 +282,6 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
         </div>
       </div>
 
-      {/* BOTÃO FLUTUANTE DE FINALIZAÇÃO */}
       {!isFinished && selectedActions.length > 0 && (
         <div className="fixed bottom-10 left-0 right-0 px-4 z-50 animate-in slide-in-from-bottom-10">
           <div className="max-w-md mx-auto">
@@ -293,7 +289,7 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
               onClick={calculateDetailedScore}
               className="w-full bg-[#003366] text-white py-6 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.2em] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-[#D4A017] hover:bg-[#D4A017] hover:text-[#003366] transition-all flex items-center justify-center gap-4"
             >
-              Concluir Atendimento <ChevronRight size={20}/>
+              Encerrar Atendimento <ChevronRight size={20}/>
             </button>
           </div>
         </div>

@@ -97,7 +97,7 @@ export interface RPGNode {
 }
 
 export interface DynamicOsceStation {
-  mode: 'rpg'; // Identificador para o modo dinâmico/RPG
+  mode: 'rpg' | 'ai'; // Atualizado para suportar o modo RPG e Paciente Virtual (IA)
   id: string;
   firebaseId?: string;
   disciplineId: string;
@@ -110,6 +110,9 @@ export interface DynamicOsceStation {
   initialPhaseId: string;
   phases: Record<string, SimulationPhase>;
   
+  // Campo para o checklist de avaliação técnica/comunicação da IA
+  checklist?: string[]; 
+
   // Campos de Suporte
   initialVitals?: ClinicalState;
   inventory?: string[];
