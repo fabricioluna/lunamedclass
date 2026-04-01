@@ -26,7 +26,6 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
   const [typeFilter, setTypeFilter] = useState<'all' | 'clinical' | 'rpg' | 'ai'>('all');
 
   // --- ESTADOS DE IMPORTAÇÃO (LADO ESQUERDO) ---
-  // NOVO: O Admin agora define o modo manualmente antes de importar
   const [importMode, setImportMode] = useState<'clinical' | 'rpg' | 'ai'>('clinical'); 
   const [osceRoom, setOsceRoom] = useState('');
   const [osceDiscipline, setOsceDiscipline] = useState('');
@@ -72,30 +71,37 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
           };
 
           // APLICAÇÃO RÍGIDA DO MODO SELECIONADO PELO ADMIN
+          
+          // MODO 1: PACIENTE VIRTUAL (IA)
           if (importMode === 'ai') {
+            const s = item as any;
             return { 
               ...base, 
               mode: 'ai',
-              // Mapeie aqui campos extras de IA se houver no seu types.ts
-            } as any; 
+              initialPhaseId: s.initialPhaseId || s.no_inicial || 'fase_1',
+              phases: s.phases || {},
+              checklist: Array.isArray(s.checklist) ? s.checklist : [],
+              initialVitals: s.initialVitals,
+              inventory: s.inventory,
+              setting: s.setting || 'Consultório para anamnese.'
+            } as DynamicOsceStation; 
           } 
           
+          // MODO 2: RPG DINÂMICO (LUNA ENGINE)
           if (importMode === 'rpg') {
             const s = item as any;
             return {
               ...base,
               mode: 'rpg',
-              foco_avaliacao: s.foco_avaliacao || '',
-              no_inicial: s.no_inicial || 'start_01',
-              arvore_decisao: s.arvore_decisao || [],
               initialPhaseId: s.initialPhaseId || s.no_inicial || 'fase_1',
               phases: s.phases || {},
               initialVitals: s.initialVitals,
-              inventory: s.inventory
+              inventory: s.inventory,
+              setting: s.setting || 'Cenário de emergência.'
             } as DynamicOsceStation;
           } 
 
-          // CASO CONTRÁRIO: CLINICAL (ESTÁTICO)
+          // MODO 3: CLINICAL (ESTÁTICO / NUVEM DE AÇÕES)
           return {
             ...base,
             mode: 'clinical',
@@ -134,7 +140,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
               <UploadCloud size={20}/> Importar Simulado
             </h3>
 
-            {/* SELETOR DE MODO - O ADMIN ESCOLHE AQUI */}
+            {/* SELETOR DE MODO - O ADMIN ESCOLHE O MOTOR AQUI */}
             <div className="bg-gray-50 p-2 rounded-2xl mb-6 grid grid-cols-3 gap-1 border border-gray-100">
                 <button 
                     onClick={() => setImportMode('clinical')}
