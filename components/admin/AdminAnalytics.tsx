@@ -8,20 +8,18 @@ import {
 interface AdminAnalyticsProps {
   analyticsData: any[];
   disciplines: SimulationInfo[];
-  rooms: any[]; // Nova prop para receber as salas/turmas
+  rooms: any[];
 }
 
 const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, disciplines, rooms }) => {
   const [filterRoom, setFilterRoom] = useState('');
   const [filterDisc, setFilterDisc] = useState('');
 
-  // Limpa a disciplina se a turma for alterada (Filtro em Cascata)
   const handleRoomChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFilterRoom(e.target.value);
     setFilterDisc('');
   };
 
-  // Filtra o menu de disciplinas baseado na turma selecionada
   const availableDisciplines = filterRoom 
     ? disciplines.filter(d => d.roomId === filterRoom) 
     : disciplines;
@@ -29,7 +27,6 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
   const stats = useMemo(() => {
     let filtered = analyticsData || [];
     
-    // 1. Filtro por Turma/Sala
     if (filterRoom) {
       const roomDiscIds = disciplines
         .filter(d => d.roomId === filterRoom)
@@ -41,7 +38,6 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
       });
     }
 
-    // 2. Filtro por Disciplina (Resolvido o bug do HM1 maiúsculo vs minúsculo)
     if (filterDisc) {
       filtered = filtered.filter(d => (d.disciplineId || '').toLowerCase() === filterDisc.toLowerCase());
     }
@@ -49,68 +45,55 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
     if (filtered.length === 0) return null;
 
     const total = filtered.length;
-
-    // MÉTRICAS GLOBAIS
     const avgGrade = filtered.reduce((acc, curr) => acc + (curr.grade || 0), 0) / total;
     const avgTime = filtered.reduce((acc, curr) => acc + (curr.timeSpent || 0), 0) / total;
-    
-    // Sucesso = Nota >= 7.0
     const successCount = filtered.filter(d => (d.grade || 0) >= 7).length;
     const successRate = (successCount / total) * 100;
+    const fatalErrorRate = (filtered.filter(d => d.isFatalError).length / total) * 100;
 
-    // COMPARATIVO DE METODOLOGIAS (MOTORES)
-    const staticSims = filtered.filter(d => d.mode === 'clinical' || d.mode === 'static-cloud');
-    const rpgSims = filtered.filter(d => d.mode === 'rpg');
-    const aiSims = filtered.filter(d => d.mode === 'ai');
+    const calcMetrics = (arr: any[]) => {
+      const count = arr.length;
+      if (count === 0) return { count: 0, avg: 0, time: 0, success: 0, fatal: 0 };
+      const avg = arr.reduce((a, c) => a + (c.grade || 0), 0) / count;
+      const time = arr.reduce((a, c) => a + (c.timeSpent || 0), 0) / count;
+      const success = (arr.filter(d => (d.grade || 0) >= 7).length / count) * 100;
+      const fatal = (arr.filter(d => d.isFatalError).length / count) * 100;
+      return { count, avg, time, success, fatal };
+    };
 
-    const avgStatic = staticSims.length > 0 ? staticSims.reduce((a, c) => a + (c.grade || 0), 0) / staticSims.length : 0;
-    const avgRpg = rpgSims.length > 0 ? rpgSims.reduce((a, c) => a + (c.grade || 0), 0) / rpgSims.length : 0;
-    const avgAi = aiSims.length > 0 ? aiSims.reduce((a, c) => a + (c.grade || 0), 0) / aiSims.length : 0;
+    const modes = {
+      static: calcMetrics(filtered.filter(d => d.mode === 'clinical' || d.mode === 'static-cloud')),
+      rpg: calcMetrics(filtered.filter(d => d.mode === 'rpg')),
+      ai: calcMetrics(filtered.filter(d => d.mode === 'ai'))
+    };
 
-    // SEGURANÇA DO PACIENTE (ERROS FATAIS)
-    const fatalErrors = rpgSims.filter(d => d.isFatalError).length;
-    const fatalErrorRate = rpgSims.length > 0 ? (fatalErrors / rpgSims.length) * 100 : 0;
-
-    // MAPEAMENTO CURRICULAR (LACUNAS DE CONHECIMENTO)
-    const themeStats: Record<string, { total: number, sumGrade: number }> = {};
+    const themeStats: Record<string, { total: number, sumGrade: number, successCount: number }> = {};
     filtered.forEach(d => {
       const theme = d.theme || 'Sem Tema';
-      if (!themeStats[theme]) themeStats[theme] = { total: 0, sumGrade: 0 };
+      if (!themeStats[theme]) themeStats[theme] = { total: 0, sumGrade: 0, successCount: 0 };
       themeStats[theme].total++;
       themeStats[theme].sumGrade += (d.grade || 0);
+      if ((d.grade || 0) >= 7) themeStats[theme].successCount++;
     });
 
-    let bestTheme = { name: '-', avg: 0, count: 0 };
-    let worstTheme = { name: '-', avg: 10, count: 0 };
+    const themeDetails = Object.keys(themeStats).map(name => ({
+      name,
+      count: themeStats[name].total,
+      avg: themeStats[name].sumGrade / themeStats[name].total,
+      successRate: (themeStats[name].successCount / themeStats[name].total) * 100
+    })).sort((a, b) => b.avg - a.avg);
 
-    Object.keys(themeStats).forEach(theme => {
-      const stats = themeStats[theme];
-      if (stats.total > 0) { 
-        const avg = stats.sumGrade / stats.total;
-        if (avg > bestTheme.avg || bestTheme.name === '-') {
-          bestTheme = { name: theme, avg, count: stats.total };
-        }
-        if (avg < worstTheme.avg || worstTheme.name === '-') {
-          worstTheme = { name: theme, avg, count: stats.total };
-        }
-      }
-    });
-
-    if (bestTheme.name === worstTheme.name) {
-       worstTheme = { name: 'Dados Insuficientes', avg: 0, count: 0 };
-    }
+    let bestTheme = themeDetails.length > 0 ? themeDetails[0] : { name: '-', avg: 0, count: 0, successRate: 0 };
+    let worstTheme = themeDetails.length > 0 ? themeDetails[themeDetails.length - 1] : { name: '-', avg: 0, count: 0, successRate: 0 };
 
     return { 
       total, 
       avgGrade, 
       avgTime, 
       successRate,
-      modes: {
-        static: { count: staticSims.length, avg: avgStatic },
-        rpg: { count: rpgSims.length, avg: avgRpg },
-        ai: { count: aiSims.length, avg: avgAi }
-      },
+      modes,
       fatalErrorRate,
+      themeDetails,
       bestTheme,
       worstTheme
     };
@@ -152,14 +135,23 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      
+    <div className="animate-in fade-in duration-500">
+      <style>{`
+        @media print {
+          @page { size: A4 portrait; margin: 1.5cm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          table { page-break-inside: auto; }
+          tr    { page-break-inside: avoid; page-break-after: auto; }
+          thead { display: table-header-group; }
+          tfoot { display: table-footer-group; }
+        }
+      `}</style>
+
       {/* ========================================================= */}
-      {/* VISUAL DA TELA DO SISTEMA (OCULTO NA HORA DE IMPRIMIR) */}
+      {/* 1. VISUAL DA TELA DO SISTEMA (OCULTO NA HORA DE IMPRIMIR) */}
       {/* ========================================================= */}
       <div className="print:hidden space-y-8">
         
-        {/* CABEÇALHO DO DASHBOARD COM NOVOS FILTROS */}
         <div className="flex flex-col xl:flex-row justify-between items-center gap-6 bg-[#003366] p-8 md:p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 pointer-events-none"></div>
           <div className="flex items-center gap-5 relative z-10 w-full xl:w-auto justify-center xl:justify-start">
@@ -173,7 +165,6 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
           </div>
           
           <div className="flex flex-wrap justify-center xl:justify-end gap-3 relative z-10 w-full xl:w-auto">
-            {/* NOVO: Filtro de Turma/Sala */}
             <select 
               value={filterRoom} 
               onChange={handleRoomChange} 
@@ -183,7 +174,6 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
               {rooms.map(r => <option key={r.id} value={r.id} className="text-black">{r.name}</option>)}
             </select>
 
-            {/* Filtro de Disciplina em Cascata */}
             <select 
               value={filterDisc} 
               onChange={e => setFilterDisc(e.target.value)} 
@@ -203,14 +193,13 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
               onClick={() => window.print()} 
               className="bg-white text-[#003366] px-4 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-100 transition-all shadow-lg"
             >
-              <Printer size={16}/> Emitir PDF Formal
+              <Printer size={16}/> Emitir PDF Profissional
             </button>
           </div>
         </div>
 
         {stats ? (
           <>
-            {/* CARDS GLOBAIS */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white p-8 rounded-[2rem] border-b-4 border-[#003366] shadow-sm flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-2">
@@ -230,7 +219,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
                 </div>
                 <div>
                   <p className="text-4xl font-black text-[#003366]">{stats.avgGrade.toFixed(1)} <span className="text-lg text-gray-300">/ 10</span></p>
-                  <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase">Desempenho Geral Acadêmico</p>
+                  <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase">Desempenho Acadêmico</p>
                 </div>
               </div>
 
@@ -244,61 +233,59 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
                   <div className="mt-2 h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-green-500" style={{ width: `${stats.successRate}%` }}></div>
                   </div>
-                  <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase">Média ponderada &ge; 7.0</p>
+                  <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase">Notas &ge; 7.0</p>
                 </div>
               </div>
 
               <div className="bg-white p-8 rounded-[2rem] border-b-4 border-purple-500 shadow-sm flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tempo de Exposição</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tempo Médio</p>
                   <Clock size={18} className="text-purple-500"/>
                 </div>
                 <div>
                   <p className="text-4xl font-black text-[#003366]">{Math.floor(stats.avgTime / 60)}m {Math.floor(stats.avgTime % 60)}s</p>
-                  <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase">Duração Média por Atendimento</p>
+                  <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase">Por Atendimento</p>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              {/* COMPARATIVO DE MOTORES */}
               <div className="xl:col-span-2 bg-white p-8 md:p-10 rounded-[2.5rem] border shadow-sm">
                 <h3 className="text-lg font-black text-[#003366] uppercase tracking-tighter mb-1 flex items-center gap-2">
-                  <Brain size={20} className="text-[#D4A017]"/> Análise Comparativa por Metodologia
+                  <Brain size={20} className="text-[#D4A017]"/> Análise Comparativa
                 </h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-8">Como as diferentes tecnologias impactam a nota do aluno</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-8">Evolução por Metodologia</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 relative overflow-hidden">
                     <p className="text-xs font-black text-blue-600 uppercase mb-1">Simulado Estático</p>
-                    <p className="text-[10px] text-gray-500 mb-4 h-8">Checklists e Procedimentos</p>
+                    <p className="text-[10px] text-gray-500 mb-4 h-8">Checklists Clínicos</p>
                     <p className="text-3xl font-black text-[#003366] mb-1">{stats.modes.static.avg.toFixed(1)}</p>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">Base: {stats.modes.static.count} execuções</p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Base: {stats.modes.static.count}</p>
                   </div>
 
                   <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 relative overflow-hidden">
                     <p className="text-xs font-black text-green-600 uppercase mb-1">Paciente Virtual</p>
-                    <p className="text-[10px] text-gray-500 mb-4 h-8">Comunicação e Anamnese</p>
+                    <p className="text-[10px] text-gray-500 mb-4 h-8">Anamnese via IA</p>
                     <p className="text-3xl font-black text-[#003366] mb-1">{stats.modes.ai.avg.toFixed(1)}</p>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">Base: {stats.modes.ai.count} execuções</p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Base: {stats.modes.ai.count}</p>
                   </div>
 
                   <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 relative overflow-hidden">
                     <p className="text-xs font-black text-purple-600 uppercase mb-1">Simulação RPG</p>
-                    <p className="text-[10px] text-gray-500 mb-4 h-8">Raciocínio Clínico sob Pressão</p>
+                    <p className="text-[10px] text-gray-500 mb-4 h-8">Raciocínio Dinâmico</p>
                     <p className="text-3xl font-black text-[#003366] mb-1">{stats.modes.rpg.avg.toFixed(1)}</p>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">Base: {stats.modes.rpg.count} execuções</p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Base: {stats.modes.rpg.count}</p>
                   </div>
                 </div>
               </div>
 
-              {/* MAPEAMENTO DIAGNÓSTICO */}
               <div className="bg-white p-8 md:p-10 rounded-[2.5rem] border shadow-sm flex flex-col justify-between">
                 <div>
                   <h3 className="text-lg font-black text-[#003366] uppercase tracking-tighter mb-1 flex items-center gap-2">
                     <TrendingUp size={20} className="text-[#D4A017]"/> Raio-X Curricular
                   </h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-8">Mapeamento de Lacunas Cognitivas</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-8">Mapeamento de Lacunas</p>
 
                   <div className="mb-6 bg-green-50 p-4 rounded-2xl border border-green-100">
                     <div className="flex items-center gap-2 mb-1">
@@ -312,23 +299,11 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
                   <div className="mb-6 bg-red-50 p-4 rounded-2xl border border-red-100">
                     <div className="flex items-center gap-2 mb-1">
                       <ChevronDown className="text-red-600" size={16}/>
-                      <p className="text-[10px] font-black text-red-600 uppercase">Lacuna Crítica (Pior Média)</p>
+                      <p className="text-[10px] font-black text-red-600 uppercase">Lacuna Crítica</p>
                     </div>
                     <p className="font-bold text-[#003366] text-sm leading-tight mb-2">{stats.worstTheme.name}</p>
                     <p className="text-xl font-black text-red-600">{stats.worstTheme.avg.toFixed(1)} <span className="text-[10px] text-gray-500 font-bold uppercase ml-1">(N={stats.worstTheme.count})</span></p>
                   </div>
-                </div>
-
-                <div className="pt-6 border-t border-gray-100">
-                   <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center gap-1"><AlertTriangle size={12} className="text-red-500"/> Risco ao Paciente</p>
-                        <p className="text-2xl font-black text-[#003366]">{stats.fatalErrorRate.toFixed(1)}%</p>
-                      </div>
-                      <div className="text-right max-w-[120px]">
-                        <p className="text-[8px] font-bold text-gray-400 uppercase leading-tight">Taxa de simulações clínicas com Erro Fatal.</p>
-                      </div>
-                   </div>
                 </div>
               </div>
             </div>
@@ -342,115 +317,124 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
       </div>
 
       {/* ========================================================= */}
-      {/* VISUAL DE IMPRESSÃO (TABELAR, FORMAL, OCULTO NA TELA)     */}
+      {/* 2. DOCUMENTO OFICIAL DE IMPRESSÃO (A4 FORMAL E ACADÊMICO) */}
       {/* ========================================================= */}
       {stats && (
-        <div className="hidden print:block w-full bg-white text-black font-sans p-4">
+        <div className="hidden print:block w-full bg-white text-black text-sm" style={{ fontFamily: 'Arial, sans-serif' }}>
           
-          <div className="border-b-2 border-black pb-4 mb-8 text-center">
-              <h1 className="text-2xl font-black uppercase tracking-tight mb-1 text-black">Relatório Científico de Eficácia Pedagógica</h1>
-              <h2 className="text-sm font-bold uppercase text-gray-600 tracking-widest">Plataforma de Simulação Luna MedClass</h2>
-              
-              <div className="flex justify-between text-xs mt-8 text-left">
-                  <span><strong>Data da Emissão:</strong> {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}</span>
-                  <span>
-                    <strong>Sala/Turma:</strong> {filterRoom ? rooms.find(r => r.id === filterRoom)?.name : 'Todas as Turmas (Geral)'} <br/>
-                    <strong>Disciplina:</strong> {filterDisc ? disciplines.find(d => d.id === filterDisc)?.title : 'Todas as Disciplinas (Geral)'}
-                  </span>
+          {/* CABEÇALHO LIMPO, EM BLOCO (SEM FLEX HORIZONTAL PARA NÃO QUEBRAR LINHA) */}
+          <div className="border-b-2 border-black pb-4 mb-6">
+            <div className="flex items-center gap-4 mb-5">
+              <img src="/logo.png" alt="Luna MedClass Logo" className="h-12 object-contain" />
+              <div>
+                <h1 className="text-xl font-black uppercase tracking-tight text-black m-0 leading-none">RELATÓRIO DE PESQUISA ANALÍTICA</h1>
+                <h2 className="text-xs font-bold text-gray-700 uppercase tracking-widest m-0 leading-none mt-1">PLATAFORMA LUNA MEDCLASS • OSCE ANALYTICS</h2>
               </div>
+            </div>
+            
+            <div className="text-xs text-black space-y-1">
+              <p className="m-0"><strong>Data da Emissão:</strong> {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}</p>
+              <p className="m-0"><strong>Filtro de Turma:</strong> {filterRoom ? rooms.find(r => r.id === filterRoom)?.name : 'Todas as Turmas (Geral)'}</p>
+              <p className="m-0"><strong>Disciplina:</strong> {filterDisc ? disciplines.find(d => d.id === filterDisc)?.title : 'Todas as Disciplinas'}</p>
+            </div>
           </div>
 
-          <div className="mb-10">
-              <h3 className="text-sm font-black border-b border-gray-400 pb-1 mb-4 uppercase tracking-widest">1. Indicadores Globais de Engajamento</h3>
-              <table className="w-full text-sm border-collapse border border-gray-800 text-center">
-                  <thead>
-                      <tr className="bg-gray-100">
-                          <th className="border border-gray-800 p-3">Amostragem Total (N)</th>
-                          <th className="border border-gray-800 p-3">Média Global de Desempenho</th>
-                          <th className="border border-gray-800 p-3">Taxa de Sucesso (Notas &ge; 7.0)</th>
-                          <th className="border border-gray-800 p-3">Tempo Médio de Retenção</th>
+          {/* PARÁGRAFO INTRODUTÓRIO */}
+          <p className="mb-6 text-justify text-xs leading-relaxed text-black">
+            Este relatório consolida os dados de desempenho clínico simulado obtidos através do Luna MedClass. Os indicadores refletem a proficiência técnica e o raciocínio diagnóstico nas estações de Exame Clínico Objetivado Estruturado (OSCE), englobando checklists estáticos, simulações baseadas em roteiro dinâmico (RPG) e anamnese via Inteligência Artificial.
+          </p>
+
+          {/* BLOCO 1: INDICADORES GLOBAIS POR METODOLOGIA */}
+          <div className="mb-8">
+              <h3 className="text-xs font-bold uppercase border-b border-black pb-1 mb-3 text-black">1. Indicadores Globais de Engajamento e Desempenho</h3>
+              <table className="w-full text-xs border-collapse border border-black text-center table-fixed">
+                  <thead className="bg-gray-100">
+                      <tr>
+                          <th className="border border-black py-2 px-1 w-1/5">Modalidade Tecnológica</th>
+                          <th className="border border-black py-2 px-1 w-1/5">Amostragem (N)</th>
+                          <th className="border border-black py-2 px-1 w-1/5">Média (0 a 10)</th>
+                          <th className="border border-black py-2 px-1 w-1/5">Taxa de Sucesso (&ge; 7.0)</th>
+                          <th className="border border-black py-2 px-1 w-1/5">Tempo Médio</th>
                       </tr>
                   </thead>
                   <tbody>
+                      <tr className="bg-gray-50">
+                          <td className="border border-black py-2 px-1 font-bold text-left pl-3">TOTAL GERAL (Média)</td>
+                          <td className="border border-black py-2 px-1 font-bold">{stats.total}</td>
+                          <td className="border border-black py-2 px-1 font-bold">{stats.avgGrade.toFixed(1)}</td>
+                          <td className="border border-black py-2 px-1 font-bold">{stats.successRate.toFixed(1)}%</td>
+                          <td className="border border-black py-2 px-1 font-bold">{Math.floor(stats.avgTime / 60)}m {Math.floor(stats.avgTime % 60)}s</td>
+                      </tr>
                       <tr>
-                          <td className="border border-gray-800 p-4 text-xl font-bold">{stats.total}</td>
-                          <td className="border border-gray-800 p-4 text-xl font-bold">{stats.avgGrade.toFixed(1)} / 10</td>
-                          <td className="border border-gray-800 p-4 text-xl font-bold">{stats.successRate.toFixed(1)}%</td>
-                          <td className="border border-gray-800 p-4 text-xl font-bold">{Math.floor(stats.avgTime / 60)}m {Math.floor(stats.avgTime % 60)}s</td>
+                          <td className="border border-black py-2 px-1 text-left pl-3">Simulado Estático (Checklists)</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.static.count}</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.static.avg.toFixed(1)}</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.static.success.toFixed(1)}%</td>
+                          <td className="border border-black py-2 px-1">{Math.floor(stats.modes.static.time / 60)}m {Math.floor(stats.modes.static.time % 60)}s</td>
+                      </tr>
+                      <tr>
+                          <td className="border border-black py-2 px-1 text-left pl-3">Paciente Virtual (Anamnese IA)</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.ai.count}</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.ai.avg.toFixed(1)}</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.ai.success.toFixed(1)}%</td>
+                          <td className="border border-black py-2 px-1">{Math.floor(stats.modes.ai.time / 60)}m {Math.floor(stats.modes.ai.time % 60)}s</td>
+                      </tr>
+                      <tr>
+                          <td className="border border-black py-2 px-1 text-left pl-3">Luna RPG (Raciocínio Dinâmico)</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.rpg.count}</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.rpg.avg.toFixed(1)}</td>
+                          <td className="border border-black py-2 px-1">{stats.modes.rpg.success.toFixed(1)}%</td>
+                          <td className="border border-black py-2 px-1">{Math.floor(stats.modes.rpg.time / 60)}m {Math.floor(stats.modes.rpg.time % 60)}s</td>
                       </tr>
                   </tbody>
               </table>
           </div>
 
-          <div className="mb-10">
-              <h3 className="text-sm font-black border-b border-gray-400 pb-1 mb-4 uppercase tracking-widest">2. Comparativo Analítico por Tecnologia de Simulação</h3>
-              <table className="w-full text-sm border-collapse border border-gray-800 text-left">
-                  <thead>
-                      <tr className="bg-gray-100">
-                          <th className="border border-gray-800 p-3 w-1/2">Motor de Simulação Utilizado</th>
-                          <th className="border border-gray-800 p-3 text-center">Amostragem Especifica (N)</th>
-                          <th className="border border-gray-800 p-3 text-center">Média de Notas Alcançada (0-10)</th>
+          {/* BLOCO 2: ESTATÍSTICAS POR TEMA */}
+          <div className="mb-8">
+              <h3 className="text-xs font-bold uppercase border-b border-black pb-1 mb-3 text-black">2. Diagnóstico Curricular por Eixo Temático (Domínios de Conhecimento)</h3>
+              <table className="w-full text-xs border-collapse border border-black text-center table-fixed">
+                  <thead className="bg-gray-100">
+                      <tr>
+                          <th className="border border-black py-2 px-2 w-2/5 text-left pl-3">Eixo Temático / Domínio</th>
+                          <th className="border border-black py-2 px-2 w-1/5">Amostragem (N)</th>
+                          <th className="border border-black py-2 px-2 w-1/5">Média (0 a 10)</th>
+                          <th className="border border-black py-2 px-2 w-1/5">Taxa de Sucesso</th>
                       </tr>
                   </thead>
                   <tbody>
-                      <tr>
-                          <td className="border border-gray-800 p-3 font-semibold">Simulado Estático (Múltipla Escolha de Condutas / Checklists)</td>
-                          <td className="border border-gray-800 p-3 text-center">{stats.modes.static.count}</td>
-                          <td className="border border-gray-800 p-3 text-center font-black text-lg">{stats.modes.static.avg.toFixed(1)}</td>
-                      </tr>
-                      <tr>
-                          <td className="border border-gray-800 p-3 font-semibold">Paciente Virtual (Entrevista Clínica não-estruturada via IA)</td>
-                          <td className="border border-gray-800 p-3 text-center">{stats.modes.ai.count}</td>
-                          <td className="border border-gray-800 p-3 text-center font-black text-lg">{stats.modes.ai.avg.toFixed(1)}</td>
-                      </tr>
-                      <tr>
-                          <td className="border border-gray-800 p-3 font-semibold">Luna Engine RPG (Raciocínio Clínico dinâmico e Fisiologia Variável)</td>
-                          <td className="border border-gray-800 p-3 text-center">{stats.modes.rpg.count}</td>
-                          <td className="border border-gray-800 p-3 text-center font-black text-lg">{stats.modes.rpg.avg.toFixed(1)}</td>
-                      </tr>
+                      {stats.themeDetails.length === 0 ? (
+                        <tr><td colSpan={4} className="border border-black py-2 text-center italic text-gray-500">Sem dados temáticos suficientes.</td></tr>
+                      ) : (
+                        stats.themeDetails.map((theme, index) => (
+                          <tr key={index} className={index === 0 ? 'bg-green-50' : index === stats.themeDetails.length - 1 && stats.themeDetails.length > 1 ? 'bg-red-50' : ''}>
+                              <td className="border border-black py-2 px-2 text-left pl-3 font-medium">
+                                {theme.name}
+                                {index === 0 && <span className="ml-2 text-[8px] font-bold text-green-700 uppercase">(Maior Domínio)</span>}
+                                {index === stats.themeDetails.length - 1 && stats.themeDetails.length > 1 && <span className="ml-2 text-[8px] font-bold text-red-700 uppercase">(Lacuna Crítica)</span>}
+                              </td>
+                              <td className="border border-black py-2 px-2">{theme.count}</td>
+                              <td className="border border-black py-2 px-2 font-bold">{theme.avg.toFixed(1)}</td>
+                              <td className="border border-black py-2 px-2">{theme.successRate.toFixed(1)}%</td>
+                          </tr>
+                        ))
+                      )}
                   </tbody>
               </table>
           </div>
 
-          <div className="mb-10">
-              <h3 className="text-sm font-black border-b border-gray-400 pb-1 mb-4 uppercase tracking-widest">3. Diagnóstico Curricular e Segurança do Paciente</h3>
-              <table className="w-full text-sm border-collapse border border-gray-800 text-left mb-6">
-                  <thead>
-                      <tr className="bg-gray-100">
-                          <th className="border border-gray-800 p-3 w-1/3">Indicador Diagnóstico</th>
-                          <th className="border border-gray-800 p-3">Eixo Temático Identificado</th>
-                          <th className="border border-gray-800 p-3 text-center">Média</th>
-                          <th className="border border-gray-800 p-3 text-center">N</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      <tr>
-                          <td className="border border-gray-800 p-3 font-black text-gray-800">Maior Domínio Teórico-Prático</td>
-                          <td className="border border-gray-800 p-3 font-semibold">{stats.bestTheme.name}</td>
-                          <td className="border border-gray-800 p-3 text-center font-black text-lg">{stats.bestTheme.avg.toFixed(1)}</td>
-                          <td className="border border-gray-800 p-3 text-center">{stats.bestTheme.count}</td>
-                      </tr>
-                      <tr>
-                          <td className="border border-gray-800 p-3 font-black text-gray-800">Lacuna Crítica de Conhecimento</td>
-                          <td className="border border-gray-800 p-3 font-semibold">{stats.worstTheme.name}</td>
-                          <td className="border border-gray-800 p-3 text-center font-black text-lg">{stats.worstTheme.avg.toFixed(1)}</td>
-                          <td className="border border-gray-800 p-3 text-center">{stats.worstTheme.count}</td>
-                      </tr>
-                  </tbody>
-              </table>
-
-              <div className="border-2 border-gray-800 p-4 bg-gray-100 flex items-center justify-between mt-6">
-                  <div className="w-2/3">
-                      <p className="font-black uppercase text-black mb-1">Risco Agudo Fictício (Taxa de Erros Fatais)</p>
-                      <p className="text-xs text-gray-800 font-medium">Corresponde ao percentual de simulações clínicas onde o discente selecionou condutas iatrogênicas ou omitiu socorro primário, resultando no óbito do paciente virtual.</p>
+          {/* BLOCO 3: SEGURANÇA DO PACIENTE */}
+          <div className="mb-8">
+              <h3 className="text-xs font-bold uppercase border-b border-black pb-1 mb-3 text-black">3. Segurança do Paciente e Erros Críticos</h3>
+              <div className="border border-black p-4 flex items-center justify-between bg-gray-50">
+                  <div className="w-3/4">
+                      <p className="font-bold uppercase text-black text-sm mb-1">Taxa de Risco Agudo (Mortalidade Fictícia)</p>
+                      <p className="text-xs font-normal text-gray-700 leading-relaxed">Representa o percentual absoluto de simulações clínicas dinâmicas (RPG) onde o aluno selecionou condutas iatrogênicas diretas ou omitiu intervenções de suporte vital primário, resultando no óbito do paciente virtual.</p>
                   </div>
-                  <div className="text-4xl font-black text-black">{stats.fatalErrorRate.toFixed(1)}%</div>
+                  <div className="text-3xl font-black text-black px-6">{stats.fatalErrorRate.toFixed(1)}%</div>
               </div>
           </div>
-
-          <div className="mt-16 text-center text-xs font-bold text-gray-500 border-t-2 border-black pt-4 uppercase tracking-widest">
-              Documento Oficial gerado por Luna MedClass Engine
-          </div>
+          
         </div>
       )}
     </div>

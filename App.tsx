@@ -119,15 +119,18 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
-      <Header 
-        onNavigate={handleNavigate} 
-        onBack={handleBack}
-        canGoBack={viewHistory.length > 1}
-        hasRoomSelected={!!selectedRoomId}
-      />
+      {/* Header oculto na impressão */}
+      <div className="print:hidden">
+        <Header 
+          onNavigate={handleNavigate} 
+          onBack={handleBack}
+          canGoBack={viewHistory.length > 1}
+          hasRoomSelected={!!selectedRoomId}
+        />
+      </div>
 
-      {/* Barra de Status com foco em Dados */}
-      <div className={`py-1 px-4 flex justify-center items-center gap-2 border-b transition-all duration-700 ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
+      {/* Barra de Status oculta na impressão */}
+      <div className={`print:hidden py-1 px-4 flex justify-center items-center gap-2 border-b transition-all duration-700 ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
         <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
         <span className={`text-[8px] font-black uppercase tracking-widest ${isOnline ? 'text-green-700' : 'text-red-700'}`}>
           {isOnline ? 'Conexão Segura • Captura de Dados Científicos Ativa' : 'Modo Offline • Sincronização Pendente'}
@@ -280,7 +283,6 @@ const AppContent: React.FC = () => {
             setupMode="ai"
           />
         )}
-        
         {currentView === 'osce-ai-quiz' && currentOsceAIStation && <OsceAIView station={currentOsceAIStation} onBack={handleBack} />}
 
         {currentView === 'calculators' && <CalculatorsView onBack={handleBack} />}
@@ -315,7 +317,7 @@ const AppContent: React.FC = () => {
         {currentView === 'admin' && <AdminView onBack={handleBack} />}
       </div>
 
-      <footer className="bg-white border-t py-8 flex flex-col items-center gap-2 mt-auto text-center px-4">
+      <footer className="print:hidden bg-white border-t py-8 flex flex-col items-center gap-2 mt-auto text-center px-4">
         <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest">© 2026 Luna MedClass</div>
         <div className="text-gray-500 text-[9px] font-medium uppercase max-w-md my-1">
           Simuladores de Alto Rendimento para Medicina.

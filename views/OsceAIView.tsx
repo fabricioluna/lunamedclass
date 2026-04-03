@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OsceStation, ClinicalState, DynamicOsceStation } from '../types';
 import { getAIResponse } from '../services/aiService';
-import { Download, LogOut, Send } from 'lucide-react';
+import { LogOut, Send } from 'lucide-react';
 
 interface OsceAIViewProps {
   station: OsceStation;
@@ -24,11 +24,9 @@ const formatFeedback = (text: string) => {
 };
 
 const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }) => {
-  // 1. Definição do Tipo (Casting)
   const dynamicStation = station as DynamicOsceStation;
   const isAiMode = dynamicStation.mode === 'ai';
   
-  // 2. Todos os States (Declarados no início para evitar erros de referência)
   const [currentPhaseId, setCurrentPhaseId] = useState<string | null>(dynamicStation.initialPhaseId || null);
   const [vitals, setVitals] = useState<ClinicalState | null>(dynamicStation.initialVitals || null);
   const [currentBg, setCurrentBg] = useState<string | undefined>(undefined);
@@ -50,9 +48,6 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
   const currentSetting = dynamicStation.setting || (isAiMode ? 'Consultório médico.' : 'Sala de Emergência.');
   const isCritical = vitals && (vitals.hr === 0 || vitals.sat < 90 || (vitals.bp && parseInt(vitals.bp.split('/')[0]) < 90));
 
-  // 3. Effects (Agora declarados após os estados)
-  
-  // Cronómetro
   useEffect(() => {
     let interval: any;
     if (!isFinished) {
@@ -61,7 +56,6 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
     return () => clearInterval(interval);
   }, [isFinished]);
 
-  // Inicializador de Fase
   useEffect(() => {
     if (dynamicStation.phases && currentPhaseId) {
       const phase = dynamicStation.phases[currentPhaseId];
@@ -72,12 +66,10 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
     }
   }, [dynamicStation, currentPhaseId]);
 
-  // Scroll automático do chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, feedback, isLoading]);
 
-  // 4. Lógica de Comunicação
   const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: any) => {
     try {
       const response = await fetch('/api/chat', {
@@ -192,7 +184,7 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
       } : { backgroundColor: '#F0F4F8' }}
     >
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-3 border-b border-gray-300/50 pb-3 shrink-0 relative z-20 print:hidden">
+      <div className="flex justify-between items-center mb-3 border-b border-gray-300/50 pb-3 shrink-0 relative z-20">
         <button onClick={onBack} className="text-[#003366] font-black uppercase text-[10px] flex items-center gap-2 hover:text-[#D4A017] bg-white/50 px-3 py-1 rounded-lg backdrop-blur-sm">
           <span>←</span> Sair
         </button>
@@ -206,7 +198,7 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
 
       {/* MONITOR */}
       {vitals && !isFinished && (
-        <div className="bg-[#0a0f18]/95 border-2 border-gray-800 shadow-xl rounded-2xl p-4 md:p-6 mb-4 flex justify-around items-center text-green-500 font-mono animate-in fade-in print:hidden">
+        <div className="bg-[#0a0f18]/95 border-2 border-gray-800 shadow-xl rounded-2xl p-4 md:p-6 mb-4 flex justify-around items-center text-green-500 font-mono animate-in fade-in">
           <div className="flex flex-col items-center">
              <span className="text-[10px] text-gray-400 uppercase">FC</span>
              <span className="text-4xl font-black">{vitals.hr}</span>
@@ -223,17 +215,7 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
       )}
 
       {/* CHAT / RELATÓRIO */}
-      <div className="flex-grow overflow-y-auto space-y-5 p-4 md:p-6 bg-white/60 backdrop-blur-lg rounded-[1.5rem] shadow-inner mb-4 border border-white/50 flex flex-col relative z-10 print:bg-white print:p-0 print:shadow-none print:border-none print:block">
-        
-        <div className="hidden print:block border-b-4 border-[#003366] pb-6 mb-10">
-            <h1 className="text-3xl font-black text-[#003366] uppercase">Relatório de Atendimento</h1>
-            <p className="text-sm font-bold text-gray-500 mt-2 uppercase">Luna MedClass Simulation Platform</p>
-            <div className="grid grid-cols-2 gap-4 mt-6">
-                <div><p className="text-[10px] font-black text-gray-400 uppercase">Caso</p><p className="font-bold text-[#003366]">{dynamicStation.title}</p></div>
-                <div><p className="text-[10px] font-black text-gray-400 uppercase">Data</p><p className="font-bold text-[#003366]">{new Date().toLocaleDateString('pt-BR')}</p></div>
-            </div>
-        </div>
-
+      <div className="flex-grow overflow-y-auto space-y-5 p-4 md:p-6 bg-white/60 backdrop-blur-lg rounded-[1.5rem] shadow-inner mb-4 border border-white/50 flex flex-col relative z-10">
         {!isFinished ? (
             messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : msg.role === 'system' ? 'justify-center' : 'justify-start'} relative z-10`}>
@@ -249,16 +231,8 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
             ))
         ) : feedback && (
             <div className="animate-in fade-in duration-700 relative z-10">
-                <div className="hidden print:block mb-10">
-                    <h2 className="text-lg font-black text-[#003366] uppercase mb-4 border-l-4 border-[#D4A017] pl-3">Transcrição</h2>
-                    <div className="space-y-4 opacity-70">
-                        {messages.filter(m => m.role !== 'system').map((m, i) => (
-                            <p key={i} className="text-xs font-medium"><b className="uppercase">{m.role === 'user' ? 'Médico: ' : 'Paciente: '}</b> {m.text}</p>
-                        ))}
-                    </div>
-                </div>
-                <div className="bg-[#003366] p-6 md:p-10 rounded-[1.5rem] shadow-2xl text-white print:text-black print:bg-white print:p-0 print:shadow-none">
-                    <h3 className="text-xl font-black uppercase flex items-center gap-3 mb-6 border-b border-white/10 pb-4 print:border-[#003366]">
+                <div className="bg-[#003366] p-6 md:p-10 rounded-[1.5rem] shadow-2xl text-white">
+                    <h3 className="text-xl font-black uppercase flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
                         <span>🎓</span> Avaliação do Preceptor
                     </h3>
                     <div className="text-sm md:text-base leading-relaxed whitespace-pre-wrap font-medium space-y-4">
@@ -271,8 +245,8 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
         <div ref={chatEndRef} />
       </div>
 
-      {/* INPUTS */}
-      <div className="shrink-0 bg-white/40 backdrop-blur-xl p-3 -mx-4 -mb-2 relative z-20 border-t border-white/40 print:hidden">
+      {/* INPUTS / CONTROLES FINAIS */}
+      <div className="shrink-0 bg-white/40 backdrop-blur-xl p-3 -mx-4 -mb-2 relative z-20 border-t border-white/40">
         {!isFinished ? (
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
@@ -291,12 +265,9 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button onClick={() => window.print()} className="flex items-center justify-center gap-3 w-full bg-[#003366] text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">
-              <Download size={18}/> Baixar PDF
-            </button>
-            <button onClick={onBack} className="flex items-center justify-center gap-3 w-full bg-[#D4A017] text-[#003366] py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">
-              <LogOut size={18}/> Sair
+          <div className="flex justify-center py-2">
+            <button onClick={onBack} className="w-full md:w-1/2 flex items-center justify-center gap-3 bg-[#D4A017] text-[#003366] py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition-all">
+              <LogOut size={18}/> Sair da Consulta
             </button>
           </div>
         )}

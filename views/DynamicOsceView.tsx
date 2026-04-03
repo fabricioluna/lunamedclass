@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { DynamicOsceStation, SimulationPhase, ClinicalState } from '../types';
-import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, CheckCircle2, Timer, BarChart3, Download } from 'lucide-react';
+import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3 } from 'lucide-react';
 
 interface DynamicOsceViewProps {
   station: DynamicOsceStation;
   onBack: () => void;
-  // O onSaveResult agora envia o pacote completo para suas estatísticas e a nota do aluno
   onSaveResult?: (score: number, total: number, timeSpent: number, analytics: any) => void; 
 }
 
@@ -34,7 +33,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   }, [currentPhaseId]);
 
   const handleChoice = (t: any) => {
-    // 1. Atualizar pontuação real (extraída do nó selecionado no JSON)
+    // 1. Atualizar pontuação real
     const delta = t.scoreDelta || t.pontuacao_delta || { tecnica: 0, comunicacao: 0, biosseguranca: 0 };
     
     const newScores = {
@@ -45,7 +44,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     
     setScores(newScores);
 
-    // 2. Registrar histórico detalhado para estatística
+    // 2. Registrar histórico detalhado
     setHistory(prev => [...prev, {
       narrative: currentPhase.narrative,
       choice: t.triggers[0],
@@ -55,17 +54,14 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
 
     setLastFeedback(t.feedbackText);
 
-    // 3. Lógica de Finalização (Vitória ou Erro Fatal)
+    // 3. Lógica de Finalização
     if (t.isFatalError || t.nextPhaseId === 'FINISH') {
       const timeSpent = Math.floor((Date.now() - startTime) / 1000);
       setEndTime(timeSpent);
       
-      // CÁLCULO DA NOTA NORMAL (0 a 10)
-      // Somamos os pontos e normalizamos (ajuste a lógica conforme sua escala de pontos do JSON)
       const totalRaw = newScores.tecnica + newScores.comunicacao + newScores.biosseguranca;
       const finalGrade = t.isFatalError ? 0 : Math.min(Math.max(totalRaw, 0), 10);
 
-      // PACOTE DE BIG DATA (Para seus relatórios e publicações)
       const analyticsData = {
         stationId: station.id,
         stationTitle: station.title,
@@ -86,12 +82,8 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       return;
     }
 
-    // 4. Navegar para o próximo nó
+    // 4. Navegar
     setCurrentPhaseId(t.nextPhaseId);
-  };
-
-  const handleDownloadPDF = () => {
-    window.print();
   };
 
   const formatTime = (seconds: number) => {
@@ -115,17 +107,16 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   );
 
   const CompetencyBar = ({ label, value, color, icon: Icon }: any) => {
-    // Normalização visual: assume-se que 10 é o topo da categoria
     const percentage = Math.min(Math.max(value * 10, 0), 100); 
     return (
       <div className="space-y-2">
-        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500 print:text-black">
-          <span className="flex items-center gap-1"><Icon size={12} className="print:hidden"/> {label}</span>
-          <span className="print:font-bold">{value.toFixed(1)}</span>
+        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
+          <span className="flex items-center gap-1"><Icon size={12}/> {label}</span>
+          <span>{value.toFixed(1)}</span>
         </div>
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden print:border print:border-gray-300 print:h-2">
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
           <div 
-            className={`h-full transition-all duration-1000 ${color} print:bg-black`} 
+            className={`h-full transition-all duration-1000 ${color}`} 
             style={{ width: `${percentage}%` }}
           />
         </div>
@@ -138,34 +129,23 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     const isSuccess = totalScore >= 7;
 
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12 animate-in zoom-in duration-500 print:p-0 print:m-0">
-        <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-gray-100 print:shadow-none print:border-none print:rounded-none">
-          
-          {/* CABEÇALHO DO PDF (Visível apenas na impressão) */}
-          <div className="hidden print:block border-b-4 border-[#003366] pb-6 mb-8 px-8 pt-8">
-              <h1 className="text-3xl font-black text-[#003366] uppercase">Relatório de Simulação Dinâmica (RPG)</h1>
-              <p className="text-sm font-bold text-gray-500 mt-2 uppercase tracking-widest">Luna MedClass • Luna Engine 2.0</p>
-              <div className="grid grid-cols-2 gap-4 mt-6">
-                  <div><p className="text-[10px] font-black text-gray-400 uppercase">Estação / Disciplina</p><p className="font-bold text-[#003366]">{station.title} ({station.disciplineId})</p></div>
-                  <div><p className="text-[10px] font-black text-gray-400 uppercase">Data da Execução</p><p className="font-bold text-[#003366]">{new Date().toLocaleDateString('pt-BR')}</p></div>
-              </div>
-          </div>
-
-          <div className={`${isSuccess ? 'bg-[#003366]' : 'bg-red-900'} p-10 text-center text-white relative transition-colors print:bg-transparent print:text-black print:border-b-2 print:border-gray-300 print:p-6`}>
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 opacity-10 print:hidden"><Award size={80}/></div>
-            <h2 className={`text-3xl font-black uppercase tracking-tighter mb-2 relative z-10 print:text-2xl ${isSuccess ? 'print:text-[#003366]' : 'print:text-red-700'}`}>
+      <div className="max-w-4xl mx-auto px-4 py-12 animate-in zoom-in duration-500">
+        <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-gray-100">
+          <div className={`${isSuccess ? 'bg-[#003366]' : 'bg-red-900'} p-10 text-center text-white relative transition-colors`}>
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 opacity-10"><Award size={80}/></div>
+            <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 relative z-10">
                 {isSuccess ? 'Simulação Concluída' : 'Desfecho Desfavorável (Erro Fatal)'}
             </h2>
-            <p className="text-[#D4A017] font-bold uppercase text-xs tracking-[0.2em] relative z-10 print:text-gray-500">Feedback de Competências Clínicas</p>
+            <p className="text-[#D4A017] font-bold uppercase text-xs tracking-[0.2em] relative z-10">Feedback de Competências Clínicas</p>
           </div>
           
-          <div className="p-8 md:p-12 space-y-10 print:p-6 print:space-y-6">
+          <div className="p-8 md:p-12 space-y-10">
             {/* NOTA NORMAL DO ALUNO */}
-            <div className="flex flex-col items-center justify-center py-6 bg-gray-50 rounded-[2rem] border border-gray-100 print:bg-transparent print:border-2 print:border-gray-300 print:rounded-xl print:py-4">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2 print:text-gray-600">Sua Nota Final</span>
+            <div className="flex flex-col items-center justify-center py-6 bg-gray-50 rounded-[2rem] border border-gray-100">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Sua Nota Final</span>
                 <div className="flex items-baseline gap-1">
-                    <span className={`text-6xl font-black print:text-4xl ${isSuccess ? 'text-[#003366] print:text-black' : 'text-red-600 print:text-black'}`}>{totalScore.toFixed(1)}</span>
-                    <span className="text-gray-300 font-bold print:text-gray-500">/ 10</span>
+                    <span className={`text-6xl font-black ${isSuccess ? 'text-[#003366]' : 'text-red-600'}`}>{totalScore.toFixed(1)}</span>
+                    <span className="text-gray-300 font-bold">/ 10</span>
                 </div>
                 {endTime && (
                   <span className="text-[10px] font-bold text-gray-500 mt-2 uppercase tracking-widest">
@@ -174,39 +154,33 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                 )}
             </div>
 
-            {/* BREAKDOWN POR COMPETÊNCIA (PARA FEEDBACK) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 print:gap-4">
+            {/* BREAKDOWN POR COMPETÊNCIA */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <CompetencyBar label="Técnica" value={scores.tecnica} color="bg-blue-500" icon={ShieldCheck} />
               <CompetencyBar label="Comunicação" value={scores.comunicacao} color="bg-green-500" icon={MessageSquare} />
               <CompetencyBar label="Segurança" value={scores.biosseguranca} color="bg-purple-500" icon={Activity} />
             </div>
 
-            {/* TIMELINE DE DECISÕES (ESTATÍSTICA VISUAL) */}
+            {/* TIMELINE DE DECISÕES */}
             <div className="space-y-4">
-              <h3 className="font-black text-[#003366] uppercase text-sm flex items-center gap-2 border-b pb-2 print:text-black">
-                <BarChart3 size={18} className="text-[#D4A017] print:hidden"/> Revisão de Conduta e Árvore de Decisão
+              <h3 className="font-black text-[#003366] uppercase text-sm flex items-center gap-2 border-b pb-2">
+                <BarChart3 size={18} className="text-[#D4A017]"/> Revisão de Conduta e Árvore de Decisão
               </h3>
-              <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar print:max-h-none print:overflow-visible">
+              <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                 {history.map((step, i) => (
-                  <div key={i} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white transition-all print:bg-transparent print:border-gray-300 print:rounded-none print:p-2 print:border-b print:border-x-0 print:border-t-0">
-                    <p className="text-[9px] font-black text-gray-400 uppercase mb-1 print:text-black">Ação {i+1} • {step.choice}</p>
-                    <p className="text-sm text-gray-700 leading-relaxed font-medium italic print:text-xs">"{step.feedback}"</p>
+                  <div key={i} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white transition-all">
+                    <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Ação {i+1} • {step.choice}</p>
+                    <p className="text-sm text-gray-700 leading-relaxed font-medium italic">"{step.feedback}"</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* BOTÕES DE AÇÃO (OCULTOS NA IMPRESSÃO) */}
-            <div className="pt-4 flex flex-col sm:flex-row justify-center gap-4 print:hidden">
-              <button 
-                onClick={handleDownloadPDF} 
-                className="flex-1 bg-white text-[#003366] py-5 rounded-2xl font-black uppercase tracking-widest border-2 border-[#003366] hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-3"
-              >
-                <Download size={20}/> Baixar Relatório (PDF)
-              </button>
+            {/* BOTÃO FINAL (CENTRALIZADO) */}
+            <div className="pt-4 flex justify-center">
               <button 
                 onClick={onBack} 
-                className="flex-1 bg-[#003366] text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-[#D4A017] hover:text-[#003366] transition-all shadow-lg flex items-center justify-center gap-3"
+                className="w-full md:w-2/3 bg-[#003366] text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-[#D4A017] hover:text-[#003366] transition-all shadow-lg flex items-center justify-center gap-3"
               >
                 Salvar Desempenho e Sair <ChevronRight size={20}/>
               </button>
