@@ -23,20 +23,30 @@ export const getAIResponse = async (prompt: string, context: string = "") => {
   }
 };
 
-/**
- * GERAÇÃO DE DICAS PARA O LABORATÓRIO VIRTUAL
- */
+// === NOVA FUNÇÃO: GERAÇÃO DE DICAS PARA O LABORATÓRIO ===
 export const generateLabTips = async (answer: string, question: string) => {
-  const prompt = `Você é um professor de medicina.
-  A pergunta foi: "${question}" e a resposta correta é: "${answer}".
-  Retorne um objeto JSON ESTRITO com as chaves: "identification", "location", "functions".
-  Não use markdown. Retorne APENAS o JSON puro.`;
+  const prompt = `Você é um professor de medicina especialista em anatomia, histologia e patologia.
+  A pergunta do simulado de laboratório visual foi: "${question}"
+  A resposta correta esperada é: "${answer}"
+
+  Com base APENAS nesta resposta correta, retorne um objeto JSON ESTRITO com as seguintes chaves (em inglês):
+  "identification": "Dica prática e direta de como identificar visualmente essa estrutura na imagem (ex: formato, cor, características)",
+  "location": "Dica de localização topográfica ou contexto no órgão",
+  "functions": "Principais funções fisiológicas ou correlação clínica direta"
+
+  Não use formatação markdown (como \`\`\`json). Retorne APENAS o objeto JSON puro e válido.`;
 
   try {
+    // Usamos a sua própria função segura para pedir a resposta!
     const responseText = await getAIResponse(prompt, "Geração de dicas estruturadas para laboratório virtual.");
+    
+    // Limpamos possíveis formatações de markdown que a IA possa colocar por engano
     const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    
     return JSON.parse(cleanText);
   } catch (error) {
+    console.error("Erro ao gerar/processar as dicas da IA:", error);
+    // Retorno de segurança caso algo falhe
     return {
       identification: "Dica visual não disponível no momento.",
       location: "Erro ao processar localização.",
@@ -72,7 +82,7 @@ export const evaluateRpgAction = async (userAction: string, availableTransitions
   try {
     const responseText = await getAIResponse(prompt, "Avaliador Clínico RPG.");
     
-    // LOG PARA O DOUTOR LUNA VER NO F12:
+    // LOG PARA DEBUG NO F12
     console.log(`[Luna Engine] Aluno digitou: "${userAction}"`);
     console.log(`[Luna Engine] Resposta Bruta da IA:`, responseText);
 
@@ -134,8 +144,7 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
     try {
         const responseText = await getAIResponse(prompt, "Gerador de Distratores Clínicos.");
         
-        // LOG PARA O DOUTOR LUNA VER NO F12:
-        console.log(`[Luna Engine] JSON Bruto gerado para as Opções (SOS):`, responseText);
+        console.log(`[Luna Engine] Gerador SOS Resposta Bruta:`, responseText);
 
         let cleanText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
         const startIdx = cleanText.indexOf('[');
