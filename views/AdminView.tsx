@@ -163,8 +163,10 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-10 border-b pb-8 gap-4">
+    <div className="max-w-7xl mx-auto px-4 py-12 print:p-0 print:m-0">
+      
+      {/* Oculta os botões de administração e cabeçalho na impressão */}
+      <div className="flex flex-col md:flex-row justify-between items-center mb-10 border-b pb-8 gap-4 print:hidden">
         <div className="flex items-center gap-4">
            <button onClick={onBack} className="bg-gray-100 p-3 rounded-xl hover:bg-gray-200 transition-all text-[#003366]">←</button>
            <div>
@@ -179,10 +181,11 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         </div>
       </div>
 
-      <nav className="flex flex-wrap gap-2 mb-12">
+      {/* Oculta as abas de navegação na impressão */}
+      <nav className="flex flex-wrap gap-2 mb-12 print:hidden">
         {[
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
-          { id: 'analytics', label: 'Research Analytics', icon: <BrainCircuit size={16}/> }, // <--- NOVA ABA
+          { id: 'analytics', label: 'Research Analytics', icon: <BrainCircuit size={16}/> },
           { id: 'access', label: 'Acessos', icon: <Lock size={16}/> }, 
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
           { id: 'questions', label: 'Questões', icon: <FileText size={16}/> },
