@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DynamicOsceStation, SimulationPhase, ClinicalState } from '../types';
-import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3 } from 'lucide-react';
+import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle } from 'lucide-react';
+import { evaluateRpgAction, generateRpgOptions } from '../services/aiService';
 
 interface DynamicOsceViewProps {
   station: DynamicOsceStation;
@@ -9,13 +10,11 @@ interface DynamicOsceViewProps {
 }
 
 const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSaveResult }) => {
-  // --- ESTADOS DA ENGINE ---
   const [currentPhaseId, setCurrentPhaseId] = useState<string>(station.initialPhaseId);
   const [vitals, setVitals] = useState<ClinicalState>(station.initialVitals || {
     hr: 80, bp: "120/80", sat: 98, rr: 16, status: "Estável"
   });
   
-  // Pontuação real baseada nos deltas do JSON
   const [scores, setScores] = useState({ tecnica: 0, comunicacao: 0, biosseguranca: 0 });
   const [history, setHistory] = useState<{ narrative: string, choice: string, feedback: string, phaseId: string }[]>([]);
   const [isFinished, setIsFinished] = useState(false);
@@ -23,38 +22,55 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const [startTime] = useState(Date.now());
   const [endTime, setEndTime] = useState<number | null>(null);
 
-  const currentPhase: SimulationPhase = station.phases[currentPhaseId];
+  const [inputText, setInputText] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [sosOptions, setSosOptions] = useState<{ text: string, isCorrect: boolean, transitionRef: any }[] | null>(null);
 
-  // Atualiza vitais ao mudar de fase
+  // Registro de Tracking (Estatísticas do Aluno)
+  const [rpgTracking, setRpgTracking] = useState({
+    hintsRequested: 0,
+    textErrors: 0,
+    hintErrors: 0
+  });
+
+  const currentPhase: SimulationPhase | undefined = station.phases[currentPhaseId];
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Tratamento de Erro de F12 (Se o JSON tentar carregar uma fase que não existe)
   useEffect(() => {
-    if (currentPhase?.vitals) {
+    if (!currentPhase) {
+        console.error("Fase não encontrada no JSON:", currentPhaseId);
+        setIsFinished(true);
+        return;
+    }
+    if (currentPhase.vitals) {
       setVitals(currentPhase.vitals);
     }
-  }, [currentPhaseId]);
+    setSosOptions(null);
+    setInputText('');
+  }, [currentPhaseId, currentPhase]);
 
-  const handleChoice = (t: any) => {
-    // 1. Atualizar pontuação real
+  const executeTransition = (t: any, choiceLabel: string, isPenalty: boolean = false) => {
     const delta = t.scoreDelta || t.pontuacao_delta || { tecnica: 0, comunicacao: 0, biosseguranca: 0 };
+    const penaltyFactor = isPenalty ? 0.3 : 1; // SOS dá apenas 30% da nota
     
     const newScores = {
-      tecnica: scores.tecnica + (delta.tecnica || delta.Tecnica || 0),
-      comunicacao: scores.comunicacao + (delta.comunicacao || delta.Comunicacao || 0),
-      biosseguranca: scores.biosseguranca + (delta.biosseguranca || delta.Biosseguranca || 0)
+      tecnica: scores.tecnica + ((delta.tecnica || delta.Tecnica || 0) * penaltyFactor),
+      comunicacao: scores.comunicacao + ((delta.comunicacao || delta.Comunicacao || 0) * penaltyFactor),
+      biosseguranca: scores.biosseguranca + ((delta.biosseguranca || delta.Biosseguranca || 0) * penaltyFactor)
     };
     
     setScores(newScores);
 
-    // 2. Registrar histórico detalhado
     setHistory(prev => [...prev, {
-      narrative: currentPhase.narrative,
-      choice: t.triggers[0],
-      feedback: t.feedbackText,
+      narrative: currentPhase?.narrative || "Desconhecido",
+      choice: choiceLabel,
+      feedback: isPenalty ? `[AJUDA UTILIZADA] ${t.feedbackText}` : t.feedbackText,
       phaseId: currentPhaseId
     }]);
 
     setLastFeedback(t.feedbackText);
 
-    // 3. Lógica de Finalização
     if (t.isFatalError || t.nextPhaseId === 'FINISH') {
       const timeSpent = Math.floor((Date.now() - startTime) / 1000);
       setEndTime(timeSpent);
@@ -71,6 +87,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         lastPhaseBeforeExit: currentPhaseId,
         performanceMap: newScores,
         fullDecisionPath: history,
+        rpgTracking: rpgTracking,
         completedAt: new Date().toISOString()
       };
 
@@ -82,8 +99,66 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       return;
     }
 
-    // 4. Navegar
     setCurrentPhaseId(t.nextPhaseId);
+  };
+
+  const handleTextSubmit = async () => {
+    if (!inputText.trim() || isProcessing || !currentPhase) return;
+    setIsProcessing(true);
+    setLastFeedback(null);
+
+    const userText = inputText.trim();
+    // Proteção garantida contra erro "Cannot read properties of undefined (reading 'map')"
+    const transitions = currentPhase.transitions || []; 
+
+    if (transitions.length === 0) {
+      setIsProcessing(false);
+      return; 
+    }
+
+    const matchedTransition = await evaluateRpgAction(userText, transitions, currentPhase.narrative);
+
+    if (matchedTransition) {
+        executeTransition(matchedTransition, `Conduta Clínica: "${userText}"`);
+    } else {
+        setRpgTracking(prev => ({ ...prev, textErrors: prev.textErrors + 1 }));
+        setLastFeedback("A conduta descrita não gerou efeito esperado ou não está indicada no protocolo atual. Verifique os dados do monitor e tente uma intervenção focada no quadro principal.");
+        setScores(prev => ({ ...prev, tecnica: prev.tecnica - 0.5 }));
+        setHistory(prev => [...prev, {
+            narrative: currentPhase.narrative,
+            choice: `Tentativa sem efeito: "${userText}"`,
+            feedback: "Conduta clinicamente não reconhecida pela equipe.",
+            phaseId: currentPhaseId
+        }]);
+    }
+    
+    setIsProcessing(false);
+    setInputText('');
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleRequestHelp = async () => {
+      if (!currentPhase) return;
+      setIsProcessing(true);
+      setRpgTracking(prev => ({ ...prev, hintsRequested: prev.hintsRequested + 1 }));
+      setLastFeedback("Consultando o Plantonista Chefe. Escolha uma das opções sugeridas (Penalidade na nota aplicada):");
+      
+      const transitions = currentPhase.transitions || [];
+      const options = await generateRpgOptions(transitions, currentPhase.narrative);
+      
+      setSosOptions(options);
+      setIsProcessing(false);
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSosChoice = (option: any) => {
+      if (option.isCorrect && option.transitionRef) {
+          executeTransition(option.transitionRef, `Auxílio Solicitado: ${option.text}`, true);
+      } else {
+          setRpgTracking(prev => ({ ...prev, hintErrors: prev.hintErrors + 1 }));
+          setLastFeedback(`[ERRO CRÍTICO] A equipe barrou sua conduta! A escolha "${option.text}" poderia prejudicar o paciente. Reveja as opções.`);
+          setScores(prev => ({ ...prev, tecnica: prev.tecnica - 1.0 })); 
+      }
   };
 
   const formatTime = (seconds: number) => {
@@ -92,7 +167,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  // --- COMPONENTES DE INTERFACE ---
   const VitalParam = ({ label, value, unit, icon: Icon, color }: any) => (
     <div className="bg-black/5 p-3 rounded-xl border border-black/5">
       <div className="flex items-center gap-2 mb-1">
@@ -140,7 +214,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
           </div>
           
           <div className="p-8 md:p-12 space-y-10">
-            {/* NOTA NORMAL DO ALUNO */}
             <div className="flex flex-col items-center justify-center py-6 bg-gray-50 rounded-[2rem] border border-gray-100">
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Sua Nota Final</span>
                 <div className="flex items-baseline gap-1">
@@ -154,29 +227,41 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                 )}
             </div>
 
-            {/* BREAKDOWN POR COMPETÊNCIA */}
+            <div className="flex justify-center gap-6">
+                <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Dicas (SOS)</p>
+                    <p className="text-lg font-black text-[#D4A017]">{rpgTracking.hintsRequested}</p>
+                </div>
+                <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Erros de Texto</p>
+                    <p className="text-lg font-black text-red-500">{rpgTracking.textErrors}</p>
+                </div>
+                <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Erros em Dicas</p>
+                    <p className="text-lg font-black text-orange-500">{rpgTracking.hintErrors}</p>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <CompetencyBar label="Técnica" value={scores.tecnica} color="bg-blue-500" icon={ShieldCheck} />
               <CompetencyBar label="Comunicação" value={scores.comunicacao} color="bg-green-500" icon={MessageSquare} />
               <CompetencyBar label="Segurança" value={scores.biosseguranca} color="bg-purple-500" icon={Activity} />
             </div>
 
-            {/* TIMELINE DE DECISÕES */}
             <div className="space-y-4">
               <h3 className="font-black text-[#003366] uppercase text-sm flex items-center gap-2 border-b pb-2">
-                <BarChart3 size={18} className="text-[#D4A017]"/> Revisão de Conduta e Árvore de Decisão
+                <BarChart3 size={18} className="text-[#D4A017]"/> Revisão de Conduta Histórica
               </h3>
               <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                 {history.map((step, i) => (
                   <div key={i} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white transition-all">
-                    <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Ação {i+1} • {step.choice}</p>
+                    <p className="text-[9px] font-black text-[#003366] uppercase mb-1">Ação {i+1} • {step.choice}</p>
                     <p className="text-sm text-gray-700 leading-relaxed font-medium italic">"{step.feedback}"</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* BOTÃO FINAL (CENTRALIZADO) */}
             <div className="pt-4 flex justify-center">
               <button 
                 onClick={onBack} 
@@ -191,13 +276,15 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     );
   }
 
+  // Proteção extra se o currentPhase for indefinido antes de renderizar
+  if (!currentPhase) return null;
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* HEADER DA ESTAÇÃO */}
+    <div className="max-w-6xl mx-auto px-4 py-8 pb-32">
       <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-[8px] font-black uppercase rounded">Modo RPG</span>
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-[8px] font-black uppercase rounded border border-purple-200">Híbrido IA</span>
             <span className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">{station.theme}</span>
           </div>
           <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">{station.title}</h2>
@@ -214,9 +301,8 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* MONITOR CLÍNICO (LADO ESQUERDO) */}
         <div className="lg:col-span-3 space-y-4">
-          <div className="bg-white p-6 rounded-[2rem] shadow-xl border-t-8 border-[#003366]">
+          <div className="bg-white p-6 rounded-[2rem] shadow-xl border-t-8 border-[#003366] sticky top-4">
             <h3 className="text-[10px] font-black text-[#003366] uppercase mb-6 tracking-widest flex items-center gap-2">
               <Activity size={14} className="animate-pulse text-red-500" /> Sinais Vitais
             </h3>
@@ -227,67 +313,87 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
               <VitalParam label="FR" value={vitals.rr} unit="irpm" icon={Activity} color="text-purple-500" />
             </div>
             <div className="mt-6 pt-4 border-t border-gray-50">
-                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-2 text-center">Status do Paciente</span>
+                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-2 text-center">Status Fisiológico</span>
                 <div className="bg-gray-900 text-green-400 py-2 px-3 rounded-lg text-center font-mono text-[10px] uppercase tracking-tighter shadow-inner">
                     {vitals.status}
                 </div>
             </div>
           </div>
-          
-          <div className="bg-[#003366] p-6 rounded-[2.5rem] text-white shadow-lg">
-             <h4 className="text-[10px] font-black text-[#D4A017] uppercase mb-2 tracking-widest flex items-center gap-2">
-                 <ShieldCheck size={12}/> Sua Missão
-             </h4>
-             <p className="text-xs font-medium leading-relaxed opacity-90">{station.task}</p>
-          </div>
         </div>
 
-        {/* NARRATIVA E DECISÕES (LADO DIREITO) */}
         <div className="lg:col-span-9 space-y-6">
-          <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-50 min-h-[450px] flex flex-col relative overflow-hidden">
-            {/* Overlay sutil de profundidade */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gray-50 rounded-full -mr-32 -mt-32 opacity-50"></div>
+          <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-2xl border border-gray-50 flex flex-col relative overflow-hidden min-h-[450px]">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full -mr-32 -mt-32 opacity-50"></div>
             
-            <div className="flex-grow relative z-10">
-              <span className="inline-block bg-blue-50 text-[#003366] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">Cenário Clínico</span>
-              <p className="text-xl md:text-2xl text-gray-800 font-bold leading-relaxed mb-10">
-                {currentPhase?.narrative}
+            <div className="relative z-10 mb-8 flex-grow">
+              <span className="inline-block bg-blue-50 text-[#003366] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">Mestre de Sala (Narrador)</span>
+              <p className="text-xl md:text-2xl text-gray-800 font-medium leading-relaxed">
+                {currentPhase.narrative}
               </p>
             </div>
 
-            {/* FEEDBACK IMEDIATO (SISTEMA DE MESTRE DE RPG) */}
             {lastFeedback && (
-              <div className="bg-yellow-50 p-5 rounded-2xl border-l-4 border-yellow-400 mb-8 flex items-start gap-4 animate-in fade-in slide-in-from-left-4 relative z-10">
-                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
-                    <AlertTriangle className="text-yellow-600" size={20} />
+              <div className="bg-yellow-50 p-6 rounded-[2rem] border-l-4 border-yellow-400 mb-8 flex items-start gap-4 animate-in fade-in slide-in-from-left-4 relative z-10">
+                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
+                    {lastFeedback.includes("rejeitada") || lastFeedback.includes("ERRO") ? <AlertTriangle className="text-red-500" size={24} /> : <Activity className="text-yellow-600" size={24} />}
                 </div>
                 <div>
-                    <span className="text-[9px] font-black text-yellow-600 uppercase tracking-widest block mb-1">Nota do Preceptor</span>
-                    <p className="text-sm font-bold text-yellow-900 italic leading-snug">{lastFeedback}</p>
+                    <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest block mb-1">Atualização do Quadro</span>
+                    <p className="text-sm font-bold text-yellow-900 leading-snug">{lastFeedback}</p>
                 </div>
               </div>
             )}
 
-            {/* OPÇÕES DE CONDUTA MÉDICA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-              {currentPhase?.transitions.map((t, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleChoice(t)}
-                  className="flex items-center justify-between p-6 rounded-[1.5rem] border-2 border-gray-100 bg-white hover:border-[#D4A017] hover:shadow-xl transition-all group text-left shadow-sm"
-                >
-                  <span className="text-sm font-black text-[#003366] group-hover:text-[#D4A017] pr-4">{t.triggers[0]}</span>
-                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#D4A017] transition-colors shrink-0">
-                    <ChevronRight size={18} className="text-gray-300 group-hover:text-white transition-all group-hover:translate-x-0.5" />
-                  </div>
-                </button>
-              ))}
+            <div className="mt-auto pt-6 border-t border-gray-100 relative z-10">
+                {sosOptions ? (
+                    <div className="animate-in slide-in-from-bottom-4">
+                        <span className="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">Múltipla Escolha (Plantonista)</span>
+                        <div className="grid grid-cols-1 gap-3">
+                            {sosOptions.map((opt, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => handleSosChoice(opt)}
+                                    className="text-left p-4 rounded-2xl border-2 border-gray-100 bg-white hover:border-[#D4A017] hover:shadow-md transition-all text-sm font-bold text-gray-700"
+                                >
+                                    {opt.text}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex-grow flex bg-gray-50 rounded-2xl border-2 border-transparent focus-within:border-[#D4A017] transition-all overflow-hidden p-2">
+                            <input
+                                type="text"
+                                value={inputText}
+                                onChange={e => setInputText(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleTextSubmit()}
+                                placeholder="Descreva sua conduta médica, exames ou medicação..."
+                                disabled={isProcessing}
+                                className="w-full bg-transparent p-3 outline-none font-medium text-[#003366] text-sm"
+                            />
+                            <button 
+                                onClick={handleTextSubmit} 
+                                disabled={isProcessing || !inputText.trim()} 
+                                className="bg-[#003366] text-white px-6 rounded-xl font-black shadow-md hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50"
+                            >
+                                <Send size={18} />
+                            </button>
+                        </div>
+                        
+                        <button 
+                            onClick={handleRequestHelp}
+                            disabled={isProcessing}
+                            className="bg-orange-50 text-orange-600 border-2 border-orange-100 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest flex flex-col items-center justify-center hover:bg-orange-600 hover:text-white transition-all min-w-[120px] disabled:opacity-50 shadow-sm"
+                        >
+                            <HelpCircle size={18} className="mb-1"/> SOS Dica
+                        </button>
+                    </div>
+                )}
+                {isProcessing && <p className="text-center text-xs font-bold text-[#D4A017] mt-4 animate-pulse">A inteligência artificial está avaliando sua conduta...</p>}
             </div>
+            <div ref={chatEndRef}></div>
           </div>
-
-          <p className="text-center text-[9px] font-black text-gray-300 uppercase tracking-[0.5em]">
-            Luna Engine 2.0 • Data Analytics Enabled
-          </p>
         </div>
       </div>
     </div>
