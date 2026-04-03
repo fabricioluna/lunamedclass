@@ -6,14 +6,35 @@ interface OsceSetupViewProps {
   availableStations: OsceStation[];
   onStart: (station: OsceStation) => void;
   onBack: () => void;
-  isAIMode?: boolean; 
+  setupMode?: 'static' | 'rpg' | 'ai' | 'lab' | 'all'; 
 }
 
-const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStations, onStart, onBack, isAIMode = false }) => {
+const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStations, onStart, onBack, setupMode = 'all' }) => {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
 
-  // IDENTIFICADOR AUTOMÁTICO DE UC (Baseado na Matriz Curricular FMS)
   const isUC = discipline.id.toLowerCase().startsWith('uc');
+
+  // Lógica inteligente para herdar Título e Emoji exatos dos botões anteriores
+  let headerEmoji = '🩺';
+  let headerTitle = 'Laboratório de Habilidades';
+  let headerSubtitle = discipline.title;
+
+  if (isUC || setupMode === 'lab') {
+    headerEmoji = '🔬';
+    headerTitle = 'Laboratório Virtual';
+  } else if (setupMode === 'ai') {
+    headerEmoji = '🤖';
+    headerTitle = 'Paciente Virtual';
+    headerSubtitle = 'Anamnese livre conversando com a IA';
+  } else if (setupMode === 'rpg') {
+    headerEmoji = '🎮';
+    headerTitle = 'Simulado RPG';
+    headerSubtitle = 'Decisões com consequências e vitais dinâmicos';
+  } else if (setupMode === 'static') {
+    headerEmoji = '📋';
+    headerTitle = 'Simulado Estático';
+    headerSubtitle = 'Checklists sequenciais e protocolos';
+  }
 
   const handleSurpriseAll = () => {
     if (availableStations.length === 0) return;
@@ -39,13 +60,14 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
       </button>
       
       <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl border border-gray-100">
+        {/* CABEÇALHO DINÂMICO */}
         <div className="text-center mb-10 border-b pb-8">
-          <div className="text-5xl mb-4">{isAIMode ? '🤖' : (isUC ? '🔬' : '🩺')}</div>
+          <div className="text-5xl mb-4">{headerEmoji}</div>
           <h2 className="text-3xl font-black text-[#003366] uppercase mb-2 tracking-tighter">
-            {isAIMode ? 'Paciente Virtual por IA' : (isUC ? 'Simulado de Laboratório' : 'Laboratório de Habilidades')}
+            {headerTitle}
           </h2>
           <p className="text-[#D4A017] text-[10px] font-black uppercase tracking-[0.3em]">
-            {isAIMode ? 'Treine Anamnese Realista' : discipline.title}
+            {headerSubtitle}
           </p>
         </div>
 
@@ -63,14 +85,14 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
               <button
                 onClick={handleSurpriseAll}
                 className={`sm:col-span-2 p-6 hover:bg-[#D4A017] hover:text-[#003366] rounded-[1.5rem] transition-all flex items-center justify-between group shadow-lg
-                  ${isAIMode ? 'bg-[#001f3f] text-[#D4A017]' : 'bg-[#003366] text-white'}
+                  ${setupMode === 'ai' ? 'bg-[#001f3f] text-[#D4A017]' : 'bg-[#003366] text-white'}
                 `}
               >
                 <div className="flex items-center gap-5 text-left">
                   <div className="text-4xl group-hover:animate-spin">🎲</div>
                   <div>
                     <h3 className="text-lg font-black uppercase tracking-tight">
-                      {isUC ? 'Bancada Surpresa (Geral)' : 'Paciente Surpresa (Geral)'}
+                      {isUC ? 'Bancada Surpresa (Geral)' : 'Caso Surpresa (Geral)'}
                     </h3>
                     <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Sorteia entre todas as {availableStations.length} estações</p>
                   </div>
@@ -118,7 +140,7 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
                   <div className="text-3xl group-hover:animate-spin">🎲</div>
                   <div>
                     <h3 className="text-md font-black uppercase tracking-tight">
-                      {isUC ? 'Bancada Surpresa neste Eixo' : 'Paciente Surpresa neste Eixo'}
+                      {isUC ? 'Bancada Surpresa neste Eixo' : 'Caso Surpresa neste Eixo'}
                     </h3>
                     <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">
                       {isUC ? `Sorteia uma bancada aleatória de ${selectedTheme}` : `Sorteia um caso aleatório de ${selectedTheme}`}
@@ -142,15 +164,19 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
                       <h3 className="text-md font-black text-[#003366] group-hover:text-[#D4A017] transition-colors leading-tight pr-4">
                         {station.title}
                       </h3>
-                      {/* BADGES DE TIPO DE ESTAÇÃO (LUNA ENGINE 2.0) */}
+                      {/* BADGES DE TIPO DE ESTAÇÃO */}
                       <div className="flex gap-2 mt-2">
                         {station.mode === 'rpg' ? (
                           <span className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
-                            ⚡ Luna Engine RPG
+                            🎮 Simulado RPG
+                          </span>
+                        ) : station.mode === 'ai' ? (
+                          <span className="bg-green-100 text-green-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-green-200 flex items-center gap-1">
+                            🤖 Paciente Virtual
                           </span>
                         ) : (
-                          <span className="bg-blue-100 text-blue-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-blue-200">
-                            📋 Simulado Prático
+                          <span className="bg-blue-100 text-blue-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1">
+                            📋 Simulado Estático
                           </span>
                         )}
                       </div>

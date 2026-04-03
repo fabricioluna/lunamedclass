@@ -212,7 +212,7 @@ const AppContent: React.FC = () => {
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
             availableStations={osceStations.filter(s => {
               const isCorrectDisc = s.disciplineId === selectedDisciplineId;
-              if (osceFilterMode === 'static') return isCorrectDisc && s.mode !== 'rpg';
+              if (osceFilterMode === 'static') return isCorrectDisc && s.mode === 'clinical'; 
               if (osceFilterMode === 'rpg') return isCorrectDisc && s.mode === 'rpg';
               return isCorrectDisc;
             })}
@@ -221,6 +221,7 @@ const AppContent: React.FC = () => {
               setCurrentOsceStation(station); 
               handleNavigate('osce-quiz'); 
             }}
+            setupMode={osceFilterMode}
           />
         )}
         
@@ -232,7 +233,6 @@ const AppContent: React.FC = () => {
               onBack={handleBack} 
               onSaveResult={(score, total, timeSpent, analytics) => {
                 if (db) {
-                  // 1. Grava nota do aluno
                   push(ref(db, 'quizResults'), {
                     score, total, timeSpent,
                     date: new Date().toLocaleString(),
@@ -240,11 +240,10 @@ const AppContent: React.FC = () => {
                     quizTitle: currentOsceStation.title,
                     type: 'osce-rpg'
                   });
-                  // 2. Grava dados para pesquisa (Estatísticas do Admin)
                   push(ref(db, 'osceAnalytics'), {
                     ...analytics,
                     date: new Date().toLocaleString(),
-                    studentId: "anon_student" // Adicione ID se tiver sistema de login
+                    studentId: "anon_student"
                   });
                 }
               }}
@@ -255,7 +254,6 @@ const AppContent: React.FC = () => {
               onBack={handleBack} 
               onSaveResult={(score, total, timeSpent, analytics) => {
                 if (db) {
-                  // 1. Grava nota do aluno
                   push(ref(db, 'quizResults'), {
                     score, total, timeSpent,
                     date: new Date().toLocaleString(),
@@ -263,7 +261,6 @@ const AppContent: React.FC = () => {
                     quizTitle: currentOsceStation.title,
                     type: 'osce-estatico'
                   });
-                  // 2. Grava dados para pesquisa (Estatísticas do Admin)
                   push(ref(db, 'osceAnalytics'), {
                     ...analytics,
                     date: new Date().toLocaleString()
@@ -277,12 +274,13 @@ const AppContent: React.FC = () => {
         {currentView === 'osce-ai-setup' && selectedDisciplineId && (
           <OsceSetupView 
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
-            availableStations={osceStations.filter(s => s.disciplineId === selectedDisciplineId)}
+            availableStations={osceStations.filter(s => s.disciplineId === selectedDisciplineId && s.mode === 'ai')} 
             onBack={handleBack}
             onStart={(station) => { setCurrentOsceAIStation(station); handleNavigate('osce-ai-quiz'); }}
-            isAIMode={true}
+            setupMode="ai"
           />
         )}
+        
         {currentView === 'osce-ai-quiz' && currentOsceAIStation && <OsceAIView station={currentOsceAIStation} onBack={handleBack} />}
 
         {currentView === 'calculators' && <CalculatorsView onBack={handleBack} />}
