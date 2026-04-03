@@ -1,197 +1,131 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
 /**
- * Função base para comunicação com a API de Chat da LunaMedClass.
- * Realiza a chamada ao endpoint seguro para processamento de linguagem natural.
+ * Função base para comunicação direta ou via API.
  */
 export const getAIResponse = async (prompt: string, context: string = "") => {
+  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  
+  if (isLocalhost) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY; // Agora com VITE_
+    if (!apiKey) return "Erro: VITE_GEMINI_API_KEY não configurada no .env local.";
+    
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(`CONTEXTO: ${context}\n\nCOMANDO: ${prompt}`);
+      return result.response.text();
+    } catch (err) {
+      console.error("Falha no Gemini Localhost:", err);
+      return "Erro na conexão direta com Gemini.";
+    }
+  }
+
+  // PRODUÇÃO (Vercel)
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, context }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Erro no servidor: ${response.status}`);
-    }
-
     const data = await response.json();
     return data.text; 
-
   } catch (error) {
-    console.error("Erro na comunicação com a API segura:", error);
-    return "Desculpe, tive um problema ao processar a sua dúvida. Tente novamente em instantes.";
-  }
-};
-
-// === NOVA FUNÇÃO: GERAÇÃO DE DICAS PARA O LABORATÓRIO ===
-export const generateLabTips = async (answer: string, question: string) => {
-  const prompt = `Você é um professor de medicina especialista em anatomia, histologia e patologia.
-  A pergunta do simulado de laboratório visual foi: "${question}"
-  A resposta correta esperada é: "${answer}"
-
-  Com base APENAS nesta resposta correta, retorne um objeto JSON ESTRITO com as seguintes chaves (em inglês):
-  "identification": "Dica prática e direta de como identificar visualmente essa estrutura na imagem (ex: formato, cor, características)",
-  "location": "Dica de localização topográfica ou contexto no órgão",
-  "functions": "Principais funções fisiológicas ou correlação clínica direta"
-
-  Não use formatação markdown (como \`\`\`json). Retorne APENAS o objeto JSON puro e válido.`;
-
-  try {
-    // Usamos a sua própria função segura para pedir a resposta!
-    const responseText = await getAIResponse(prompt, "Geração de dicas estruturadas para laboratório virtual.");
-    
-    // Limpamos possíveis formatações de markdown que a IA possa colocar por engano
-    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    return JSON.parse(cleanText);
-  } catch (error) {
-    console.error("Erro ao gerar/processar as dicas da IA:", error);
-    // Retorno de segurança caso algo falhe
-    return {
-      identification: "Dica visual não disponível no momento.",
-      location: "Erro ao processar localização.",
-      functions: "Verifique sua conexão e tente novamente."
-    };
+    return "Erro na comunicação com o servidor.";
   }
 };
 
 /**
- * MOTOR RPG HÍBRIDO: AVALIADOR DE CONDUTA (INTELIGÊNCIA SEMÂNTICA)
- * Usa âncora Regex para extrair a decisão da IA mesmo que ela escreva texto indesejado.
+ * FUNÇÃO AVANÇADA (Utilizada pelo OsceAIView)
+ * Blindada contra erro 404 no localhost.
  */
-export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
-  if (!availableTransitions || availableTransitions.length === 0) return null;
+export const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: any) => {
+  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
-  const prompt = `
-  Você é o juiz clínico de um simulador de medicina. Seja MUITO FLEXÍVEL com sinônimos e erros de digitação.
-  Cenário do paciente: "${narrative}".
-  
-  Conduta digitada pelo aluno: "${userAction}"
-  
-  Caminhos aceitos no sistema (Índice e Gatilhos Esperados):
-  ${availableTransitions.map((t, i) => `ID [${i}]: ${t.triggers.join(', ')}`).join('\n')}
-  
-  Sua Tarefa: Avalie a INTENÇÃO CLÍNICA da conduta do aluno. Se a intenção corresponder práticamente a uma das opções, é um acerto.
-  Exemplos: "ver monitor", "instalar monitorização", "ver sinais" equivalem a "Monitor".
-  
-  RESPONDA OBRIGATORIAMENTE COM ESTA ESTRUTURA EXATA:
-  Se for um acerto, responda: MATCH: [NUMERO DO ID] (Exemplo: MATCH: 0)
-  Se for uma conduta absurda, perigosa ou totalmente fora de contexto, responda: MATCH: NONE
-  `;
-
-  try {
-    const responseText = await getAIResponse(prompt, "Avaliador Clínico RPG.");
-    
-    // LOG PARA DEBUG NO F12
-    console.log(`[Luna Engine] Aluno digitou: "${userAction}"`);
-    console.log(`[Luna Engine] Resposta Bruta da IA:`, responseText);
-
-    const cleanResponse = responseText.toUpperCase();
-    
-    if (cleanResponse.includes("MATCH: NONE")) {
-        return null;
-    }
-
-    // Procura exatamente pelo padrão "MATCH: numero" usando Regex
-    const matchResult = cleanResponse.match(/MATCH:\s*(\d+)/);
-    
-    if (matchResult && matchResult[1]) {
-        const index = parseInt(matchResult[1], 10);
-        if (index >= 0 && index < availableTransitions.length) {
-            return availableTransitions[index];
-        }
-    }
-
-    // Se falhar o Regex, fazemos um fallback buscando apenas um número isolado na string
-    const fallbackMatch = cleanResponse.match(/\b(\d+)\b/);
-    if (fallbackMatch && fallbackMatch[1]) {
-        const fallbackIndex = parseInt(fallbackMatch[1], 10);
-        if (fallbackIndex >= 0 && fallbackIndex < availableTransitions.length) {
-            return availableTransitions[fallbackIndex];
-        }
-    }
-
-    return null;
-  } catch (error) {
-    console.error("[Luna Engine] Erro ao avaliar ação de RPG:", error);
-    return null;
-  }
-};
-
-/**
- * MOTOR RPG HÍBRIDO: BOTÃO DE SOCORRO (GERADOR DE DISTRATORES INTELIGENTES)
- */
-export const generateRpgOptions = async (validTransitions: any[], narrative: string) => {
-    if (!validTransitions || validTransitions.length === 0) return [];
-
-    const targetTransition = validTransitions[0];
-    const correctTrigger = targetTransition.triggers[0];
-
-    const prompt = `
-    Cenário Clínico Atual: "${narrative}".
-    Conduta Médica Correta e Esperada: "${correctTrigger}".
-    
-    Aja como uma banca examinadora de prova de residência médica. Gere 4 condutas médicas INCORRETAS (distratores). 
-    REGRAS VITAIS:
-    1. NÃO PODEM SER ABSURDOS (ex: dar alta num infarto).
-    2. Precisam fazer SENTIDO CLÍNICO no contexto, mas estarem erradas por uma questão de prioridade, contraindicação ou dosagem.
-    
-    Retorne ESTRITAMENTE um array JSON contendo 5 strings (a Conduta Correta misturada com as 4 incorretas que você criar).
-    Não adicione explicações, nem markdown. APENAS o array no formato:
-    ["Distrator Plausível 1", "Conduta Correta", "Distrator Plausível 2", "Distrator Plausível 3", "Distrator Plausível 4"]
-    `;
+  if (isLocalhost) {
+    console.log("[Luna Engine] Executando lógica de fase localmente...");
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) return { text: "Erro: Configure VITE_GEMINI_API_KEY no .env" };
 
     try {
-        const responseText = await getAIResponse(prompt, "Gerador de Distratores Clínicos.");
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const localPrompt = `
+        ${context}
+        REGRAS DE TRANSIÇÃO (JSON): ${JSON.stringify(phaseRules)}
+        AÇÃO DO MÉDICO: ${prompt}
         
-        console.log(`[Luna Engine] Gerador SOS Resposta Bruta:`, responseText);
-
-        let cleanText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const startIdx = cleanText.indexOf('[');
-        const endIdx = cleanText.lastIndexOf(']');
-        if (startIdx !== -1 && endIdx !== -1) {
-            cleanText = cleanText.substring(startIdx, endIdx + 1);
+        Responda em formato JSON puro:
+        {
+          "text": "Sua resposta",
+          "newPhaseId": "ID da fase caso o aluno tenha acertado uma transição, ou null"
         }
-
-        let optionsArray = JSON.parse(cleanText);
-        
-        if (Array.isArray(optionsArray)) {
-            if (!optionsArray.includes(correctTrigger)) {
-                optionsArray[0] = correctTrigger;
-            }
-            
-            for (let i = optionsArray.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [optionsArray[i], optionsArray[j]] = [optionsArray[j], optionsArray[i]];
-            }
-
-            return optionsArray.slice(0, 5).map(opt => ({
-                text: opt,
-                isCorrect: opt === correctTrigger,
-                transitionRef: opt === correctTrigger ? targetTransition : null
-            }));
-        }
-        throw new Error("Formato não é um array válido.");
-    } catch (error) {
-        console.error("[Luna Engine] Falha no gerador de distratores da IA, usando fallback.", error);
-        
-        const fallbacks = [
-            "Aguardar evolução clínica sem intervir no momento",
-            "Prescrever Dipirona 500mg EV e observar",
-            "Solicitar tomografia de corpo inteiro imediatamente",
-            "Encaminhar para ambulatório geral sem estabilização"
-        ];
-        
-        let safeArray = [correctTrigger, ...fallbacks];
-        for (let i = safeArray.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [safeArray[i], safeArray[j]] = [safeArray[j], safeArray[i]];
-        }
-
-        return safeArray.map(opt => ({
-            text: opt,
-            isCorrect: opt === correctTrigger,
-            transitionRef: opt === correctTrigger ? targetTransition : null
-        }));
+      `;
+      
+      const result = await model.generateContent(localPrompt);
+      const resText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(resText);
+    } catch (err) {
+      console.error("Erro no motor de fases local:", err);
+      return { text: "O motor de fases local falhou. Verifique o console." };
     }
+  }
+
+  // Se NÃO for localhost, aí sim tentamos o fetch (Vercel)
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, context, mode: 'rpg', phaseRules }),
+    });
+    if (!response.ok) throw new Error("Erro 404 ou 500");
+    return await response.json(); 
+  } catch (error) {
+    return { text: "O servidor de produção não respondeu corretamente." };
+  }
+};
+
+/**
+ * GERAÇÃO DE DICAS PARA O LABORATÓRIO
+ */
+export const generateLabTips = async (answer: string, question: string) => {
+  const prompt = `Professor de medicina. Pergunta: "${question}", Resposta: "${answer}". Retorne JSON: identification, location, functions.`;
+  try {
+    const responseText = await getAIResponse(prompt, "Geração de dicas.");
+    return JSON.parse(responseText.replace(/```json/g, '').replace(/```/g, '').trim());
+  } catch (error) {
+    return { identification: "Erro local.", location: "-", functions: "-" };
+  }
+};
+
+/**
+ * AVALIADOR RPG (SINÔNIMOS)
+ */
+export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
+  if (!availableTransitions.length) return null;
+  const prompt = `Juiz clínico. Cenário: "${narrative}". Ação: "${userAction}". Opções: ${availableTransitions.map((t, i) => `ID[${i}]: ${t.triggers[0]}`).join(', ')}. RESPONDA: MATCH: [ID] ou MATCH: NONE.`;
+  
+  try {
+    const res = await getAIResponse(prompt, "Avaliador RPG.");
+    const match = res.toUpperCase().match(/MATCH:\s*(\d+)/);
+    return match ? availableTransitions[parseInt(match[1])] : null;
+  } catch { return null; }
+};
+
+/**
+ * GERADOR SOS
+ */
+export const generateRpgOptions = async (validTransitions: any[], narrative: string) => {
+    if (!validTransitions.length) return [];
+    const correct = validTransitions[0].triggers[0];
+    const prompt = `Cenário: "${narrative}". Correta: "${correct}". Gere 4 distratores médicos reais. Retorne array JSON de 5 strings.`;
+    try {
+        const res = await getAIResponse(prompt, "SOS.");
+        const clean = res.replace(/```json/g, '').replace(/```/g, '').trim();
+        let arr = JSON.parse(clean.substring(clean.indexOf('['), clean.lastIndexOf(']') + 1));
+        if (!arr.includes(correct)) arr[0] = correct;
+        arr.sort(() => Math.random() - 0.5);
+        return arr.map((opt: string) => ({ text: opt, isCorrect: opt === correct, transitionRef: opt === correct ? validTransitions[0] : null }));
+    } catch { return [{ text: correct, isCorrect: true, transitionRef: validTransitions[0] }]; }
 };
