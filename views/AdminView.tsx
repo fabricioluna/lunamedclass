@@ -15,21 +15,20 @@ import AdminOsce from '../components/admin/AdminOsce.tsx';
 import AdminThemes from '../components/admin/AdminThemes.tsx';
 import AdminReferences from '../components/admin/AdminReferences.tsx';
 import AdminDisciplines from '../components/admin/AdminDisciplines.tsx'; 
-import AdminAnalytics from '../components/admin/AdminAnalytics'; // <--- INTEGRADO
+import AdminAnalytics from '../components/admin/AdminAnalytics';
 
 interface AdminViewProps {
   onBack: () => void; 
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
-  // 1. PUXANDO DADOS (Incluso osceAnalytics para sua pesquisa)
+  // 1. PUXANDO DADOS 
   const { rooms, questions, osceStations, disciplines, summaries, quizResults, labSimulations, osceAnalytics } = useData();
 
   const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('fms_admin_auth') === 'true');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   
-  // Adicionado 'analytics' no tipo da aba
   const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access'>('stats');
   
   const [statsRoomFilter, setStatsRoomFilter] = useState(''); 
@@ -60,7 +59,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         remove(ref(db, 'osce'));
         remove(ref(db, 'discipline_config'));
         remove(ref(db, 'labSimulations')); 
-        remove(ref(db, 'osceAnalytics')); // Resetar dados de pesquisa também
+        remove(ref(db, 'osceAnalytics')); 
       }
       alert("✅ Banco de dados completamente resetado.");
     } else if (pass !== null) {
@@ -224,11 +223,12 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         />
       )}
 
-      {/* NOVO DASHBOARD DE PESQUISA */}
+      {/* DASHBOARD DE PESQUISA (Passando a prop 'rooms') */}
       {activeTab === 'analytics' && (
         <AdminAnalytics 
           analyticsData={osceAnalytics || []} 
           disciplines={disciplines} 
+          rooms={rooms} 
         />
       )}
 

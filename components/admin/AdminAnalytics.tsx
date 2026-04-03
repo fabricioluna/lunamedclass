@@ -8,14 +8,14 @@ import {
 interface AdminAnalyticsProps {
   analyticsData: any[];
   disciplines: SimulationInfo[];
-  rooms: any[]; // Recebe as Salas/Turmas do App
+  rooms: any[]; // Nova prop para receber as salas/turmas
 }
 
 const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, disciplines, rooms }) => {
   const [filterRoom, setFilterRoom] = useState('');
   const [filterDisc, setFilterDisc] = useState('');
 
-  // Limpa a disciplina se a turma for alterada
+  // Limpa a disciplina se a turma for alterada (Filtro em Cascata)
   const handleRoomChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFilterRoom(e.target.value);
     setFilterDisc('');
@@ -50,12 +50,15 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
 
     const total = filtered.length;
 
+    // MÉTRICAS GLOBAIS
     const avgGrade = filtered.reduce((acc, curr) => acc + (curr.grade || 0), 0) / total;
     const avgTime = filtered.reduce((acc, curr) => acc + (curr.timeSpent || 0), 0) / total;
     
+    // Sucesso = Nota >= 7.0
     const successCount = filtered.filter(d => (d.grade || 0) >= 7).length;
     const successRate = (successCount / total) * 100;
 
+    // COMPARATIVO DE METODOLOGIAS (MOTORES)
     const staticSims = filtered.filter(d => d.mode === 'clinical' || d.mode === 'static-cloud');
     const rpgSims = filtered.filter(d => d.mode === 'rpg');
     const aiSims = filtered.filter(d => d.mode === 'ai');
@@ -64,9 +67,11 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
     const avgRpg = rpgSims.length > 0 ? rpgSims.reduce((a, c) => a + (c.grade || 0), 0) / rpgSims.length : 0;
     const avgAi = aiSims.length > 0 ? aiSims.reduce((a, c) => a + (c.grade || 0), 0) / aiSims.length : 0;
 
+    // SEGURANÇA DO PACIENTE (ERROS FATAIS)
     const fatalErrors = rpgSims.filter(d => d.isFatalError).length;
     const fatalErrorRate = rpgSims.length > 0 ? (fatalErrors / rpgSims.length) * 100 : 0;
 
+    // MAPEAMENTO CURRICULAR (LACUNAS DE CONHECIMENTO)
     const themeStats: Record<string, { total: number, sumGrade: number }> = {};
     filtered.forEach(d => {
       const theme = d.theme || 'Sem Tema';
@@ -121,7 +126,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
 
     const rows = analyticsData.map(d => {
       let logData = '';
-      if (d.mode === 'ai') logData = "Transcricao Completa (Ver Banco)";
+      if (d.mode === 'ai') logData = "Transcrição Completa (Ver Banco)";
       else if (d.fullDecisionPath) logData = d.fullDecisionPath.map((p: any) => p.choice).join(" > ");
       else if (d.userSequence) logData = d.userSequence.join(" | ");
 
@@ -321,7 +326,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
                         <p className="text-2xl font-black text-[#003366]">{stats.fatalErrorRate.toFixed(1)}%</p>
                       </div>
                       <div className="text-right max-w-[120px]">
-                        <p className="text-[8px] font-bold text-gray-400 uppercase leading-tight">Taxa de simulações com Erro Fatal.</p>
+                        <p className="text-[8px] font-bold text-gray-400 uppercase leading-tight">Taxa de simulações clínicas com Erro Fatal.</p>
                       </div>
                    </div>
                 </div>
@@ -349,8 +354,8 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
               <div className="flex justify-between text-xs mt-8 text-left">
                   <span><strong>Data da Emissão:</strong> {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}</span>
                   <span>
-                    <strong>Sala/Turma:</strong> {filterRoom ? rooms.find(r => r.id === filterRoom)?.name : 'Geral'} <br/>
-                    <strong>Disciplina:</strong> {filterDisc ? disciplines.find(d => d.id === filterDisc)?.title : 'Todas (Geral)'}
+                    <strong>Sala/Turma:</strong> {filterRoom ? rooms.find(r => r.id === filterRoom)?.name : 'Todas as Turmas (Geral)'} <br/>
+                    <strong>Disciplina:</strong> {filterDisc ? disciplines.find(d => d.id === filterDisc)?.title : 'Todas as Disciplinas (Geral)'}
                   </span>
               </div>
           </div>
