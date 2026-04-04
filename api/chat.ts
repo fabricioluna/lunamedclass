@@ -7,7 +7,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { prompt, context, mode, phaseRules } = req.body;
+    // LUNA ENGINE 2.0: Injeção do parâmetro isFinalEvaluation para Roteamento Dual-Engine
+    const { prompt, context, mode, phaseRules, isFinalEvaluation } = req.body;
 
     // Inicia a IA com a chave de ambiente SECRETA do servidor
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -90,9 +91,16 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    // Chamada à Google usando o SDK
+    // =======================================================================
+    // ROTEAMENTO DUAL-ENGINE (Performance vs Precisão)
+    // Se for uma avaliação final estruturada, usa o modelo PRO. 
+    // Caso contrário (chat em tempo real), usa o modelo FLASH.
+    // =======================================================================
+    const targetModel = isFinalEvaluation ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+
+    // Chamada à Google usando o SDK dinâmico
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: targetModel,
         contents: fullPrompt,
         config: config
     });
@@ -117,7 +125,8 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ 
       text: response.text || "...", 
       vitalsUpdate: functionCallData,
-      newPhaseId: newPhaseId
+      newPhaseId: newPhaseId,
+      modelUsed: targetModel // Opcional: devolvemos o modelo usado para fins de debug/analytics no frontend
     });
 
   } catch (error) {

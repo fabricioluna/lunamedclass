@@ -137,7 +137,7 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
     ⚠️ OMISSÕES OU ERROS:
     📊 NOTA FINAL (0 a 10):`;
 
-    const response = await getAIResponse(prompt, context);
+    const response = await getAIResponse(prompt, context, true);
     setFeedback(response);
 
     const gradeMatch = response.match(/NOTA FINAL.*:\s*(\d+(\.\d+)?)/i);

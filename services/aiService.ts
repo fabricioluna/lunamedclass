@@ -1,33 +1,14 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// Não precisamos mais do import do GoogleGenerativeAI aqui, pois o front-end não chama mais a IA diretamente. Toda a segurança e chamadas estão no backend (Vercel).
 
 /**
  * Função base para comunicação direta ou via API.
  */
-export const getAIResponse = async (prompt: string, context: string = "") => {
-  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  
-  if (isLocalhost) {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return "Erro: VITE_GEMINI_API_KEY não configurada no .env local.";
-    
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      // ATUALIZADO: Usando a versão mais estável e recente do Flash
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const result = await model.generateContent(`CONTEXTO: ${context}\n\nCOMANDO: ${prompt}`);
-      return result.response.text();
-    } catch (err) {
-      console.error("Falha no Gemini Localhost:", err);
-      return "Erro na conexão direta com Gemini.";
-    }
-  }
-
-  // PRODUÇÃO (Vercel)
+export const getAIResponse = async (prompt: string, context: string = "", isFinalEvaluation: boolean = false) => {
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, context }),
+      body: JSON.stringify({ prompt, context, isFinalEvaluation }), // <-- Injetamos o parâmetro aqui
     });
     const data = await response.json();
     return data.text; 
@@ -41,44 +22,6 @@ export const getAIResponse = async (prompt: string, context: string = "") => {
  * Blindada contra erro 404 no localhost.
  */
 export const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: any) => {
-  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-
-  if (isLocalhost) {
-    console.log("[Luna Engine] Executando lógica de fase localmente com gemini-2.0-flash...");
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return { text: "Erro: Configure VITE_GEMINI_API_KEY no .env" };
-
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      // ATUALIZADO: Motor atualizado para 2.0
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      
-      const localPrompt = `
-        ${context}
-        REGRAS DE TRANSIÇÃO (JSON): ${JSON.stringify(phaseRules)}
-        AÇÃO DO MÉDICO: ${prompt}
-        
-        Responda em formato JSON puro (sem marcações markdown):
-        {
-          "text": "Sua resposta narrativa sobre o que aconteceu",
-          "newPhaseId": "ID da fase caso o aluno tenha acertado uma transição, ou null"
-        }
-      `;
-      
-      const result = await model.generateContent(localPrompt);
-      let resText = result.response.text();
-      
-      // Sanitização robusta para garantir que o parse não quebre
-      resText = resText.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      return JSON.parse(resText);
-    } catch (err) {
-      console.error("Erro no motor de fases local:", err);
-      return { text: "O motor de fases local falhou. Verifique o console da aplicação para detalhes." };
-    }
-  }
-
-  // Se NÃO for localhost, tentamos o fetch (Vercel)
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
