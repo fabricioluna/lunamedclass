@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DynamicOsceStation, SimulationPhase, ClinicalState } from '../types';
-import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle } from 'lucide-react';
-import { fetchAdvancedAI, generateRpgOptions } from '../services/aiService';
+import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle, CheckCircle2 } from 'lucide-react';
+import { fetchAdvancedAI, generateRpgOptions, generateFinalFeedback } from '../services/aiService';
 
 // ============================================================================
 // LUNA ENGINE: Sintetizador de Áudio Clínico (Web Audio API) - INTEGRAL
@@ -75,27 +75,49 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [sosOptions, setSosOptions] = useState<any[] | null>(null);
+  const [finalFeedback, setFinalFeedback] = useState<any | null>(null);
 
   const currentPhase = station.phases[currentPhaseId];
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  // ALTERAÇÃO DE SCROLL: Referência ao container inteiro em vez do elemento final
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const isCritical = isMonitorConnected && (vitals.sat < 90 || vitals.hr > 125 || vitals.hr < 45 || vitals.hr === 0);
   const { playSuccess, playError, isMuted, toggleMute, initAudio } = useClinicalAudio(vitals.hr, isMonitorConnected, isCritical);
 
   useEffect(() => {
-    if (!currentPhase) { setIsFinished(true); return; }
+    if (!currentPhase) { handleFinishSim('success'); return; }
     if (currentPhase.vitals && !isProcessing) setVitals(currentPhase.vitals);
     setDynamicNarrative(currentPhase.narrative);
     setSosOptions(null);
   }, [currentPhaseId]);
 
+  // ALTERAÇÃO DE SCROLL: Forçar o scroll APENAS dentro do chat
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    if (vitals.hr === 0 && isMonitorConnected) {
-       setEndReason('death');
-       setIsFinished(true);
+    if (chatContainerRef.current) {
+        const container = chatContainerRef.current;
+        container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth'
+        });
     }
-  }, [history, isProcessing, vitals.hr]);
+    if (vitals.hr === 0 && isMonitorConnected && !isFinished) {
+       handleFinishSim('death');
+    }
+  }, [history, isProcessing, vitals.hr, isFinished]);
+
+  const handleFinishSim = async (reason: 'success' | 'death' | 'manual') => {
+    setEndReason(reason);
+    setIsFinished(true);
+    setIsProcessing(true);
+    try {
+      const feedback = await generateFinalFeedback(history, station.title);
+      setFinalFeedback(feedback);
+    } catch (err) {
+      console.error("Erro ao gerar feedback final:", err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const processAction = async (text: string) => {
     initAudio();
@@ -110,7 +132,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       const res = await fetchAdvancedAI(text, `Cena: ${dynamicNarrative}`, { transitions: currentPhase.transitions });
       
       if (res.newPhaseId === "FINISH") {
-        setIsFinished(true);
+        handleFinishSim('success');
         return;
       }
 
@@ -148,26 +170,68 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
 
   const handleManualEnd = () => {
     if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) {
-      setEndReason('manual');
-      setIsFinished(true);
+      handleFinishSim('manual');
     }
   };
 
   if (isFinished) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-white p-10 text-center">
-        <Award size={80} className="text-[#003366] mb-6 animate-bounce" />
-        <h2 className="text-4xl font-black text-[#003366] uppercase mb-4 tracking-tighter">
-          {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
-        </h2>
-        <p className="text-gray-500 font-bold mb-10 max-w-md">O preceptor clínico salvou o seu histórico para avaliação.</p>
-        <button onClick={onBack} className="bg-[#003366] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-[#D4A017] transition-all shadow-xl">Ver Resultados</button>
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-6 text-center overflow-y-auto">
+        <div className="max-w-2xl w-full bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500">
+            {endReason === 'death' ? <XCircle size={80} className="text-red-500 mb-6 mx-auto animate-pulse" /> : <Award size={80} className="text-[#003366] mb-6 mx-auto animate-bounce" />}
+            <h2 className="text-3xl font-black text-[#003366] uppercase mb-4 tracking-tighter">
+              {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
+            </h2>
+            
+            {!finalFeedback ? (
+              <div className="py-10 flex flex-col items-center">
+                <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">Luna está avaliando seu desempenho...</p>
+              </div>
+            ) : (
+              <div className="text-left space-y-6 animate-in fade-in duration-700">
+                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+                  <h4 className="text-[10px] font-black text-[#003366] uppercase mb-2">🤝 Postura e Comunicação</h4>
+                  <p className="text-gray-600 text-sm italic">"{finalFeedback.postura}"</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-green-50 p-4 rounded-2xl">
+                    <h4 className="text-[10px] font-black text-green-600 uppercase mb-2">🎯 Acertos</h4>
+                    <ul className="text-[11px] text-green-700 space-y-1">
+                      {finalFeedback.acertos.map((a:string, i:number) => <li key={i}>• {a}</li>)}
+                    </ul>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-2xl">
+                    <h4 className="text-[10px] font-black text-red-600 uppercase mb-2">⚠️ Omissões</h4>
+                    <ul className="text-[11px] text-red-700 space-y-1">
+                      {finalFeedback.omissoes.map((o:string, i:number) => <li key={i}>• {o}</li>)}
+                    </ul>
+                  </div>
+                </div>
+                <div className="bg-[#003366] p-6 rounded-3xl flex justify-between items-center shadow-xl">
+                  <div>
+                    <span className="text-blue-300 text-[10px] font-black uppercase">Nota Final</span>
+                    <div className="text-4xl font-black text-white">{Number(finalFeedback.nota).toFixed(1)}</div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if(onSaveResult && finalFeedback) onSaveResult(finalFeedback.nota, 10, 0, { history, feedback: finalFeedback });
+                      onBack();
+                    }} 
+                    className="bg-[#D4A017] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-lg"
+                  >
+                    Finalizar
+                  </button>
+                </div>
+              </div>
+            )}
+        </div>
     </div>
   );
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-100 select-none">
       
-      {/* HEADER FIXO (H: 56px) */}
+      {/* HEADER FIXO */}
       <header className="h-[56px] bg-white border-b border-gray-200 flex justify-between items-center px-6 shrink-0 z-50 shadow-sm">
         <div className="flex items-center gap-2">
           <Zap size={18} className="text-blue-600 fill-blue-600"/>
@@ -181,14 +245,14 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         </div>
       </header>
 
-      {/* ÁREA DE TRABALHO PRINCIPAL (FLEX GROW) */}
-      <main className="flex-grow flex p-3 gap-3 overflow-hidden">
+      {/* ÁREA DE TRABALHO PRINCIPAL */}
+      <main className="flex-grow flex flex-col md:flex-row p-3 gap-3 overflow-hidden">
         
-        {/* COLUNA ESQUERDA (FIXA: 340px) */}
-        <aside className="w-[340px] flex flex-col gap-3 h-full overflow-hidden shrink-0">
+        {/* COLUNA ESQUERDA - FOCO EM VITAIS MAIORES */}
+        <aside className="w-full md:w-[340px] flex flex-col gap-3 h-auto md:h-full overflow-hidden shrink-0">
           
-          {/* MONITOR CARDIÁCO (ALTURA FIXA E DENSA) */}
-          <div className={`bg-[#0a0f18] p-5 rounded-3xl border-4 transition-all duration-500 shrink-0 ${isCritical ? 'border-red-600 shadow-[0_0_20px_rgba(220,0,0,0.4)] animate-pulse' : 'border-gray-800 shadow-lg'}`}>
+          {/* MONITOR CARDIÁCO - AUMENTADO CONFORME SOLICITADO */}
+          <div className={`bg-[#0a0f18] p-6 rounded-3xl border-4 transition-all duration-500 shrink-0 ${isCritical ? 'border-red-600 shadow-[0_0_20px_rgba(220,0,0,0.4)] animate-pulse' : 'border-gray-800 shadow-lg'}`}>
             <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
               <div className="flex items-center gap-2">
                 <Activity className={isMonitorConnected ? 'text-green-500' : 'text-gray-700'} size={16}/>
@@ -215,7 +279,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                 </div>
               </div>
             ) : (
-              <div className="py-14 text-center text-gray-800 text-[11px] font-black uppercase tracking-widest leading-relaxed opacity-40 italic">Aguardando<br/>Conexão...</div>
+              <div className="py-14 text-center text-gray-800 text-[11px] font-black uppercase tracking-widest leading-relaxed opacity-40 italic">Aguardando Conexão</div>
             )}
             
             <div className={`mt-4 py-2 px-3 rounded-xl text-[10px] font-bold text-center uppercase tracking-widest ${isMonitorConnected ? (isCritical ? 'bg-red-900/40 text-red-200' : 'bg-gray-800 text-green-400') : 'bg-gray-800/50 text-gray-600'}`}>
@@ -223,11 +287,11 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
             </div>
           </div>
 
-          {/* HISTÓRICO DE CONDUTAS (PREENCHE O RESTO DA COLUNA) */}
-          <div className="bg-white p-4 rounded-3xl border border-gray-200 flex-grow overflow-hidden flex flex-col shadow-sm">
+          {/* HISTÓRICO - DIMINUÍDO CONFORME SOLICITADO */}
+          <div className="bg-white p-4 rounded-3xl border border-gray-200 flex-grow max-h-[120px] md:max-h-none overflow-hidden flex flex-col shadow-sm">
              <div className="flex items-center gap-2 mb-3 border-b pb-2 shrink-0">
                <History size={14} className="text-gray-400"/>
-               <span className="text-[10px] font-black uppercase text-gray-400">Histórico de Conduta</span>
+               <span className="text-[10px] font-black uppercase text-gray-400">Histórico Compacto</span>
              </div>
              <div className="overflow-y-auto space-y-2 flex-grow custom-scrollbar pr-2">
                 {history.filter(h => h.role === 'user').map((h, i) => (
@@ -237,27 +301,28 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
           </div>
         </aside>
 
-        {/* COLUNA DIREITA (DINÂMICA) */}
+        {/* COLUNA DIREITA - CENÁRIO E CHAT */}
         <section className="flex-grow flex flex-col gap-3 h-full overflow-hidden">
           
-          {/* CENÁRIO (OCUPA NO MÁXIMO 15% DA ALTURA DO ECRÃ) */}
-          <div className="bg-[#003366] text-white p-4 rounded-3xl shadow-xl shrink-0 border-l-[6px] border-[#D4A017] max-h-[15vh] flex flex-col overflow-hidden relative">
+          {/* CENÁRIO - AUMENTADO PARA CABER TEXTO COMPLETO */}
+          <div className="bg-[#003366] text-white p-4 rounded-3xl shadow-xl shrink-0 border-l-[6px] border-[#D4A017] min-h-[100px] max-h-[25vh] flex flex-col overflow-hidden relative">
             <div className="flex items-center gap-2 mb-1 shrink-0 opacity-70">
                 <ShieldCheck size={14} className="text-[#D4A017]"/>
-                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Contexto Atual</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Contexto Clínico</span>
             </div>
             <div className="overflow-y-auto custom-scrollbar-white pr-2">
               <p className="text-sm md:text-base font-medium leading-relaxed italic">{dynamicNarrative}</p>
             </div>
           </div>
 
-          {/* CHAT (ÁREA DE MENSAGENS - PREENCHE O RESTO DO ESPAÇO) */}
-          <div className="flex-grow bg-white rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative">
-            <div className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50/20 custom-scrollbar">
+          {/* CHAT - QUADRO DE CONVERSA OTIMIZADO COM REF NA DIV PAI */}
+          <div className="flex-grow flex-1 min-h-0 bg-white rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative">
+            {/* Div Container de Mensagens - onde ocorre o scroll isolado */}
+            <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50/20 custom-scrollbar">
               {history.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center opacity-10">
                       <UserCircle size={60} strokeWidth={1} className="text-[#003366] mb-2"/>
-                      <p className="font-black uppercase text-[11px] tracking-[0.4em]">Aguardando Protocolo</p>
+                      <p className="font-black uppercase text-[11px] tracking-[0.4em]">Protocolo Luna Engine</p>
                   </div>
               ) : (
                   history.map((msg, i) => (
@@ -273,22 +338,26 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                       </div>
                   ))
               )}
-              {isProcessing && <div className="flex justify-start animate-pulse"><div className="bg-gray-200 h-10 w-24 rounded-3xl"></div></div>}
-              <div ref={chatEndRef} />
+              {isProcessing && (
+                <div className="flex justify-start items-center gap-2 animate-pulse">
+                  <div className="bg-gray-200 h-10 w-24 rounded-3xl"></div>
+                  <span className="text-[10px] font-black text-gray-300 uppercase"> Luna está analisando...</span>
+                </div>
+              )}
             </div>
 
-            {/* BARRA DE INPUT (FIXA NO FUNDO DA ÁREA DIREITA) */}
+            {/* BARRA DE INPUT - FIXA NO RODAPÉ */}
             <div className="p-4 bg-white border-t border-gray-100 shrink-0">
                 {sosOptions ? (
                   <div className="animate-in slide-in-from-bottom-2 space-y-4">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] font-black text-orange-600 uppercase flex items-center gap-2"><HelpCircle size={14}/> Decisão Assistida (SOS)</span>
+                      <span className="text-[10px] font-black text-orange-600 uppercase flex items-center gap-2"><HelpCircle size={14}/> SOS MÉDICO</span>
                       <button onClick={() => setSosOptions(null)} className="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase">Voltar</button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {sosOptions.map(opt => (
                         <button key={opt.id} onClick={() => handleSosChoice(opt)} className="bg-white border-2 border-orange-100 p-4 rounded-3xl text-left text-xs font-bold hover:border-orange-500 hover:bg-orange-50/50 transition-all flex justify-between items-center group shadow-sm">
-                            <span className="leading-snug pr-4">{opt.text}</span>
+                            <span className="leading-snug pr-4 truncate">{opt.text}</span>
                             <ChevronRight className="text-orange-200 group-hover:text-orange-500 shrink-0" size={18}/>
                         </button>
                       ))}
@@ -302,7 +371,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                           value={inputText} 
                           onChange={e => setInputText(e.target.value)} 
                           onKeyDown={e => e.key === 'Enter' && processAction(inputText)}
-                          placeholder="O que você deseja fazer agora?" 
+                          placeholder="Digite sua conduta clínica..." 
                           className="flex-grow bg-transparent px-5 py-2.5 outline-none font-medium text-[#003366] text-sm md:text-base placeholder:text-gray-400"
                           disabled={isProcessing}
                         />
@@ -319,7 +388,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                       disabled={isProcessing}
                       className="bg-orange-50 text-orange-600 h-full px-7 py-4 rounded-2xl font-black uppercase text-[10px] border border-orange-100 hover:bg-orange-600 hover:text-white transition-all shadow-sm shrink-0"
                     >
-                      Dica
+                      SOS
                     </button>
                   </div>
                 )}

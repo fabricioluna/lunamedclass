@@ -57,13 +57,49 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
 const extractJson = (text: string) => {
   try {
     const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const start = clean.indexOf('[');
-    const end = clean.lastIndexOf(']') + 1;
+    // Ajuste técnico para aceitar tanto objetos {} quanto arrays []
+    const start = clean.indexOf('{') !== -1 && (clean.indexOf('{') < clean.indexOf('[') || clean.indexOf('[') === -1) 
+      ? clean.indexOf('{') 
+      : clean.indexOf('[');
+    
+    const end = clean.lastIndexOf(clean[start] === '{' ? '}' : ']') + 1;
+
     if (start === -1) return JSON.parse(clean);
     return JSON.parse(clean.substring(start, end));
   } catch (e) {
     console.error("Falha ao parsear resposta da IA:", text);
     return null;
+  }
+};
+
+/**
+ * NOVO: GERA FEEDBACK FINAL ESTRUTURADO (DEBRIEFING)
+ * Implementado para atender ao requisito de encerramento do simulado.
+ */
+export const generateFinalFeedback = async (history: { role: string, text: string }[], stationTitle: string) => {
+  const chatHistory = history.map(h => `${h.role === 'user' ? 'Aluno' : 'Sistema'}: ${h.text}`).join('\n');
+  
+  const prompt = `Você é o Preceptor Sênior da Luna MedClass.
+  Analise o histórico abaixo da simulação "${stationTitle}" e forneça um feedback estruturado seguindo rigorosamente os protocolos clínicos.
+  
+  HISTÓRICO:
+  ${chatHistory}
+
+  REGRAS DE RESPOSTA:
+  Retorne APENAS um objeto JSON (sem markdown) no seguinte formato:
+  {
+    "postura": "Análise da comunicação e biossegurança",
+    "acertos": ["Lista de condutas corretas"],
+    "omissoes": ["Lista de erros ou faltas"],
+    "nota": 0.0
+  }`;
+
+  try {
+    const res = await getAIResponse(prompt, "Avaliador de Debriefing 3.0");
+    const feedback = extractJson(res);
+    return feedback || { postura: "Avaliação indisponível.", acertos: [], omissoes: [], nota: 5.0 };
+  } catch (err) {
+    return { postura: "Erro ao processar feedback.", acertos: [], omissoes: [], nota: 0.0 };
   }
 };
 

@@ -109,9 +109,9 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4f7f6] p-6">
-        <div className="w-12 h-12 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-6"></div>
-        <h1 className="text-[#003366] font-black uppercase tracking-[0.3em] text-xs">Luna Analytics Engine Sincronizando...</h1>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4f7f6] p-4">
+        <div className="w-10 h-10 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
+        <h1 className="text-[#003366] font-black uppercase tracking-[0.2em] text-[10px]">Luna Analytics Engine Sincronizando...</h1>
       </div>
     );
   }
@@ -138,7 +138,8 @@ const AppContent: React.FC = () => {
         </span>
       </div>
 
-      <div className="flex-grow">
+      {/* APLICADO O max-w-7xl PARA IMPEDIR O GIGANTISMO GLOBAL DAS CAIXAS */}
+      <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col relative">
         {/* ROTA DA SANDBOX DE TESTES DA IA */}
         {currentView === 'ai-test' && <AITestView />}
 
@@ -317,19 +318,19 @@ const AppContent: React.FC = () => {
         )}
 
         {currentView === 'admin' && <AdminView onBack={handleBack} />}
-      </div>
+      </main>
 
-      <footer className="print:hidden bg-white border-t py-8 flex flex-col items-center gap-2 mt-auto text-center px-4">
-        <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest">© 2026 Luna MedClass</div>
-        <div className="text-gray-500 text-[9px] font-medium uppercase max-w-md my-1">
+      <footer className="print:hidden bg-white border-t py-4 flex flex-col items-center gap-1 mt-auto text-center px-4">
+        <div className="text-gray-400 text-[9px] font-black uppercase tracking-widest">© 2026 Luna MedClass</div>
+        <div className="text-gray-500 text-[8px] font-medium uppercase max-w-md">
           Simuladores de Alto Rendimento para Medicina.
         </div>
-        <div className="text-[#D4A017] text-[11px] font-black uppercase tracking-[0.2em] mb-1">Desenvolvido por Fabrício Luna</div>
+        <div className="text-[#D4A017] text-[9px] font-black uppercase tracking-[0.1em]">Desenvolvido por Fabrício Luna</div>
         
         {/* BOTÃO SECRETO PARA ABRIR A SANDBOX DE IA */}
         <div 
           onClick={() => handleNavigate('ai-test')}
-          className="text-[8px] text-gray-300 font-black uppercase tracking-tighter cursor-pointer hover:text-blue-500 transition-colors"
+          className="text-[7px] text-gray-300 font-black uppercase tracking-tighter cursor-pointer hover:text-blue-500 transition-colors mt-1"
         >
           Build {APP_VERSION}
         </div>
