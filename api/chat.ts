@@ -1,25 +1,18 @@
 import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(req: any, res: any) {
-  // Apenas aceitar requisições POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
   try {
-    // LUNA ENGINE 2.0: Injeção do parâmetro isFinalEvaluation para Roteamento Dual-Engine
     const { prompt, context, mode, phaseRules, isFinalEvaluation } = req.body;
-
-    // Inicia a IA com a chave de ambiente SECRETA do servidor
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    
     const fullPrompt = `Contexto acadêmico: ${context}\n\nPergunta/Ação do aluno: ${prompt}`;
-    
-    // Objeto de configuração base do Gemini
     let config: any = {};
 
     // =======================================================================
-    // CÓRTEX MÉDICO UNIVERSAL
+    // CÓRTEX MÉDICO UNIVERSAL - ATUALIZADO (FISIOLOGIA IMPLACÁVEL)
     // =======================================================================
     const UNIVERSAL_RULES = `
     DIRETRIZES CLÍNICAS E PEDAGÓGICAS INSTITUCIONAIS:
@@ -27,12 +20,33 @@ export default async function handler(req: any, res: any) {
     2. Emergências: Em cenários extra-hospitalares ou de trauma, a "Segurança da Cena" deve ser o primeiro passo. Siga rigorosamente a sistematização ABCDE e protocolos BLS (AHA).
     3. Habilidades Clínicas: Em consultas, exija comunicação empática, apresentação profissional e estruturação lógica da anamnese e exame físico (inspeção, palpação, percussão, ausculta).
     4. Pressão Clínica (Ação de Narrador): Se o aluno hesitar, fizer perguntas irrelevantes em uma emergência ou tomar atitudes sem foco, narre ativamente o agravamento do quadro.
+    5. FISIOLOGIA DINÂMICA ABSOLUTA: A ferramenta 'update_vitals' DEVE refletir a BIOLOGIA REAL. Se o aluno prescrever o tratamento CORRETO, os vitais melhoram. Se o aluno prescrever algo ERRADO, CONTRAINDICADO ou ABSURDO (ex: dar sal para hipertenso, betabloqueador em bradicardia), os vitais DEVEM PIORAR DRASTICAMENTE (Iatrogenia).
     NÃO DÊ O DIAGNÓSTICO AO ALUNO. VOCÊ É APENAS O NARRADOR/AVALIADOR DA CENA.
     `;
 
-    // === MÁQUINA DE ESTADOS (STATE MACHINE) ===
-    if (mode === 'rpg' || mode === 'clinical') { 
-      
+    if (mode === 'rpg' || mode === 'clinical' || mode === 'ai') { 
+      let toolsArray: any[] = [];
+
+      // LUNA ENGINE: O Motor Fisiológico (update_vitals) SÓ funciona nas estações de Emergência (rpg/clinical).
+      // No Paciente Virtual (ai), bloqueamos essa ferramenta para focar apenas na Anamnese.
+      if (mode !== 'ai') {
+        toolsArray.push({
+          name: "update_vitals",
+          description: "Atualiza os sinais vitais do paciente no monitor multiparamétrico da tela do aluno em resposta a uma conduta médica com efeito fisiológico. PIORE os dados se for erro médico, MELHORE se for conduta correta.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              hr: { type: "INTEGER", description: "Frequência Cardíaca" },
+              bp: { type: "STRING", description: "Pressão Arterial" },
+              sat: { type: "INTEGER", description: "Saturação de Oxigênio" },
+              rr: { type: "INTEGER", description: "Frequência Respiratória" },
+              status: { type: "STRING", description: "Breve status clínico visual" }
+            },
+            required: ["hr", "bp", "sat", "rr", "status"]
+          }
+        });
+      }
+
       if (phaseRules && phaseRules.transitions) {
         const transitionsText = phaseRules.transitions.map((t: any) => 
           `- Se a conduta do aluno corresponder a algum destes gatilhos: [${t.triggers.join(', ')}], chame a ferramenta 'change_phase' com nextPhaseId = "${t.nextPhaseId}" e use esta narrativa na resposta: "${t.feedbackText}"`
@@ -48,77 +62,51 @@ export default async function handler(req: any, res: any) {
         
         INSTRUÇÕES CRÍTICAS:
         1. Se a ação do aluno NÃO corresponder aos gatilhos, diga que a ação não surtiu efeito, que faltou biossegurança (se aplicável), ou que o paciente piorou. NUNCA diga o que ele tem que fazer.
-        2. SE a ação do aluno ativar um gatilho, você DEVE EXECUTAR a ferramenta 'change_phase' enviando o ID da próxima fase.`;
+        2. SE a ação do aluno ativar um gatilho, você DEVE EXECUTAR a ferramenta 'change_phase' enviando o ID da próxima fase.
+        3. Você pode usar 'update_vitals' simultaneamente se a ação também gerar melhora fisiológica instantânea.`;
         
-        config.tools = [{
-          functionDeclarations: [{
-            name: "change_phase",
-            description: "Avança a simulação para a próxima fase clínica quando o aluno acerta a conduta médica estipulada nos gatilhos.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                nextPhaseId: { type: "STRING", description: "O ID da próxima fase correspondente ao acerto do aluno (ex: 'fase_2')" }
-              },
-              required: ["nextPhaseId"]
-            }
-          }]
-        }];
+        toolsArray.push({
+          name: "change_phase",
+          description: "Avança a simulação para a próxima fase clínica quando o aluno acerta a conduta médica estipulada nos gatilhos.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              nextPhaseId: { type: "STRING", description: "O ID da próxima fase correspondente ao acerto do aluno (ex: 'fase_2')" }
+            },
+            required: ["nextPhaseId"]
+          }
+        });
+
       } else {
-        // RPG LEGACY: APENAS SINAIS VITAIS LIVRES
-        config.systemInstruction = `Você é o Mestre de Jogo (Narrador) de um simulador médico de UTI/Emergência realista. Narre o ambiente, os sons e as reações do paciente. SEMPRE responda com um texto descritivo. 
+        config.systemInstruction = `Você é o Mestre de Jogo (Narrador) de um simulador médico realista. Narre o ambiente, os sons e as reações do paciente. SEMPRE responda com um texto descritivo. 
         
         ${UNIVERSAL_RULES}
         
-        SE a condição do paciente evoluir (melhorar ou piorar) devido ao tempo ou devido à intervenção do aluno, VOCÊ DEVE utilizar a ferramenta 'update_vitals' para alterar os parâmetros do monitor cardíaco da tela do aluno.`;
-        
-        config.tools = [{
-          functionDeclarations: [{
-            name: "update_vitals",
-            description: "Atualiza os sinais vitais do paciente no monitor multiparamétrico da tela do aluno em resposta a uma conduta médica.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                hr: { type: "INTEGER", description: "Frequência Cardíaca" },
-                bp: { type: "STRING", description: "Pressão Arterial" },
-                sat: { type: "INTEGER", description: "Saturação de Oxigênio" },
-                rr: { type: "INTEGER", description: "Frequência Respiratória" },
-                status: { type: "STRING", description: "Breve status clínico visual" }
-              },
-              required: ["hr", "bp", "sat", "rr", "status"]
-            }
-          }]
-        }];
+        SE a condição do paciente evoluir devido à intervenção do aluno, VOCÊ DEVE utilizar a ferramenta 'update_vitals' para alterar os parâmetros do monitor. Lembre-se de piorar o paciente se a conduta for incorreta.`;
       }
+
+      config.tools = [{ functionDeclarations: toolsArray }];
     }
 
-    // =======================================================================
-    // ROTEAMENTO DUAL-ENGINE (Performance vs Precisão)
-    // Se for uma avaliação final estruturada, usa o modelo PRO. 
-    // Caso contrário (chat em tempo real), usa o modelo FLASH.
-    // =======================================================================
     const targetModel = isFinalEvaluation ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
 
-    // Chamada à Google usando o SDK dinâmico
     const response = await ai.models.generateContent({
         model: targetModel,
         contents: fullPrompt,
         config: config
     });
 
-    // === INTERCEPTAÇÃO DOS SINAIS VITAIS OU MUDANÇA DE FASE ===
     let functionCallData = null;
     let newPhaseId = null;
     
     if (response.functionCalls && response.functionCalls.length > 0) {
-      const call = response.functionCalls[0];
-      
-      if (call.name === "update_vitals") {
-        // Type casting para os sinais vitais
-        functionCallData = call.args as { hr: number, bp: string, sat: number, rr: number, status: string }; 
-      } else if (call.name === "change_phase") {
-        // Correção cirúrgica: Asserção de tipo explícita para o compilador TS
-        const args = call.args as { nextPhaseId: string };
-        newPhaseId = args.nextPhaseId; 
+      for (const call of response.functionCalls) {
+        if (call.name === "update_vitals") {
+          functionCallData = call.args as { hr: number, bp: string, sat: number, rr: number, status: string }; 
+        } else if (call.name === "change_phase") {
+          const args = call.args as { nextPhaseId: string };
+          newPhaseId = args.nextPhaseId; 
+        }
       }
     }
 
@@ -126,7 +114,7 @@ export default async function handler(req: any, res: any) {
       text: response.text || "...", 
       vitalsUpdate: functionCallData,
       newPhaseId: newPhaseId,
-      modelUsed: targetModel // Opcional: devolvemos o modelo usado para fins de debug/analytics no frontend
+      modelUsed: targetModel 
     });
 
   } catch (error) {

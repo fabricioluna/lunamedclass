@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OsceStation, ClinicalState, DynamicOsceStation } from '../types';
-import { getAIResponse, fetchAdvancedAI } from '../services/aiService'; // Importação atualizada
-import { LogOut, Send } from 'lucide-react';
+import { getAIResponse, fetchAdvancedAI } from '../services/aiService'; 
+import { LogOut, Send, Activity } from 'lucide-react'; 
 
 interface OsceAIViewProps {
   station: OsceStation;
@@ -15,7 +15,7 @@ const formatFeedback = (text: string) => {
     <>
       {parts.map((part, index) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={index} className="text-[#D4A017] font-black">{part.slice(2, -2)}</strong>;
+          return <strong key={index} className="text-[#003366] font-black">{part.slice(2, -2)}</strong>;
         }
         return <span key={index}>{part}</span>;
       })}
@@ -34,6 +34,14 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  
+  const [visibleVitals, setVisibleVitals] = useState({
+    hr: false,
+    bp: false,
+    sat: false,
+    rr: false
+  });
+
   const [feedback, setFeedback] = useState('');
   const [messages, setMessages] = useState<{role: 'user'|'patient'|'system', text: string}[]>([
     { 
@@ -45,7 +53,13 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
   ]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const isCritical = vitals && (vitals.hr === 0 || vitals.sat < 90 || (vitals.bp && parseInt(vitals.bp.split('/')[0]) < 90));
+  
+  const isAnyVitalVisible = visibleVitals.hr || visibleVitals.bp || visibleVitals.sat || visibleVitals.rr;
+  const isCritical = vitals && (
+    (visibleVitals.hr && vitals.hr === 0) || 
+    (visibleVitals.sat && vitals.sat < 90) || 
+    (visibleVitals.bp && vitals.bp && parseInt(vitals.bp.split('/')[0]) < 90)
+  );
 
   useEffect(() => {
     let interval: any;
@@ -76,6 +90,21 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsLoading(true);
 
+    const msgLower = userMsg.toLowerCase();
+    if (!/(n[aã]o|deslig|tirar|remover)/i.test(msgLower)) {
+      setVisibleVitals(prev => {
+        const next = { ...prev };
+        if (/(monitor|sinais vitais|ssvv|triagem|par[âa]metros)/i.test(msgLower)) {
+          next.hr = next.bp = next.sat = next.rr = true;
+        }
+        if (/(press[aã]o|pa\b|esfigmo|tens[aã]o)/i.test(msgLower)) next.bp = true;
+        if (/(frequ[êe]ncia card[íi]aca|fc\b|pulso|batimento|cora[çc][aã]o|card[íi]ac|ausculta\scard)/i.test(msgLower)) next.hr = true;
+        if (/(ox[ií]metr|satura|spo2|sp\s*o2|o2\b|oxigen)/i.test(msgLower)) next.sat = true;
+        if (/(frequ[êe]ncia respirat[óo]ria|fr\b|respira|pulm|incurs[õo]es|ausculta\spulm)/i.test(msgLower)) next.rr = true;
+        return next;
+      });
+    }
+
     const chatHistory = messages
       .filter(m => m.role !== 'system')
       .map(m => `${m.role === 'user' ? 'Médico' : (isAiMode ? 'Paciente' : 'Narrador')}: ${m.text}`)
@@ -91,10 +120,12 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
         narrative: currentPhase.narrative
       };
 
+      // LUNA ENGINE: Foco puro em Anamnese e Atendimento (Sem Fisiologia Dinâmica)
       context = isAiMode 
         ? `Você é o PACIENTE desta simulação. Persona: "${currentPhase.narrative}".
-           1. Responda em 1ª pessoa, de forma natural.
-           2. Use linguagem leiga.
+           1. Responda em 1ª pessoa, de forma natural e com linguagem leiga.
+           2. O objetivo desta consulta é TREINO DE ANAMNESE E CONDUTA INICIAL.
+           3. Se o médico prescrever medicamentos ou tratamentos, reaja apenas verbalmente (ex: "Obrigado doutor", ou "Tem certeza? Eu tenho alergia a isso").
            Histórico: ${chatHistory}`
         : `Você é o NARRADOR (Mestre). CENÁRIO: "${dynamicStation.scenario}". 
            FASE ATUAL: "${currentPhase.narrative}".
@@ -103,14 +134,20 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
 
     const prompt = `Médico (Aluno): ${userMsg}\n${isAiMode ? 'Paciente' : 'Narrador'}:`;
     
-    // CHAMADA ATUALIZADA: Agora usa o serviço inteligente e centralizado
     const aiData = await fetchAdvancedAI(prompt, context, phaseRules);
     let cleanResponse = aiData.text.replace(/^(Narrador|Paciente):\s*/i, '').trim();
     
+    if (aiData.vitalsUpdate) {
+      setVitals(aiData.vitalsUpdate);
+    }
+
     if (aiData.newPhaseId && dynamicStation.phases?.[aiData.newPhaseId]) {
       const nextPhase = dynamicStation.phases[aiData.newPhaseId];
       setCurrentPhaseId(aiData.newPhaseId);
-      setVitals(nextPhase.vitals);
+      
+      if (nextPhase.vitals) {
+        setVitals(nextPhase.vitals);
+      }
       if (nextPhase.backgroundUrl) setCurrentBg(nextPhase.backgroundUrl);
     } 
 
@@ -127,15 +164,16 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
       .map(m => `${m.role === 'user' ? 'Médico' : (isAiMode ? 'Paciente' : 'Narrador')}: ${m.text}`)
       .join('\n');
 
-    const context = `Você é um PRECEPTOR MÉDICO SÊNIOR.
-    Cenário: "${dynamicStation.scenario}". Checklist: ${dynamicStation.checklist?.join(', ') || 'Geral'}.`;
+    const context = `Você é um PRECEPTOR MÉDICO SÊNIOR avaliando um aluno de medicina.
+    Cenário: "${dynamicStation.scenario}". Missão do aluno: "${dynamicStation.task}".`;
 
-    const prompt = `Avalie rigidamente a transcrição:\n${chatHistory}\n
-    Estrutura:
-    🤝 POSTURA E COMUNICAÇÃO:
-    🎯 ACERTOS E CHECKLIST:
-    ⚠️ OMISSÕES OU ERROS:
-    📊 NOTA FINAL (0 a 10):`;
+    const prompt = `Avalie com máximo rigor a transcrição clínica abaixo:\n\n${chatHistory}\n
+    Gere um relatório detalhado obrigando a seguinte estrutura exata:
+    🤝 POSTURA E COMUNICAÇÃO: (Avaliando empatia e clareza com o paciente)
+    ✅ PONTOS FORTES: (O que o aluno investigou ou fez corretamente)
+    ⚠️ PONTOS FRACOS E OMISSÕES: (O que faltou investigar, erros graves ou dados negligenciados)
+    🎯 CONDUTA ESPERADA (Gabarito): (Como um médico especialista conduziria este caso de forma ideal)
+    📊 NOTA FINAL: (Apenas um número de 0 a 10)`;
 
     const response = await getAIResponse(prompt, context, true);
     setFeedback(response);
@@ -178,10 +216,41 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
       </div>
 
       {vitals && !isFinished && (
-        <div className="bg-[#0a0f18]/95 border-2 border-gray-800 shadow-xl rounded-2xl p-4 md:p-6 mb-4 flex justify-around items-center text-green-500 font-mono animate-in fade-in">
-          <div className="flex flex-col items-center"><span className="text-[10px] text-gray-400 uppercase">FC</span><span className="text-4xl font-black">{vitals.hr}</span></div>
-          <div className="flex flex-col items-center"><span className="text-[10px] text-gray-400 uppercase">PA</span><span className="text-4xl font-black text-blue-400">{vitals.bp}</span></div>
-          <div className="flex flex-col items-center"><span className="text-[10px] text-gray-400 uppercase">SpO2</span><span className="text-4xl font-black">{vitals.sat}%</span></div>
+        <div className={`border-2 shadow-xl rounded-2xl p-4 md:p-6 mb-4 flex justify-around items-center font-mono transition-all duration-700 ${isAnyVitalVisible ? 'bg-[#0a0f18]/95 border-gray-800 text-green-500' : 'bg-gray-900 border-gray-800 text-gray-600'}`}>
+          {isAnyVitalVisible ? (
+            <>
+              <div className="flex flex-col items-center animate-in fade-in zoom-in">
+                <span className="text-[10px] text-gray-400 uppercase">FC</span>
+                <span className={`text-4xl font-black transition-opacity duration-1000 ${visibleVitals.hr ? '' : 'opacity-20'}`}>
+                  {visibleVitals.hr ? vitals.hr : '--'}
+                </span>
+              </div>
+              <div className="flex flex-col items-center animate-in fade-in zoom-in">
+                <span className="text-[10px] text-gray-400 uppercase">PA</span>
+                <span className={`text-4xl font-black transition-opacity duration-1000 ${visibleVitals.bp ? 'text-blue-400' : 'opacity-20 text-gray-500'}`}>
+                  {visibleVitals.bp ? vitals.bp : '--/--'}
+                </span>
+              </div>
+              <div className="flex flex-col items-center animate-in fade-in zoom-in">
+                <span className="text-[10px] text-gray-400 uppercase">SpO2</span>
+                <span className={`text-4xl font-black transition-opacity duration-1000 ${visibleVitals.sat ? '' : 'opacity-20'}`}>
+                  {visibleVitals.sat ? `${vitals.sat}%` : '--%'}
+                </span>
+              </div>
+              <div className="flex flex-col items-center animate-in fade-in zoom-in">
+                <span className="text-[10px] text-gray-400 uppercase">FR</span>
+                <span className={`text-4xl font-black transition-opacity duration-1000 ${visibleVitals.rr ? 'text-purple-400' : 'opacity-20 text-gray-500'}`}>
+                  {visibleVitals.rr ? vitals.rr : '--'}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center w-full py-2">
+              <Activity size={24} className="mb-2 opacity-30 animate-pulse" />
+              <span className="text-xs tracking-[0.2em] uppercase font-black opacity-50">Sinais Vitais Ocultos</span>
+              <span className="text-[9px] mt-1 text-gray-500 font-bold">Solicite a aferição específica (ex: "medir pressão" ou "palpar pulso")</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -199,14 +268,33 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
                     </div>
                 </div>
             ))
-        ) : feedback && (
-            <div className="animate-in fade-in duration-700 relative z-10">
-                <div className="bg-[#003366] p-6 md:p-10 rounded-[1.5rem] shadow-2xl text-white">
-                    <h3 className="text-xl font-black uppercase flex items-center gap-3 mb-6 border-b border-white/10 pb-4">🎓 Avaliação do Preceptor</h3>
-                    <div className="text-sm md:text-base leading-relaxed whitespace-pre-wrap font-medium space-y-4">{formatFeedback(feedback)}</div>
+        ) : feedback ? (
+            <div className="animate-in fade-in zoom-in duration-700 relative z-10">
+                <div className="bg-white p-6 md:p-10 rounded-[1.5rem] shadow-xl border border-gray-200 text-gray-800">
+                    <h3 className="text-xl font-black uppercase flex items-center gap-3 mb-6 border-b border-gray-100 pb-4 text-[#003366]">
+                      🎓 Relatório do Preceptor
+                    </h3>
+                    <div className="text-sm md:text-base leading-relaxed whitespace-pre-wrap font-medium space-y-4">
+                      {formatFeedback(feedback)}
+                    </div>
                 </div>
             </div>
+        ) : (
+            <div className="flex flex-col items-center justify-center h-full animate-in fade-in duration-500">
+              <div className="bg-blue-50/80 backdrop-blur-sm p-8 rounded-[2rem] border border-blue-100 flex flex-col items-center shadow-lg">
+                <div className="w-16 h-16 relative mb-6">
+                   <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+                   <div className="absolute inset-0 border-4 border-[#003366] rounded-full border-t-transparent animate-spin"></div>
+                   <Activity size={24} className="absolute inset-0 m-auto text-[#D4A017] animate-pulse" />
+                </div>
+                <h3 className="text-lg font-black uppercase tracking-widest text-center mb-2 text-[#003366]">Avaliando Conduta...</h3>
+                <p className="text-sm font-bold text-gray-500 text-center max-w-xs">
+                  O Preceptor de IA está analisando a sua anamnese e elaborando o feedback clínico. Aguarde...
+                </p>
+              </div>
+            </div>
         )}
+        
         {isLoading && !isFinished && <div className="text-[#D4A017] font-black animate-pulse p-4">Digitando...</div>}
         <div ref={chatEndRef} />
       </div>

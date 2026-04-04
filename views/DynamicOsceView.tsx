@@ -15,6 +15,9 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     hr: 80, bp: "120/80", sat: 98, rr: 16, status: "Estável"
   });
   
+  // LUNA ENGINE: Estado do Monitor Inteligente (Inicia offline)
+  const [isMonitorConnected, setIsMonitorConnected] = useState(false);
+
   const [scores, setScores] = useState({ tecnica: 0, comunicacao: 0, biosseguranca: 0 });
   const [history, setHistory] = useState<{ narrative: string, choice: string, feedback: string, phaseId: string }[]>([]);
   const [isFinished, setIsFinished] = useState(false);
@@ -36,7 +39,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const currentPhase: SimulationPhase | undefined = station.phases[currentPhaseId];
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Tratamento de Erro de F12 (Se o JSON tentar carregar uma fase que não existe)
+  // Atualização de Fase e Tratamento de Erros
   useEffect(() => {
     if (!currentPhase) {
         console.error("Fase não encontrada no JSON:", currentPhaseId);
@@ -52,7 +55,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
 
   const executeTransition = (t: any, choiceLabel: string, isPenalty: boolean = false) => {
     const delta = t.scoreDelta || t.pontuacao_delta || { tecnica: 0, comunicacao: 0, biosseguranca: 0 };
-    const penaltyFactor = isPenalty ? 0.3 : 1; // SOS dá apenas 30% da nota
+    const penaltyFactor = isPenalty ? 0.3 : 1; 
     
     const newScores = {
       tecnica: scores.tecnica + ((delta.tecnica || delta.Tecnica || 0) * penaltyFactor),
@@ -108,21 +111,40 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     setLastFeedback(null);
 
     const userText = inputText.trim();
-    // Proteção garantida contra erro "Cannot read properties of undefined (reading 'map')"
     const transitions = currentPhase.transitions || []; 
+
+    // LUNA ENGINE: Deteção Universal do Monitor
+    // Regex que apanha menções a sinais vitais e monitorização
+    const monitorKeywords = /(monitor|ox[ií]metr|sinais vitais|ssvv|press[aã]o|eletro|ecg|cabos|satura[çc][aã]o|frequ[êe]ncia)/i;
+    const isAskingForMonitor = monitorKeywords.test(userText) && !/(n[aã]o|deslig|tirar|remover)/i.test(userText);
 
     if (transitions.length === 0) {
       setIsProcessing(false);
       return; 
     }
 
+    // Avalia no Backend (Vercel)
     const matchedTransition = await evaluateRpgAction(userText, transitions, currentPhase.narrative);
 
     if (matchedTransition) {
+        // Se a ação envolver monitor e acertar a transição, liga-se
+        if (isAskingForMonitor && !isMonitorConnected) setIsMonitorConnected(true);
         executeTransition(matchedTransition, `Conduta Clínica: "${userText}"`);
+    } else if (isAskingForMonitor && !isMonitorConnected) {
+        // FALLBACK: O aluno pediu o monitor, a IA não achou gatilho, mas é um comando válido!
+        setIsMonitorConnected(true);
+        setLastFeedback("Monitor multiparamétrico instalado com sucesso. Os dados vitais apareceram na tela.");
+        setScores(prev => ({ ...prev, tecnica: prev.tecnica + 0.5 })); // Reward: +0.5 pontos
+        setHistory(prev => [...prev, {
+            narrative: currentPhase.narrative,
+            choice: `Conduta Universal: "${userText}"`,
+            feedback: "Monitorização instalada pela equipe de enfermagem.",
+            phaseId: currentPhaseId
+        }]);
     } else {
+        // Erro real: Conduta inútil ou perigosa
         setRpgTracking(prev => ({ ...prev, textErrors: prev.textErrors + 1 }));
-        setLastFeedback("A conduta descrita não gerou efeito esperado ou não está indicada no protocolo atual. Verifique os dados do monitor e tente uma intervenção focada no quadro principal.");
+        setLastFeedback("A conduta descrita não gerou efeito esperado ou não está indicada no protocolo atual. Verifique o quadro clínico e tente uma intervenção focada.");
         setScores(prev => ({ ...prev, tecnica: prev.tecnica - 0.5 }));
         setHistory(prev => [...prev, {
             narrative: currentPhase.narrative,
@@ -227,21 +249,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                 )}
             </div>
 
-            <div className="flex justify-center gap-6">
-                <div className="text-center">
-                    <p className="text-[10px] font-black text-gray-400 uppercase">Dicas (SOS)</p>
-                    <p className="text-lg font-black text-[#D4A017]">{rpgTracking.hintsRequested}</p>
-                </div>
-                <div className="text-center">
-                    <p className="text-[10px] font-black text-gray-400 uppercase">Erros de Texto</p>
-                    <p className="text-lg font-black text-red-500">{rpgTracking.textErrors}</p>
-                </div>
-                <div className="text-center">
-                    <p className="text-[10px] font-black text-gray-400 uppercase">Erros em Dicas</p>
-                    <p className="text-lg font-black text-orange-500">{rpgTracking.hintErrors}</p>
-                </div>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <CompetencyBar label="Técnica" value={scores.tecnica} color="bg-blue-500" icon={ShieldCheck} />
               <CompetencyBar label="Comunicação" value={scores.comunicacao} color="bg-green-500" icon={MessageSquare} />
@@ -276,7 +283,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     );
   }
 
-  // Proteção extra se o currentPhase for indefinido antes de renderizar
   if (!currentPhase) return null;
 
   return (
@@ -302,20 +308,35 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-3 space-y-4">
-          <div className="bg-white p-6 rounded-[2rem] shadow-xl border-t-8 border-[#003366] sticky top-4">
+          
+          {/* LUNA ENGINE: PAINEL DO MONITOR INTELIGENTE */}
+          <div className="bg-white p-6 rounded-[2rem] shadow-xl border-t-8 border-[#003366] sticky top-4 transition-all duration-500">
             <h3 className="text-[10px] font-black text-[#003366] uppercase mb-6 tracking-widest flex items-center gap-2">
-              <Activity size={14} className="animate-pulse text-red-500" /> Sinais Vitais
+              <Activity size={14} className={isMonitorConnected ? "animate-pulse text-red-500" : "text-gray-400"} />
+              Sinais Vitais {!isMonitorConnected && <span className="text-red-500 ml-1">(OFFLINE)</span>}
             </h3>
-            <div className="grid grid-cols-1 gap-3">
-              <VitalParam label="FC" value={vitals.hr} unit="bpm" icon={Activity} color="text-red-500" />
-              <VitalParam label="PA" value={vitals.bp} unit="mmHg" icon={ShieldCheck} color="text-blue-500" />
-              <VitalParam label="SatO2" value={vitals.sat} unit="%" icon={Activity} color="text-green-600" />
-              <VitalParam label="FR" value={vitals.rr} unit="irpm" icon={Activity} color="text-purple-500" />
-            </div>
+
+            {isMonitorConnected ? (
+              <div className="grid grid-cols-1 gap-3 animate-in fade-in zoom-in duration-500">
+                <VitalParam label="FC" value={vitals.hr} unit="bpm" icon={Activity} color="text-red-500" />
+                <VitalParam label="PA" value={vitals.bp} unit="mmHg" icon={ShieldCheck} color="text-blue-500" />
+                <VitalParam label="SatO2" value={vitals.sat} unit="%" icon={Activity} color="text-green-600" />
+                <VitalParam label="FR" value={vitals.rr} unit="irpm" icon={Activity} color="text-purple-500" />
+              </div>
+            ) : (
+              <div className="bg-[#0a0f18] rounded-2xl p-6 flex flex-col items-center justify-center text-center border-2 border-gray-800 h-[260px] shadow-[inset_0_0_30px_rgba(0,0,0,0.8)] animate-in fade-in">
+                <Activity size={40} className="text-gray-800 mb-3" />
+                <span className="text-red-500/80 font-mono text-xs uppercase tracking-widest font-black animate-pulse">Monitor Desligado</span>
+                <span className="text-gray-500 text-[10px] mt-3 font-bold px-4 leading-relaxed">
+                  Instale a monitorização no paciente para acender a tela.
+                </span>
+              </div>
+            )}
+
             <div className="mt-6 pt-4 border-t border-gray-50">
                 <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-2 text-center">Status Fisiológico</span>
-                <div className="bg-gray-900 text-green-400 py-2 px-3 rounded-lg text-center font-mono text-[10px] uppercase tracking-tighter shadow-inner">
-                    {vitals.status}
+                <div className={`py-2 px-3 rounded-lg text-center font-mono text-[10px] uppercase tracking-tighter shadow-inner transition-colors duration-500 ${isMonitorConnected ? 'bg-gray-900 text-green-400' : 'bg-gray-100 text-gray-400'}`}>
+                    {isMonitorConnected ? vitals.status : 'AGUARDANDO CONEXÃO'}
                 </div>
             </div>
           </div>
@@ -392,7 +413,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                 )}
                 {isProcessing && <p className="text-center text-xs font-bold text-[#D4A017] mt-4 animate-pulse">A inteligência artificial está avaliando sua conduta...</p>}
             </div>
-            <div ref={chatEndRef}></div>
+            <div ref={chatEndRef} />
           </div>
         </div>
       </div>
