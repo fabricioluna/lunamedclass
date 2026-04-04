@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DynamicOsceStation, SimulationPhase, ClinicalState } from '../types';
-import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap } from 'lucide-react';
+import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle } from 'lucide-react';
 import { fetchAdvancedAI, generateRpgOptions } from '../services/aiService';
 
 // ============================================================================
@@ -40,8 +40,8 @@ const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: b
     const intervalMs = 60000 / hr; 
     timerRef.current = setInterval(() => {
       if (isCritical) {
-        playTone(950, 'square', 0.15, 0.04);
-        setTimeout(() => playTone(1250, 'square', 0.15, 0.04), 150);
+        playTone(1000, 'square', 0.2, 0.04);
+        setTimeout(() => playTone(1300, 'square', 0.2, 0.04), 150);
       } else {
         playTone(750, 'sine', 0.08, 0.02);
       }
@@ -71,6 +71,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const [scores, setScores] = useState({ tecnica: 0, comunicacao: 0, biosseguranca: 0 });
   const [history, setHistory] = useState<{ role: 'user' | 'narrator', text: string }[]>([]);
   const [isFinished, setIsFinished] = useState(false);
+  const [endReason, setEndReason] = useState<'success' | 'death' | 'manual'>('success');
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [sosOptions, setSosOptions] = useState<any[] | null>(null);
@@ -78,37 +79,41 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const currentPhase = station.phases[currentPhaseId];
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const isCritical = isMonitorConnected && (
-    vitals.sat < 90 || vitals.hr > 130 || vitals.hr < 45 || 
-    (vitals.bp ? parseInt(vitals.bp.split('/')[0]) < 85 : false)
-  );
-
+  const isCritical = isMonitorConnected && (vitals.sat < 90 || vitals.hr > 125 || vitals.hr < 45 || vitals.hr === 0);
   const { playSuccess, playError, isMuted, toggleMute, initAudio } = useClinicalAudio(vitals.hr, isMonitorConnected, isCritical);
 
   useEffect(() => {
     if (!currentPhase) { setIsFinished(true); return; }
-    if (currentPhase.vitals) setVitals(currentPhase.vitals);
+    if (currentPhase.vitals && !isProcessing) setVitals(currentPhase.vitals);
     setDynamicNarrative(currentPhase.narrative);
     setSosOptions(null);
   }, [currentPhaseId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history, isProcessing]);
+    if (vitals.hr === 0 && isMonitorConnected) {
+       setEndReason('death');
+       setIsFinished(true);
+    }
+  }, [history, isProcessing, vitals.hr]);
 
-  const handleTextSubmit = async () => {
+  const processAction = async (text: string) => {
     initAudio();
-    if (!inputText.trim() || isProcessing || !currentPhase) return;
-    const userText = inputText.trim();
-    setInputText('');
-    setHistory(prev => [...prev, { role: 'user', text: userText }]);
+    if (!text.trim() || isProcessing || !currentPhase) return;
     setIsProcessing(true);
+    setHistory(prev => [...prev, { role: 'user', text }]);
+    setInputText('');
 
-    const monitorKeywords = /(monitor|ox[ií]metr|sinais vitais|ssvv|press[aã]o|eletro|ecg|cabos|satura[çc][aã]o|frequ[êe]ncia)/i;
-    if (monitorKeywords.test(userText)) setIsMonitorConnected(true);
+    if (/(monitor|ox[ií]metr|sinais vitais|ssvv|press[aã]o|eletro|ecg|cabos|satura[çc][aã]o|frequ[êe]ncia)/i.test(text)) setIsMonitorConnected(true);
 
     try {
-      const res = await fetchAdvancedAI(userText, `Cena Atual: ${dynamicNarrative}`, { transitions: currentPhase.transitions });
+      const res = await fetchAdvancedAI(text, `Cena: ${dynamicNarrative}`, { transitions: currentPhase.transitions });
+      
+      if (res.newPhaseId === "FINISH") {
+        setIsFinished(true);
+        return;
+      }
+
       if (res.newPhaseId && res.newPhaseId !== currentPhaseId) {
           playSuccess();
           setScores(prev => ({ ...prev, tecnica: prev.tecnica + 1.0 }));
@@ -117,6 +122,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
           playError();
           setScores(prev => ({ ...prev, tecnica: prev.tecnica - 0.5 }));
       }
+
       if (res.vitalsUpdate) setVitals(res.vitalsUpdate);
       if (res.text) {
         setDynamicNarrative(res.text);
@@ -135,179 +141,192 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     setSosOptions(options); setIsProcessing(false);
   };
 
-  const handleSosChoice = (option: any) => {
-    initAudio();
-    if (option.isCorrect && option.transitionRef) {
-        playSuccess();
-        setScores(prev => ({ ...prev, tecnica: prev.tecnica + 0.5 }));
-        setCurrentPhaseId(option.transitionRef.nextPhaseId);
-        setSosOptions(null);
-    } else {
-        playError();
-        setScores(prev => ({ ...prev, tecnica: prev.tecnica - 1.0 }));
-        setSosOptions(prev => prev ? prev.filter(o => o.id !== option.id) : null);
-        setHistory(prev => [...prev, { role: 'narrator', text: `Tentativa falha: "${option.text}"` }]);
+  const handleSosChoice = async (option: any) => {
+    setSosOptions(null);
+    await processAction(option.text); 
+  };
+
+  const handleManualEnd = () => {
+    if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) {
+      setEndReason('manual');
+      setIsFinished(true);
     }
   };
 
-  if (isFinished) return <div className="h-screen flex items-center justify-center bg-white"><button onClick={onBack} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black">VOLTAR AO MENU</button></div>;
+  if (isFinished) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-white p-10 text-center">
+        <Award size={80} className="text-[#003366] mb-6 animate-bounce" />
+        <h2 className="text-4xl font-black text-[#003366] uppercase mb-4 tracking-tighter">
+          {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
+        </h2>
+        <p className="text-gray-500 font-bold mb-10 max-w-md">O preceptor clínico salvou o seu histórico para avaliação.</p>
+        <button onClick={onBack} className="bg-[#003366] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-[#D4A017] transition-all shadow-xl">Ver Resultados</button>
+    </div>
+  );
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 h-screen flex flex-col overflow-hidden bg-gray-50/50">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-100 select-none">
       
-      {/* HEADER INTEGRAL */}
-      <div className="flex justify-between items-center py-1.5 shrink-0 border-b border-gray-200">
+      {/* HEADER FIXO (H: 56px) */}
+      <header className="h-[56px] bg-white border-b border-gray-200 flex justify-between items-center px-6 shrink-0 z-50 shadow-sm">
         <div className="flex items-center gap-2">
-          <Zap size={14} className="text-blue-600 fill-blue-600"/>
-          <h2 className="text-[10px] font-black text-[#003366] uppercase tracking-tighter">{station.title}</h2>
+          <Zap size={18} className="text-blue-600 fill-blue-600"/>
+          <h2 className="text-[12px] font-black text-[#003366] uppercase tracking-wider">{station.title}</h2>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => { initAudio(); toggleMute(); }} className="p-1.5 bg-white rounded-lg shadow-sm border border-gray-100">
-            {isMuted ? <VolumeX size={14}/> : <Volume2 size={14} className="text-blue-600"/>}
+        <div className="flex gap-4 items-center">
+          <button onClick={handleManualEnd} className="bg-red-50 text-red-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-2">
+            <XCircle size={14}/> Finalizar Atendimento
           </button>
-          <button onClick={onBack} className="p-1.5 bg-white rounded-lg shadow-sm border border-gray-100 hover:text-red-500 transition-all"><RotateCcw size={14}/></button>
+          <RotateCcw size={18} className="text-gray-300 cursor-pointer hover:text-red-500" onClick={onBack}/>
         </div>
-      </div>
+      </header>
 
-      <div className="flex-grow grid grid-cols-12 gap-3 overflow-hidden py-3">
+      {/* ÁREA DE TRABALHO PRINCIPAL (FLEX GROW) */}
+      <main className="flex-grow flex p-3 gap-3 overflow-hidden">
         
-        {/* COLUNA ESQUERDA: MONITOR GRANDE + HISTÓRICO PEQUENO */}
-        <div className="lg:col-span-3 flex flex-col gap-3 overflow-hidden h-full">
+        {/* COLUNA ESQUERDA (FIXA: 340px) */}
+        <aside className="w-[340px] flex flex-col gap-3 h-full overflow-hidden shrink-0">
           
-          {/* MONITOR AUMENTADO (GIGANTE) */}
-          <div className={`bg-[#0a0f18] p-8 rounded-[2.5rem] border-4 transition-all duration-500 shrink-0 ${isCritical ? 'border-red-600 shadow-2xl animate-pulse' : 'border-gray-800 shadow-lg'}`}>
-            <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-2">
-              <span className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">Monitorização Crítica</span>
-              <Activity className={isMonitorConnected ? 'text-green-500 animate-pulse' : 'text-gray-700'} size={16}/>
+          {/* MONITOR CARDIÁCO (ALTURA FIXA E DENSA) */}
+          <div className={`bg-[#0a0f18] p-5 rounded-3xl border-4 transition-all duration-500 shrink-0 ${isCritical ? 'border-red-600 shadow-[0_0_20px_rgba(220,0,0,0.4)] animate-pulse' : 'border-gray-800 shadow-lg'}`}>
+            <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+              <div className="flex items-center gap-2">
+                <Activity className={isMonitorConnected ? 'text-green-500' : 'text-gray-700'} size={16}/>
+                <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Sinais Vitais</span>
+              </div>
+              <button onClick={() => { initAudio(); toggleMute(); }} className="text-gray-600 hover:text-white transition-colors">
+                {isMuted ? <VolumeX size={18}/> : <Volume2 size={18}/>}
+              </button>
             </div>
+
             {isMonitorConnected ? (
-              <div className="space-y-10 font-mono">
-                <div className="flex justify-between items-end border-b border-white/5 pb-4">
-                    <span className="text-xs text-gray-500 font-black uppercase">FC</span>
-                    <span className={`${vitals.hr > 120 || vitals.hr < 50 ? 'text-red-500' : 'text-green-500'} text-7xl font-black leading-none tracking-tighter`}>{vitals.hr}</span>
+              <div className="space-y-4 font-mono">
+                <div className="flex justify-between items-end border-b border-white/5 pb-2">
+                    <span className="text-[10px] text-gray-500 font-black">FC</span>
+                    <span className={`${vitals.hr > 120 || vitals.hr < 45 || vitals.hr === 0 ? 'text-red-500' : 'text-green-500'} text-5xl font-black leading-none`}>{vitals.hr}</span>
                 </div>
-                <div className="flex justify-between items-end border-b border-white/5 pb-4">
-                    <span className="text-xs text-gray-500 font-black uppercase">PA</span>
-                    <span className="text-blue-400 text-5xl font-black leading-none">{vitals.bp}</span>
+                <div className="flex justify-between items-end border-b border-white/5 pb-2">
+                    <span className="text-[10px] text-gray-500 font-black">PA</span>
+                    <span className="text-blue-400 text-3xl font-black leading-none">{vitals.bp}</span>
                 </div>
                 <div className="flex justify-between items-end">
-                    <span className="text-xs text-gray-500 font-black uppercase">SpO2</span>
-                    <span className={`${vitals.sat < 92 ? 'text-red-500' : 'text-green-400'} text-7xl font-black leading-none tracking-tighter`}>{vitals.sat}%</span>
+                    <span className="text-[10px] text-gray-500 font-black">SpO2</span>
+                    <span className={`${vitals.sat < 92 ? 'text-red-500' : 'text-green-400'} text-4xl font-black leading-none`}>{vitals.sat}%</span>
                 </div>
               </div>
             ) : (
-              <div className="py-20 text-center text-gray-700 text-[10px] font-black uppercase tracking-widest leading-none">Aguardando<br/>Monitorização</div>
+              <div className="py-14 text-center text-gray-800 text-[11px] font-black uppercase tracking-widest leading-relaxed opacity-40 italic">Aguardando<br/>Conexão...</div>
             )}
-            <div className={`mt-8 py-3 px-3 rounded-xl text-[12px] font-bold text-center uppercase tracking-widest ${isMonitorConnected ? (isCritical ? 'bg-red-900/40 text-red-200 shadow-inner' : 'bg-green-900/20 text-green-400') : 'bg-gray-800 text-gray-600'}`}>
-                {isMonitorConnected ? vitals.status : 'Aparelho Offline'}
+            
+            <div className={`mt-4 py-2 px-3 rounded-xl text-[10px] font-bold text-center uppercase tracking-widest ${isMonitorConnected ? (isCritical ? 'bg-red-900/40 text-red-200' : 'bg-gray-800 text-green-400') : 'bg-gray-800/50 text-gray-600'}`}>
+                {isMonitorConnected ? vitals.status : 'OFFLINE'}
             </div>
           </div>
 
-          {/* HISTÓRICO DE LOGS (DIMINUÍDO) */}
-          <div className="bg-white p-4 rounded-3xl border border-gray-100 h-[180px] shrink-0 overflow-hidden flex flex-col shadow-sm">
+          {/* HISTÓRICO DE CONDUTAS (PREENCHE O RESTO DA COLUNA) */}
+          <div className="bg-white p-4 rounded-3xl border border-gray-200 flex-grow overflow-hidden flex flex-col shadow-sm">
              <div className="flex items-center gap-2 mb-3 border-b pb-2 shrink-0">
-               <History size={12} className="text-gray-400"/>
-               <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Logs de Conduta</span>
+               <History size={14} className="text-gray-400"/>
+               <span className="text-[10px] font-black uppercase text-gray-400">Histórico de Conduta</span>
              </div>
-             <div className="overflow-y-auto space-y-2 flex-grow custom-scrollbar">
+             <div className="overflow-y-auto space-y-2 flex-grow custom-scrollbar pr-2">
                 {history.filter(h => h.role === 'user').map((h, i) => (
-                    <div key={i} className="text-[8px] text-gray-400 leading-snug italic pl-2 border-l-2 border-blue-50">"{h.text}"</div>
+                    <div key={i} className="text-[10px] text-gray-400 italic border-l-2 border-blue-100 pl-2 leading-tight">"{h.text}"</div>
                 ))}
              </div>
           </div>
-        </div>
+        </aside>
 
-        {/* COLUNA DIREITA: CENÁRIO + CHAT ENXUTO + INPUT */}
-        <div className="lg:col-span-9 flex flex-col gap-3 overflow-hidden h-full">
+        {/* COLUNA DIREITA (DINÂMICA) */}
+        <section className="flex-grow flex flex-col gap-3 h-full overflow-hidden">
           
-          {/* QUADRO DO CENÁRIO (ESTRUTURA FIXA NO TOPO) */}
-          <div className="bg-[#003366] text-white p-5 rounded-3xl shadow-xl shrink-0 border-l-[6px] border-[#D4A017] min-h-[120px] max-h-[140px] flex flex-col overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16"></div>
-            <div className="flex items-center gap-2 mb-2 shrink-0">
+          {/* CENÁRIO (OCUPA NO MÁXIMO 15% DA ALTURA DO ECRÃ) */}
+          <div className="bg-[#003366] text-white p-4 rounded-3xl shadow-xl shrink-0 border-l-[6px] border-[#D4A017] max-h-[15vh] flex flex-col overflow-hidden relative">
+            <div className="flex items-center gap-2 mb-1 shrink-0 opacity-70">
                 <ShieldCheck size={14} className="text-[#D4A017]"/>
-                <span className="text-[8px] font-black uppercase tracking-[0.3em] opacity-70">Contexto da Emergência</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Contexto Atual</span>
             </div>
-            <p className="text-sm md:text-lg font-medium leading-relaxed whitespace-pre-wrap overflow-y-auto custom-scrollbar-white pr-3">
-                {dynamicNarrative}
-            </p>
+            <div className="overflow-y-auto custom-scrollbar-white pr-2">
+              <p className="text-sm md:text-base font-medium leading-relaxed italic">{dynamicNarrative}</p>
+            </div>
           </div>
 
-          {/* ÁREA DE CONVERSA (ALTURA REDUZIDA PARA ALINHAMENTO) */}
-          <div className="h-[42vh] bg-white rounded-3xl border border-gray-100 shadow-inner flex flex-col overflow-hidden relative shrink-0">
-            <div className="flex-grow overflow-y-auto p-5 space-y-5 bg-gray-50/20 custom-scrollbar">
+          {/* CHAT (ÁREA DE MENSAGENS - PREENCHE O RESTO DO ESPAÇO) */}
+          <div className="flex-grow bg-white rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative">
+            <div className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50/20 custom-scrollbar">
               {history.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center opacity-10">
-                      <UserCircle size={50} strokeWidth={1} className="text-[#003366] mb-3"/>
-                      <p className="font-black uppercase text-[10px] tracking-[0.4em] text-[#003366]">Diga algo para iniciar</p>
+                      <UserCircle size={60} strokeWidth={1} className="text-[#003366] mb-2"/>
+                      <p className="font-black uppercase text-[11px] tracking-[0.4em]">Aguardando Protocolo</p>
                   </div>
               ) : (
                   history.map((msg, i) => (
                       <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
-                          <div className={`max-w-[85%] p-4 md:p-5 rounded-[2rem] text-sm md:text-base shadow-sm border ${
+                          <div className={`max-w-[80%] p-3 px-5 rounded-2xl text-sm shadow-sm border ${
                               msg.role === 'user' 
-                              ? 'bg-[#003366] text-white border-blue-700 rounded-tr-none' 
+                              ? 'bg-[#003366] text-white border-blue-800 rounded-tr-none' 
                               : 'bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium'
                           }`}>
-                              {msg.role === 'narrator' && <span className="block text-[8px] font-black text-blue-500 uppercase mb-1 tracking-widest">Narrador</span>}
+                              {msg.role === 'narrator' && <span className="block text-[8px] font-black text-blue-500 uppercase mb-0.5 tracking-widest">Equipe / Paciente</span>}
                               {msg.text}
                           </div>
                       </div>
                   ))
               )}
-              {isProcessing && <div className="flex justify-start animate-pulse"><div className="bg-gray-200 h-10 w-24 rounded-3xl rounded-tl-none"></div></div>}
+              {isProcessing && <div className="flex justify-start animate-pulse"><div className="bg-gray-200 h-10 w-24 rounded-3xl"></div></div>}
               <div ref={chatEndRef} />
             </div>
-          </div>
 
-          {/* INPUTÁREA ROBUSTA (AQUI O USUÁRIO ESCREVE) */}
-          <div className="p-4 bg-white border-t border-gray-100 shrink-0 shadow-lg rounded-3xl">
-              {sosOptions ? (
-                <div className="animate-in slide-in-from-bottom-2 space-y-4 p-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[9px] font-black text-orange-600 uppercase flex items-center gap-2"><HelpCircle size={12}/> Ajuda do Plantonista</span>
-                    <button onClick={() => setSosOptions(null)} className="text-[9px] font-black text-gray-400 hover:text-red-500 uppercase">Voltar</button>
+            {/* BARRA DE INPUT (FIXA NO FUNDO DA ÁREA DIREITA) */}
+            <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+                {sosOptions ? (
+                  <div className="animate-in slide-in-from-bottom-2 space-y-4">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] font-black text-orange-600 uppercase flex items-center gap-2"><HelpCircle size={14}/> Decisão Assistida (SOS)</span>
+                      <button onClick={() => setSosOptions(null)} className="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase">Voltar</button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {sosOptions.map(opt => (
+                        <button key={opt.id} onClick={() => handleSosChoice(opt)} className="bg-white border-2 border-orange-100 p-4 rounded-3xl text-left text-xs font-bold hover:border-orange-500 hover:bg-orange-50/50 transition-all flex justify-between items-center group shadow-sm">
+                            <span className="leading-snug pr-4">{opt.text}</span>
+                            <ChevronRight className="text-orange-200 group-hover:text-orange-500 shrink-0" size={18}/>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {sosOptions.map(opt => (
-                      <button key={opt.id} onClick={() => handleSosChoice(opt)} className="bg-white border-2 border-orange-100 p-4 rounded-2xl text-left text-xs font-bold hover:border-orange-500 hover:bg-orange-50/50 transition-all flex justify-between items-center group shadow-sm">
-                          <span className="leading-snug pr-4">{opt.text}</span>
-                          <ChevronRight className="text-orange-200 group-hover:text-orange-500 shrink-0" size={16}/>
-                      </button>
-                    ))}
+                ) : (
+                  <div className="flex gap-3 items-center max-w-5xl mx-auto px-2">
+                    <div className="flex-grow flex bg-gray-100/50 rounded-2xl border-2 border-transparent focus-within:border-blue-600 focus-within:bg-white shadow-inner p-1.5 transition-all group">
+                        <input 
+                          type="text" 
+                          value={inputText} 
+                          onChange={e => setInputText(e.target.value)} 
+                          onKeyDown={e => e.key === 'Enter' && processAction(inputText)}
+                          placeholder="O que você deseja fazer agora?" 
+                          className="flex-grow bg-transparent px-5 py-2.5 outline-none font-medium text-[#003366] text-sm md:text-base placeholder:text-gray-400"
+                          disabled={isProcessing}
+                        />
+                        <button 
+                          onClick={() => processAction(inputText)} 
+                          disabled={isProcessing || !inputText.trim()} 
+                          className="bg-[#003366] text-white p-3.5 rounded-xl active:scale-95 hover:bg-blue-700 transition-all shadow-xl disabled:opacity-10"
+                        >
+                          <Send size={20} />
+                        </button>
+                    </div>
+                    <button 
+                      onClick={handleRequestHelp} 
+                      disabled={isProcessing}
+                      className="bg-orange-50 text-orange-600 h-full px-7 py-4 rounded-2xl font-black uppercase text-[10px] border border-orange-100 hover:bg-orange-600 hover:text-white transition-all shadow-sm shrink-0"
+                    >
+                      Dica
+                    </button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex gap-3 items-center max-w-5xl mx-auto px-2">
-                  <div className="flex-grow flex bg-gray-100/50 rounded-2xl border-2 border-transparent focus-within:border-blue-600 focus-within:bg-white shadow-inner p-1.5 transition-all group">
-                      <input 
-                        type="text" 
-                        value={inputText} 
-                        onChange={e => setInputText(e.target.value)} 
-                        onKeyDown={e => e.key === 'Enter' && handleTextSubmit()}
-                        placeholder="O que você deseja fazer agora?" 
-                        className="flex-grow bg-transparent px-5 py-2.5 outline-none font-medium text-[#003366] text-sm md:text-base placeholder:text-gray-400"
-                        disabled={isProcessing}
-                      />
-                      <button 
-                        onClick={handleTextSubmit} 
-                        disabled={isProcessing || !inputText.trim()} 
-                        className="bg-[#003366] text-white p-3.5 rounded-xl active:scale-95 hover:bg-blue-700 transition-all shadow-xl disabled:opacity-10"
-                      >
-                        <Send size={20} />
-                      </button>
-                  </div>
-                  <button 
-                    onClick={handleRequestHelp} 
-                    disabled={isProcessing}
-                    className="bg-orange-50 text-orange-600 h-full px-7 py-4 rounded-2xl font-black uppercase text-[10px] border border-orange-100 hover:bg-orange-600 hover:text-white transition-all shadow-sm shrink-0"
-                  >
-                    Dica
-                  </button>
-                </div>
-              )}
+                )}
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 };

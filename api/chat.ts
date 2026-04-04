@@ -8,36 +8,38 @@ export default async function handler(req: any, res: any) {
   try {
     const { prompt, context, mode, phaseRules, isFinalEvaluation } = req.body;
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const fullPrompt = `Contexto acadêmico: ${context}\n\nPergunta/Ação do aluno: ${prompt}`;
+    
+    // O prompt agora enfatiza que a resposta da IA é a NOVA REALIDADE do cenário
+    const fullPrompt = `CONTEXTO ATUAL: ${context}\n\nCONDUTA DO ALUNO: ${prompt}`;
+    
     let config: any = {};
 
     // =======================================================================
-    // CÓRTEX MÉDICO UNIVERSAL - HUMANIZADO (LUNA ENGINE 2.5)
+    // CÓRTEX MÉDICO UNIVERSAL - LUNA ENGINE 3.0 (REALISMO ABSOLUTO)
     // =======================================================================
     const UNIVERSAL_RULES = `
     VOCÊ É UM MESTRE DE RPG MÉDICO E NARRADOR IMERSIVO, O MELHOR SIMULADOR MÉDICO DO MUNDO.
     
     DIRETRIZES INSTITUCIONAIS E DE NARRATIVA:
-    1. Responda SEMPRE com humanidade. Se o aluno der "Bom dia", se apresentar ou fizer "social", responda como os profissionais na sala ou como o paciente faria. Não seja robótico.
-    2. Biossegurança: O aluno DEVE declarar permissão para tocar no paciente, lavagem de mãos e EPIs antes de tocar no paciente. Se ele falhar, narre a hesitação da equipe.
-    3. REAÇÃO IMEDIATA: Toda ação do aluno deve gerar uma consequência narrativa.
-      - Se ele pedir um exame desnecessário, narre o tempo passando e o paciente sofrendo.
-      - Se ele der uma droga errada, use 'update_vitals' para piorar o paciente e narre o caos.
-    4. Emergências: Siga rigorosamente ABCDE. Se o aluno hesitar, narre ativamente o agravamento do quadro clínico.
-    5. FISIOLOGIA REAL E IMPLACÁVEL: A ferramenta 'update_vitals' DEVE refletir a biologia. Se a conduta for correta, melhore os sinais. Se for erro ou iatrogenia (ex: dar sal para hipertenso), VOCÊ DEVE PIORAR os vitais drasticamente via 'update_vitals' e narrar o mal-estar.
-    6. ESTADO DINÂMICO: Sua resposta de texto passará a ser a "Nova Realidade" da cena. Descreva o que o aluno VÊ, OUVE e SENTE após a ação dele.
-    7. MÁQUINA DE ESTADOS: Use os 'phaseRules' apenas como marcos. Você tem liberdade para criar "sub-fases" narrativas entre elas.
-    8. NUNCA diga "Essa conduta não surtiu efeito". Narre a consequência real: "O paciente tosse, o monitor começa a apitar e a enfermeira te olha com pavor".
-    9. NÃO DÊ O DIAGNÓSTICO. O raciocínio é do aluno.
+    1. HUMANIDADE: Responda sempre com realismo. Se o aluno interagir socialmente, responda como a equipe ou o paciente. Não seja robótico.
+    2. BIOSSEGURANÇA: Exija permissão para tocar no paciente e lavagem de mãos/EPIs. Se falhar, narre a hesitação da equipe e o risco imediato.
+    3. REAÇÃO IMEDIATA: Toda ação gera uma consequência visual ou sonora. Se for iatrogenia (ex: dar sal), você DEVE piorar os vitais drasticamente e narrar o caos na sala.
+    4. PODER DE VIDA E MORTE: Se a conduta for fatal ou houver demora crítica, você pode levar o paciente a óbito chamando 'update_vitals' com hr: 0, bp: "0/0", sat: 0.
+    5. ESTADO DINÂMICO: Sua resposta passará a ser a "Nova Realidade" da cena. Descreva o que o aluno VÊ, OUVE e SENTE.
+    6. MÁQUINA DE ESTADOS: Use os 'phaseRules' apenas como marcos técnicos. Se o aluno acertar, avance. Se errar, narre a consequência e mantenha-o na fase para correção.
+    7. ENCERRAMENTO: Se o aluno pedir para "finalizar", "encerrar" ou "colher feedback", aceite e chame 'change_phase' com nextPhaseId: "FINISH".
+    8. NUNCA diga "Essa conduta não surtiu efeito". Narre o que acontece: "O monitor apita e o paciente começa a suar frio".
+    9. NÃO DÊ O DIAGNÓSTICO. O raciocínio clínico deve ser 100% do aluno.
     `;
 
     if (mode === 'rpg' || mode === 'clinical' || mode === 'ai') { 
       let toolsArray: any[] = [];
 
+      // Ferramenta de Monitor (Inativa apenas no modo Anamnese 'ai')
       if (mode !== 'ai') {
         toolsArray.push({
           name: "update_vitals",
-          description: "Sincroniza o monitor cardíaco com a narrativa. Use SEMPRE que o paciente melhorar ou piorar.",
+          description: "Altera os sinais vitais no monitor. Use para refletir melhora, piora ou óbito (hr:0).",
           parameters: {
             type: "OBJECT",
             properties: {
@@ -45,7 +47,7 @@ export default async function handler(req: any, res: any) {
               bp: { type: "STRING", description: "PA" },
               sat: { type: "INTEGER", description: "SatO2" },
               rr: { type: "INTEGER", description: "FR" },
-              status: { type: "STRING", description: "Status visual do monitor" }
+              status: { type: "STRING", description: "Status visual (ex: Estável, Crítico, Óbito)" }
             },
             required: ["hr", "bp", "sat", "rr", "status"]
           }
@@ -54,25 +56,25 @@ export default async function handler(req: any, res: any) {
 
       if (phaseRules && phaseRules.transitions) {
         const transitionsText = phaseRules.transitions.map((t: any) => 
-          `- Gatilho Técnico para avançar: [${t.triggers.join(', ')}]. Se o aluno fizer isso, chame 'change_phase' com nextPhaseId = "${t.nextPhaseId}".`
+          `- Gatilho Técnico: [${t.triggers.join(', ')}]. Se o aluno atingir isso, chame 'change_phase' com nextPhaseId = "${t.nextPhaseId}".`
         ).join('\n');
 
         config.systemInstruction = `${UNIVERSAL_RULES}
         
-        REGRAS DE TRANSIÇÃO (MÁQUINA DE ESTADOS):
+        REGRAS DE TRANSIÇÃO TÉCNICA:
         ${transitionsText}
         
-        LÓGICA DE EXECUÇÃO:
-        - Se for Social: Responda apenas com texto.
-        - Se for Acerto Técnico: Chame 'change_phase'.
-        - Se for Erro Clínico: Narre a piora e chame 'update_vitals' com dados críticos.`;
+        LOGICA DE EXECUÇÃO:
+        - Conduta Social: Resposta apenas narrativa.
+        - Acerto Técnico: Narre o sucesso e chame 'change_phase'.
+        - Erro/Iatrogenia: Narre a consequência e chame 'update_vitals' com dados degradados.`;
         
         toolsArray.push({
           name: "change_phase",
-          description: "Avança a simulação para a próxima fase clínica.",
+          description: "Avança para a próxima fase clínica ou encerra a simulação (FINISH).",
           parameters: {
             type: "OBJECT",
-            properties: { nextPhaseId: { type: "STRING", description: "ID da próxima fase" } },
+            properties: { nextPhaseId: { type: "STRING" } },
             required: ["nextPhaseId"]
           }
         });
@@ -111,7 +113,7 @@ export default async function handler(req: any, res: any) {
     });
 
   } catch (error) {
-    console.error("Erro interno no Servidor Vercel:", error);
-    return res.status(500).json({ error: 'Falha ao comunicar com a Inteligência Artificial.' });
+    console.error("Erro no Servidor:", error);
+    return res.status(500).json({ error: 'Falha na comunicação com a Engine de Simulação.' });
   }
 }
