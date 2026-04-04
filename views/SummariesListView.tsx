@@ -8,7 +8,6 @@ import type { Summary, SimulationInfo } from '../types.ts';
 interface SummariesListViewProps {
   disciplineId: string;
   disciplines: SimulationInfo[];
-  summaries: Summary[];
   onBack: () => void;
   onShareClick?: () => void;
 }

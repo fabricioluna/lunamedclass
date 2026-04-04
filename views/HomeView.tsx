@@ -1,6 +1,6 @@
 import React from 'react';
-import DisciplineCard from '../components/DisciplineCard.tsx';
-import { SimulationInfo, Room } from '../types.ts';
+import DisciplineCard from '../components/DisciplineCard';
+import { SimulationInfo, Room } from '../types';
 import { Lock } from 'lucide-react'; // <-- IMPORTAÇÃO DO ÍCONE DE CADEADO
 
 interface HomeViewProps {

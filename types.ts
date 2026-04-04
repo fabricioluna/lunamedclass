@@ -134,6 +134,7 @@ export interface SimulationInfo {
   themes: string[];
   references?: ReferenceMaterial[];
   lockedFeatures?: string[]; 
+  isHidden?: boolean; // <-- ADICIONADO AQUI: Propriedade que resolve o erro no HomeView
 }
 
 export interface Summary {

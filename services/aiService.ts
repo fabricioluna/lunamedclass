@@ -7,12 +7,13 @@ export const getAIResponse = async (prompt: string, context: string = "") => {
   const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   
   if (isLocalhost) {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY; // Agora com VITE_
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) return "Erro: VITE_GEMINI_API_KEY não configurada no .env local.";
     
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // ATUALIZADO: Usando a versão mais estável e recente do Flash
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const result = await model.generateContent(`CONTEXTO: ${context}\n\nCOMANDO: ${prompt}`);
       return result.response.text();
     } catch (err) {
@@ -43,36 +44,41 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
   const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
   if (isLocalhost) {
-    console.log("[Luna Engine] Executando lógica de fase localmente...");
+    console.log("[Luna Engine] Executando lógica de fase localmente com gemini-2.0-flash...");
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) return { text: "Erro: Configure VITE_GEMINI_API_KEY no .env" };
 
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // ATUALIZADO: Motor atualizado para 2.0
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       
       const localPrompt = `
         ${context}
         REGRAS DE TRANSIÇÃO (JSON): ${JSON.stringify(phaseRules)}
         AÇÃO DO MÉDICO: ${prompt}
         
-        Responda em formato JSON puro:
+        Responda em formato JSON puro (sem marcações markdown):
         {
-          "text": "Sua resposta",
+          "text": "Sua resposta narrativa sobre o que aconteceu",
           "newPhaseId": "ID da fase caso o aluno tenha acertado uma transição, ou null"
         }
       `;
       
       const result = await model.generateContent(localPrompt);
-      const resText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+      let resText = result.response.text();
+      
+      // Sanitização robusta para garantir que o parse não quebre
+      resText = resText.replace(/```json/g, '').replace(/```/g, '').trim();
+      
       return JSON.parse(resText);
     } catch (err) {
       console.error("Erro no motor de fases local:", err);
-      return { text: "O motor de fases local falhou. Verifique o console." };
+      return { text: "O motor de fases local falhou. Verifique o console da aplicação para detalhes." };
     }
   }
 
-  // Se NÃO for localhost, aí sim tentamos o fetch (Vercel)
+  // Se NÃO for localhost, tentamos o fetch (Vercel)
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
@@ -90,12 +96,13 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
  * GERAÇÃO DE DICAS PARA O LABORATÓRIO
  */
 export const generateLabTips = async (answer: string, question: string) => {
-  const prompt = `Professor de medicina. Pergunta: "${question}", Resposta: "${answer}". Retorne JSON: identification, location, functions.`;
+  const prompt = `Professor de medicina. Pergunta: "${question}", Resposta: "${answer}". Retorne JSON puro (sem markdown): {"identification": "...", "location": "...", "functions": "..."}`;
   try {
     const responseText = await getAIResponse(prompt, "Geração de dicas.");
-    return JSON.parse(responseText.replace(/```json/g, '').replace(/```/g, '').trim());
+    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanText);
   } catch (error) {
-    return { identification: "Erro local.", location: "-", functions: "-" };
+    return { identification: "Erro ao gerar dica.", location: "-", functions: "-" };
   }
 };
 
@@ -104,7 +111,7 @@ export const generateLabTips = async (answer: string, question: string) => {
  */
 export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
   if (!availableTransitions.length) return null;
-  const prompt = `Juiz clínico. Cenário: "${narrative}". Ação: "${userAction}". Opções: ${availableTransitions.map((t, i) => `ID[${i}]: ${t.triggers[0]}`).join(', ')}. RESPONDA: MATCH: [ID] ou MATCH: NONE.`;
+  const prompt = `Juiz clínico. Cenário: "${narrative}". Ação: "${userAction}". Opções: ${availableTransitions.map((t, i) => `ID[${i}]: ${t.triggers[0]}`).join(', ')}. RESPONDA APENAS: MATCH: [ID] ou MATCH: NONE.`;
   
   try {
     const res = await getAIResponse(prompt, "Avaliador RPG.");
@@ -119,7 +126,7 @@ export const evaluateRpgAction = async (userAction: string, availableTransitions
 export const generateRpgOptions = async (validTransitions: any[], narrative: string) => {
     if (!validTransitions.length) return [];
     const correct = validTransitions[0].triggers[0];
-    const prompt = `Cenário: "${narrative}". Correta: "${correct}". Gere 4 distratores médicos reais. Retorne array JSON de 5 strings.`;
+    const prompt = `Cenário: "${narrative}". Correta: "${correct}". Gere 4 distratores médicos reais curtos. Retorne APENAS um array JSON puro de 5 strings.`;
     try {
         const res = await getAIResponse(prompt, "SOS.");
         const clean = res.replace(/```json/g, '').replace(/```/g, '').trim();

@@ -1,35 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header.tsx';
-import RoomSelectionView from './views/RoomSelectionView.tsx';
-import HomeView from './views/HomeView.tsx';
-import DisciplineView from './views/DisciplineView.tsx';
-import QuizSetupView from './views/QuizSetupView.tsx';
-import QuizView from './views/QuizView.tsx';
-import AdminView from './views/AdminView.tsx';
-import SummariesListView from './views/SummariesListView.tsx';
-import OsceView from './views/OsceView.tsx';
-import DynamicOsceView from './views/DynamicOsceView.tsx'; 
-import OsceSetupView from './views/OsceSetupView.tsx';
-import OsceAIView from './views/OsceAIView.tsx';
+import Header from './components/Header';
+import RoomSelectionView from './views/RoomSelectionView';
+import HomeView from './views/HomeView';
+import DisciplineView from './views/DisciplineView';
+import QuizSetupView from './views/QuizSetupView';
+import QuizView from './views/QuizView';
+import AdminView from './views/AdminView';
+import SummariesListView from './views/SummariesListView';
+import OsceView from './views/OsceView';
+import DynamicOsceView from './views/DynamicOsceView'; 
+import OsceSetupView from './views/OsceSetupView';
+import OsceAIView from './views/OsceAIView';
 import OsceModeSelectionView from './views/OsceModeSelectionView'; 
-import CalculatorsView from './views/CalculatorsView.tsx';
-import CareerQuiz from './components/CareerQuiz.tsx';
-import ReferencesView from './views/ReferencesView.tsx';
-import ShareMaterialView from './views/ShareMaterialView.tsx';
-import LabListView from './views/LabListView.tsx';
-import LabQuizView from './views/LabQuizView.tsx';
+import CalculatorsView from './views/CalculatorsView';
+import CareerQuiz from './components/CareerQuiz';
+import ReferencesView from './views/ReferencesView';
+import ShareMaterialView from './views/ShareMaterialView';
+import LabListView from './views/LabListView';
+import LabQuizView from './views/LabQuizView';
 
-import { ViewState, Question, OsceStation, LabSimulation } from './types.ts';
-import { ROOMS } from './constants.tsx';
-import { db, ref, push } from './firebase.ts';
+// INJEÇÃO DA NOSSA SANDBOX DE TESTES DA IA
+import AITestView from './views/AITestView';
 
-import { DataProvider, useData } from './contexts/DataContext.tsx';
+import { ViewState, Question, OsceStation, LabSimulation } from './types';
+import { ROOMS } from './constants';
+import { db, ref, push } from './firebase';
+
+import { DataProvider, useData } from './contexts/DataContext';
 
 const APP_VERSION = "7.8.0 - Luna Data Engine";
 
 const AppContent: React.FC = () => {
-  const [currentView, setCurrentView] = useState<ViewState>('room-selection');
-  const [viewHistory, setViewHistory] = useState<ViewState[]>(['room-selection']);
+  const [currentView, setCurrentView] = useState<ViewState | 'ai-test'>('room-selection');
+  const [viewHistory, setViewHistory] = useState<(ViewState | 'ai-test')[]>(['room-selection']);
   
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
@@ -68,7 +71,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleNavigate = (view: ViewState) => {
+  const handleNavigate = (view: ViewState | 'ai-test') => {
     if (view === currentView) return; 
     if (view === 'room-selection') {
       setSelectedDisciplineId(null);
@@ -119,17 +122,15 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
-      {/* Header oculto na impressão */}
       <div className="print:hidden">
         <Header 
-          onNavigate={handleNavigate} 
+          onNavigate={handleNavigate as any} 
           onBack={handleBack}
           canGoBack={viewHistory.length > 1}
           hasRoomSelected={!!selectedRoomId}
         />
       </div>
 
-      {/* Barra de Status oculta na impressão */}
       <div className={`print:hidden py-1 px-4 flex justify-center items-center gap-2 border-b transition-all duration-700 ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
         <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
         <span className={`text-[8px] font-black uppercase tracking-widest ${isOnline ? 'text-green-700' : 'text-red-700'}`}>
@@ -138,6 +139,9 @@ const AppContent: React.FC = () => {
       </div>
 
       <div className="flex-grow">
+        {/* ROTA DA SANDBOX DE TESTES DA IA */}
+        {currentView === 'ai-test' && <AITestView />}
+
         {currentView === 'room-selection' && <RoomSelectionView rooms={ROOMS} onSelectRoom={handleSelectRoom} />}
         {currentView === 'home' && currentRoom && <HomeView room={currentRoom} disciplines={roomDisciplines} onSelectDiscipline={handleSelectDiscipline} />}
         {currentView === 'career-quiz' && <CareerQuiz onBack={handleBack} />}
@@ -192,7 +196,6 @@ const AppContent: React.FC = () => {
           />
         )}
 
-        {/* ROTAS DE OSCE E PRÁTICA */}
         {currentView === 'osce-mode-selection' && (
           <OsceModeSelectionView 
             onBack={handleBack}
@@ -228,7 +231,6 @@ const AppContent: React.FC = () => {
           />
         )}
         
-        {/* === MOTOR HÍBRIDO OSCE (ESTÁTICO + RPG) === */}
         {currentView === 'osce-quiz' && currentOsceStation && (
           currentOsceStation.mode === 'rpg' ? (
             <DynamicOsceView 
@@ -323,7 +325,14 @@ const AppContent: React.FC = () => {
           Simuladores de Alto Rendimento para Medicina.
         </div>
         <div className="text-[#D4A017] text-[11px] font-black uppercase tracking-[0.2em] mb-1">Desenvolvido por Fabrício Luna</div>
-        <div className="text-[8px] text-gray-300 font-black uppercase tracking-tighter">Build {APP_VERSION}</div>
+        
+        {/* BOTÃO SECRETO PARA ABRIR A SANDBOX DE IA */}
+        <div 
+          onClick={() => handleNavigate('ai-test')}
+          className="text-[8px] text-gray-300 font-black uppercase tracking-tighter cursor-pointer hover:text-blue-500 transition-colors"
+        >
+          Build {APP_VERSION}
+        </div>
       </footer>
     </div>
   );
