@@ -12,35 +12,40 @@ export default async function handler(req: any, res: any) {
     let config: any = {};
 
     // =======================================================================
-    // CÓRTEX MÉDICO UNIVERSAL - ATUALIZADO (FISIOLOGIA IMPLACÁVEL)
+    // CÓRTEX MÉDICO UNIVERSAL - HUMANIZADO (LUNA ENGINE 2.5)
     // =======================================================================
     const UNIVERSAL_RULES = `
-    DIRETRIZES CLÍNICAS E PEDAGÓGICAS INSTITUCIONAIS:
-    1. Biossegurança: O aluno DEVE declarar que lavou as mãos e colocou EPIs adequados antes de qualquer exame físico ou procedimento invasivo. Penalize condutas que quebrem isso.
-    2. Emergências: Em cenários extra-hospitalares ou de trauma, a "Segurança da Cena" deve ser o primeiro passo. Siga rigorosamente a sistematização ABCDE e protocolos BLS (AHA).
-    3. Habilidades Clínicas: Em consultas, exija comunicação empática, apresentação profissional e estruturação lógica da anamnese e exame físico (inspeção, palpação, percussão, ausculta).
-    4. Pressão Clínica (Ação de Narrador): Se o aluno hesitar, fizer perguntas irrelevantes em uma emergência ou tomar atitudes sem foco, narre ativamente o agravamento do quadro.
-    5. FISIOLOGIA DINÂMICA ABSOLUTA: A ferramenta 'update_vitals' DEVE refletir a BIOLOGIA REAL. Se o aluno prescrever o tratamento CORRETO, os vitais melhoram. Se o aluno prescrever algo ERRADO, CONTRAINDICADO ou ABSURDO (ex: dar sal para hipertenso, betabloqueador em bradicardia), os vitais DEVEM PIORAR DRASTICAMENTE (Iatrogenia).
-    NÃO DÊ O DIAGNÓSTICO AO ALUNO. VOCÊ É APENAS O NARRADOR/AVALIADOR DA CENA.
+    VOCÊ É UM MESTRE DE RPG MÉDICO E NARRADOR IMERSIVO, O MELHOR SIMULADOR MÉDICO DO MUNDO.
+    
+    DIRETRIZES INSTITUCIONAIS E DE NARRATIVA:
+    1. Responda SEMPRE com humanidade. Se o aluno der "Bom dia", se apresentar ou fizer "social", responda como os profissionais na sala ou como o paciente faria. Não seja robótico.
+    2. Biossegurança: O aluno DEVE declarar permissão para tocar no paciente, lavagem de mãos e EPIs antes de tocar no paciente. Se ele falhar, narre a hesitação da equipe.
+    3. REAÇÃO IMEDIATA: Toda ação do aluno deve gerar uma consequência narrativa.
+      - Se ele pedir um exame desnecessário, narre o tempo passando e o paciente sofrendo.
+      - Se ele der uma droga errada, use 'update_vitals' para piorar o paciente e narre o caos.
+    4. Emergências: Siga rigorosamente ABCDE. Se o aluno hesitar, narre ativamente o agravamento do quadro clínico.
+    5. FISIOLOGIA REAL E IMPLACÁVEL: A ferramenta 'update_vitals' DEVE refletir a biologia. Se a conduta for correta, melhore os sinais. Se for erro ou iatrogenia (ex: dar sal para hipertenso), VOCÊ DEVE PIORAR os vitais drasticamente via 'update_vitals' e narrar o mal-estar.
+    6. ESTADO DINÂMICO: Sua resposta de texto passará a ser a "Nova Realidade" da cena. Descreva o que o aluno VÊ, OUVE e SENTE após a ação dele.
+    7. MÁQUINA DE ESTADOS: Use os 'phaseRules' apenas como marcos. Você tem liberdade para criar "sub-fases" narrativas entre elas.
+    8. NUNCA diga "Essa conduta não surtiu efeito". Narre a consequência real: "O paciente tosse, o monitor começa a apitar e a enfermeira te olha com pavor".
+    9. NÃO DÊ O DIAGNÓSTICO. O raciocínio é do aluno.
     `;
 
     if (mode === 'rpg' || mode === 'clinical' || mode === 'ai') { 
       let toolsArray: any[] = [];
 
-      // LUNA ENGINE: O Motor Fisiológico (update_vitals) SÓ funciona nas estações de Emergência (rpg/clinical).
-      // No Paciente Virtual (ai), bloqueamos essa ferramenta para focar apenas na Anamnese.
       if (mode !== 'ai') {
         toolsArray.push({
           name: "update_vitals",
-          description: "Atualiza os sinais vitais do paciente no monitor multiparamétrico da tela do aluno em resposta a uma conduta médica com efeito fisiológico. PIORE os dados se for erro médico, MELHORE se for conduta correta.",
+          description: "Sincroniza o monitor cardíaco com a narrativa. Use SEMPRE que o paciente melhorar ou piorar.",
           parameters: {
             type: "OBJECT",
             properties: {
-              hr: { type: "INTEGER", description: "Frequência Cardíaca" },
-              bp: { type: "STRING", description: "Pressão Arterial" },
-              sat: { type: "INTEGER", description: "Saturação de Oxigênio" },
-              rr: { type: "INTEGER", description: "Frequência Respiratória" },
-              status: { type: "STRING", description: "Breve status clínico visual" }
+              hr: { type: "INTEGER", description: "FC" },
+              bp: { type: "STRING", description: "PA" },
+              sat: { type: "INTEGER", description: "SatO2" },
+              rr: { type: "INTEGER", description: "FR" },
+              status: { type: "STRING", description: "Status visual do monitor" }
             },
             required: ["hr", "bp", "sat", "rr", "status"]
           }
@@ -49,47 +54,36 @@ export default async function handler(req: any, res: any) {
 
       if (phaseRules && phaseRules.transitions) {
         const transitionsText = phaseRules.transitions.map((t: any) => 
-          `- Se a conduta do aluno corresponder a algum destes gatilhos: [${t.triggers.join(', ')}], chame a ferramenta 'change_phase' com nextPhaseId = "${t.nextPhaseId}" e use esta narrativa na resposta: "${t.feedbackText}"`
+          `- Gatilho Técnico para avançar: [${t.triggers.join(', ')}]. Se o aluno fizer isso, chame 'change_phase' com nextPhaseId = "${t.nextPhaseId}".`
         ).join('\n');
 
-        config.systemInstruction = `Você é o Juiz e Narrador de uma simulação médica regida por uma Máquina de Estados. 
-        O aluno deve tomar a conduta correta para avançar.
+        config.systemInstruction = `${UNIVERSAL_RULES}
         
-        ${UNIVERSAL_RULES}
-        
-        REGRAS DE TRANSIÇÃO PARA A FASE ATUAL:
+        REGRAS DE TRANSIÇÃO (MÁQUINA DE ESTADOS):
         ${transitionsText}
         
-        INSTRUÇÕES CRÍTICAS:
-        1. Se a ação do aluno NÃO corresponder aos gatilhos, diga que a ação não surtiu efeito, que faltou biossegurança (se aplicável), ou que o paciente piorou. NUNCA diga o que ele tem que fazer.
-        2. SE a ação do aluno ativar um gatilho, você DEVE EXECUTAR a ferramenta 'change_phase' enviando o ID da próxima fase.
-        3. Você pode usar 'update_vitals' simultaneamente se a ação também gerar melhora fisiológica instantânea.`;
+        LÓGICA DE EXECUÇÃO:
+        - Se for Social: Responda apenas com texto.
+        - Se for Acerto Técnico: Chame 'change_phase'.
+        - Se for Erro Clínico: Narre a piora e chame 'update_vitals' com dados críticos.`;
         
         toolsArray.push({
           name: "change_phase",
-          description: "Avança a simulação para a próxima fase clínica quando o aluno acerta a conduta médica estipulada nos gatilhos.",
+          description: "Avança a simulação para a próxima fase clínica.",
           parameters: {
             type: "OBJECT",
-            properties: {
-              nextPhaseId: { type: "STRING", description: "O ID da próxima fase correspondente ao acerto do aluno (ex: 'fase_2')" }
-            },
+            properties: { nextPhaseId: { type: "STRING", description: "ID da próxima fase" } },
             required: ["nextPhaseId"]
           }
         });
-
       } else {
-        config.systemInstruction = `Você é o Mestre de Jogo (Narrador) de um simulador médico realista. Narre o ambiente, os sons e as reações do paciente. SEMPRE responda com um texto descritivo. 
-        
-        ${UNIVERSAL_RULES}
-        
-        SE a condição do paciente evoluir devido à intervenção do aluno, VOCÊ DEVE utilizar a ferramenta 'update_vitals' para alterar os parâmetros do monitor. Lembre-se de piorar o paciente se a conduta for incorreta.`;
+        config.systemInstruction = UNIVERSAL_RULES;
       }
 
       config.tools = [{ functionDeclarations: toolsArray }];
     }
 
     const targetModel = isFinalEvaluation ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
-
     const response = await ai.models.generateContent({
         model: targetModel,
         contents: fullPrompt,
@@ -102,10 +96,9 @@ export default async function handler(req: any, res: any) {
     if (response.functionCalls && response.functionCalls.length > 0) {
       for (const call of response.functionCalls) {
         if (call.name === "update_vitals") {
-          functionCallData = call.args as { hr: number, bp: string, sat: number, rr: number, status: string }; 
+          functionCallData = call.args; 
         } else if (call.name === "change_phase") {
-          const args = call.args as { nextPhaseId: string };
-          newPhaseId = args.nextPhaseId; 
+          newPhaseId = (call.args as any).nextPhaseId; 
         }
       }
     }
