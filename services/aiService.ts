@@ -1,14 +1,9 @@
-// Não precisamos mais do import do GoogleGenerativeAI aqui, pois o front-end não chama mais a IA diretamente. Toda a segurança e chamadas estão no backend (Vercel).
-
-/**
- * Função base para comunicação direta ou via API.
- */
 export const getAIResponse = async (prompt: string, context: string = "", isFinalEvaluation: boolean = false) => {
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, context, isFinalEvaluation }), // <-- Injetamos o parâmetro aqui
+      body: JSON.stringify({ prompt, context, isFinalEvaluation }),
     });
     const data = await response.json();
     return data.text; 
@@ -17,10 +12,6 @@ export const getAIResponse = async (prompt: string, context: string = "", isFina
   }
 };
 
-/**
- * FUNÇÃO AVANÇADA (Utilizada pelo OsceAIView)
- * Blindada contra erro 404 no localhost.
- */
 export const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: any) => {
   try {
     const response = await fetch('/api/chat', {
@@ -35,9 +26,6 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
   }
 };
 
-/**
- * GERAÇÃO DE DICAS PARA O LABORATÓRIO
- */
 export const generateLabTips = async (answer: string, question: string) => {
   const prompt = `Professor de medicina. Pergunta: "${question}", Resposta: "${answer}". Retorne JSON puro (sem markdown): {"identification": "...", "location": "...", "functions": "..."}`;
   try {
@@ -50,22 +38,42 @@ export const generateLabTips = async (answer: string, question: string) => {
 };
 
 /**
- * AVALIADOR RPG (SINÔNIMOS)
+ * AVALIADOR RPG MULTITAREFA (Otimizado)
+ * Agora compreende múltiplas condutas simultâneas em uma única frase.
  */
 export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
-  if (!availableTransitions.length) return null;
-  const prompt = `Juiz clínico. Cenário: "${narrative}". Ação: "${userAction}". Opções: ${availableTransitions.map((t, i) => `ID[${i}]: ${t.triggers[0]}`).join(', ')}. RESPONDA APENAS: MATCH: [ID] ou MATCH: NONE.`;
+  if (!availableTransitions.length) return [];
+  
+  const prompt = `Juiz clínico. Cenário atual: "${narrative}".
+  O aluno tomou a seguinte conduta composta: "${userAction}".
+  
+  Opções de gatilho disponíveis na fase atual:
+  ${availableTransitions.map((t, i) => `ID[${i}]: ${t.triggers.join(' | ')}`).join('\n')}
+  
+  Identifique TODAS as opções numéricas que o aluno executou simultaneamente nesta frase.
+  Responda APENAS com um array JSON de inteiros. 
+  Exemplo se acertou a 0 e a 2: [0, 2]
+  Exemplo se não acertou nenhuma: []`;
   
   try {
-    const res = await getAIResponse(prompt, "Avaliador RPG.");
-    const match = res.toUpperCase().match(/MATCH:\s*(\d+)/);
-    return match ? availableTransitions[parseInt(match[1])] : null;
-  } catch { return null; }
+    const res = await getAIResponse(prompt, "Avaliador RPG Múltiplo.");
+    const clean = res.replace(/```json/g, '').replace(/```/g, '').trim();
+    const startIdx = clean.indexOf('[');
+    const endIdx = clean.lastIndexOf(']') + 1;
+    
+    if (startIdx !== -1 && endIdx !== -1) {
+        const matchArray = JSON.parse(clean.substring(startIdx, endIdx));
+        if (Array.isArray(matchArray)) {
+            // Retorna um array com todos os objetos de transição atingidos
+            return matchArray.filter(id => availableTransitions[id]).map(id => availableTransitions[id]);
+        }
+    }
+    return [];
+  } catch { 
+    return []; 
+  }
 };
 
-/**
- * GERADOR SOS
- */
 export const generateRpgOptions = async (validTransitions: any[], narrative: string) => {
     if (!validTransitions.length) return [];
     const correct = validTransitions[0].triggers[0];
