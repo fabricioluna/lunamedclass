@@ -1,61 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DynamicOsceStation, SimulationPhase, ClinicalState } from '../types';
-import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle, CheckCircle2 } from 'lucide-react';
-import { fetchAdvancedAI, generateRpgOptions, generateFinalFeedback } from '../services/aiService';
-
-// ============================================================================
-// LUNA ENGINE: Sintetizador de Áudio Clínico (Web Audio API) - INTEGRAL
-// ============================================================================
-const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: boolean) => {
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const timerRef = useRef<any>(null);
-  const [isMuted, setIsMuted] = useState(false);
-
-  const initAudio = useCallback(() => {
-    if (!audioCtxRef.current) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) audioCtxRef.current = new AudioCtx();
-    }
-    if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
-  }, []);
-
-  const playTone = useCallback((freq = 800, type: OscillatorType = 'sine', duration = 0.1, vol = 0.05) => {
-    if (isMuted || !audioCtxRef.current) return;
-    try {
-      const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(vol, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(); osc.stop(ctx.currentTime + duration);
-    } catch (e) {}
-  }, [isMuted]);
-
-  useEffect(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (!isMonitorConnected || isMuted || hr === 0) return;
-    const intervalMs = 60000 / hr; 
-    timerRef.current = setInterval(() => {
-      if (isCritical) {
-        playTone(1000, 'square', 0.2, 0.04);
-        setTimeout(() => playTone(1300, 'square', 0.2, 0.04), 150);
-      } else {
-        playTone(750, 'sine', 0.08, 0.02);
-      }
-    }, intervalMs);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [hr, isMonitorConnected, isCritical, isMuted, playTone]);
-
-  const playSuccess = () => { initAudio(); playTone(600, 'sine', 0.1, 0.05); setTimeout(() => playTone(900, 'sine', 0.2, 0.05), 100); };
-  const playError = () => { initAudio(); playTone(200, 'sawtooth', 0.4, 0.08); };
-
-  return { playSuccess, playError, isMuted, toggleMute: () => setIsMuted(!isMuted), initAudio };
-};
-
-// ============================================================================
+import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle } from 'lucide-react';
+import { evaluateRpgAction, generateRpgOptions } from '../services/aiService';
 
 interface DynamicOsceViewProps {
   station: DynamicOsceStation;
@@ -65,337 +11,390 @@ interface DynamicOsceViewProps {
 
 const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSaveResult }) => {
   const [currentPhaseId, setCurrentPhaseId] = useState<string>(station.initialPhaseId);
-  const [vitals, setVitals] = useState<ClinicalState>(station.initialVitals || { hr: 80, bp: "120/80", sat: 98, rr: 16, status: "Estável" });
-  const [dynamicNarrative, setDynamicNarrative] = useState<string | null>(null);
-  const [isMonitorConnected, setIsMonitorConnected] = useState(false);
+  const [vitals, setVitals] = useState<ClinicalState>(station.initialVitals || {
+    hr: 80, bp: "120/80", sat: 98, rr: 16, status: "Estável"
+  });
+  
   const [scores, setScores] = useState({ tecnica: 0, comunicacao: 0, biosseguranca: 0 });
-  const [history, setHistory] = useState<{ role: 'user' | 'narrator', text: string }[]>([]);
+  const [history, setHistory] = useState<{ narrative: string, choice: string, feedback: string, phaseId: string }[]>([]);
   const [isFinished, setIsFinished] = useState(false);
-  const [endReason, setEndReason] = useState<'success' | 'death' | 'manual'>('success');
+  const [lastFeedback, setLastFeedback] = useState<string | null>(null);
+  const [startTime] = useState(Date.now());
+  const [endTime, setEndTime] = useState<number | null>(null);
+
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [sosOptions, setSosOptions] = useState<any[] | null>(null);
-  const [finalFeedback, setFinalFeedback] = useState<any | null>(null);
+  const [sosOptions, setSosOptions] = useState<{ text: string, isCorrect: boolean, transitionRef: any }[] | null>(null);
 
-  const currentPhase = station.phases[currentPhaseId];
-  // ALTERAÇÃO DE SCROLL: Referência ao container inteiro em vez do elemento final
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [rpgTracking, setRpgTracking] = useState({
+    hintsRequested: 0,
+    textErrors: 0,
+    hintErrors: 0
+  });
 
-  const isCritical = isMonitorConnected && (vitals.sat < 90 || vitals.hr > 125 || vitals.hr < 45 || vitals.hr === 0);
-  const { playSuccess, playError, isMuted, toggleMute, initAudio } = useClinicalAudio(vitals.hr, isMonitorConnected, isCritical);
+  const currentPhase: SimulationPhase | undefined = station.phases[currentPhaseId];
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!currentPhase) { handleFinishSim('success'); return; }
-    if (currentPhase.vitals && !isProcessing) setVitals(currentPhase.vitals);
-    setDynamicNarrative(currentPhase.narrative);
+    if (!currentPhase) {
+        console.error("Fase não encontrada no JSON:", currentPhaseId);
+        setIsFinished(true);
+        return;
+    }
+    if (currentPhase.vitals) {
+      setVitals(currentPhase.vitals);
+    }
     setSosOptions(null);
-  }, [currentPhaseId]);
+    setInputText('');
+  }, [currentPhaseId, currentPhase]);
 
-  // ALTERAÇÃO DE SCROLL: Forçar o scroll APENAS dentro do chat
-  useEffect(() => {
-    if (chatContainerRef.current) {
-        const container = chatContainerRef.current;
-        container.scrollTo({
-            top: container.scrollHeight,
-            behavior: 'smooth'
-        });
-    }
-    if (vitals.hr === 0 && isMonitorConnected && !isFinished) {
-       handleFinishSim('death');
-    }
-  }, [history, isProcessing, vitals.hr, isFinished]);
+  const executeTransition = (t: any, choiceLabel: string, isPenalty: boolean = false) => {
+    const delta = t.scoreDelta || t.pontuacao_delta || { tecnica: 0, comunicacao: 0, biosseguranca: 0 };
+    const penaltyFactor = isPenalty ? 0.3 : 1; 
+    
+    const newScores = {
+      tecnica: scores.tecnica + ((delta.tecnica || delta.Tecnica || 0) * penaltyFactor),
+      comunicacao: scores.comunicacao + ((delta.comunicacao || delta.Comunicacao || 0) * penaltyFactor),
+      biosseguranca: scores.biosseguranca + ((delta.biosseguranca || delta.Biosseguranca || 0) * penaltyFactor)
+    };
+    
+    setScores(newScores);
 
-  const handleFinishSim = async (reason: 'success' | 'death' | 'manual') => {
-    setEndReason(reason);
-    setIsFinished(true);
-    setIsProcessing(true);
-    try {
-      const feedback = await generateFinalFeedback(history, station.title);
-      setFinalFeedback(feedback);
-    } catch (err) {
-      console.error("Erro ao gerar feedback final:", err);
-    } finally {
-      setIsProcessing(false);
+    setHistory(prev => [...prev, {
+      narrative: currentPhase?.narrative || "Desconhecido",
+      choice: choiceLabel,
+      feedback: isPenalty ? `[AJUDA UTILIZADA] ${t.feedbackText}` : t.feedbackText,
+      phaseId: currentPhaseId
+    }]);
+
+    setLastFeedback(t.feedbackText);
+
+    if (t.isFatalError || t.nextPhaseId === 'FINISH') {
+      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+      setEndTime(timeSpent);
+      
+      const totalRaw = newScores.tecnica + newScores.comunicacao + newScores.biosseguranca;
+      const finalGrade = t.isFatalError ? 0 : Math.min(Math.max(totalRaw, 0), 10);
+
+      const analyticsData = {
+        stationId: station.id,
+        stationTitle: station.title,
+        disciplineId: station.disciplineId,
+        theme: station.theme,
+        isFatalError: t.isFatalError || false,
+        lastPhaseBeforeExit: currentPhaseId,
+        performanceMap: newScores,
+        fullDecisionPath: history,
+        rpgTracking: rpgTracking,
+        completedAt: new Date().toISOString()
+      };
+
+      if (onSaveResult) {
+        onSaveResult(finalGrade, 10, timeSpent, analyticsData);
+      }
+      
+      setIsFinished(true);
+      return;
     }
+
+    setCurrentPhaseId(t.nextPhaseId);
   };
 
-  const processAction = async (text: string) => {
-    initAudio();
-    if (!text.trim() || isProcessing || !currentPhase) return;
+  const handleTextSubmit = async () => {
+    if (!inputText.trim() || isProcessing || !currentPhase) return;
     setIsProcessing(true);
-    setHistory(prev => [...prev, { role: 'user', text }]);
-    setInputText('');
+    setLastFeedback(null);
 
-    if (/(monitor|ox[ií]metr|sinais vitais|ssvv|press[aã]o|eletro|ecg|cabos|satura[çc][aã]o|frequ[êe]ncia)/i.test(text)) setIsMonitorConnected(true);
+    const userText = inputText.trim();
+    const transitions = currentPhase.transitions || []; 
 
-    try {
-      const res = await fetchAdvancedAI(text, `Cena: ${dynamicNarrative}`, { transitions: currentPhase.transitions });
-      
-      if (res.newPhaseId === "FINISH") {
-        handleFinishSim('success');
-        return;
-      }
-
-      if (res.newPhaseId && res.newPhaseId !== currentPhaseId) {
-          playSuccess();
-          setScores(prev => ({ ...prev, tecnica: prev.tecnica + 1.0 }));
-          setCurrentPhaseId(res.newPhaseId);
-      } else if (res.vitalsUpdate && (res.vitalsUpdate.hr > 125 || res.vitalsUpdate.sat < 90)) {
-          playError();
-          setScores(prev => ({ ...prev, tecnica: prev.tecnica - 0.5 }));
-      }
-
-      if (res.vitalsUpdate) setVitals(res.vitalsUpdate);
-      if (res.text) {
-        setDynamicNarrative(res.text);
-        setHistory(prev => [...prev, { role: 'narrator', text: res.text }]);
-      }
-    } catch (err) {
-      setHistory(prev => [...prev, { role: 'narrator', text: "A equipe aguarda ordens." }]);
-    } finally {
+    if (transitions.length === 0) {
       setIsProcessing(false);
+      return; 
     }
+
+    const matchedTransition = await evaluateRpgAction(userText, transitions, currentPhase.narrative);
+
+    if (matchedTransition) {
+        executeTransition(matchedTransition, `Conduta Clínica: "${userText}"`);
+    } else {
+        setRpgTracking(prev => ({ ...prev, textErrors: prev.textErrors + 1 }));
+        setLastFeedback("A conduta descrita não gerou efeito esperado ou não está indicada no protocolo atual.");
+        setScores(prev => ({ ...prev, tecnica: prev.tecnica - 0.5 }));
+        setHistory(prev => [...prev, {
+            narrative: currentPhase.narrative,
+            choice: `Tentativa sem efeito: "${userText}"`,
+            feedback: "Conduta clinicamente não reconhecida pela equipe.",
+            phaseId: currentPhaseId
+        }]);
+    }
+    
+    setIsProcessing(false);
+    setInputText('');
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
   const handleRequestHelp = async () => {
-    initAudio(); setIsProcessing(true);
-    const options = await generateRpgOptions(currentPhase.transitions || [], dynamicNarrative || currentPhase.narrative);
-    setSosOptions(options); setIsProcessing(false);
+      if (!currentPhase) return;
+      setIsProcessing(true);
+      setRpgTracking(prev => ({ ...prev, hintsRequested: prev.hintsRequested + 1 }));
+      setLastFeedback("Consultando o Plantonista Chefe...");
+      
+      const transitions = currentPhase.transitions || [];
+      const options = await generateRpgOptions(transitions, currentPhase.narrative);
+      
+      setSosOptions(options);
+      setIsProcessing(false);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
-  const handleSosChoice = async (option: any) => {
-    setSosOptions(null);
-    await processAction(option.text); 
+  const handleSosChoice = (option: any) => {
+      if (option.isCorrect && option.transitionRef) {
+          executeTransition(option.transitionRef, `Auxílio Solicitado: ${option.text}`, true);
+      } else {
+          setRpgTracking(prev => ({ ...prev, hintErrors: prev.hintErrors + 1 }));
+          setLastFeedback(`[ERRO CRÍTICO] A escolha "${option.text}" poderia prejudicar o paciente.`);
+          setScores(prev => ({ ...prev, tecnica: prev.tecnica - 1.0 })); 
+      }
   };
 
-  const handleManualEnd = () => {
-    if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) {
-      handleFinishSim('manual');
-    }
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  if (isFinished) return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-6 text-center overflow-y-auto">
-        <div className="max-w-2xl w-full bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500">
-            {endReason === 'death' ? <XCircle size={80} className="text-red-500 mb-6 mx-auto animate-pulse" /> : <Award size={80} className="text-[#003366] mb-6 mx-auto animate-bounce" />}
-            <h2 className="text-3xl font-black text-[#003366] uppercase mb-4 tracking-tighter">
-              {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
-            </h2>
-            
-            {!finalFeedback ? (
-              <div className="py-10 flex flex-col items-center">
-                <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">Luna está avaliando seu desempenho...</p>
-              </div>
-            ) : (
-              <div className="text-left space-y-6 animate-in fade-in duration-700">
-                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
-                  <h4 className="text-[10px] font-black text-[#003366] uppercase mb-2">🤝 Postura e Comunicação</h4>
-                  <p className="text-gray-600 text-sm italic">"{finalFeedback.postura}"</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-green-50 p-4 rounded-2xl">
-                    <h4 className="text-[10px] font-black text-green-600 uppercase mb-2">🎯 Acertos</h4>
-                    <ul className="text-[11px] text-green-700 space-y-1">
-                      {finalFeedback.acertos.map((a:string, i:number) => <li key={i}>• {a}</li>)}
-                    </ul>
-                  </div>
-                  <div className="bg-red-50 p-4 rounded-2xl">
-                    <h4 className="text-[10px] font-black text-red-600 uppercase mb-2">⚠️ Omissões</h4>
-                    <ul className="text-[11px] text-red-700 space-y-1">
-                      {finalFeedback.omissoes.map((o:string, i:number) => <li key={i}>• {o}</li>)}
-                    </ul>
-                  </div>
-                </div>
-                <div className="bg-[#003366] p-6 rounded-3xl flex justify-between items-center shadow-xl">
-                  <div>
-                    <span className="text-blue-300 text-[10px] font-black uppercase">Nota Final</span>
-                    <div className="text-4xl font-black text-white">{Number(finalFeedback.nota).toFixed(1)}</div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      if(onSaveResult && finalFeedback) onSaveResult(finalFeedback.nota, 10, 0, { history, feedback: finalFeedback });
-                      onBack();
-                    }} 
-                    className="bg-[#D4A017] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-lg"
-                  >
-                    Finalizar
-                  </button>
-                </div>
-              </div>
-            )}
-        </div>
+  const VitalParam = ({ label, value, unit, icon: Icon, color }: any) => (
+    <div className="bg-black/5 p-2 md:p-3 rounded-xl border border-black/5 flex flex-col justify-center">
+      <div className="flex items-center gap-1 md:gap-2 mb-0.5">
+        <Icon size={12} className={`${color} shrink-0`} />
+        <span className="text-[8px] md:text-[10px] font-black uppercase text-gray-500 tracking-tighter md:tracking-widest">{label}</span>
+      </div>
+      <div className="flex items-baseline gap-1">
+        <span className={`text-sm md:text-xl font-mono font-bold ${color}`}>{value}</span>
+        <span className="text-[8px] md:text-[9px] text-gray-400 font-bold">{unit}</span>
+      </div>
     </div>
   );
 
-  return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-100 select-none">
-      
-      {/* HEADER FIXO */}
-      <header className="h-[56px] bg-white border-b border-gray-200 flex justify-between items-center px-6 shrink-0 z-50 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Zap size={18} className="text-blue-600 fill-blue-600"/>
-          <h2 className="text-[12px] font-black text-[#003366] uppercase tracking-wider">{station.title}</h2>
+  const CompetencyBar = ({ label, value, color, icon: Icon }: any) => {
+    const percentage = Math.min(Math.max(value * 10, 0), 100); 
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
+          <span className="flex items-center gap-1"><Icon size={12}/> {label}</span>
+          <span>{value.toFixed(1)}</span>
         </div>
-        <div className="flex gap-4 items-center">
-          <button onClick={handleManualEnd} className="bg-red-50 text-red-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-2">
-            <XCircle size={14}/> Finalizar Atendimento
-          </button>
-          <RotateCcw size={18} className="text-gray-300 cursor-pointer hover:text-red-500" onClick={onBack}/>
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div 
+            className={`h-full transition-all duration-1000 ${color}`} 
+            style={{ width: `${percentage}%` }}
+          />
         </div>
-      </header>
+      </div>
+    );
+  };
 
-      {/* ÁREA DE TRABALHO PRINCIPAL */}
-      <main className="flex-grow flex flex-col md:flex-row p-3 gap-3 overflow-hidden">
-        
-        {/* COLUNA ESQUERDA - FOCO EM VITAIS MAIORES */}
-        <aside className="w-full md:w-[340px] flex flex-col gap-3 h-auto md:h-full overflow-hidden shrink-0">
+  if (isFinished) {
+    const totalScore = Math.min(Math.max(scores.tecnica + scores.comunicacao + scores.biosseguranca, 0), 10);
+    const isSuccess = totalScore >= 7;
+
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6 md:py-12 animate-in zoom-in duration-500">
+        <div className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl overflow-hidden border border-gray-100">
+          <div className={`${isSuccess ? 'bg-[#003366]' : 'bg-red-900'} p-6 md:p-10 text-center text-white relative transition-colors`}>
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 opacity-10"><Award size={60} className="md:w-20 md:h-20"/></div>
+            <h2 className="text-xl md:text-3xl font-black uppercase tracking-tighter mb-2 relative z-10">
+                {isSuccess ? 'Simulação Concluída' : 'Desfecho Desfavorável'}
+            </h2>
+            <p className="text-[#D4A017] font-bold uppercase text-[10px] tracking-[0.2em] relative z-10">Feedback de Competências Clínicas</p>
+          </div>
           
-          {/* MONITOR CARDIÁCO - AUMENTADO CONFORME SOLICITADO */}
-          <div className={`bg-[#0a0f18] p-6 rounded-3xl border-4 transition-all duration-500 shrink-0 ${isCritical ? 'border-red-600 shadow-[0_0_20px_rgba(220,0,0,0.4)] animate-pulse' : 'border-gray-800 shadow-lg'}`}>
-            <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-              <div className="flex items-center gap-2">
-                <Activity className={isMonitorConnected ? 'text-green-500' : 'text-gray-700'} size={16}/>
-                <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Sinais Vitais</span>
-              </div>
-              <button onClick={() => { initAudio(); toggleMute(); }} className="text-gray-600 hover:text-white transition-colors">
-                {isMuted ? <VolumeX size={18}/> : <Volume2 size={18}/>}
-              </button>
-            </div>
-
-            {isMonitorConnected ? (
-              <div className="space-y-4 font-mono">
-                <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                    <span className="text-[10px] text-gray-500 font-black">FC</span>
-                    <span className={`${vitals.hr > 120 || vitals.hr < 45 || vitals.hr === 0 ? 'text-red-500' : 'text-green-500'} text-5xl font-black leading-none`}>{vitals.hr}</span>
+          <div className="p-6 md:p-12 space-y-6 md:space-y-10">
+            <div className="flex flex-col items-center justify-center py-4 md:py-6 bg-gray-50 rounded-[1.5rem] md:rounded-[2rem] border border-gray-100">
+                <span className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Nota Final</span>
+                <div className="flex items-baseline gap-1">
+                    <span className={`text-4xl md:text-6xl font-black ${isSuccess ? 'text-[#003366]' : 'text-red-600'}`}>{totalScore.toFixed(1)}</span>
+                    <span className="text-gray-300 font-bold">/ 10</span>
                 </div>
-                <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                    <span className="text-[10px] text-gray-500 font-black">PA</span>
-                    <span className="text-blue-400 text-3xl font-black leading-none">{vitals.bp}</span>
-                </div>
-                <div className="flex justify-between items-end">
-                    <span className="text-[10px] text-gray-500 font-black">SpO2</span>
-                    <span className={`${vitals.sat < 92 ? 'text-red-500' : 'text-green-400'} text-4xl font-black leading-none`}>{vitals.sat}%</span>
-                </div>
-              </div>
-            ) : (
-              <div className="py-14 text-center text-gray-800 text-[11px] font-black uppercase tracking-widest leading-relaxed opacity-40 italic">Aguardando Conexão</div>
-            )}
-            
-            <div className={`mt-4 py-2 px-3 rounded-xl text-[10px] font-bold text-center uppercase tracking-widest ${isMonitorConnected ? (isCritical ? 'bg-red-900/40 text-red-200' : 'bg-gray-800 text-green-400') : 'bg-gray-800/50 text-gray-600'}`}>
-                {isMonitorConnected ? vitals.status : 'OFFLINE'}
-            </div>
-          </div>
-
-          {/* HISTÓRICO - DIMINUÍDO CONFORME SOLICITADO */}
-          <div className="bg-white p-4 rounded-3xl border border-gray-200 flex-grow max-h-[120px] md:max-h-none overflow-hidden flex flex-col shadow-sm">
-             <div className="flex items-center gap-2 mb-3 border-b pb-2 shrink-0">
-               <History size={14} className="text-gray-400"/>
-               <span className="text-[10px] font-black uppercase text-gray-400">Histórico Compacto</span>
-             </div>
-             <div className="overflow-y-auto space-y-2 flex-grow custom-scrollbar pr-2">
-                {history.filter(h => h.role === 'user').map((h, i) => (
-                    <div key={i} className="text-[10px] text-gray-400 italic border-l-2 border-blue-100 pl-2 leading-tight">"{h.text}"</div>
-                ))}
-             </div>
-          </div>
-        </aside>
-
-        {/* COLUNA DIREITA - CENÁRIO E CHAT */}
-        <section className="flex-grow flex flex-col gap-3 h-full overflow-hidden">
-          
-          {/* CENÁRIO - AUMENTADO PARA CABER TEXTO COMPLETO */}
-          <div className="bg-[#003366] text-white p-4 rounded-3xl shadow-xl shrink-0 border-l-[6px] border-[#D4A017] min-h-[100px] max-h-[25vh] flex flex-col overflow-hidden relative">
-            <div className="flex items-center gap-2 mb-1 shrink-0 opacity-70">
-                <ShieldCheck size={14} className="text-[#D4A017]"/>
-                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Contexto Clínico</span>
-            </div>
-            <div className="overflow-y-auto custom-scrollbar-white pr-2">
-              <p className="text-sm md:text-base font-medium leading-relaxed italic">{dynamicNarrative}</p>
-            </div>
-          </div>
-
-          {/* CHAT - QUADRO DE CONVERSA OTIMIZADO COM REF NA DIV PAI */}
-          <div className="flex-grow flex-1 min-h-0 bg-white rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative">
-            {/* Div Container de Mensagens - onde ocorre o scroll isolado */}
-            <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50/20 custom-scrollbar">
-              {history.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center opacity-10">
-                      <UserCircle size={60} strokeWidth={1} className="text-[#003366] mb-2"/>
-                      <p className="font-black uppercase text-[11px] tracking-[0.4em]">Protocolo Luna Engine</p>
-                  </div>
-              ) : (
-                  history.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
-                          <div className={`max-w-[80%] p-3 px-5 rounded-2xl text-sm shadow-sm border ${
-                              msg.role === 'user' 
-                              ? 'bg-[#003366] text-white border-blue-800 rounded-tr-none' 
-                              : 'bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium'
-                          }`}>
-                              {msg.role === 'narrator' && <span className="block text-[8px] font-black text-blue-500 uppercase mb-0.5 tracking-widest">Equipe / Paciente</span>}
-                              {msg.text}
-                          </div>
-                      </div>
-                  ))
-              )}
-              {isProcessing && (
-                <div className="flex justify-start items-center gap-2 animate-pulse">
-                  <div className="bg-gray-200 h-10 w-24 rounded-3xl"></div>
-                  <span className="text-[10px] font-black text-gray-300 uppercase"> Luna está analisando...</span>
-                </div>
-              )}
-            </div>
-
-            {/* BARRA DE INPUT - FIXA NO RODAPÉ */}
-            <div className="p-4 bg-white border-t border-gray-100 shrink-0">
-                {sosOptions ? (
-                  <div className="animate-in slide-in-from-bottom-2 space-y-4">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] font-black text-orange-600 uppercase flex items-center gap-2"><HelpCircle size={14}/> SOS MÉDICO</span>
-                      <button onClick={() => setSosOptions(null)} className="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase">Voltar</button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {sosOptions.map(opt => (
-                        <button key={opt.id} onClick={() => handleSosChoice(opt)} className="bg-white border-2 border-orange-100 p-4 rounded-3xl text-left text-xs font-bold hover:border-orange-500 hover:bg-orange-50/50 transition-all flex justify-between items-center group shadow-sm">
-                            <span className="leading-snug pr-4 truncate">{opt.text}</span>
-                            <ChevronRight className="text-orange-200 group-hover:text-orange-500 shrink-0" size={18}/>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-3 items-center max-w-5xl mx-auto px-2">
-                    <div className="flex-grow flex bg-gray-100/50 rounded-2xl border-2 border-transparent focus-within:border-blue-600 focus-within:bg-white shadow-inner p-1.5 transition-all group">
-                        <input 
-                          type="text" 
-                          value={inputText} 
-                          onChange={e => setInputText(e.target.value)} 
-                          onKeyDown={e => e.key === 'Enter' && processAction(inputText)}
-                          placeholder="Digite sua conduta clínica..." 
-                          className="flex-grow bg-transparent px-5 py-2.5 outline-none font-medium text-[#003366] text-sm md:text-base placeholder:text-gray-400"
-                          disabled={isProcessing}
-                        />
-                        <button 
-                          onClick={() => processAction(inputText)} 
-                          disabled={isProcessing || !inputText.trim()} 
-                          className="bg-[#003366] text-white p-3.5 rounded-xl active:scale-95 hover:bg-blue-700 transition-all shadow-xl disabled:opacity-10"
-                        >
-                          <Send size={20} />
-                        </button>
-                    </div>
-                    <button 
-                      onClick={handleRequestHelp} 
-                      disabled={isProcessing}
-                      className="bg-orange-50 text-orange-600 h-full px-7 py-4 rounded-2xl font-black uppercase text-[10px] border border-orange-100 hover:bg-orange-600 hover:text-white transition-all shadow-sm shrink-0"
-                    >
-                      SOS
-                    </button>
-                  </div>
+                {endTime && (
+                  <span className="text-[9px] font-bold text-gray-500 mt-1 uppercase tracking-widest">
+                    Tempo: {formatTime(endTime)}
+                  </span>
                 )}
             </div>
+
+            <div className="flex justify-center gap-4 md:gap-6">
+                <div className="text-center">
+                    <p className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase">Dicas</p>
+                    <p className="text-base md:text-lg font-black text-[#D4A017]">{rpgTracking.hintsRequested}</p>
+                </div>
+                <div className="text-center">
+                    <p className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase">Erros Texto</p>
+                    <p className="text-base md:text-lg font-black text-red-500">{rpgTracking.textErrors}</p>
+                </div>
+                <div className="text-center">
+                    <p className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase">Erros Dicas</p>
+                    <p className="text-base md:text-lg font-black text-orange-500">{rpgTracking.hintErrors}</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+              <CompetencyBar label="Técnica" value={scores.tecnica} color="bg-blue-500" icon={ShieldCheck} />
+              <CompetencyBar label="Comunicação" value={scores.comunicacao} color="bg-green-500" icon={MessageSquare} />
+              <CompetencyBar label="Segurança" value={scores.biosseguranca} color="bg-purple-500" icon={Activity} />
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-black text-[#003366] uppercase text-xs md:text-sm flex items-center gap-2 border-b pb-2">
+                <BarChart3 size={16} className="text-[#D4A017]"/> Histórico
+              </h3>
+              <div className="space-y-3 max-h-[200px] md:max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                {history.map((step, i) => (
+                  <div key={i} className="p-3 md:p-4 bg-gray-50 rounded-xl md:rounded-2xl border border-gray-100">
+                    <p className="text-[8px] md:text-[9px] font-black text-[#003366] uppercase mb-1">Ação {i+1} • {step.choice}</p>
+                    <p className="text-xs md:text-sm text-gray-700 leading-relaxed font-medium italic">"{step.feedback}"</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-center">
+              <button 
+                onClick={onBack} 
+                className="w-full md:w-2/3 bg-[#003366] text-white py-4 md:py-5 rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm tracking-widest hover:bg-[#D4A017] hover:text-[#003366] transition-all shadow-lg flex items-center justify-center gap-3"
+              >
+                Salvar e Sair <ChevronRight size={18}/>
+              </button>
+            </div>
           </div>
-        </section>
-      </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentPhase) return null;
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-4 md:py-8 pb-32">
+      {/* Header Compacto Mobile */}
+      <div className="flex justify-between items-center mb-4 md:mb-8 bg-white p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-gray-100">
+        <div className="overflow-hidden">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 text-[7px] md:text-[8px] font-black uppercase rounded border border-purple-200">Híbrido IA</span>
+            <span className="text-[8px] md:text-[10px] font-black text-[#D4A017] uppercase tracking-tighter md:tracking-widest truncate">{station.theme}</span>
+          </div>
+          <h2 className="text-lg md:text-2xl font-black text-[#003366] uppercase tracking-tighter truncate">{station.title}</h2>
+        </div>
+        <div className="flex items-center gap-2 md:gap-4 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 text-gray-400 font-bold text-xs bg-gray-50 px-3 py-2 rounded-full">
+                <Timer size={14} />
+                <span>Simulação</span>
+            </div>
+            <button onClick={onBack} className="text-gray-300 hover:text-red-500 transition-colors p-2">
+              <RotateCcw size={20} />
+            </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
+        {/* Monitor de Vitais: 2 colunas no mobile, 1 no desktop */}
+        <div className="lg:col-span-3">
+          <div className="bg-white p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] shadow-xl border-t-4 md:border-t-8 border-[#003366] lg:sticky lg:top-4">
+            <h3 className="text-[8px] md:text-[10px] font-black text-[#003366] uppercase mb-3 md:mb-6 tracking-widest flex items-center gap-2">
+              <Activity size={14} className="animate-pulse text-red-500" /> Sinais Vitais
+            </h3>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 md:gap-3">
+              <VitalParam label="FC" value={vitals.hr} unit="bpm" icon={Activity} color="text-red-500" />
+              <VitalParam label="PA" value={vitals.bp} unit="mmHg" icon={ShieldCheck} color="text-blue-500" />
+              <VitalParam label="SatO2" value={vitals.sat} unit="%" icon={Activity} color="text-green-600" />
+              <VitalParam label="FR" value={vitals.rr} unit="irpm" icon={Activity} color="text-purple-500" />
+            </div>
+            <div className="mt-3 md:mt-6 pt-3 md:pt-4 border-t border-gray-50 hidden md:block">
+                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-2 text-center">Status</span>
+                <div className="bg-gray-900 text-green-400 py-2 px-3 rounded-lg text-center font-mono text-[9px] uppercase tracking-tighter shadow-inner">
+                    {vitals.status}
+                </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Área de Narrativa e Input */}
+        <div className="lg:col-span-9 space-y-4 md:space-y-6">
+          <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-50 flex flex-col relative overflow-hidden min-h-[350px] md:min-h-[450px]">
+            <div className="absolute top-0 right-0 w-48 h-48 md:w-64 md:h-64 bg-blue-50 rounded-full -mr-24 -mt-24 opacity-50"></div>
+            
+            <div className="relative z-10 mb-6 md:mb-8 flex-grow">
+              <span className="inline-block bg-blue-50 text-[#003366] px-3 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4">Mestre de Sala</span>
+              <p className="text-base md:text-2xl text-gray-800 font-medium leading-relaxed">
+                {currentPhase.narrative}
+              </p>
+            </div>
+
+            {lastFeedback && (
+              <div className="bg-yellow-50 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border-l-4 border-yellow-400 mb-6 md:mb-8 flex items-start gap-3 md:gap-4 animate-in fade-in slide-in-from-left-4 relative z-10">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
+                    {lastFeedback.includes("ERRO") ? <AlertTriangle className="text-red-500" size={20} /> : <Activity className="text-yellow-600" size={20} />}
+                </div>
+                <div>
+                    <span className="text-[8px] md:text-[10px] font-black text-yellow-600 uppercase tracking-widest block mb-1">Atualização</span>
+                    <p className="text-xs md:text-sm font-bold text-yellow-900 leading-snug">{lastFeedback}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-auto pt-4 md:pt-6 border-t border-gray-100 relative z-10">
+                {sosOptions ? (
+                    <div className="animate-in slide-in-from-bottom-4">
+                        <span className="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-3 md:mb-4">Opções do Plantonista</span>
+                        <div className="grid grid-cols-1 gap-2 md:gap-3">
+                            {sosOptions.map((opt, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => handleSosChoice(opt)}
+                                    className="text-left p-3 md:p-4 rounded-xl md:rounded-2xl border-2 border-gray-100 bg-white hover:border-[#D4A017] hover:shadow-md transition-all text-xs md:text-sm font-bold text-gray-700"
+                                >
+                                    {opt.text}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+                        <div className="flex-grow flex bg-gray-50 rounded-xl md:rounded-2xl border-2 border-transparent focus-within:border-[#D4A017] transition-all overflow-hidden p-1.5 md:p-2">
+                            <input
+                                type="text"
+                                value={inputText}
+                                onChange={e => setInputText(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleTextSubmit()}
+                                placeholder="Conduta, exames ou medicação..."
+                                disabled={isProcessing}
+                                className="w-full bg-transparent p-2 md:p-3 outline-none font-medium text-[#003366] text-xs md:text-sm"
+                            />
+                            <button 
+                                onClick={handleTextSubmit} 
+                                disabled={isProcessing || !inputText.trim()} 
+                                className="bg-[#003366] text-white px-4 md:px-6 rounded-lg md:rounded-xl font-black shadow-md hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50"
+                            >
+                                <Send size={16} />
+                            </button>
+                        </div>
+                        
+                        <button 
+                            onClick={handleRequestHelp}
+                            disabled={isProcessing}
+                            className="bg-orange-50 text-orange-600 border-2 border-orange-100 px-4 py-3 md:px-6 md:py-0 rounded-xl md:rounded-2xl font-black uppercase text-[8px] md:text-[10px] tracking-widest flex sm:flex-col items-center justify-center gap-2 sm:gap-1 hover:bg-orange-600 hover:text-white transition-all min-w-[100px] md:min-w-[120px] disabled:opacity-50 shadow-sm"
+                        >
+                            <HelpCircle size={16} /> <span>SOS Dica</span>
+                        </button>
+                    </div>
+                )}
+                {isProcessing && <p className="text-center text-[10px] font-bold text-[#D4A017] mt-3 md:mt-4 animate-pulse">Luna Engine processando conduta...</p>}
+            </div>
+            <div ref={chatEndRef}></div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
