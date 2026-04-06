@@ -19,6 +19,9 @@ import ShareMaterialView from './views/ShareMaterialView';
 import LabListView from './views/LabListView';
 import LabQuizView from './views/LabQuizView';
 
+// INJEÇÃO DA NOSSA NOVA TELA DE PESQUISA 
+import SurveyView from './views/SurveyView';
+
 // INJEÇÃO DA NOSSA SANDBOX DE TESTES DA IA
 import AITestView from './views/AITestView';
 
@@ -138,10 +141,24 @@ const AppContent: React.FC = () => {
         </span>
       </div>
 
-      {/* APLICADO O max-w-7xl PARA IMPEDIR O GIGANTISMO GLOBAL DAS CAIXAS */}
       <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col relative">
         {/* ROTA DA SANDBOX DE TESTES DA IA */}
         {currentView === 'ai-test' && <AITestView />}
+
+        {/* ======================================================== */}
+        {/* ROTA DA NOSSA PESQUISA INSTITUCIONAL                     */}
+        {/* ======================================================== */}
+        {currentView === 'survey' && (
+          <SurveyView 
+            onBack={handleBack} 
+            onSaveResult={(data: any) => {
+              if (db) {
+                push(ref(db, 'surveys'), data);
+              }
+            }} 
+          />
+        )}
+        {/* ======================================================== */}
 
         {currentView === 'room-selection' && <RoomSelectionView rooms={ROOMS} onSelectRoom={handleSelectRoom} />}
         {currentView === 'home' && currentRoom && <HomeView room={currentRoom} disciplines={roomDisciplines} onSelectDiscipline={handleSelectDiscipline} />}

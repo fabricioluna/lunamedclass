@@ -1,6 +1,6 @@
 import React from 'react';
 import { SimulationInfo, Summary } from '../types';
-import { Lock, Stethoscope, BookOpen, FolderOpen, PenTool } from 'lucide-react';
+import { Lock, Stethoscope, BookOpen, FolderOpen, PenTool, ClipboardSignature, ArrowRight } from 'lucide-react';
 
 interface DisciplineViewProps {
   disciplineId: string;
@@ -16,6 +16,9 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
 
   // IDENTIFICADOR AUTOMÁTICO DE UC
   const isUC = disciplineId.toLowerCase().startsWith('uc');
+
+  // TRAVA DE SEGURANÇA: Garante que o banner só apareça em Habilidades Médicas
+  const isHabMed = discipline.title.toLowerCase().includes('habilidade') || discipline.title.toLowerCase().includes('habmed');
 
   // VERIFICA QUAIS BOTÕES ESTÃO BLOQUEADOS NO FIREBASE
   const locked = discipline.lockedFeatures || [];
@@ -63,6 +66,42 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
           </div>
         </div>
       </div>
+
+      {/* ========================================= */}
+      {/* BANNER DE PESQUISA (EXCLUSIVO PARA HABMED) */}
+      {/* ========================================= */}
+      {isHabMed && (
+        <div className="mb-8 bg-gradient-to-r from-[#003366] to-[#004080] rounded-[2rem] p-6 shadow-xl relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-6 border border-blue-800 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <ClipboardSignature size={120} />
+          </div>
+          
+          <div className="relative z-10 flex-1">
+            <div className="inline-block bg-[#D4A017] text-white px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest mb-2 shadow-sm">
+              Pesquisa Institucional Pós-Prova
+            </div>
+            <h3 className="text-xl font-black text-white mb-2 leading-tight">
+              Como o Luna MedClass impactou sua nota de HM1?
+            </h3>
+            <p className="text-blue-100 text-sm max-w-2xl font-medium">
+              Avalie o sistema em menos de 1 minuto. Seus dados guiarão a criação dos simuladores práticos para a Unidade 2.
+            </p>
+          </div>
+
+          <button 
+            onClick={() => onSelectOption('survey')}
+            className="relative z-10 w-full sm:w-auto bg-white text-[#003366] px-6 py-4 rounded-xl font-black uppercase text-xs tracking-wider shadow-lg hover:bg-gray-50 transition-all flex items-center justify-center gap-2 group shrink-0"
+          >
+            <span className="relative flex h-3 w-3 mr-1">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4A017] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#D4A017]"></span>
+            </span>
+            Responder Pesquisa
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      )}
+      {/* ========================================= */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         

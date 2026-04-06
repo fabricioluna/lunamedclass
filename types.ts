@@ -1,4 +1,4 @@
-export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'osce-mode-selection' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz';
+export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'osce-mode-selection' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz' | 'survey';
 
 export interface Room {
   id: string;
@@ -134,7 +134,7 @@ export interface SimulationInfo {
   themes: string[];
   references?: ReferenceMaterial[];
   lockedFeatures?: string[]; 
-  isHidden?: boolean; // <-- ADICIONADO AQUI: Propriedade que resolve o erro no HomeView
+  isHidden?: boolean; 
 }
 
 export interface Summary {
@@ -196,4 +196,23 @@ export interface LabSimulation {
   questions: LabQuestion[];
   createdAt?: number;
   views?: number; 
+}
+
+// === INTERFACES DE PESQUISA INSTITUCIONAL ===
+export interface SurveyAnswers {
+  usagePattern: string;
+  q2_timeSaved: number;
+  q3_interface: number;
+  q4_simulators: number;
+  q5_finalImpact: number;
+  q6_bestFeature: string;
+  q7_nextUnit: string;
+  q8_nps: number; // Métrica NPS (0 a 10) adicionada
+}
+
+export interface SurveyResponse {
+  id?: string;
+  unit: string; 
+  answers: SurveyAnswers;
+  createdAt?: any; 
 }
