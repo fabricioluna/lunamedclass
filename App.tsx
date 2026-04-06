@@ -34,9 +34,24 @@ import { DataProvider, useData } from './contexts/DataContext';
 const APP_VERSION = "7.8.0 - Luna Data Engine";
 
 const AppContent: React.FC = () => {
-  const [currentView, setCurrentView] = useState<ViewState | 'ai-test'>('room-selection');
-  const [viewHistory, setViewHistory] = useState<(ViewState | 'ai-test')[]>(['room-selection']);
   
+  // ========================================================
+  // LÓGICA DE DEEP LINKING (LINK DIRETO PARA A PESQUISA)
+  // ========================================================
+  const getInitialView = (): ViewState | 'ai-test' => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'survey') return 'survey';
+    return 'room-selection';
+  };
+
+  const [currentView, setCurrentView] = useState<ViewState | 'ai-test'>(getInitialView());
+  
+  // Se o aluno entrar pelo link direto, garantimos que a tela principal está no histórico para ele poder voltar
+  const [viewHistory, setViewHistory] = useState<(ViewState | 'ai-test')[]>(
+    getInitialView() === 'survey' ? ['room-selection', 'survey'] : ['room-selection']
+  );
+  // ========================================================
+
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
   const [quizFilteredQuestions, setQuizFilteredQuestions] = useState<Question[]>([]);
@@ -100,6 +115,8 @@ const AppContent: React.FC = () => {
       if (prevView === 'room-selection') {
         setSelectedDisciplineId(null);
         setSelectedRoomId(null);
+        // Ao voltar para o início, limpa o parâmetro da URL para não prender o aluno na pesquisa
+        window.history.replaceState({}, '', window.location.pathname);
       }
       return newHistory;
     });
