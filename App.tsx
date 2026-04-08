@@ -19,8 +19,9 @@ import ShareMaterialView from './views/ShareMaterialView';
 import LabListView from './views/LabListView';
 import LabQuizView from './views/LabQuizView';
 
-// INJEÇÃO DA NOSSA NOVA TELA DE PESQUISA 
+// INJEÇÃO DA NOSSA NOVA TELA DE PESQUISA E RELATÓRIO
 import SurveyView from './views/SurveyView';
+import SurveyReportView from './views/SurveyReportView';
 
 // INJEÇÃO DA NOSSA SANDBOX DE TESTES DA IA
 import AITestView from './views/AITestView';
@@ -36,19 +37,20 @@ const APP_VERSION = "7.8.0 - Luna Data Engine";
 const AppContent: React.FC = () => {
   
   // ========================================================
-  // LÓGICA DE DEEP LINKING (LINK DIRETO PARA A PESQUISA)
+  // LÓGICA DE DEEP LINKING (Acesso direto por URL)
   // ========================================================
   const getInitialView = (): ViewState | 'ai-test' => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('view') === 'survey') return 'survey';
+    const viewParam = params.get('view');
+    if (viewParam === 'survey') return 'survey';
+    if (viewParam === 'survey-report') return 'survey-report';
     return 'room-selection';
   };
 
   const [currentView, setCurrentView] = useState<ViewState | 'ai-test'>(getInitialView());
   
-  // Se o aluno entrar pelo link direto, garantimos que a tela principal está no histórico para ele poder voltar
   const [viewHistory, setViewHistory] = useState<(ViewState | 'ai-test')[]>(
-    getInitialView() === 'survey' ? ['room-selection', 'survey'] : ['room-selection']
+    getInitialView() !== 'room-selection' ? ['room-selection', getInitialView()] : ['room-selection']
   );
   // ========================================================
 
@@ -115,7 +117,7 @@ const AppContent: React.FC = () => {
       if (prevView === 'room-selection') {
         setSelectedDisciplineId(null);
         setSelectedRoomId(null);
-        // Ao voltar para o início, limpa o parâmetro da URL para não prender o aluno na pesquisa
+        // Limpa a URL ao voltar para a home para não prender o usuário
         window.history.replaceState({}, '', window.location.pathname);
       }
       return newHistory;
@@ -159,12 +161,9 @@ const AppContent: React.FC = () => {
       </div>
 
       <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col relative">
-        {/* ROTA DA SANDBOX DE TESTES DA IA */}
         {currentView === 'ai-test' && <AITestView />}
 
-        {/* ======================================================== */}
-        {/* ROTA DA NOSSA PESQUISA INSTITUCIONAL                     */}
-        {/* ======================================================== */}
+        {/* ROTAS DE PESQUISA INSTITUCIONAL (Com a injeção do Data Layer) */}
         {currentView === 'survey' && (
           <SurveyView 
             onBack={handleBack} 
@@ -175,7 +174,10 @@ const AppContent: React.FC = () => {
             }} 
           />
         )}
-        {/* ======================================================== */}
+        
+        {currentView === 'survey-report' && (
+          <SurveyReportView onBack={handleBack} />
+        )}
 
         {currentView === 'room-selection' && <RoomSelectionView rooms={ROOMS} onSelectRoom={handleSelectRoom} />}
         {currentView === 'home' && currentRoom && <HomeView room={currentRoom} disciplines={roomDisciplines} onSelectDiscipline={handleSelectDiscipline} />}
@@ -361,7 +363,6 @@ const AppContent: React.FC = () => {
         </div>
         <div className="text-[#D4A017] text-[9px] font-black uppercase tracking-[0.1em]">Desenvolvido por Fabrício Luna</div>
         
-        {/* BOTÃO SECRETO PARA ABRIR A SANDBOX DE IA */}
         <div 
           onClick={() => handleNavigate('ai-test')}
           className="text-[7px] text-gray-300 font-black uppercase tracking-tighter cursor-pointer hover:text-blue-500 transition-colors mt-1"
