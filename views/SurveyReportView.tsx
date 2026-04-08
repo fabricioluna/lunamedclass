@@ -244,7 +244,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
         </div>
 
         {/* MÉTRICAS PRINCIPAIS (NPS) */}
-        <div className="mb-10 p-6 border-2 border-gray-200 rounded-2xl bg-gray-50" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+        <div className="mb-10 p-6 border-2 border-gray-200 rounded-2xl bg-gray-50 break-inside-avoid" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
           <h2 className="text-lg font-black text-[#003366] uppercase tracking-widest border-b border-gray-300 pb-2 mb-4">1. Indicador de Aceitação Global</h2>
           <div className="flex justify-between items-center">
             <div>
@@ -259,7 +259,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
         </div>
 
         {/* LIKERT - TABELA ACADÊMICA */}
-        <div className="mb-10">
+        <div className="mb-10 break-inside-avoid">
           <h2 className="text-lg font-black text-[#003366] uppercase tracking-widest border-b-2 border-gray-200 pb-2 mb-4">2. Avaliação de Variáveis Latentes (Escala Likert 1-5)</h2>
           <table className="w-full text-left border-collapse">
             <thead>
@@ -290,7 +290,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
         </div>
 
         {/* PADRÃO DE USO - LISTA */}
-        <div className="mb-10">
+        <div className="mb-10 break-inside-avoid">
           <h2 className="text-lg font-black text-[#003366] uppercase tracking-widest border-b-2 border-gray-200 pb-2 mb-4">3. Frequência de Engajamento</h2>
           <div className="space-y-2">
             {Object.entries(usageCounts).sort((a, b) => b[1] - a[1]).map(([pattern, count], i) => {
@@ -305,14 +305,14 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* ANÁLISE DE DISCURSO (CITAÇÕES) */}
-        <div className="break-before-page">
+        {/* ANÁLISE DE DISCURSO (CITAÇÕES) - Removida a quebra de página forçada */}
+        <div className="mt-10">
           <h2 className="text-lg font-black text-[#003366] uppercase tracking-widest border-b-2 border-gray-200 pb-2 mb-6">4. Análise Qualitativa de Discurso (Amostragem)</h2>
           
           <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-4">4.1. Funcionalidades de Maior Impacto na Prova</h3>
           <div className="space-y-4 mb-8">
             {data.filter(d => d.answers.q6_bestFeature).map((d, i) => (
-              <div key={`pos-${i}`} className="pl-4 border-l-4 border-[#003366] text-sm text-gray-800 italic" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+              <div key={`pos-${i}`} className="pl-4 border-l-4 border-[#003366] text-sm text-gray-800 italic break-inside-avoid" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                 "{d.answers.q6_bestFeature}"
               </div>
             ))}
@@ -321,7 +321,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
           <h3 className="text-sm font-black text-[#D4A017] uppercase tracking-widest mb-4" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>4.2. Demandas e Expectativas para a N2</h3>
           <div className="space-y-4">
             {data.filter(d => d.answers.q7_nextUnit).map((d, i) => (
-              <div key={`neg-${i}`} className="pl-4 border-l-4 border-[#D4A017] text-sm text-gray-800 italic" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+              <div key={`neg-${i}`} className="pl-4 border-l-4 border-[#D4A017] text-sm text-gray-800 italic break-inside-avoid" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                 "{d.answers.q7_nextUnit}"
               </div>
             ))}
@@ -329,7 +329,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
         </div>
         
         {/* RODAPÉ DA IMPRESSÃO */}
-        <div className="mt-12 pt-4 border-t border-gray-300 text-center text-xs text-gray-400">
+        <div className="mt-12 pt-4 border-t border-gray-300 text-center text-xs text-gray-400 break-inside-avoid">
           Gerado automaticamente por Luna MedClass Data Engine.
         </div>
 
