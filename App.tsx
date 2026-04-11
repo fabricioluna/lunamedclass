@@ -63,6 +63,9 @@ const AppContent: React.FC = () => {
   const [currentLabSimulation, setCurrentLabSimulation] = useState<LabSimulation | null>(null); 
 
   const [osceFilterMode, setOsceFilterMode] = useState<'static' | 'rpg' | 'all'>('all');
+  
+  // ESTADO INJETADO: Armazena o filtro de categoria do Laboratório Virtual (Ex: anatomia, histologia)
+  const [labCategoryFilter, setLabCategoryFilter] = useState<string | null>(null);
 
   const { 
     isLoading, 
@@ -91,19 +94,33 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleNavigate = (view: ViewState | 'ai-test') => {
-    if (view === currentView) return; 
-    if (view === 'room-selection') {
+  // INTERCEPTADOR DE ROTAS: Adaptado para capturar as categorias da UC V
+  const handleNavigate = (view: ViewState | 'ai-test' | string) => {
+    let targetView = view as ViewState | 'ai-test';
+
+    // Se o Dispatch vier com uma subcategoria do lab (ex: lab-list-anatomia)
+    if (typeof view === 'string' && view.startsWith('lab-list-')) {
+      const category = view.replace('lab-list-', '');
+      setLabCategoryFilter(category);
+      targetView = 'lab-list';
+    } else if (view === 'lab-list') {
+      // Se chamar o lab-list puro, limpa o filtro anterior
+      setLabCategoryFilter(null);
+    }
+
+    if (targetView === currentView) return; 
+    
+    if (targetView === 'room-selection') {
       setSelectedDisciplineId(null);
       setSelectedRoomId(null);
       setViewHistory(['room-selection']);
-    } else if (view === 'home') {
+    } else if (targetView === 'home') {
       setSelectedDisciplineId(null);
       setViewHistory(prev => [...prev, 'home']);
     } else {
-      setViewHistory(prev => [...prev, view]);
+      setViewHistory(prev => [...prev, targetView]);
     }
-    setCurrentView(view);
+    setCurrentView(targetView);
   };
 
   const handleBack = () => {
@@ -112,6 +129,7 @@ const AppContent: React.FC = () => {
       const newHistory = [...prev];
       newHistory.pop(); 
       const prevView = newHistory[newHistory.length - 1]; 
+      
       setCurrentView(prevView);
       if (prevView === 'home') setSelectedDisciplineId(null);
       if (prevView === 'room-selection') {
@@ -120,6 +138,11 @@ const AppContent: React.FC = () => {
         // Limpa a URL ao voltar para a home para não prender o usuário
         window.history.replaceState({}, '', window.location.pathname);
       }
+      // Ao sair do Lab List, garantimos que o filtro seja resetado
+      if (prevView !== 'lab-list') {
+        setLabCategoryFilter(null);
+      }
+      
       return newHistory;
     });
   };
@@ -188,7 +211,8 @@ const AppContent: React.FC = () => {
             disciplines={disciplines}
             summaries={summaries}
             onBack={handleBack} 
-            onSelectOption={(type) => handleNavigate(type as ViewState)}
+            // O cast foi removido para permitir a passagem dinâmica das strings 'lab-list-anatomia'
+            onSelectOption={(type) => handleNavigate(type)}
           />
         )}
         
@@ -331,9 +355,12 @@ const AppContent: React.FC = () => {
             disciplineId={selectedDisciplineId} 
             disciplines={disciplines} 
             simulations={labSimulations} 
+            // Injetamos a categoria selecionada via props (ex: 'anatomia', 'histologia')
+            categoryFilter={labCategoryFilter}
             onStart={(sim) => { setCurrentLabSimulation(sim); handleNavigate('lab-quiz'); }} 
           />
         )}
+        
         {currentView === 'lab-quiz' && currentLabSimulation && (
           <LabQuizView 
             simulation={currentLabSimulation} 

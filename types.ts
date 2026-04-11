@@ -193,6 +193,7 @@ export interface LabSimulation {
   title: string;
   author: string;
   description: string;
+  category?: string; // INJEÇÃO: Propriedade necessária para o filtro no LabListView
   questions: LabQuestion[];
   createdAt?: number;
   views?: number; 
