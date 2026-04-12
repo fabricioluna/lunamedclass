@@ -54,35 +54,26 @@ const AdminLab: React.FC<AdminLabProps> = ({
       const parsedLines = [];
       const warnings: string[] = [];
 
-      // Mapeamento dinâmico inteligente com rastreio de linhas
+      // Mapeamento dinâmico inteligente com rastreio de linhas (AGORA COM 6 COLUNAS)
       for (let i = startIndex; i < lines.length; i++) {
         const parts = lines[i];
         const lineNum = i + 1; // Linha real na planilha do usuário
 
-        let filename = '';
-        let structure = '';
-        let question = '';
-        let answer = '';
-
-        if (parts.length >= 4) {
-            filename = parts[0]?.trim();
-            structure = parts[1]?.trim();
-            question = parts[2]?.trim();
-            answer = parts[3]?.trim();
-        } else if (parts.length === 3) {
-            filename = parts[0]?.trim();
-            question = parts[1]?.trim();
-            answer = parts[2]?.trim();
-            structure = answer;
-        }
+        // Extração Direta sem Estrutura (Imagem, Pergunta, Resposta, Identificação, Localização, Funções)
+        const filename = parts[0]?.trim() || '';
+        const question = parts[1]?.trim() || '';
+        const answer = parts[2]?.trim() || '';
+        const identification = parts[3]?.trim() || 'N/A';
+        const location = parts[4]?.trim() || 'N/A';
+        const functions = parts[5]?.trim() || 'N/A';
 
         // Validação Cirúrgica: Verifica se os campos vitais estão vazios
         if (!filename || !question || !answer) {
-            warnings.push(`• Linha ${lineNum}: Ignorada. Dados Incompletos -> Imagem: [${filename || 'vazio'}], Pergunta: [${question || 'vazia'}], Resposta: [${answer || 'vazia'}]`);
+            warnings.push(`• Linha ${lineNum}: Ignorada. Dados Vitais Incompletos -> Imagem: [${filename || 'vazio'}], Pergunta: [${question || 'vazia'}], Resposta: [${answer || 'vazia'}]`);
             continue;
         }
 
-        parsedLines.push({ filename, structure, question, answer, lineNum });
+        parsedLines.push({ filename, question, answer, identification, location, functions, lineNum });
       }
 
       if (parsedLines.length === 0) throw new Error("CSV não contém linhas válidas com Imagem, Pergunta e Resposta.");
@@ -108,50 +99,16 @@ const AdminLab: React.FC<AdminLabProps> = ({
         const snap = await uploadBytes(sRef, imageFile as File); 
         const imageUrl = await getDownloadURL(snap.ref);
 
-        // 2. GERAÇÃO DE DICAS VIA IA (LUNA ENGINE 2.0)
-        setLabUploadProgress(`Gerando Dicas com IA para peça ${i + 1}: ${item.structure}...`);
-        let identification = 'N/A';
-        let location = 'N/A';
-        let functions = 'N/A';
-
-        try {
-            const aiPrompt = `Atue como um especialista em anatomia médica. O aluno precisa identificar a estrutura: "${item.structure}". Gere 3 dicas diretas. Retorne APENAS um JSON válido no formato exato: {"identification": "Como identificar visualmente", "location": "Onde se localiza", "functions": "Qual a principal função"}. Sem marcações markdown ou textos fora do JSON.`;
-            
-            // Chamada nativa para a API híbrida do Luna MedClass
-            const aiRes = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: aiPrompt })
-            });
-
-            if (aiRes.ok) {
-                const data = await aiRes.json();
-                const jsonText = data.response || data.text || '';
-                
-                // Regex Cirúrgica: Extrai apenas o miolo do JSON, ignorando formatações Markdown do Gemini
-                const match = jsonText.match(/\{[\s\S]*\}/); 
-                if (match) {
-                    const parsed = JSON.parse(match[0]);
-                    identification = parsed.identification || 'N/A';
-                    location = parsed.location || 'N/A';
-                    functions = parsed.functions || 'N/A';
-                }
-            } else {
-                console.warn(`Luna Engine offline ou inacessível para a peça: ${item.structure}`);
-            }
-        } catch (e) {
-            console.warn(`Falha na rede ao invocar IA para a peça ${item.structure}. Preenchendo com N/A.`, e);
-        }
-
+        // 2. MONTAGEM DA PEÇA (Lendo diretamente da planilha)
         finalQuestions.push({
           id: `lab_q_${Date.now()}_${i}`,
           imageUrl: imageUrl,
           imageName: item.filename, 
           question: item.question,
           answer: item.answer,
-          aiIdentification: identification,
-          aiLocation: location,
-          aiFunctions: functions
+          aiIdentification: item.identification,
+          aiLocation: item.location,
+          aiFunctions: item.functions
         });
       }
 
@@ -169,7 +126,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
       if (onAddLabSimulation) onAddLabSimulation(newSim);
       
       // RELATÓRIO FINAL DE INTEGRIDADE
-      let finalMessage = `✅ Sucesso Absoluto! Simulado com ${finalQuestions.length} peças criado, indexado com IA e publicado!`;
+      let finalMessage = `✅ Sucesso Absoluto! Simulado com ${finalQuestions.length} peças criado em tempo recorde e publicado!`;
       
       if (warnings.length > 0) {
         finalMessage += `\n\n⚠️ ALERTA DE INTEGRIDADE (Linhas Incompletas):\nO sistema protegeu o banco de dados ignorando as seguintes linhas do CSV:\n\n` + warnings.join('\n');
@@ -210,11 +167,10 @@ const AdminLab: React.FC<AdminLabProps> = ({
       <div className="lg:col-span-5 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
         <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Criar Lab Virtual</h3>
         <p className="text-[10px] font-bold text-gray-500 mb-6 leading-relaxed bg-gray-50 p-3 rounded-xl border">
-          <b>SISTEMA IA INTEGRADO:</b><br/>
-          Você só precisa enviar de 3 a 4 colunas no CSV.<br/>
-          O motor Luna Engine vai gerar as dicas morfológicas automaticamente durante o upload.<br/><br/>
-          <b>Padrão (3 Colunas):</b> Imagem ; Pergunta ; Resposta<br/>
-          <b>Padrão (4 Colunas):</b> Imagem ; Estrutura ; Pergunta ; Resposta
+          <b>ARQUITETURA DE DADOS DE ALTA VELOCIDADE:</b><br/>
+          As dicas morfológicas agora são extraídas diretamente da sua planilha, eliminando tempo de carregamento e o uso da IA no painel.<br/><br/>
+          <b>Padrão Exigido (6 Colunas):</b><br/>
+          Imagem ; Pergunta ; Resposta ; Identificação ; Localização ; Funções
         </p>
         
         <form onSubmit={handleLabImport} className="space-y-4">
@@ -239,7 +195,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
 
           <button type="submit" disabled={isLabUploading || !labCsvFile || !labImageFiles} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50 flex justify-center items-center gap-2">
             {isLabUploading ? <Loader2 size={16} className="animate-spin"/> : <Microscope size={16}/>}
-            {isLabUploading ? 'Processando Motor IA...' : 'Enviar Simulado Lab'}
+            {isLabUploading ? 'Processando Lote de Arquivos...' : 'Enviar Simulado Lab'}
           </button>
 
           {isLabUploading && (

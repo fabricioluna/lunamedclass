@@ -1,7 +1,7 @@
 /**
  * LUNA ENGINE - AI SERVICE 
- * Versão: 3.0 (Realismo Clínico & Consequências Dinâmicas)
- * Foco: Processamento de Multi-ações e SOS Gamificado
+ * Versão: 3.2 (Estável - Foco Exclusivo no Módulo OSCE e RPG)
+ * Limpeza de Dead Code: Remoção das funções de Laboratório Virtual (agora via CSV).
  */
 
 // Tipagem para as opções de ajuda (SOS)
@@ -24,7 +24,7 @@ export const getAIResponse = async (prompt: string, context: string = "", isFina
     });
     const data = await response.json();
     
-    // ✅ CORREÇÃO CIRÚRGICA: Lendo 'data.response' ou 'data.text'
+    // Leitura Cirúrgica: Captura 'data.response' vindo do seu backend na Nuvem
     return data.response || data.text || "Sem resposta da engine."; 
   } catch (error) {
     console.error("Erro Crítico LUNA Engine:", error);
@@ -54,12 +54,11 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
 };
 
 /**
- * Helper para extrair JSON de respostas da IA que podem conter Markdown
+ * Helper para extrair JSON de respostas da IA (Blindagem contra Markdown)
  */
 const extractJson = (text: string) => {
   try {
-    const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    // Ajuste técnico para aceitar tanto objetos {} quanto arrays []
+    const clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
     const start = clean.indexOf('{') !== -1 && (clean.indexOf('{') < clean.indexOf('[') || clean.indexOf('[') === -1) 
       ? clean.indexOf('{') 
       : clean.indexOf('[');
@@ -75,8 +74,7 @@ const extractJson = (text: string) => {
 };
 
 /**
- * NOVO: GERA FEEDBACK FINAL ESTRUTURADO (DEBRIEFING)
- * Implementado para atender ao requisito de encerramento do simulado.
+ * GERA FEEDBACK FINAL ESTRUTURADO (DEBRIEFING DO OSCE)
  */
 export const generateFinalFeedback = async (history: { role: string, text: string }[], stationTitle: string) => {
   const chatHistory = history.map(h => `${h.role === 'user' ? 'Aluno' : 'Sistema'}: ${h.text}`).join('\n');
@@ -97,7 +95,7 @@ export const generateFinalFeedback = async (history: { role: string, text: strin
   }`;
 
   try {
-    const res = await getAIResponse(prompt, "Avaliador de Debriefing 3.0");
+    const res = await getAIResponse(prompt, "Avaliador de Debriefing");
     const feedback = extractJson(res);
     return feedback || { postura: "Avaliação indisponível.", acertos: [], omissoes: [], nota: 5.0 };
   } catch (err) {
@@ -106,7 +104,7 @@ export const generateFinalFeedback = async (history: { role: string, text: strin
 };
 
 /**
- * AVALIADOR MULTITAREFA: Identifica múltiplas ações em uma sentença
+ * AVALIADOR MULTITAREFA: Identifica múltiplas ações no OSCE Dinâmico
  */
 export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
   if (!availableTransitions.length) return [];
@@ -121,7 +119,7 @@ export const evaluateRpgAction = async (userAction: string, availableTransitions
   Retorne APENAS um array JSON com os IDs das ações que o aluno REALIZOU (ex: [0, 2]).`;
   
   try {
-    const res = await getAIResponse(prompt, "Avaliador de Conduta 3.0");
+    const res = await getAIResponse(prompt, "Avaliador de Conduta");
     const matchArray = extractJson(res);
     if (Array.isArray(matchArray)) {
         return matchArray
@@ -135,13 +133,11 @@ export const evaluateRpgAction = async (userAction: string, availableTransitions
 };
 
 /**
- * GERADOR DE OPÇÕES SOS (DICA DINÂMICA COM CONSEQUÊNCIA)
- * Cria 1 opção correta e 3 distratores médicos plausíveis para o contexto.
+ * GERADOR DE OPÇÕES SOS (DICA DINÂMICA COM CONSEQUÊNCIA PARA OSCE)
  */
 export const generateRpgOptions = async (validTransitions: any[], narrative: string): Promise<SosOption[]> => {
     if (!validTransitions.length) return [];
     
-    // Pegamos o primeiro gatilho da transição correta como a "frase de ouro"
     const correctTrigger = validTransitions[0].triggers[0];
     
     const prompt = `Você é um preceptor médico criando um desafio.
@@ -157,7 +153,6 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
         
         if (!Array.isArray(stringArray)) throw new Error("Invalid SOS format");
 
-        // Garante que a opção correta está no pool
         if (!stringArray.some(s => s.toLowerCase().includes(correctTrigger.toLowerCase()))) {
             stringArray[0] = correctTrigger;
         }
@@ -168,13 +163,11 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
                 id: Math.random().toString(36).substring(2, 11),
                 text: text,
                 isCorrect: isThisCorrect,
-                // O transitionRef é crucial: se for a correta, ele carrega o destino da fase
                 transitionRef: isThisCorrect ? validTransitions[0] : null
             };
         }).sort(() => Math.random() - 0.5);
 
     } catch (error) {
-        // Fallback de segurança integral
         return [{ 
             id: 'emergency-fallback', 
             text: correctTrigger, 
@@ -182,27 +175,4 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
             transitionRef: validTransitions[0] 
         }];
     }
-};
-
-/**
- * NOVO: GERA DICAS DE ANATOMIA PARA O LABORATÓRIO VIRTUAL
- * Integrado ao processo de Ingestão de Dados (Upload) para garantir que
- * as dicas de identificação, localização e função sejam blindadas.
- */
-export const generateAnatomyHints = async (structure: string) => {
-  const prompt = `Atue como um especialista em anatomia médica. O aluno precisa identificar a estrutura: "${structure}". Gere 3 dicas diretas. Retorne APENAS um JSON válido no formato exato: {"identification": "Como identificar visualmente", "location": "Onde se localiza", "functions": "Qual a principal função"}. Sem marcações markdown ou textos fora do JSON.`;
-
-  try {
-    const res = await getAIResponse(prompt, "Assistente de Laboratório Morfofuncional");
-    const parsed = extractJson(res);
-    
-    return {
-      identification: parsed?.identification || 'N/A',
-      location: parsed?.location || 'N/A',
-      functions: parsed?.functions || 'N/A'
-    };
-  } catch (error) {
-    console.error(`Luna Engine: Falha crítica ao gerar dicas para ${structure}`, error);
-    return { identification: 'N/A', location: 'N/A', functions: 'N/A' };
-  }
 };
