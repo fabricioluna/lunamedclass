@@ -1,7 +1,7 @@
 import React from 'react';
 import DisciplineCard from '../components/DisciplineCard';
 import { SimulationInfo, Room } from '../types';
-import { Lock } from 'lucide-react'; // <-- IMPORTAÇÃO DO ÍCONE DE CADEADO
+import { Lock } from 'lucide-react';
 
 interface HomeViewProps {
   room: Room;
@@ -50,12 +50,10 @@ const HomeView: React.FC<HomeViewProps> = ({ room, disciplines, onSelectDiscipli
             {activeDisciplines.map(disc => (
               <div key={disc.id} className={`relative transition-all duration-300 ${disc.isHidden ? 'opacity-60 grayscale' : ''}`}>
                 
-                {/* O card fica insensível a cliques se estiver bloqueado */}
                 <div className={disc.isHidden ? 'pointer-events-none' : ''}>
                   <DisciplineCard info={disc} onSelect={onSelectDiscipline} />
                 </div>
 
-                {/* Película de bloqueio por cima do card */}
                 {disc.isHidden && (
                   <div
                     className="absolute inset-0 z-10 flex items-center justify-center cursor-not-allowed rounded-[2.5rem]"
