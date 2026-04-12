@@ -23,7 +23,9 @@ export const getAIResponse = async (prompt: string, context: string = "", isFina
       body: JSON.stringify({ prompt, context, isFinalEvaluation }),
     });
     const data = await response.json();
-    return data.text || "Sem resposta da engine."; 
+    
+    // ✅ CORREÇÃO CIRÚRGICA: Lendo 'data.response' ou 'data.text'
+    return data.response || data.text || "Sem resposta da engine."; 
   } catch (error) {
     console.error("Erro Crítico LUNA Engine:", error);
     return "Erro de conexão com a inteligência clínica.";
