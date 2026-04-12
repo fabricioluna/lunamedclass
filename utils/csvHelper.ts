@@ -1,20 +1,47 @@
-export const parseResilientCSV = (text: string, expectedColumns: number) => {
-  const rawLines = text.split('\n');
-  const mergedLines: string[] = [];
-  let currentLine = '';
+export const parseResilientCSV = (text: string): string[][] => {
+  const result: string[][] = [];
+  let currentLine: string[] = [];
+  let currentCell = '';
+  let insideQuotes = false;
 
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].replace(/\r/g, '').trim();
-    if (!line && !currentLine) continue;
-    
-    currentLine = currentLine ? currentLine + ' ' + line : line;
-    const semicolonCount = (currentLine.match(/;/g) || []).length;
-    
-    if (semicolonCount >= expectedColumns - 1) {
-      mergedLines.push(currentLine);
-      currentLine = '';
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        currentCell += '"';
+        i++; // Ignora a próxima aspa (escaped quote)
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ';' && !insideQuotes) {
+      currentLine.push(currentCell.trim());
+      currentCell = '';
+    } else if ((char === '\n' || (char === '\r' && nextChar === '\n')) && !insideQuotes) {
+      currentLine.push(currentCell.trim());
+      // Só adiciona a linha se não estiver vazia
+      if (currentLine.join('').trim() !== '') {
+        result.push(currentLine);
+      }
+      currentLine = [];
+      currentCell = '';
+      if (char === '\r') i++; // Ignora o \n se for \r\n
+    } else {
+      // Ignora standalone \r fora de aspas
+      if (char !== '\r' || insideQuotes) { 
+        currentCell += char;
+      }
     }
   }
-  if (currentLine) mergedLines.push(currentLine);
-  return mergedLines;
+  
+  // Captura a última célula/linha caso o arquivo não termine com quebra de linha
+  if (currentCell || currentLine.length > 0) {
+    currentLine.push(currentCell.trim());
+    if (currentLine.join('').trim() !== '') {
+      result.push(currentLine);
+    }
+  }
+
+  return result;
 };

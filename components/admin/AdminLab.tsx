@@ -3,7 +3,7 @@ import { SimulationInfo, LabSimulation, LabQuestion } from '../../types';
 import { Trash2, Microscope, Loader2 } from 'lucide-react';
 import { firestoreDB, storage } from '../../firebase';
 import { deleteObject, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { parseResilientCSV } from '../../utils/csvHelper'; // Usando a função global agora
+import { parseResilientCSV } from '../../utils/csvHelper';
 
 interface AdminLabProps {
   disciplines: SimulationInfo[];
@@ -41,28 +41,58 @@ const AdminLab: React.FC<AdminLabProps> = ({
     try {
       const filesArray = Array.from(labImageFiles as FileList); 
       
-      setLabUploadProgress('Lendo o arquivo CSV completo...');
+      setLabUploadProgress('Analisando arquivo CSV com parser de alta precisão...');
       const csvText = await labCsvFile.text();
-      const lines = parseResilientCSV(csvText, 6); 
+      const lines = parseResilientCSV(csvText); 
 
-      const parsedLines = lines.slice(1).map(line => {
-        const parts = line.split(';');
-        return {
-          filename: parts[0]?.trim(), 
-          question: parts[1]?.trim(),
-          answer: parts[2]?.trim(),
-          identification: parts[3]?.trim() || 'N/A',
-          location: parts[4]?.trim() || 'N/A',
-          functions: parts[5]?.trim() || 'N/A'
-        };
-      }).filter(l => l.filename && l.question && l.answer);
+      // Remove cabeçalho se existir e ajusta o offset para contagem de linhas
+      let startIndex = 0;
+      if (lines[0] && lines[0].join('').toLowerCase().includes('imagem')) {
+        startIndex = 1;
+      }
 
-      if (parsedLines.length === 0) throw new Error("CSV vazio ou fora do formato esperado de 6 colunas.");
+      const parsedLines = [];
+      const warnings: string[] = [];
+
+      // Mapeamento dinâmico inteligente com rastreio de linhas
+      for (let i = startIndex; i < lines.length; i++) {
+        const parts = lines[i];
+        const lineNum = i + 1; // Linha real na planilha do usuário
+
+        let filename = '';
+        let structure = '';
+        let question = '';
+        let answer = '';
+
+        if (parts.length >= 4) {
+            filename = parts[0]?.trim();
+            structure = parts[1]?.trim();
+            question = parts[2]?.trim();
+            answer = parts[3]?.trim();
+        } else if (parts.length === 3) {
+            filename = parts[0]?.trim();
+            question = parts[1]?.trim();
+            answer = parts[2]?.trim();
+            structure = answer;
+        }
+
+        // Validação Cirúrgica: Verifica se os campos vitais estão vazios
+        if (!filename || !question || !answer) {
+            warnings.push(`• Linha ${lineNum}: Ignorada. Dados Incompletos -> Imagem: [${filename || 'vazio'}], Pergunta: [${question || 'vazia'}], Resposta: [${answer || 'vazia'}]`);
+            continue;
+        }
+
+        parsedLines.push({ filename, structure, question, answer, lineNum });
+      }
+
+      if (parsedLines.length === 0) throw new Error("CSV não contém linhas válidas com Imagem, Pergunta e Resposta.");
 
       const finalQuestions: LabQuestion[] = [];
 
       for (let i = 0; i < parsedLines.length; i++) {
         const item = parsedLines[i];
+        
+        // 1. UPLOAD DA IMAGEM
         setLabUploadProgress(`Fazendo upload da imagem ${i + 1} de ${parsedLines.length}: ${item.filename}`);
 
         const imageFile = filesArray.find(f => {
@@ -71,12 +101,47 @@ const AdminLab: React.FC<AdminLabProps> = ({
         });
 
         if (!imageFile) {
-          throw new Error(`A imagem referente a "${item.filename}" não foi encontrada. Certifique-se de que selecionou todas as imagens.`);
+          throw new Error(`A imagem referente a "${item.filename}" não foi encontrada. Certifique-se de que selecionou todas as imagens no painel.`);
         }
 
         const sRef = storageRef(storage, `lab_images/${labDisc}/${Date.now()}_${imageFile.name}`);
         const snap = await uploadBytes(sRef, imageFile as File); 
         const imageUrl = await getDownloadURL(snap.ref);
+
+        // 2. GERAÇÃO DE DICAS VIA IA (LUNA ENGINE 2.0)
+        setLabUploadProgress(`Gerando Dicas com IA para peça ${i + 1}: ${item.structure}...`);
+        let identification = 'N/A';
+        let location = 'N/A';
+        let functions = 'N/A';
+
+        try {
+            const aiPrompt = `Atue como um especialista em anatomia médica. O aluno precisa identificar a estrutura: "${item.structure}". Gere 3 dicas diretas. Retorne APENAS um JSON válido no formato exato: {"identification": "Como identificar visualmente", "location": "Onde se localiza", "functions": "Qual a principal função"}. Sem marcações markdown ou textos fora do JSON.`;
+            
+            // Chamada nativa para a API híbrida do Luna MedClass
+            const aiRes = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: aiPrompt })
+            });
+
+            if (aiRes.ok) {
+                const data = await aiRes.json();
+                const jsonText = data.response || data.text || '';
+                
+                // Regex Cirúrgica: Extrai apenas o miolo do JSON, ignorando formatações Markdown do Gemini
+                const match = jsonText.match(/\{[\s\S]*\}/); 
+                if (match) {
+                    const parsed = JSON.parse(match[0]);
+                    identification = parsed.identification || 'N/A';
+                    location = parsed.location || 'N/A';
+                    functions = parsed.functions || 'N/A';
+                }
+            } else {
+                console.warn(`Luna Engine offline ou inacessível para a peça: ${item.structure}`);
+            }
+        } catch (e) {
+            console.warn(`Falha na rede ao invocar IA para a peça ${item.structure}. Preenchendo com N/A.`, e);
+        }
 
         finalQuestions.push({
           id: `lab_q_${Date.now()}_${i}`,
@@ -84,13 +149,13 @@ const AdminLab: React.FC<AdminLabProps> = ({
           imageName: item.filename, 
           question: item.question,
           answer: item.answer,
-          aiIdentification: item.identification,
-          aiLocation: item.location,
-          aiFunctions: item.functions
+          aiIdentification: identification,
+          aiLocation: location,
+          aiFunctions: functions
         });
       }
 
-      setLabUploadProgress('Salvando Simulado no banco de dados...');
+      setLabUploadProgress('Salvando o ecossistema no banco de dados (Firestore)...');
       const newSim: LabSimulation = {
         id: `lab_sim_${Date.now()}`,
         disciplineId: labDisc,
@@ -102,7 +167,15 @@ const AdminLab: React.FC<AdminLabProps> = ({
       };
 
       if (onAddLabSimulation) onAddLabSimulation(newSim);
-      alert(`✅ Sucesso! Simulado de Laboratório com ${finalQuestions.length} peças publicado perfeitamente!`);
+      
+      // RELATÓRIO FINAL DE INTEGRIDADE
+      let finalMessage = `✅ Sucesso Absoluto! Simulado com ${finalQuestions.length} peças criado, indexado com IA e publicado!`;
+      
+      if (warnings.length > 0) {
+        finalMessage += `\n\n⚠️ ALERTA DE INTEGRIDADE (Linhas Incompletas):\nO sistema protegeu o banco de dados ignorando as seguintes linhas do CSV:\n\n` + warnings.join('\n');
+      }
+
+      alert(finalMessage);
       
       setLabCsvFile(null); setLabImageFiles(null); setLabTitle(''); setLabDesc('');
       const imgInput = document.getElementById('labImageInput') as HTMLInputElement;
@@ -111,7 +184,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
       if(csvInput) csvInput.value = '';
 
     } catch (err: any) { 
-      alert('Erro no Upload: ' + err.message); 
+      alert('Erro Crítico no Upload: ' + err.message); 
     } finally {
       setIsLabUploading(false);
       setLabUploadProgress('');
@@ -137,14 +210,11 @@ const AdminLab: React.FC<AdminLabProps> = ({
       <div className="lg:col-span-5 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
         <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Criar Lab Virtual</h3>
         <p className="text-[10px] font-bold text-gray-500 mb-6 leading-relaxed bg-gray-50 p-3 rounded-xl border">
-          <b>DICA:</b> Gere o conteúdo no ChatGPT e salve como CSV.<br/><br/>
-          <b>Colunas do CSV (6 colunas):</b><br/>
-          1. Imagem (ex: 001.jpg ou 001)<br/>
-          2. Pergunta<br/>
-          3. Resposta<br/>
-          4. Identificação (Gerado por IA local)<br/>
-          5. Localização (Gerado por IA local)<br/>
-          6. Funções (Gerado por IA local)
+          <b>SISTEMA IA INTEGRADO:</b><br/>
+          Você só precisa enviar de 3 a 4 colunas no CSV.<br/>
+          O motor Luna Engine vai gerar as dicas morfológicas automaticamente durante o upload.<br/><br/>
+          <b>Padrão (3 Colunas):</b> Imagem ; Pergunta ; Resposta<br/>
+          <b>Padrão (4 Colunas):</b> Imagem ; Estrutura ; Pergunta ; Resposta
         </p>
         
         <form onSubmit={handleLabImport} className="space-y-4">
@@ -157,7 +227,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
           <textarea placeholder="Descrição para os alunos..." value={labDesc} onChange={e => setLabDesc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none resize-none" rows={2} disabled={isLabUploading}></textarea>
           
           <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-200">
-            <label className="block text-[10px] font-black uppercase text-[#003366] mb-2">1. Selecione o arquivo CSV Completo</label>
+            <label className="block text-[10px] font-black uppercase text-[#003366] mb-2">1. Selecione o arquivo CSV</label>
             <input id="labCsvInput" type="file" accept=".csv" onChange={e => setLabCsvFile(e.target.files ? e.target.files[0] : null)} className="w-full text-xs text-gray-700 font-bold" required disabled={isLabUploading} />
           </div>
 
@@ -169,7 +239,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
 
           <button type="submit" disabled={isLabUploading || !labCsvFile || !labImageFiles} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50 flex justify-center items-center gap-2">
             {isLabUploading ? <Loader2 size={16} className="animate-spin"/> : <Microscope size={16}/>}
-            {isLabUploading ? 'Fazendo Upload Seguro...' : 'Enviar Simulado Lab'}
+            {isLabUploading ? 'Processando Motor IA...' : 'Enviar Simulado Lab'}
           </button>
 
           {isLabUploading && (

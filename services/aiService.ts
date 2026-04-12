@@ -181,3 +181,26 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
         }];
     }
 };
+
+/**
+ * NOVO: GERA DICAS DE ANATOMIA PARA O LABORATÓRIO VIRTUAL
+ * Integrado ao processo de Ingestão de Dados (Upload) para garantir que
+ * as dicas de identificação, localização e função sejam blindadas.
+ */
+export const generateAnatomyHints = async (structure: string) => {
+  const prompt = `Atue como um especialista em anatomia médica. O aluno precisa identificar a estrutura: "${structure}". Gere 3 dicas diretas. Retorne APENAS um JSON válido no formato exato: {"identification": "Como identificar visualmente", "location": "Onde se localiza", "functions": "Qual a principal função"}. Sem marcações markdown ou textos fora do JSON.`;
+
+  try {
+    const res = await getAIResponse(prompt, "Assistente de Laboratório Morfofuncional");
+    const parsed = extractJson(res);
+    
+    return {
+      identification: parsed?.identification || 'N/A',
+      location: parsed?.location || 'N/A',
+      functions: parsed?.functions || 'N/A'
+    };
+  } catch (error) {
+    console.error(`Luna Engine: Falha crítica ao gerar dicas para ${structure}`, error);
+    return { identification: 'N/A', location: 'N/A', functions: 'N/A' };
+  }
+};

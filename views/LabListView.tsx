@@ -40,12 +40,13 @@ const LabListView: React.FC<Props> = ({ disciplineId, simulations, disciplines, 
     }
   };
 
+  // Configuração padronizada de abas para Unidades Curriculares
   const tabs = [
     { id: 'Todos', label: 'Todos' },
     { id: 'Anatomia', label: 'Anatomia' },
     { id: 'Histologia', label: 'Histologia' },
     { id: 'Farmacologia', label: 'Farmacologia' },
-    { id: 'Exames', label: 'Exames' }
+    { id: 'Exames', label: 'Interpretação de Exames' }
   ];
 
   return (
@@ -66,7 +67,7 @@ const LabListView: React.FC<Props> = ({ disciplineId, simulations, disciplines, 
       </div>
 
       {/* ======================================================== */}
-      {/* BARRA DE NAVEGAÇÃO DE CATEGORIAS (TABS) - SEMPRE VISÍVEL */}
+      {/* BARRA DE NAVEGAÇÃO DE CATEGORIAS (TABS) - SEMPRE VISÍVEL PARA UCs */}
       {/* ======================================================== */}
       {isUC && (
         <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 mb-10 animate-in fade-in zoom-in duration-500">
@@ -93,7 +94,7 @@ const LabListView: React.FC<Props> = ({ disciplineId, simulations, disciplines, 
           <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-200 flex flex-col items-center justify-center shadow-sm animate-in fade-in">
             <FilterX size={48} className="text-gray-300 mb-4" />
             <p className="text-gray-500 font-bold text-sm uppercase tracking-widest">
-              Nenhum simulado de <span className="text-[#D4A017]">{activeTab !== 'Todos' ? activeTab : 'laboratório'}</span> disponível.
+              Nenhum simulado de <span className="text-[#D4A017]">{activeTab !== 'Todos' ? (tabs.find(t => t.id === activeTab)?.label || activeTab) : 'laboratório'}</span> disponível.
             </p>
             <p className="text-gray-400 text-xs font-medium mt-2 max-w-md px-4">
               A coordenação ou professores ainda não cadastraram peças para esta área. Os botões permanecem ativos para quando houver conteúdo.
@@ -108,7 +109,7 @@ const LabListView: React.FC<Props> = ({ disciplineId, simulations, disciplines, 
                    {sim.category ? (
                      <span className="flex items-center gap-1 bg-[#f4f7f6] text-[#003366] px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-gray-200">
                        {getCategoryIcon(sim.category, 12)}
-                       {sim.category}
+                       {tabs.find(t => t.id.toLowerCase() === sim.category?.toLowerCase())?.label || sim.category}
                      </span>
                    ) : (
                      <span className="flex items-center gap-1 bg-gray-50 text-gray-400 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-gray-100">
