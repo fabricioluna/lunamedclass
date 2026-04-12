@@ -41,7 +41,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
     try {
       const filesArray = Array.from(labImageFiles as FileList); 
       
-      setLabUploadProgress('Analisando arquivo CSV com parser de alta precisão...');
+      setLabUploadProgress('Analisando arquivo CSV e extraindo dicas...');
       const csvText = await labCsvFile.text();
       const lines = parseResilientCSV(csvText); 
 
@@ -54,12 +54,12 @@ const AdminLab: React.FC<AdminLabProps> = ({
       const parsedLines = [];
       const warnings: string[] = [];
 
-      // Mapeamento dinâmico inteligente com rastreio de linhas (AGORA COM 6 COLUNAS)
+      // Mapeamento dinâmico das 6 COLUNAS (Sem IA, puramente via dados)
       for (let i = startIndex; i < lines.length; i++) {
         const parts = lines[i];
         const lineNum = i + 1; // Linha real na planilha do usuário
 
-        // Extração Direta sem Estrutura (Imagem, Pergunta, Resposta, Identificação, Localização, Funções)
+        // Extração Direta e veloz
         const filename = parts[0]?.trim() || '';
         const question = parts[1]?.trim() || '';
         const answer = parts[2]?.trim() || '';
@@ -69,7 +69,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
 
         // Validação Cirúrgica: Verifica se os campos vitais estão vazios
         if (!filename || !question || !answer) {
-            warnings.push(`• Linha ${lineNum}: Ignorada. Dados Vitais Incompletos -> Imagem: [${filename || 'vazio'}], Pergunta: [${question || 'vazia'}], Resposta: [${answer || 'vazia'}]`);
+            warnings.push(`• Linha ${lineNum}: Ignorada. Dados Vitais Incompletos -> Imagem: [${filename}], Pergunta: [${question}], Resposta: [${answer}]`);
             continue;
         }
 
@@ -83,8 +83,8 @@ const AdminLab: React.FC<AdminLabProps> = ({
       for (let i = 0; i < parsedLines.length; i++) {
         const item = parsedLines[i];
         
-        // 1. UPLOAD DA IMAGEM
-        setLabUploadProgress(`Fazendo upload da imagem ${i + 1} de ${parsedLines.length}: ${item.filename}`);
+        // 1. UPLOAD DA IMAGEM E PROGRESSO
+        setLabUploadProgress(`Processando e enviando imagem ${i + 1} de ${parsedLines.length}: ${item.filename}`);
 
         const imageFile = filesArray.find(f => {
           const nameWithoutExt = f.name.substring(0, f.name.lastIndexOf('.')) || f.name;
@@ -99,7 +99,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
         const snap = await uploadBytes(sRef, imageFile as File); 
         const imageUrl = await getDownloadURL(snap.ref);
 
-        // 2. MONTAGEM DA PEÇA (Lendo diretamente da planilha)
+        // 2. MONTAGEM DA PEÇA (Carga instantânea baseada 100% no CSV)
         finalQuestions.push({
           id: `lab_q_${Date.now()}_${i}`,
           imageUrl: imageUrl,
@@ -126,7 +126,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
       if (onAddLabSimulation) onAddLabSimulation(newSim);
       
       // RELATÓRIO FINAL DE INTEGRIDADE
-      let finalMessage = `✅ Sucesso Absoluto! Simulado com ${finalQuestions.length} peças criado em tempo recorde e publicado!`;
+      let finalMessage = `✅ Sucesso Absoluto! Simulado com ${finalQuestions.length} peças criado em tempo recorde (Via Planilha) e publicado!`;
       
       if (warnings.length > 0) {
         finalMessage += `\n\n⚠️ ALERTA DE INTEGRIDADE (Linhas Incompletas):\nO sistema protegeu o banco de dados ignorando as seguintes linhas do CSV:\n\n` + warnings.join('\n');
@@ -168,7 +168,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
         <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Criar Lab Virtual</h3>
         <p className="text-[10px] font-bold text-gray-500 mb-6 leading-relaxed bg-gray-50 p-3 rounded-xl border">
           <b>ARQUITETURA DE DADOS DE ALTA VELOCIDADE:</b><br/>
-          As dicas morfológicas agora são extraídas diretamente da sua planilha, eliminando tempo de carregamento e o uso da IA no painel.<br/><br/>
+          As dicas morfológicas agora são extraídas diretamente da sua planilha (Offline), eliminando tempo de carregamento e o uso da IA no painel.<br/><br/>
           <b>Padrão Exigido (6 Colunas):</b><br/>
           Imagem ; Pergunta ; Resposta ; Identificação ; Localização ; Funções
         </p>
