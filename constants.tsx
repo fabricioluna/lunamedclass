@@ -1,4 +1,4 @@
-import { Question, SimulationInfo, Room } from './types.ts';
+import { Question, SimulationInfo, Room, MedicalEvent } from './types';
 
 export const THEME = {
   primary: '#003366',
@@ -30,7 +30,6 @@ export const ROOMS: Room[] = [
 ];
 
 export const SIMULATIONS: SimulationInfo[] = [
-  // --- SALA: TURMA 8 ---
   {
     id: 'ucv',
     roomId: 'turma8',
@@ -169,8 +168,6 @@ export const SIMULATIONS: SimulationInfo[] = [
     ],
     references: []
   },
-
-  // --- SALA: TURMA 9 / HABMED 1 EXCLUSIVO ---
   {
     id: 'hm1',
     roomId: 'turma9',
@@ -200,3 +197,293 @@ export const SIMULATIONS: SimulationInfo[] = [
 ];
 
 export const INITIAL_QUESTIONS: Question[] = [];
+
+// === NOVO MÓDULO: CONGRESSOS MÉDICOS 2026 (Ordem Cronológica Estrita) ===
+export const MEDICAL_EVENTS_2026: MedicalEvent[] = [
+  {
+    id: 'evt-dermato-1',
+    congress: 'Congresso Internacional EB2026',
+    description: 'Evento internacional dedicado à pesquisa e ao cuidado da Epidermólise Bolhosa, reunindo especialistas de vários países.',
+    specialty: 'Dermatologia',
+    location: 'São Paulo (SP)',
+    eventDate: '20 a 22 de Janeiro de 2026',
+    registrationPeriod: 'Encerrado',
+    submissionPeriod: 'Encerrado',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-sao-paulo'
+  },
+  {
+    id: 'evt-inovacao-1',
+    congress: 'Health Innovation Forum 2026',
+    description: 'Fórum presencial com foco em tendências, transformação digital, inteligência artificial e inovação aplicada à saúde.',
+    specialty: 'Gestão e Tecnologia em Saúde',
+    location: 'Espaço Dois Ipês – Goiânia (GO)',
+    eventDate: '28 e 29 de Janeiro de 2026',
+    registrationPeriod: 'Até 15/01/2026',
+    submissionPeriod: 'Não aplicável',
+    link: 'https://usebip.com/blogs/bip-insights/congresos-medicos-2026-em-goiania'
+  },
+  {
+    id: 'evt-ortopedia-1',
+    congress: '2nd South Atlantic Forum on Osteoarthritis',
+    description: 'Fórum com foco em osteoartrite, trazendo atualização em diagnóstico, tratamento clínico, cirúrgico e reabilitação.',
+    specialty: 'Ortopedia e Traumatologia',
+    location: 'Centro de Convenções Rebouças – São Paulo (SP)',
+    eventDate: '27 e 28 de Fevereiro de 2026',
+    registrationPeriod: 'Até 10/02/2026',
+    submissionPeriod: 'Não aplicável',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-sao-paulo'
+  },
+  {
+    id: 'evt-pediatria-pr-1',
+    congress: 'Congresso Paranaense de Pediatria, Alergia e Imunologia',
+    description: 'Atualização clínica focada nos distúrbios alérgicos e imunológicos na infância.',
+    specialty: 'Pediatria e Imunologia',
+    location: 'Curitiba (PR)',
+    eventDate: '06 e 07 de Março de 2026',
+    registrationPeriod: 'Até 20/02/2026',
+    submissionPeriod: 'Até 15/01/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-curitiba'
+  },
+  {
+    id: 'evt-paliativos-1',
+    congress: 'XII Congresso Latinoamericano e XI Brasileiro de Cuidados Paliativos',
+    description: 'Encontro latino-americano dedicado à integração e ao desenvolvimento dos cuidados paliativos em diferentes cenários de saúde.',
+    specialty: 'Cuidados Paliativos',
+    location: 'São Paulo (SP)',
+    eventDate: '11 a 14 de Março de 2026',
+    registrationPeriod: 'Até 28/02/2026',
+    submissionPeriod: 'Encerrado',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-sao-paulo'
+  },
+  {
+    id: 'evt-tricologia-1',
+    congress: 'III Congresso Internacional de Tricologia e Transplante Capilar',
+    description: 'Um dos principais encontros em tricologia, terapias regenerativas e transplante capilar.',
+    specialty: 'Dermatologia',
+    location: 'São Paulo (SP)',
+    eventDate: '12 a 14 de Março de 2026',
+    registrationPeriod: 'Até 01/03/2026',
+    submissionPeriod: 'Até 30/01/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-sao-paulo'
+  },
+  {
+    id: 'evt-estetica-1',
+    congress: 'IMCAS Americas 2026',
+    description: 'Evento internacional de referência em tendências, tecnologias e técnicas em medicina estética.',
+    specialty: 'Medicina Estética e Cirurgia Plástica',
+    location: 'São Paulo (SP)',
+    eventDate: '13 a 15 de Março de 2026',
+    registrationPeriod: 'Até 01/03/2026',
+    submissionPeriod: 'Encerrado',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-sao-paulo'
+  },
+  {
+    id: 'evt-saudepublica-1',
+    congress: 'Congresso Brasileiro de Saúde Coletiva e Políticas Públicas (UFPR)',
+    description: 'Evento voltado à saúde coletiva, políticas públicas, pesquisa em saúde e integração entre academia e comunidade.',
+    specialty: 'Saúde Coletiva',
+    location: 'UFPR – Curitiba (PR)',
+    eventDate: '08 a 10 de Abril de 2026',
+    registrationPeriod: 'Até 25/03/2026',
+    submissionPeriod: 'Até 20/02/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-curitiba'
+  },
+  {
+    id: 'evt-coloprocto-1',
+    congress: 'Congresso de Coloproctologia do Centro-Oeste',
+    description: 'Reúne especialistas para atualização em doenças colorretais, técnicas cirúrgicas e discussão de casos.',
+    specialty: 'Coloproctologia',
+    location: 'Auditório Sicoob UniCentro Br – Goiânia (GO)',
+    eventDate: '10 e 11 de Abril de 2026',
+    registrationPeriod: 'Até 30/03/2026',
+    submissionPeriod: 'Até 15/02/2026',
+    link: 'https://usebip.com/blogs/bip-insights/congresos-medicos-2026-em-goiania'
+  },
+  {
+    id: 'evt-ortopedia-pr-1',
+    congress: 'Congresso Brasileiro de Ortopedia e Cirurgia da Coluna',
+    description: 'Atualizações técnicas em abordagens cirúrgicas de coluna e controle de dor.',
+    specialty: 'Ortopedia e Coluna',
+    location: 'Viasoft Experience – Curitiba (PR)',
+    eventDate: '18 a 21 de Abril de 2026',
+    registrationPeriod: 'Até 05/04/2026',
+    submissionPeriod: 'Até 15/02/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-curitiba'
+  },
+  {
+    id: 'evt-pediatria-nefro-1',
+    congress: 'Congresso Brasileiro de Nefrologia Pediátrica',
+    description: 'Encontro nacional dedicado à nefrologia pediátrica, com foco em atualização científica e discussão de casos.',
+    specialty: 'Pediatria e Nefrologia',
+    location: 'Windsor Barra Hotel – Rio de Janeiro (RJ)',
+    eventDate: '29 de Abril a 02 de Maio de 2026',
+    registrationPeriod: 'Até 10/04/2026',
+    submissionPeriod: 'Até 20/02/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  },
+  {
+    id: 'evt-ciruderm-1',
+    congress: '36º Congresso Brasileiro de Cirurgia Dermatológica (CBCD 2026)',
+    description: 'Congresso nacional com programação científica em cirurgia dermatológica, oncologia cutânea e estética.',
+    specialty: 'Cirurgia Dermatológica',
+    location: 'Centro de Convenções – Goiânia (GO)',
+    eventDate: '30 de Abril a 03 de Maio de 2026',
+    registrationPeriod: 'Até 15/04/2026',
+    submissionPeriod: 'Até 15/02/2026',
+    link: 'https://usebip.com/blogs/bip-insights/congresos-medicos-2026-em-goiania'
+  },
+  {
+    id: 'evt-cardiologia-rj-1',
+    congress: 'Congresso de Cardiologia do Estado do Rio de Janeiro',
+    description: 'Debates sobre insuficiência cardíaca, valvopatias e novas diretrizes de hipertensão.',
+    specialty: 'Cardiologia',
+    location: 'Rio de Janeiro (RJ)',
+    eventDate: '07 e 08 de Maio de 2026',
+    registrationPeriod: 'Até 25/04/2026',
+    submissionPeriod: 'Até 10/03/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  },
+  {
+    id: 'evt-mastologia-1',
+    congress: '28º Congresso Brasileiro de Mastologia e 15º BBCS',
+    description: 'Principal encontro da mastologia, com foco em prevenção, diagnóstico e tratamento de câncer de mama.',
+    specialty: 'Mastologia / Oncologia',
+    location: 'Centro de Convenções – Goiânia (GO)',
+    eventDate: '13 a 16 de Maio de 2026',
+    registrationPeriod: 'Até 01/05/2026',
+    submissionPeriod: 'Até 28/02/2026',
+    link: 'https://usebip.com/blogs/bip-insights/congresos-medicos-2026-em-goiania'
+  },
+  {
+    id: 'evt-educacao-1',
+    congress: 'X Congresso de Educação Médica do Centro-Oeste (COEMCO)',
+    description: 'Voltado a médicos e acadêmicos, debatendo currículos, tecnologia no ensino e metodologias ativas.',
+    specialty: 'Educação Médica',
+    location: 'Faculdade de Medicina da UFG – Goiânia (GO)',
+    eventDate: '22 e 23 de Maio de 2026',
+    registrationPeriod: 'Até 10/05/2026',
+    submissionPeriod: 'Até 30/03/2026',
+    link: 'https://usebip.com/blogs/bip-insights/congresos-medicos-2026-em-goiania'
+  },
+  {
+    id: 'evt-trauma-1',
+    congress: 'XXXI Congresso Brasileiro de Trauma Ortopédico (CBTO)',
+    description: 'Reúne ortopedistas de todo o Brasil com foco em trauma e emergências ortopédicas em cirurgias de alta complexidade.',
+    specialty: 'Ortopedia e Traumatologia',
+    location: 'São Paulo (SP)',
+    eventDate: '04 a 06 de Junho de 2026',
+    registrationPeriod: 'Até 20/05/2026',
+    submissionPeriod: 'Até 10/03/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026'
+  },
+  {
+    id: 'evt-neuro-1',
+    congress: 'Congress on Brain, Behavior and Emotions 2026',
+    description: 'Encontro internacional reunindo neurociência, psicologia e psiquiatria para discutir a relação entre cérebro, comportamento e emoções.',
+    specialty: 'Psiquiatria e Neurologia',
+    location: 'Porto Alegre (RS)',
+    eventDate: '04 a 06 de Junho de 2026',
+    registrationPeriod: 'Até 15/05/2026',
+    submissionPeriod: 'Até 28/02/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026'
+  },
+  {
+    id: 'evt-infecto-1',
+    congress: 'X Infecto Rio 2026',
+    description: 'Congresso regional com atualização em doenças infecciosas, HIV, antimicrobianos e infecções hospitalares.',
+    specialty: 'Infectologia',
+    location: 'Rio de Janeiro (RJ)',
+    eventDate: '10 a 12 de Junho de 2026',
+    registrationPeriod: 'Até 30/05/2026',
+    submissionPeriod: 'Até 20/03/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  },
+  {
+    id: 'evt-medgeral-1',
+    congress: '4º Congresso Brasileiro de Medicina Geral da AMB (CBMG)',
+    description: 'Evento multiprofissional sobre soluções para o cuidado integrado e visão sistêmica do paciente.',
+    specialty: 'Medicina Geral',
+    location: 'Distrito Anhembi – São Paulo (SP)',
+    eventDate: '11 a 13 de Junho de 2026',
+    registrationPeriod: 'Até 31/05/2026',
+    submissionPeriod: 'Até 15/04/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026'
+  },
+  {
+    id: 'evt-oftalmo-1',
+    congress: 'Congresso Brasileiro de Oftalmologia 2026',
+    description: 'Educação médica continuada essencial para oftalmologistas, debates sobre avanços cirúrgicos e networking.',
+    specialty: 'Oftalmologia',
+    location: 'Windsor Oceânico – Rio de Janeiro (RJ)',
+    eventDate: '02 a 04 de Julho de 2026',
+    registrationPeriod: 'Até 15/06/2026',
+    submissionPeriod: 'Até 30/04/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  },
+  {
+    id: 'evt-aids-1',
+    congress: 'Congresso Internacional de Saúde Pública, HIV e AIDS',
+    description: 'Maior encontro global sobre HIV/AIDS reunindo pesquisadores, infectologistas e formuladores de políticas públicas.',
+    specialty: 'Infectologia e Saúde Pública',
+    location: 'Riocentro – Rio de Janeiro (RJ)',
+    eventDate: '26 a 31 de Julho de 2026',
+    registrationPeriod: 'Até 30/06/2026',
+    submissionPeriod: 'Até 15/05/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  },
+  {
+    id: 'evt-neurocirurgia-1',
+    congress: 'Congresso Brasileiro de Neurocirurgia',
+    description: 'Abordagens modernas e robótica aplicadas a lesões medulares, tumores cerebrais e traumas neurológicos.',
+    specialty: 'Neurocirurgia',
+    location: 'Windsor Barra – Rio de Janeiro (RJ)',
+    eventDate: '11 a 15 de Agosto de 2026',
+    registrationPeriod: 'Até 25/07/2026',
+    submissionPeriod: 'Até 30/05/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  },
+  {
+    id: 'evt-reumato-1',
+    congress: 'Congresso Sul-Brasileiro de Reumatologia',
+    description: 'Debates sobre lúpus, artrite reumatoide, fibromialgia e o uso de biológicos na prática clínica.',
+    specialty: 'Reumatologia',
+    location: 'Curitiba (PR)',
+    eventDate: '02 a 05 de Setembro de 2026',
+    registrationPeriod: 'Até 15/08/2026',
+    submissionPeriod: 'Até 30/06/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calendario-de-congressos-medicos-2026-em-curitiba'
+  },
+  {
+    id: 'evt-ginecologia-1',
+    congress: 'Congresso Brasileiro de Ginecologia, Menopausa e Saúde da Mulher',
+    description: 'Focado em climatério, reposição hormonal, oncoginecologia preventiva e saúde integral feminina.',
+    specialty: 'Ginecologia',
+    location: 'Rio de Janeiro (RJ)',
+    eventDate: '30 de Setembro a 03 de Outubro de 2026',
+    registrationPeriod: 'Até 10/09/2026',
+    submissionPeriod: 'Até 15/07/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  },
+  {
+    id: 'evt-oncologia-1',
+    congress: 'Congresso Brasileiro de Oncologia Clínica (SBOC)',
+    description: 'Avanços em imunoterapia, terapia-alvo, rastreamento molecular e protocolos no manejo do paciente oncológico.',
+    specialty: 'Oncologia Clínica',
+    location: 'Windsor Barra Hotel – Rio de Janeiro (RJ)',
+    eventDate: '05 a 07 de Novembro de 2026',
+    registrationPeriod: 'Até 20/10/2026',
+    submissionPeriod: 'Até 30/08/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  },
+  {
+    id: 'evt-cih-1',
+    congress: 'XX Congresso Brasileiro de Controle de Infecção e Epidemiologia Hospitalar (CIH 2026)',
+    description: 'Discussão nacional sobre controle de surtos, resistência antimicrobiana e protocolos de biossegurança.',
+    specialty: 'Infectologia / Epidemiologia',
+    location: 'Rio de Janeiro (RJ)',
+    eventDate: '18 a 21 de Novembro de 2026',
+    registrationPeriod: 'Até 30/10/2026',
+    submissionPeriod: 'Até 15/09/2026',
+    link: 'https://usebip.com/blogs/bip-insights/calend-rio-de-congressos-medicos-2026-no-rio-de-janeiro'
+  }
+];

@@ -19,13 +19,17 @@ import ShareMaterialView from './views/ShareMaterialView';
 import LabListView from './views/LabListView';
 import LabQuizView from './views/LabQuizView';
 
-// INJEÇÃO DA NOSSA NOVA TELA DE PESQUISA E RELATÓRIO
+// TELAS DE PESQUISA INSTITUCIONAL
 import SurveyView from './views/SurveyView';
 import SurveyReportView from './views/SurveyReportView';
 
-// INJEÇÃO DA NOSSA SANDBOX DE TESTES DA IA
+// SANDBOX DA IA
 import AITestView from './views/AITestView';
 
+// TELA DE CONGRESSOS MÉDICOS
+import MedicalEventsView from './views/MedicalEventsView';
+
+// IMPORTS PURIFICADOS (SEM EXTENSÕES)
 import { ViewState, Question, OsceStation, LabSimulation } from './types';
 import { ROOMS } from './constants';
 import { db, ref, push } from './firebase';
@@ -36,14 +40,12 @@ const APP_VERSION = "7.8.0 - Luna Data Engine";
 
 const AppContent: React.FC = () => {
   
-  // ========================================================
-  // LÓGICA DE DEEP LINKING (Acesso direto por URL)
-  // ========================================================
   const getInitialView = (): ViewState | 'ai-test' => {
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get('view');
     if (viewParam === 'survey') return 'survey';
     if (viewParam === 'survey-report') return 'survey-report';
+    if (viewParam === 'medical-events') return 'medical-events'; 
     return 'room-selection';
   };
 
@@ -52,7 +54,6 @@ const AppContent: React.FC = () => {
   const [viewHistory, setViewHistory] = useState<(ViewState | 'ai-test')[]>(
     getInitialView() !== 'room-selection' ? ['room-selection', getInitialView()] : ['room-selection']
   );
-  // ========================================================
 
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
@@ -63,8 +64,6 @@ const AppContent: React.FC = () => {
   const [currentLabSimulation, setCurrentLabSimulation] = useState<LabSimulation | null>(null); 
 
   const [osceFilterMode, setOsceFilterMode] = useState<'static' | 'rpg' | 'all'>('all');
-  
-  // ESTADO INJETADO: Armazena o filtro de categoria do Laboratório Virtual (Ex: anatomia, histologia)
   const [labCategoryFilter, setLabCategoryFilter] = useState<string | null>(null);
 
   const { 
@@ -94,17 +93,14 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // INTERCEPTADOR DE ROTAS: Adaptado para capturar as categorias da UC V
   const handleNavigate = (view: ViewState | 'ai-test' | string) => {
     let targetView = view as ViewState | 'ai-test';
 
-    // Se o Dispatch vier com uma subcategoria do lab (ex: lab-list-anatomia)
     if (typeof view === 'string' && view.startsWith('lab-list-')) {
       const category = view.replace('lab-list-', '');
       setLabCategoryFilter(category);
       targetView = 'lab-list';
     } else if (view === 'lab-list') {
-      // Se chamar o lab-list puro, limpa o filtro anterior
       setLabCategoryFilter(null);
     }
 
@@ -135,10 +131,8 @@ const AppContent: React.FC = () => {
       if (prevView === 'room-selection') {
         setSelectedDisciplineId(null);
         setSelectedRoomId(null);
-        // Limpa a URL ao voltar para a home para não prender o usuário
         window.history.replaceState({}, '', window.location.pathname);
       }
-      // Ao sair do Lab List, garantimos que o filtro seja resetado
       if (prevView !== 'lab-list') {
         setLabCategoryFilter(null);
       }
@@ -186,21 +180,19 @@ const AppContent: React.FC = () => {
       <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col relative">
         {currentView === 'ai-test' && <AITestView />}
 
-        {/* ROTAS DE PESQUISA INSTITUCIONAL (Com a injeção do Data Layer) */}
         {currentView === 'survey' && (
           <SurveyView 
             onBack={handleBack} 
             onSaveResult={(data: any) => {
-              if (db) {
-                push(ref(db, 'surveys'), data);
-              }
+              if (db) push(ref(db, 'surveys'), data);
             }} 
           />
         )}
         
-        {currentView === 'survey-report' && (
-          <SurveyReportView onBack={handleBack} />
-        )}
+        {currentView === 'survey-report' && <SurveyReportView onBack={handleBack} />}
+
+        {/* NOVA ROTA CONGRESSOS MÉDICOS */}
+        {currentView === 'medical-events' && <MedicalEventsView onBack={handleBack} />}
 
         {currentView === 'room-selection' && <RoomSelectionView rooms={ROOMS} onSelectRoom={handleSelectRoom} />}
         {currentView === 'home' && currentRoom && <HomeView room={currentRoom} disciplines={roomDisciplines} onSelectDiscipline={handleSelectDiscipline} />}
@@ -211,7 +203,6 @@ const AppContent: React.FC = () => {
             disciplines={disciplines}
             summaries={summaries}
             onBack={handleBack} 
-            // O cast foi removido para permitir a passagem dinâmica das strings 'lab-list-anatomia'
             onSelectOption={(type) => handleNavigate(type)}
           />
         )}
@@ -355,7 +346,6 @@ const AppContent: React.FC = () => {
             disciplineId={selectedDisciplineId} 
             disciplines={disciplines} 
             simulations={labSimulations} 
-            // Injetamos a categoria selecionada via props (ex: 'anatomia', 'histologia')
             categoryFilter={labCategoryFilter}
             onStart={(sim) => { setCurrentLabSimulation(sim); handleNavigate('lab-quiz'); }} 
           />

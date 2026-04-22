@@ -74,6 +74,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack, hasRoomS
             >
               ⭐ ESPECIALIDADE
             </button>
+            {/* INJEÇÃO: Botão Congressos */}
+            <button 
+              onClick={() => navigateTo('medical-events')}
+              className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] px-5 py-2 rounded-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all whitespace-nowrap shadow-sm"
+            >
+              📅 CONGRESSOS
+            </button>
             <button 
               onClick={() => navigateTo('calculators')}
               className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] px-5 py-2 rounded-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all whitespace-nowrap shadow-sm"
@@ -121,6 +128,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack, hasRoomS
               className="w-full text-left py-3 px-4 text-sm font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] rounded-lg hover:bg-[#D4A017]/10 transition-all"
             >
               ⭐ QUAL MINHA ESPECIALIDADE?
+            </button>
+            {/* INJEÇÃO: Botão Congressos Mobile */}
+            <button 
+              onClick={() => navigateTo('medical-events')}
+              className="w-full text-left py-3 px-4 text-sm font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] rounded-lg hover:bg-[#D4A017]/10 transition-all"
+            >
+              📅 CONGRESSOS MÉDICOS
             </button>
             <button 
               onClick={() => navigateTo('calculators')}

@@ -1,4 +1,4 @@
-export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'osce-mode-selection' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz' | 'survey' | 'survey-report';
+export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'osce-mode-selection' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz' | 'survey' | 'survey-report' | 'medical-events';
 
 export interface Room {
   id: string;
@@ -216,4 +216,17 @@ export interface SurveyResponse {
   unit: string; 
   answers: SurveyAnswers;
   createdAt?: any; 
+}
+
+// === NOVO MÓDULO: CONGRESSOS MÉDICOS ===
+export interface MedicalEvent {
+  id: string;
+  congress: string;
+  description: string;
+  specialty: string;
+  location: string;
+  eventDate: string;
+  registrationPeriod: string;
+  submissionPeriod: string;
+  link: string;
 }
