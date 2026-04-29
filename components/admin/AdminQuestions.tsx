@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Question, SimulationInfo } from '../../types';
 import { Trash2, Edit3, X } from 'lucide-react';
-import { parseResilientCSV } from '../../utils/csvHelper'; // Função agora vem exclusivamente do utilitário
 
 interface AdminQuestionsProps {
   questions: Question[];
@@ -27,7 +26,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   const [themeFilter, setThemeFilter] = useState('');
   const [quizFilter, setQuizFilter] = useState(''); 
 
-  // ESTADOS DE IMPORTAÇÃO CSV
+  // ESTADOS DE IMPORTAÇÃO JSON (Refatorado)
   const [qDiscipline, setQDiscipline] = useState('');
   const [qTheme, setQTheme] = useState('');
   const [qTitle, setQTitle] = useState(''); 
@@ -57,6 +56,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     return Array.from(titles).sort();
   }, [questions, discFilter]);
 
+  // FUNÇÃO REFATORADA: Importação restrita a JSON Teórico
   const handleQuestionImport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!qFile || !qDiscipline || !qTheme || !qTitle) {
@@ -67,32 +67,47 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
-        // Usa a função do csvHelper
-        const lines = parseResilientCSV(text, 8); 
+        const parsedData = JSON.parse(text);
+
+        if (!Array.isArray(parsedData)) {
+          throw new Error("O arquivo JSON deve conter uma lista (array) de questões.");
+        }
         
-        const newQs: Question[] = lines.slice(1).map((line, idx) => {
-          const parts = line.split(';');
+        const newQs: Question[] = parsedData.map((item, idx) => {
+          // Type Guard Rigoroso focado no Novo Padrão Teórico
+          if (!item.pergunta || !Array.isArray(item.alternativas) || item.alternativas.length !== 4 || typeof item.correta !== 'number') {
+             throw new Error(`A questão na posição ${idx + 1} possui formato inválido. Deve conter 'pergunta', 'alternativas' (4 itens), 'correta' (número 0-3) e 'explicacao'.`);
+          }
+
+          // Mapper: Traduz o JSON amigável para a tipagem estrita do sistema (types.ts)
           return {
             id: `q_${Date.now()}_${idx}`,
             disciplineId: qDiscipline,
             theme: qTheme,
-            q: parts[0]?.trim() || '',
-            options: [parts[1]?.trim() || '', parts[2]?.trim() || '', parts[3]?.trim() || '', parts[4]?.trim() || ''],
-            answer: parseInt(parts[5]?.trim() || '0', 10),
-            explanation: parts[6]?.trim() || '',
-            tag: parts[7]?.trim() === 'true' ? 'Prática' : 'Teórica',
-            isPractical: parts[7]?.trim() === 'true',
+            q: item.pergunta.trim(),
+            options: item.alternativas.map((opt: string) => opt.trim()),
+            answer: item.correta,
+            explanation: item.explicacao?.trim() || '',
+            tag: 'Teórica', // Forçado como Teórica
+            isPractical: false, // Desliga o modo prático
             quizTitle: qTitle,   
             author: qAuthor || 'Equipe' 
           };
         });
+        
         onAddQuestions(newQs);
-        alert(`${newQs.length} questões adicionadas ao simulado "${qTitle}"!`);
+        alert(`✅ ${newQs.length} questões teóricas adicionadas ao simulado "${qTitle}"!`);
+        
         setQFile(null);
         setQTitle('');
         setQAuthor('');
+        
+        // Limpa o input file visualmente
+        const fileInput = document.getElementById('jsonFileInput') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+
       } catch (err: any) { 
-        alert('Erro ao ler o CSV de questões: ' + err.message); 
+        alert('❌ Erro de integridade no JSON: ' + err.message); 
       }
     };
     reader.readAsText(qFile);
@@ -172,7 +187,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     <>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
         <div className="lg:col-span-4 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
-          <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Importar CSV Teórico</h3>
+          <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Importar JSON Teórico</h3>
           <form onSubmit={handleQuestionImport} className="space-y-4">
             <select value={qDiscipline} onChange={e => setQDiscipline(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
               <option value="">Disciplina...</option>
@@ -186,8 +201,8 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
             <input type="text" placeholder="Nome do Simulado (Ex: P1 Cárdio Fafá)" value={qTitle} onChange={e => setQTitle(e.target.value)} maxLength={50} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required />
             <input type="text" placeholder="Autor (opcional)" value={qAuthor} onChange={e => setQAuthor(e.target.value)} maxLength={30} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" />
 
-            <input type="file" accept=".csv" onChange={e => setQFile(e.target.files ? e.target.files[0] : null)} className="w-full text-[10px] text-gray-400 font-black uppercase p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200" required/>
-            <button type="submit" disabled={!qFile} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50">Subir Simulado 🚀</button>
+            <input id="jsonFileInput" type="file" accept=".json" onChange={e => setQFile(e.target.files ? e.target.files[0] : null)} className="w-full text-[10px] text-gray-400 font-black uppercase p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200" required/>
+            <button type="submit" disabled={!qFile} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50">Subir JSON Teórico 🚀</button>
           </form>
         </div>
         
