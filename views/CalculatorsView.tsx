@@ -65,6 +65,7 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return ((a + m) / 20) * 10;
   };
 
+  // Previsão para a Prova Teórica
   const getNeededHitsStatus = () => {
     const tutoria = getTutoriaPartial(); 
     const pratica = getPraticaPartial();
@@ -72,13 +73,41 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const atuais = parseFloat(teoricaAcertos) || 0;
     const tpExtra = parseFloat(extraPoints.replace(',', '.')) || 0;
     
+    // Pesos atualizados: Prática = 3.0 (0.30), Tutoria = 2.8 (0.28), Teórica = 4.2 (0.42)
     const neededTeoricaGrade = (7 - tpExtra - (pratica * 0.30) - (tutoria * 0.28)) / 0.42;
-    const totalNeededHits = Math.ceil((neededTeoricaGrade * totalQ) / 10);
     
-    if (totalNeededHits <= 0 || atuais >= totalNeededHits) return { text: "Meta Atingida! 🎉", color: "text-green-500" };
-    if (totalNeededHits > totalQ) return { text: "Meta impossível (7.0)", color: "text-red-400" };
-    const missing = totalNeededHits - atuais;
-    return { text: `Faltam ${missing} questões`, color: "text-[#003366]" };
+    if (neededTeoricaGrade <= 0) return { text: "Meta Atingida! 🎉", color: "text-green-500" };
+    if (neededTeoricaGrade > 10) return { text: "Meta impossível (7.0)", color: "text-red-400" };
+    
+    if (teoricaMode === 'nota') {
+      return { text: `Necessário nota ${(neededTeoricaGrade).toFixed(2)}`, color: "text-[#003366]" };
+    } else {
+      const totalNeededHits = Math.ceil((neededTeoricaGrade * totalQ) / 10);
+      if (atuais >= totalNeededHits) return { text: "Meta Atingida! 🎉", color: "text-green-500" };
+      const missing = totalNeededHits - atuais;
+      return { text: `Faltam ${missing} questões`, color: "text-[#003366]" };
+    }
+  };
+
+  // Previsão para a Prova Prática
+  const getNeededPraticaStatus = () => {
+    const tutoria = getTutoriaPartial(); 
+    const teorica = getTeoricaPartial();
+    const tpExtra = parseFloat(extraPoints.replace(',', '.')) || 0;
+    
+    // Pesos atualizados: Teórica = 4.2 (0.42), Tutoria = 2.8 (0.28), Prática = 3.0 (0.30)
+    const neededPraticaGrade = (7 - tpExtra - (teorica * 0.42) - (tutoria * 0.28)) / 0.30;
+    
+    if (neededPraticaGrade <= 0) return { text: "Meta Atingida! 🎉", color: "text-green-500" };
+    if (neededPraticaGrade > 10) return { text: "Meta impossível (7.0)", color: "text-red-400" };
+    
+    if (praticaMode === 'nota') {
+      return { text: `Necessário nota ${(neededPraticaGrade).toFixed(2)}`, color: "text-[#003366]" };
+    } else {
+      // São 20 questões no total na prática (10 morfo, 10 anatomia) para formar a nota base 10.
+      const neededHits = Math.ceil(neededPraticaGrade * 2); 
+      return { text: `Necessário ${neededHits} acertos totais`, color: "text-[#003366]" };
+    }
   };
 
   // --- FUNÇÕES DE CÁLCULO PARCIAL (HABMED) ---
@@ -115,6 +144,7 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const extra = parseFloat(extraPoints.replace(',', '.')) || 0;
 
     if (activeCalc === 'UC') {
+      // Atualizado para os pesos que somam base 10 certinho (0.42 + 0.30 + 0.28)
       base = (getTeoricaPartial() * 0.42) + (getPraticaPartial() * 0.30) + (getTutoriaPartial() * 0.28);
     } else if (activeCalc === 'IESC') {
       const n1 = (parseFloat(iescGrades.n1_teorica) * 0.15) + (parseFloat(iescGrades.n1_pratica) * 0.10) + (parseFloat(iescGrades.n1_extensao) * 0.15) + (parseFloat(iescGrades.n1_portfolio) * 0.10);
@@ -235,6 +265,14 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     </>
                   )}
                 </div>
+                
+                {/* OBJETIVO PRÁTICA */}
+                <div className="mt-10 p-6 bg-[#D4A017]/5 rounded-[2rem] border border-[#D4A017]/20 flex flex-col items-center justify-center gap-2">
+                  <div className="text-[10px] font-black text-[#D4A017] uppercase tracking-[0.3em]">🎯 Objetivo para Média 7.0</div>
+                  <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getNeededPraticaStatus().color}`}>
+                    {getNeededPraticaStatus().text}
+                  </div>
+                </div>
               </div>
 
               <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
@@ -253,9 +291,11 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 ) : (
                   <div><label className={labelClass}>Nota Final da Teórica</label><input type="text" value={teoricaNotaDirect} onChange={e => handleInputChange(e.target.value, setTeoricaNotaDirect)} placeholder="0.0" className={inputClass} /></div>
                 )}
+                
+                {/* OBJETIVO TEÓRICA */}
                 <div className="mt-10 p-6 bg-[#D4A017]/5 rounded-[2rem] border border-[#D4A017]/20 flex flex-col items-center justify-center gap-2">
                   <div className="text-[10px] font-black text-[#D4A017] uppercase tracking-[0.3em]">🎯 Objetivo para Média 7.0</div>
-                  <div className={`text-3xl font-black tracking-tighter ${getNeededHitsStatus().color}`}>
+                  <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getNeededHitsStatus().color}`}>
                     {getNeededHitsStatus().text}
                   </div>
                 </div>
