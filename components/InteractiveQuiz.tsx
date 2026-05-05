@@ -33,13 +33,13 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
     if (answers[questionId] !== undefined) return; 
     if (eliminatedOptions[questionId]?.includes(optionIndex)) return; 
 
-    setDraftAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+    setDraftAnswers((prev: Record<string, number>) => ({ ...prev, [questionId]: optionIndex }));
   };
 
   const toggleEliminateOption = (questionId: string, optionIndex: number) => {
     if (answers[questionId] !== undefined) return; 
 
-    setEliminatedOptions(prev => {
+    setEliminatedOptions((prev: Record<string, number[]>) => {
       const currentEliminated = prev[questionId] || [];
       const isEliminated = currentEliminated.includes(optionIndex);
       let newEliminated;
@@ -54,7 +54,7 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
     });
 
     if (draftAnswers[questionId] === optionIndex) {
-      setDraftAnswers(prev => {
+      setDraftAnswers((prev: Record<string, number>) => {
         const newDrafts = { ...prev };
         delete newDrafts[questionId];
         return newDrafts;
@@ -66,11 +66,11 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
     const selectedOpt = draftAnswers[questionId];
     if (selectedOpt === undefined || answers[questionId] !== undefined) return;
 
-    setAnswers(prev => ({ ...prev, [questionId]: selectedOpt }));
+    setAnswers((prev: Record<string, number>) => ({ ...prev, [questionId]: selectedOpt }));
     
     const isCorrect = selectedOpt === correctIndex;
     if (isCorrect) {
-      setScore(prev => prev + 1);
+      setScore((prev: number) => prev + 1);
     }
 
     if (onAnswerQuestion) {
@@ -81,14 +81,14 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
 
   const nextQuestion = () => {
     if (currentIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      setCurrentIndex((prev: number) => prev + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const prevQuestion = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
+      setCurrentIndex((prev: number) => prev - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };

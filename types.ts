@@ -28,7 +28,8 @@ export interface Question {
   tag: string;
   isPractical: boolean;
   quizTitle?: string; 
-  author?: string;    
+  author?: string;
+  image?: string; // <-- ADICIONE APENAS ESTA LINHA
 }
 
 // === INTERFACES COMPARTILHADAS ===
@@ -165,6 +166,7 @@ export interface QuizResult {
   type?: 'teorico' | 'laboratorio' | 'osce'; 
   timeSpent?: number; 
   details?: QuizDetail[]; 
+  createdAt?: any; // ADICIONE ESTA LINHA PARA RESOLVER O ERRO
 }
 
 export interface ReferenceMaterial {

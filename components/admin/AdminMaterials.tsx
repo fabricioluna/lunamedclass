@@ -239,7 +239,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
                    <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-[#003366]">{s.title || s.label}</p>
-                        {s.isVerified && <BadgeCheck size={14} className="text-emerald-500" title="Material Verificado"/>}
+                        {s.isVerified && <span title="Material Verificado"><BadgeCheck size={14} className="text-emerald-500" /></span>}
                       </div>
                       <p className="text-[9px] font-black uppercase text-gray-400 mt-1">
                         {s.disciplineId} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date} {s.author ? `• por ${s.author}` : ''}
