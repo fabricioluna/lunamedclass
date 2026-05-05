@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LabSimulation, LabQuestion, QuizDetail } from '../types';
-import { Microscope, MapPin, Activity, ChevronRight, ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal, Image as ImageIcon } from 'lucide-react';
+import { Microscope, MapPin, Activity, ChevronRight, ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal, Image as ImageIcon, Lightbulb, Search, Target } from 'lucide-react';
 
 interface Props {
   simulation: LabSimulation;
@@ -231,27 +231,26 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {q.aiIdentification && q.aiIdentification !== 'N/A' && (
                 <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col items-start shadow-sm">
-                   <div className="bg-blue-100 p-2 rounded-lg text-blue-700 mb-4"><Microscope size={20}/></div>
-                   <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-800 mb-2">Como Identificar</h4>
+                   <div className="bg-blue-100 p-2 rounded-lg text-blue-700 mb-4"><Lightbulb size={20}/></div>
+                   <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-800 mb-2">Dica Estratégica 1</h4>
                    <p className="text-sm text-gray-700 font-medium leading-relaxed">{q.aiIdentification}</p>
                 </div>
               )}
               {q.aiLocation && q.aiLocation !== 'N/A' && (
                 <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100 flex flex-col items-start shadow-sm">
-                   <div className="bg-amber-100 p-2 rounded-lg text-amber-700 mb-4"><MapPin size={20}/></div>
-                   <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-800 mb-2">Localização</h4>
+                   <div className="bg-amber-100 p-2 rounded-lg text-amber-700 mb-4"><Search size={20}/></div>
+                   <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-800 mb-2">Dica Estratégica 2</h4>
                    <p className="text-sm text-gray-700 font-medium leading-relaxed">{q.aiLocation}</p>
                 </div>
               )}
               {q.aiFunctions && q.aiFunctions !== 'N/A' && (
                 <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 flex flex-col items-start shadow-sm">
-                   <div className="bg-emerald-100 p-2 rounded-lg text-emerald-700 mb-4"><Activity size={20}/></div>
-                   <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-800 mb-2">Função Principal</h4>
+                   <div className="bg-emerald-100 p-2 rounded-lg text-emerald-700 mb-4"><Target size={20}/></div>
+                   <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-800 mb-2">Dica Estratégica 3</h4>
                    <p className="text-sm text-gray-700 font-medium leading-relaxed">{q.aiFunctions}</p>
                 </div>
               )}
             </div>
-
             {/* BLOCO DE AUTOAVALIAÇÃO (GOTA A GOTA DO ANALYTICS) */}
             {!answerRecorded ? (
               <div className="mt-8 bg-blue-50/50 border-2 border-blue-100 p-6 rounded-2xl flex flex-col items-center animate-in zoom-in duration-300">
@@ -287,7 +286,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult }) => {
           <ChevronLeft size={16}/> Anterior
         </button>
         
-        {/* Se for a última questão, mostra o botão Finalizar. Caso contrário, botão Próxima. 
+        {/* Se for a última questão, mostra o botão Finalizar. Caso contrário, botão PróxFima. 
             Ambos estão desativados se a resposta não tiver sido revelada E registada. */}
         {currentIndex === activeQuestions.length - 1 ? (
           <button 
