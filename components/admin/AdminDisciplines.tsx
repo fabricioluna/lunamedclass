@@ -5,7 +5,7 @@ import { ROOMS } from '../../constants';
 
 /**
  * Interface rigorosa para controle granular de funcionalidades.
- * Reflete os módulos descritos no ecossistema Luna MedClass[cite: 2].
+ * Reflete os módulos descritos no ecossistema Luna MedClass.
  */
 interface AvailableFeature {
   id: 'quiz' | 'lab_osce' | 'materials' | 'references' | 'ai';
@@ -42,7 +42,7 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
         </h3>
       </div>
       <p className="text-sm text-gray-500 mb-8 font-medium">
-        Bloqueie a disciplina inteira ou desligue funcionalidades específicas de cada módulo conforme as diretrizes pedagógicas[cite: 2].
+        Bloqueie a disciplina inteira ou desligue funcionalidades específicas de cada módulo conforme as diretrizes pedagógicas.
       </p>
 
       <div className="space-y-8">
@@ -108,10 +108,10 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
                         isLocked ? 'opacity-40 pointer-events-none grayscale' : 'opacity-100'
                       }`}>
                         <div className="col-span-2 text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                          Funcionalidades do Ecossistema[cite: 2]
+                          Funcionalidades do Ecossistema
                         </div>
                         {AVAILABLE_FEATURES.map(feature => {
-                          // A funcionalidade de IA (Luna Engine 2.0) é restrita a HM1 e HM2[cite: 2]
+                          // A funcionalidade de IA (Luna Engine 2.0) é restrita a HM1 e HM2
                           if (feature.id === 'ai' && !['hm1', 'hm2'].includes(disc.id)) return null;
 
                           const isFeatureLocked = lockedFeatures.includes(feature.id);
