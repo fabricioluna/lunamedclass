@@ -15,7 +15,7 @@ import AdminOsce from '../components/admin/AdminOsce.tsx';
 import AdminThemes from '../components/admin/AdminThemes.tsx';
 import AdminReferences from '../components/admin/AdminReferences.tsx';
 import AdminDisciplines from '../components/admin/AdminDisciplines.tsx'; 
-import AdminAnalytics from '../components/admin/AdminAnalytics';
+import AdminAnalytics from '../components/admin/AdminAnalytics.tsx'; // Corrigida a extensão .tsx
 
 interface AdminViewProps {
   onBack: () => void; 
@@ -47,99 +47,173 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   };
 
   // =========================================================================
-  // 2. FUNÇÕES DE BANCO DE DADOS
+  // 2. FUNÇÕES DE BANCO DE DADOS (AGORA ASSÍNCRONAS COM TRATAMENTO DE ERRO)
   // =========================================================================
   
-  const handleGlobalReset = () => {
+  const handleGlobalReset = async () => {
     const pass = prompt("⚠️ AÇÃO DESTRUTIVA: Apagar absolutamente TODO o banco de dados?\n\nPara confirmar, digite a senha de administrador (fmst8):");
     if (pass === 'fmst8') {
       if (db) {
-        remove(ref(db, 'questions'));
-        remove(ref(db, 'summaries'));
-        remove(ref(db, 'osce'));
-        remove(ref(db, 'discipline_config'));
-        remove(ref(db, 'labSimulations')); 
-        remove(ref(db, 'osceAnalytics')); 
+        try {
+          await Promise.all([
+            remove(ref(db, 'questions')),
+            remove(ref(db, 'summaries')),
+            remove(ref(db, 'osce')),
+            remove(ref(db, 'discipline_config')),
+            remove(ref(db, 'labSimulations')),
+            remove(ref(db, 'osceAnalytics'))
+          ]);
+          alert("✅ Banco de dados completamente resetado.");
+        } catch (error) {
+          console.error("[AdminView] Erro ao resetar banco:", error);
+          alert("❌ Erro ao resetar banco de dados.");
+        }
       }
-      alert("✅ Banco de dados completamente resetado.");
     } else if (pass !== null) {
       alert("❌ Senha incorreta. Ação cancelada.");
     }
   };
 
-  const handleClearResults = () => db && remove(ref(db, 'quizResults'));
+  const handleClearResults = async () => {
+    if (db) {
+      try {
+        await remove(ref(db, 'quizResults'));
+      } catch (error) {
+        console.error("[AdminView] Erro ao limpar quizResults:", error);
+      }
+    }
+  };
   
-  const handleClearAnalytics = () => {
+  const handleClearAnalytics = async () => {
     const pass = prompt("Deseja apagar os dados brutos de pesquisa (Analytics)? Digite fmst8:");
     if (pass === 'fmst8' && db) {
-        remove(ref(db, 'osceAnalytics'));
+      try {
+        await remove(ref(db, 'osceAnalytics'));
         alert("Dados de analytics removidos.");
-    }
-  };
-
-  const handleClearQuestions = (discId?: string) => {
-    if (db) {
-      if (discId) {
-        questions.filter(q => q.disciplineId === discId).forEach(q => q.firebaseId && remove(ref(db, `questions/${q.firebaseId}`)));
-      } else {
-        remove(ref(db, 'questions'));
+      } catch (error) {
+        console.error("[AdminView] Erro ao limpar analytics:", error);
       }
     }
   };
 
-  const handleClearOsce = (discId?: string) => {
+  const handleClearQuestions = async (discId?: string) => {
     if (db) {
-      if (discId) {
-        osceStations.filter(o => o.disciplineId === discId).forEach(o => o.firebaseId && remove(ref(db, `osce/${o.firebaseId}`)));
-      } else {
-        remove(ref(db, 'osce'));
+      try {
+        if (discId) {
+          const promises = questions
+            .filter(q => q.disciplineId === discId && q.firebaseId)
+            .map(q => remove(ref(db, `questions/${q.firebaseId}`)));
+          await Promise.all(promises);
+        } else {
+          await remove(ref(db, 'questions'));
+        }
+      } catch (error) {
+        console.error("[AdminView] Erro ao limpar questões:", error);
       }
     }
   };
 
-  const handleClearLab = (discId?: string) => {
+  const handleClearOsce = async (discId?: string) => {
     if (db) {
-      if (discId) {
-        labSimulations.filter(s => s.disciplineId === discId).forEach(s => s.firebaseId && remove(ref(db, `labSimulations/${s.firebaseId}`)));
-      } else {
-        remove(ref(db, 'labSimulations'));
+      try {
+        if (discId) {
+          const promises = osceStations
+            .filter(o => o.disciplineId === discId && o.firebaseId)
+            .map(o => remove(ref(db, `osce/${o.firebaseId}`)));
+          await Promise.all(promises);
+        } else {
+          await remove(ref(db, 'osce'));
+        }
+      } catch (error) {
+        console.error("[AdminView] Erro ao limpar OSCE:", error);
       }
     }
   };
 
-  const handleAddTheme = (disciplineId: string, themeName: string) => {
+  const handleClearLab = async (discId?: string) => {
+    if (db) {
+      try {
+        if (discId) {
+          const promises = labSimulations
+            .filter(s => s.disciplineId === discId && s.firebaseId)
+            .map(s => remove(ref(db, `labSimulations/${s.firebaseId}`)));
+          await Promise.all(promises);
+        } else {
+          await remove(ref(db, 'labSimulations'));
+        }
+      } catch (error) {
+        console.error("[AdminView] Erro ao limpar Lab Virtual:", error);
+      }
+    }
+  };
+
+  const handleAddTheme = async (disciplineId: string, themeName: string) => {
     const disc = disciplines.find(d => d.id === disciplineId);
     if (!disc) return;
     const newThemes = Array.from(new Set([...disc.themes, themeName]));
-    if (db) set(ref(db, `discipline_config/${disciplineId}/themes`), newThemes);
+    if (db) {
+      try {
+        await set(ref(db, `discipline_config/${disciplineId}/themes`), newThemes);
+      } catch (error) {
+        console.error("[AdminView] Erro ao adicionar tema:", error);
+      }
+    }
   };
 
-  const handleRemoveTheme = (disciplineId: string, themeName: string) => {
+  const handleRemoveTheme = async (disciplineId: string, themeName: string) => {
     const disc = disciplines.find(d => d.id === disciplineId);
     if (!disc) return;
     const newThemes = disc.themes.filter(t => t !== themeName);
-    if (db) set(ref(db, `discipline_config/${disciplineId}/themes`), newThemes);
+    if (db) {
+      try {
+        await set(ref(db, `discipline_config/${disciplineId}/themes`), newThemes);
+      } catch (error) {
+        console.error("[AdminView] Erro ao remover tema:", error);
+      }
+    }
   };
 
-  const handleUpdateReferences = (disciplineId: string, refsList: ReferenceMaterial[]) => {
-    if (db) set(ref(db, `discipline_config/${disciplineId}/references`), refsList);
+  const handleUpdateReferences = async (disciplineId: string, refsList: ReferenceMaterial[]) => {
+    if (db) {
+      try {
+        await set(ref(db, `discipline_config/${disciplineId}/references`), refsList);
+      } catch (error) {
+        console.error("[AdminView] Erro ao atualizar referências:", error);
+      }
+    }
   };
 
-  const handleToggleStatus = (disciplineId: string, currentStatus: string) => {
+  // CORREÇÃO CRÍTICA: Aguarda a conclusão da promise para garantir a consistência
+  const handleToggleStatus = async (disciplineId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'locked' : 'active';
-    if (db) set(ref(db, `discipline_config/${disciplineId}/status`), newStatus);
+    if (db) {
+      try {
+        await set(ref(db, `discipline_config/${disciplineId}/status`), newStatus);
+      } catch (error) {
+        console.error("[AdminView] Erro ao alterar o status da disciplina:", error);
+      }
+    }
   };
 
-  const handleToggleFeature = (disciplineId: string, featureId: string, isCurrentlyLocked: boolean) => {
+  // CORREÇÃO CRÍTICA: Tratamento robusto da mutação de features
+  const handleToggleFeature = async (disciplineId: string, featureId: string, isCurrentlyLocked: boolean) => {
     const disc = disciplines.find(d => d.id === disciplineId);
     if (!disc) return;
+    
     let newLockedFeatures = disc.lockedFeatures ? [...disc.lockedFeatures] : [];
     if (isCurrentlyLocked) {
       newLockedFeatures = newLockedFeatures.filter(id => id !== featureId);
     } else {
       if (!newLockedFeatures.includes(featureId)) newLockedFeatures.push(featureId);
     }
-    if (db) set(ref(db, `discipline_config/${disciplineId}/lockedFeatures`), newLockedFeatures);
+    
+    if (db) {
+      try {
+        await set(ref(db, `discipline_config/${disciplineId}/lockedFeatures`), newLockedFeatures);
+      } catch (error) {
+        console.error("[AdminView] Erro ao alterar controle de feature:", error);
+      }
+    }
   };
 
   // =========================================================================
@@ -223,7 +297,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         />
       )}
 
-      {/* DASHBOARD DE PESQUISA (Passando a prop 'rooms') */}
+      {/* DASHBOARD DE PESQUISA */}
       {activeTab === 'analytics' && (
         <AdminAnalytics 
           analyticsData={osceAnalytics || []} 
@@ -248,18 +322,34 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         <AdminQuestions 
           questions={questions}
           disciplines={disciplines}
-          onAddQuestions={(qs) => db && qs.forEach(q => push(ref(db, 'questions'), q))}
-          onUpdateQuestion={(q) => { if (db && q.firebaseId) set(ref(db, `questions/${q.firebaseId}`), q); }}
-          onRemoveQuestion={(id) => { const q = questions.find(item => item.id === id); if (db && q?.firebaseId) remove(ref(db, `questions/${q.firebaseId}`)); }}
-          onClearQuestions={handleClearQuestions}
-          onRemoveQuiz={(title, discId) => {
+          onAddQuestions={async (qs) => {
             if (db) {
-                questions.forEach(q => {
-                  if (q.quizTitle === title && (!discId || q.disciplineId === discId)) {
-                    if (q.firebaseId) remove(ref(db, `questions/${q.firebaseId}`));
-                  }
-                });
-              }
+              const promises = qs.map(q => push(ref(db, 'questions'), q));
+              await Promise.all(promises).catch(console.error);
+            }
+          }}
+          onUpdateQuestion={async (q) => { 
+            if (db && q.firebaseId) {
+              await set(ref(db, `questions/${q.firebaseId}`), q).catch(console.error);
+            }
+          }}
+          onRemoveQuestion={async (id) => { 
+            const q = questions.find(item => item.id === id); 
+            if (db && q?.firebaseId) {
+              await remove(ref(db, `questions/${q.firebaseId}`)).catch(console.error);
+            }
+          }}
+          onClearQuestions={handleClearQuestions}
+          onRemoveQuiz={async (title, discId) => {
+            if (db) {
+              const promises: Promise<void>[] = [];
+              questions.forEach(q => {
+                if (q.quizTitle === title && (!discId || q.disciplineId === discId)) {
+                  if (q.firebaseId) promises.push(remove(ref(db, `questions/${q.firebaseId}`)));
+                }
+              });
+              await Promise.all(promises).catch(console.error);
+            }
           }}
         />
       )}
@@ -268,8 +358,15 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         <AdminLab 
           disciplines={disciplines}
           labSimulations={labSimulations}
-          onAddLabSimulation={(sim) => db && push(ref(db, 'labSimulations'), sim)}
-          onRemoveLabSimulation={(id) => { const sim = labSimulations.find(item => item.id === id); if (db && sim?.firebaseId) remove(ref(db, `labSimulations/${sim.firebaseId}`)); }}
+          onAddLabSimulation={async (sim) => {
+            if (db) await push(ref(db, 'labSimulations'), sim).catch(console.error);
+          }}
+          onRemoveLabSimulation={async (id) => { 
+            const sim = labSimulations.find(item => item.id === id); 
+            if (db && sim?.firebaseId) {
+              await remove(ref(db, `labSimulations/${sim.firebaseId}`)).catch(console.error);
+            }
+          }}
           onClearLab={handleClearLab}
         />
       )}
@@ -279,8 +376,18 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           rooms={rooms}
           disciplines={disciplines}
           osceStations={osceStations}
-          onAddOsceStations={(os) => db && os.forEach(o => push(ref(db, 'osce'), o))}
-          onRemoveOsceStation={(id) => { const o = osceStations.find(item => item.id === id); if (db && o?.firebaseId) remove(ref(db, `osce/${o.firebaseId}`)); }}
+          onAddOsceStations={async (os) => {
+            if (db) {
+              const promises = os.map(o => push(ref(db, 'osce'), o));
+              await Promise.all(promises).catch(console.error);
+            }
+          }}
+          onRemoveOsceStation={async (id) => { 
+            const o = osceStations.find(item => item.id === id); 
+            if (db && o?.firebaseId) {
+              await remove(ref(db, `osce/${o.firebaseId}`)).catch(console.error);
+            }
+          }}
           onClearOsce={handleClearOsce}
         />
       )}
