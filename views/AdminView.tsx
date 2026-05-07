@@ -15,7 +15,7 @@ import AdminOsce from '../components/admin/AdminOsce.tsx';
 import AdminThemes from '../components/admin/AdminThemes.tsx';
 import AdminReferences from '../components/admin/AdminReferences.tsx';
 import AdminDisciplines from '../components/admin/AdminDisciplines.tsx'; 
-import AdminAnalytics from '../components/admin/AdminAnalytics.tsx'; // Corrigida a extensão .tsx
+import AdminAnalytics from '../components/admin/AdminAnalytics.tsx';
 
 interface AdminViewProps {
   onBack: () => void; 
@@ -47,7 +47,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   };
 
   // =========================================================================
-  // 2. FUNÇÕES DE BANCO DE DADOS (AGORA ASSÍNCRONAS COM TRATAMENTO DE ERRO)
+  // 2. FUNÇÕES DE BANCO DE DADOS (ASSÍNCRONAS COM TRATAMENTO DE ERRO)
   // =========================================================================
   
   const handleGlobalReset = async () => {
@@ -183,7 +183,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     }
   };
 
-  // CORREÇÃO CRÍTICA: Aguarda a conclusão da promise para garantir a consistência
+  // Mutações assíncronas para o Firebase
   const handleToggleStatus = async (disciplineId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'locked' : 'active';
     if (db) {
@@ -195,7 +195,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     }
   };
 
-  // CORREÇÃO CRÍTICA: Tratamento robusto da mutação de features
   const handleToggleFeature = async (disciplineId: string, featureId: string, isCurrentlyLocked: boolean) => {
     const disc = disciplines.find(d => d.id === disciplineId);
     if (!disc) return;
