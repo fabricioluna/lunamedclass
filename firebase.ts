@@ -6,11 +6,15 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
-// BLINDAGEM MÁXIMA: 
-// Apenas a chave secreta vem do .env. 
-// As rotas públicas ficam fixas para garantir que o Vercel e o Vite nunca falhem.
+/**
+ * CONFIGURAÇÃO BLINDADA LUNA MEDCLASS
+ * Mantemos os identificadores de rota fixos para evitar que falhas no .env
+ * ou no Vercel impeçam a inicialização do sistema.
+ */
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  // A única que realmente precisa ser protegida
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "", 
+  
   authDomain: "monitor-virtual-fms.firebaseapp.com",
   databaseURL: "https://monitor-virtual-fms-default-rtdb.firebaseio.com",
   projectId: "monitor-virtual-fms",
@@ -22,13 +26,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
+// Inicializa Analytics apenas no navegador
 if (typeof window !== "undefined") {
   getAnalytics(app);
 }
-
-// ============================================================================
-// ECOSSISTEMA LUNA MEDCLASS - CONEXÕES DE BANCO DE DADOS
-// ============================================================================
 
 export const db = getDatabase(app);
 export { ref, onValue, push, remove, set, update, off };
