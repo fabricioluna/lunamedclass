@@ -1,5 +1,11 @@
 export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'osce-mode-selection' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz' | 'survey' | 'survey-report' | 'medical-events';
 
+/**
+ * Utilitário global para gerenciar datas oriundas do Firebase (Firestore ou Realtime)
+ * Evita o uso do tipo 'any' e previne crashes na renderização de datas.
+ */
+export type FirebaseTimestamp = number | string | { seconds: number; nanoseconds: number };
+
 export interface Room {
   id: string;
   name: string;
@@ -29,7 +35,7 @@ export interface Question {
   isPractical: boolean;
   quizTitle?: string; 
   author?: string;
-  image?: string; // <-- ADICIONE APENAS ESTA LINHA
+  image?: string; 
 }
 
 // === INTERFACES COMPARTILHADAS ===
@@ -60,9 +66,8 @@ export interface SimulationPhase {
 }
 
 // === INTERFACE 1: OSCE ESTÁTICO (Clássico - HM1) ===
-// Foco: Paramentação, Antropometria, SSVV - Checklist Sequencial
 export interface StaticOsceStation {
-  mode: 'clinical'; // Identificador para o modo estático/clássico
+  mode: 'clinical'; // Identificador estrito para TypeScript
   id: string;
   firebaseId?: string;
   disciplineId: string;
@@ -77,8 +82,7 @@ export interface StaticOsceStation {
   correctOrderIndices: number[];
 }
 
-// === INTERFACE 2: OSCE DINÂMICO (RPG - Luna Engine 2.0 - HM2) ===
-// Foco: Árvore de Decisão, Protocolo SPIKES, Relação Médico-Paciente
+// === INTERFACE 2: OSCE DINÂMICO (RPG / IA - Luna Engine 2.0 - HM2) ===
 export interface RPGNodeOption {
   texto_acao: string;
   proximo_no: string;
@@ -98,7 +102,7 @@ export interface RPGNode {
 }
 
 export interface DynamicOsceStation {
-  mode: 'rpg' | 'ai'; // Atualizado para suportar o modo RPG e Paciente Virtual (IA)
+  mode: 'rpg' | 'ai'; 
   id: string;
   firebaseId?: string;
   disciplineId: string;
@@ -106,22 +110,16 @@ export interface DynamicOsceStation {
   title: string;
   scenario: string;
   task: string;
-  
-  // Estrutura de Árvore de Decisão (Luna Engine 2.0)
   initialPhaseId: string;
   phases: Record<string, SimulationPhase>;
-  
-  // Campo para o checklist de avaliação técnica/comunicação da IA
   checklist?: string[]; 
-
-  // Campos de Suporte
   initialVitals?: ClinicalState;
   inventory?: string[];
   setting?: string;
   tip?: string;
 }
 
-// === UNIÃO DISCRIMINADA: O SISTEMA RECONHECE O FORMATO PELO 'mode' ===
+// === UNIÃO DISCRIMINADA ===
 export type OsceStation = StaticOsceStation | DynamicOsceStation;
 
 export interface SimulationInfo {
@@ -151,7 +149,7 @@ export interface Summary {
   author?: string;
   description?: string;
   size?: string;
-  createdAt?: any;
+  createdAt?: FirebaseTimestamp;
   views?: number; 
   isVerified?: boolean; 
 }
@@ -166,7 +164,26 @@ export interface QuizResult {
   type?: 'teorico' | 'laboratorio' | 'osce'; 
   timeSpent?: number; 
   details?: QuizDetail[]; 
-  createdAt?: any; // ADICIONE ESTA LINHA PARA RESOLVER O ERRO
+  createdAt?: FirebaseTimestamp; 
+}
+
+// === NOVO: INTERFACE DE ANALYTICS (OBSERVATÓRIO CIENTÍFICO) ===
+export interface AnalyticsResult {
+  id?: string;
+  firebaseId?: string;
+  disciplineId?: string;
+  theme?: string;
+  stationTitle?: string;
+  quizTitle?: string;
+  mode?: 'clinical' | 'static-cloud' | 'rpg' | 'ai';
+  grade?: number;
+  timeSpent?: number;
+  isFatalError?: boolean;
+  date?: string;
+  completedAt?: FirebaseTimestamp;
+  fullDecisionPath?: Array<{ choice: string; [key: string]: any }>;
+  userSequence?: string[];
+  createdAt?: FirebaseTimestamp;
 }
 
 export interface ReferenceMaterial {
@@ -195,9 +212,9 @@ export interface LabSimulation {
   title: string;
   author: string;
   description: string;
-  category?: string; // INJEÇÃO: Propriedade necessária para o filtro no LabListView
+  category?: string; 
   questions: LabQuestion[];
-  createdAt?: number;
+  createdAt?: FirebaseTimestamp;
   views?: number; 
 }
 
@@ -210,17 +227,17 @@ export interface SurveyAnswers {
   q5_finalImpact: number;
   q6_bestFeature: string;
   q7_nextUnit: string;
-  q8_nps: number; // Métrica NPS (0 a 10) adicionada
+  q8_nps: number; 
 }
 
 export interface SurveyResponse {
   id?: string;
   unit: string; 
   answers: SurveyAnswers;
-  createdAt?: any; 
+  createdAt?: FirebaseTimestamp; 
 }
 
-// === NOVO MÓDULO: CONGRESSOS MÉDICOS ===
+// === MÓDULO: CONGRESSOS MÉDICOS ===
 export interface MedicalEvent {
   id: string;
   congress: string;
