@@ -1,10 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { QuizResult, Question, LabSimulation, SimulationInfo } from '../../types';
+import { QuizResult, Question, LabSimulation, SimulationInfo, FirebaseTimestamp } from '../../types';
 import { BarChart3, TrendingUp, Layers, AlertTriangle, FileDown, Trash2, CalendarDays, ChevronDown, CheckSquare } from 'lucide-react';
 import { ROOMS } from '../../constants';
 
 // IMPORTAÇÕES DO FIREBASE PARA DELETAR RESULTADOS ESPECÍFICOS
-import { db, ref, remove } from '../../firebase.ts';
+import { db, ref, remove } from '../../firebase';
 
 // IMPORTAÇÕES DO GERADOR DE PDF
 import jsPDF from 'jspdf';
@@ -25,11 +25,26 @@ interface AdminStatsProps {
   setStatsQuizTitleFilter: (val: string) => void;
 }
 
-// Tipo para armazenar imagem Base64 e proporção original
 interface PdfImage {
   dataUrl: string;
   ratio: number; 
 }
+
+// === HELPER DE TIPAGEM ESTrita ===
+// Converte o FirebaseTimestamp misto em um número de milissegundos puro para cálculos matemáticos
+const normalizeTimestamp = (ts?: FirebaseTimestamp, fallbackDateStr?: string): number | null => {
+  if (ts) {
+    if (typeof ts === 'number') return ts;
+    if (typeof ts === 'string') return new Date(ts).getTime();
+    if (typeof ts === 'object' && 'seconds' in ts) return ts.seconds * 1000;
+  }
+  // Tratamento legado
+  if (fallbackDateStr) {
+    const dStr = String(fallbackDateStr);
+    return new Date(dStr.split(/[\s,T]+/)[0].split('/').reverse().join('-')).getTime();
+  }
+  return null;
+};
 
 const AdminStats: React.FC<AdminStatsProps> = ({
   quizResults,
@@ -44,22 +59,18 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   setStatsTypeFilter,
 }) => {
 
-  // ESTADOS PARA O FILTRO DE PERÍODO (DATA)
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
-  // ESTADO PARA MÚLTIPLA ESCOLHA DE SIMULADOS
   const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); 
 
-  // ESTADO PARA ARMAZENAR A LOGO E SUA PROPORÇÃO PARA O PDF
   const [pdfLogo, setPdfLogo] = useState<PdfImage | null>(null);
 
-  // 0. PREPARA A LOGO DIRETO DA RAIZ (/img/logo.png) E CALCULA PROPORÇÃO
- useEffect(() => {
+  useEffect(() => {
     const img = new Image();
     img.crossOrigin = "Anonymous";
-    img.src = '/logo.png'; // <--- CORRIGIDO PARA PUXAR DA PASTA PUBLIC
+    img.src = '/logo.png'; 
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
@@ -78,7 +89,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     };
   }, []);
 
-  // FUNÇÃO PARA APAGAR UM RESULTADO DO FIREBASE
   const handleDeleteResult = (id?: string) => {
     if (!id) return;
     if (confirm("⚠️ Tem certeza que deseja excluir esta execução? Os gráficos e relatórios serão recalculados instantaneamente.")) {
@@ -86,7 +96,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     }
   };
 
-  // 1. DESCOBRE TODOS OS SIMULADOS DISPONÍVEIS BASEADO NOS FILTROS MAIORES
   const availableStatTitles = useMemo(() => {
     const titles = new Set<string>();
     quizResults.forEach(qr => {
@@ -101,12 +110,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     return Array.from(titles);
   }, [quizResults, statsRoomFilter, statsDiscFilter, statsTypeFilter, disciplines]);
 
-  // 2. AUTO-SELECIONA TODOS QUANDO OS FILTROS MUDAM
   useEffect(() => {
     setSelectedQuizzes(availableStatTitles);
   }, [availableStatTitles]);
 
-  // 3. CALCULA A ESTATÍSTICA SOMENTE DOS QUE ESTÃO "TICADOS"
   const analytics = useMemo(() => {
     const filteredResults = quizResults.filter(qr => {
       if (statsRoomFilter) {
@@ -122,13 +129,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         if (selectedQuizzes.length !== availableStatTitles.length) return false;
       }
 
-      let timeInMillis = qr.createdAt;
-      if (timeInMillis && typeof timeInMillis === 'object' && (timeInMillis as any).seconds) {
-        timeInMillis = (timeInMillis as any).seconds * 1000;
-      } else if ((qr as any).date) {
-        const dStr = String((qr as any).date);
-        timeInMillis = new Date(dStr.split(/[\s,T]+/)[0].split('/').reverse().join('-')).getTime();
-      }
+      const timeInMillis = normalizeTimestamp(qr.createdAt, (qr as any).date);
 
       if (timeInMillis) {
         if (startDate) {
@@ -168,12 +169,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         historicalFullSims++;
       } else {
         let timeStr = 'legacy_unknown';
-        let timeInMillis = qr.createdAt;
-        if (timeInMillis && typeof timeInMillis === 'object' && (timeInMillis as any).seconds) {
-          timeInMillis = (timeInMillis as any).seconds * 1000;
-        }
+        const timeInMillis = normalizeTimestamp(qr.createdAt);
         if (timeInMillis) {
-          const d = new Date(timeInMillis as number);
+          const d = new Date(timeInMillis);
           timeStr = `${d.getDate()}_${d.getMonth()}_${d.getFullYear()}`;
         } else if ((qr as any).date) {
           timeStr = String((qr as any).date).split(/[\s,T]+/)[0];
@@ -181,11 +179,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         sessionTracker.add(`legacy_${qr.quizTitle || 'Misto'}_${timeStr}`);
       }
 
-      let timeInMillisForMonth = qr.createdAt;
-      if (timeInMillisForMonth && typeof timeInMillisForMonth === 'object' && (timeInMillisForMonth as any).seconds) {
-        timeInMillisForMonth = (timeInMillisForMonth as any).seconds * 1000;
-      }
-      const dateObj = new Date((timeInMillisForMonth as number) || Date.now());
+      const timeForMonth = normalizeTimestamp(qr.createdAt) || Date.now();
+      const dateObj = new Date(timeForMonth);
       const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
       const monthLabel = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
       const sortKey = `${dateObj.getFullYear()}${String(dateObj.getMonth()).padStart(2, '0')}`;
@@ -267,9 +262,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     };
   }, [quizResults, questions, labSimulations, statsRoomFilter, statsDiscFilter, statsTypeFilter, selectedQuizzes, startDate, endDate, disciplines, availableStatTitles.length]);
 
-  // ============================================================================
-  // FUNÇÃO DE GERAÇÃO DO RELATÓRIO PDF (ESPAÇO OTIMIZADO)
-  // ============================================================================
   const handleGeneratePDF = () => {
     if (analytics.totalSimulations === 0) {
       alert("Não há dados suficientes para gerar um relatório com os filtros atuais.");
@@ -291,30 +283,24 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           ? selectedQuizzes.join(', ') 
           : `${selectedQuizzes.length} simulados combinados`;
 
-    // --- CABEÇALHO COMPACTO ---
     let textStartX = pageWidth / 2;
     let titleAlign = 'center';
-    let headerHeight = 30; // Altura base muito menor
+    let headerHeight = 30; 
 
-    // Logo
     if (pdfLogo) {
-      const targetWidth = 28; // Reduzimos de 35 para 28 para não empurrar muito a página
+      const targetWidth = 28; 
       const targetHeight = targetWidth / pdfLogo.ratio;
-      
-      // Logo colada na margem superior (Y=10)
       doc.addImage(pdfLogo.dataUrl, 'PNG', 14, 10, targetWidth, targetHeight);
       
-      textStartX = 48; // Texto logo após a logo
+      textStartX = 48; 
       titleAlign = 'left';
-      headerHeight = Math.max(30, 10 + targetHeight + 4); // Margem inferior de apenas 4px
+      headerHeight = Math.max(30, 10 + targetHeight + 4); 
     }
     
-    // Título Principal
-    doc.setFontSize(16); // Reduzido de 18 para 16 (compacto e elegante)
+    doc.setFontSize(16); 
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 51, 102); 
     
-    // Alinhamento vertical do título com a logo
     let textY = 20;
     if (pdfLogo) {
        textY = 10 + ((28 / pdfLogo.ratio) / 2) + 3; 
@@ -322,15 +308,13 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     
     doc.text("Relatório Executivo de Learning Analytics", textStartX, textY, { align: titleAlign as any });
 
-    // Linha separadora bem colada no título
     doc.setDrawColor(200, 200, 200);
     doc.line(14, headerHeight, 196, headerHeight); 
 
-    // --- INFO FILTROS (Sem "espaço morto") ---
-    const filterStartY = headerHeight + 6; // Apenas 6px de distância da linha
+    const filterStartY = headerHeight + 6; 
     
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10); // Reduzido para caber melhor
+    doc.setFontSize(10); 
     doc.setFont("helvetica", "bold");
     doc.text("Parâmetros do Relatório", 14, filterStartY);
     
@@ -347,19 +331,18 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     doc.text(`Escopo: ${quizFilterLabel}`, 110, filterStartY + 10);
     doc.text(`Período de Análise: ${periodoLabel}`, 110, filterStartY + 15);
 
-    const endFilterLineY = filterStartY + 18; // Fechou o bloco de filtros rápido
+    const endFilterLineY = filterStartY + 18; 
     doc.setDrawColor(200, 200, 200);
     doc.line(14, endFilterLineY, 196, endFilterLineY); 
 
-    // --- MÉTRICAS GLOBAIS ---
-    const metricsY = endFilterLineY + 6; // Apenas 6px de distância
+    const metricsY = endFilterLineY + 6; 
     
-    doc.setFontSize(12); // Título das métricas ligeiramente menor
+    doc.setFontSize(12); 
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 51, 102);
     doc.text("Métricas Globais de Engajamento", 14, metricsY);
     
-    doc.setFontSize(9); // Fontes padronizadas
+    doc.setFontSize(9); 
     doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "normal");
     doc.text(`• Total de Simulados Realizados: ${analytics.totalSimulations}`, 14, metricsY + 6);
@@ -367,10 +350,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     doc.text(`• Aproveitamento (Nota Média): ${analytics.globalAccuracy}%`, 110, metricsY + 6);
     doc.text(`• Pacing (Tempo Médio/Questão): ${analytics.avgTimeFormatted}`, 110, metricsY + 11);
 
-    // Começa a tabela bem mais em cima agora
     let currentY = metricsY + 18;
 
-    // --- DESEMPENHO POR TEMA ---
     const themeBody = [
       ...analytics.criticalThemes.map(t => [t.theme, t.total, `${t.accuracy}%`, 'Crítico']),
       ...analytics.attentionThemes.map(t => [t.theme, t.total, `${t.accuracy}%`, 'Atenção']),
@@ -384,12 +365,12 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       doc.text("Mapeamento de Lacunas (Por Tema)", 14, currentY);
       
       autoTable(doc, {
-        startY: currentY + 3, // Tabela começa mais colada no título
+        startY: currentY + 3, 
         head: [['Tema / Eixo Analisado', 'Questões Resolvidas', 'Aproveitamento', 'Status Atual']],
         body: themeBody,
         theme: 'grid',
         headStyles: { fillColor: [0, 51, 102], textColor: 255, fontStyle: 'bold', fontSize: 9, halign: 'center' },
-        styles: { fontSize: 8, cellPadding: 2 }, // Células mais compactas
+        styles: { fontSize: 8, cellPadding: 2 }, 
         columnStyles: {
             0: { halign: 'left' },
             1: { halign: 'center' },
@@ -409,9 +390,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       currentY += 10;
     }
 
-    // --- TOP 10 MAIORES DÉFICITS ---
     if (analytics.hardestQuestions.length > 0) {
-      if (currentY > 250) { // Tolerância maior antes de quebrar a página
+      if (currentY > 250) { 
          doc.addPage();
          currentY = 15;
       }
@@ -444,7 +424,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       });
     }
 
-    // --- RODAPÉ ---
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -465,7 +444,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   return (
     <div className="animate-in fade-in duration-500 space-y-8">
       
-      {/* CABEÇALHO HTML */}
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm gap-4">
         <div>
           <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Filtros de Análise</h3>
@@ -479,10 +457,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         </button>
       </div>
 
-      {/* FILTROS PRINCIPAIS */}
       <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex flex-wrap gap-4 items-end">
         
-        {/* FILTROS DE DATAS */}
         <div className="flex-1 min-w-[130px]">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><CalendarDays size={12}/> Data Inicial</label>
           <input 
@@ -502,7 +478,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           />
         </div>
 
-        {/* RESTANTE DOS FILTROS */}
         <div className="flex-1 min-w-[200px]">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Turma</label>
           <select 
@@ -540,7 +515,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           </select>
         </div>
 
-        {/* MENU SUSPENSO MULTI-ESCOLHA */}
         <div className="flex-1 min-w-[250px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-[#003366] mb-2 flex items-center gap-1">
             <CheckSquare size={12}/> Selecionar Simulados
@@ -564,7 +538,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
 
           {isDropdownOpen && (
             <>
-              {/* Overlay invisível */}
               <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
               
               <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden">
@@ -617,7 +590,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         </div>
       </div>
 
-      {/* MÉTRICAS PRINCIPAIS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-[#003366] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
            <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">📝</div>
@@ -641,7 +613,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         </div>
       </div>
 
-      {/* EVOLUÇÃO TEMPORAL E RADAR DE RISCO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
           <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter mb-6 flex items-center gap-2">
@@ -730,7 +701,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         )}
       </div>
 
-      {/* SESSÃO: GERENCIAMENTO DE RESULTADOS */}
       <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm mt-8">
         <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter mb-2">
           Gerenciamento de Resultados (Histórico Bruto)
@@ -750,8 +720,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
             </thead>
             <tbody>
               {analytics.rawResults.slice(0, 50).map((qr, idx) => {
-                const dateRaw = qr.createdAt && typeof qr.createdAt === 'object' ? (qr.createdAt as any).seconds * 1000 : qr.createdAt || Date.now();
-                const displayDate = new Date(dateRaw as number).toLocaleString();
+                const dateRaw = normalizeTimestamp(qr.createdAt) || Date.now();
+                const displayDate = new Date(dateRaw).toLocaleString();
                 const scorePerc = Math.round(((qr.score || 0) / (qr.total || 1)) * 100);
 
                 return (
