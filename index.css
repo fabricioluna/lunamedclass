@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Prevenção de flashes brancos durante o carregamento */
+body {
+  background-color: #f4f7f6;
+  margin: 0;
+  padding: 0;
+}
