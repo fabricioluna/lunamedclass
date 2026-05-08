@@ -1,10 +1,8 @@
 /**
  * LUNA ENGINE - AI SERVICE 
  * Versão: 3.2 (Estável - Foco Exclusivo no Módulo OSCE e RPG)
- * Limpeza de Dead Code: Remoção das funções de Laboratório Virtual (agora via CSV).
  */
 
-// Tipagem para as opções de ajuda (SOS)
 export interface SosOption {
   id: string;
   text: string;
@@ -12,9 +10,6 @@ export interface SosOption {
   transitionRef: any | null;
 }
 
-/**
- * Comunicação base com a Engine do Servidor
- */
 export const getAIResponse = async (prompt: string, context: string = "", isFinalEvaluation: boolean = false) => {
   try {
     const response = await fetch('/api/chat', {
@@ -22,19 +17,20 @@ export const getAIResponse = async (prompt: string, context: string = "", isFina
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, context, isFinalEvaluation }),
     });
+
+    // Tratamento de falhas HTTP (ex: 504 Gateway Timeout)
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+
     const data = await response.json();
-    
-    // Leitura Cirúrgica: Captura 'data.response' vindo do seu backend na Nuvem
     return data.response || data.text || "Sem resposta da engine."; 
   } catch (error) {
-    console.error("Erro Crítico LUNA Engine:", error);
-    return "Erro de conexão com a inteligência clínica.";
+    console.error("[Luna Engine] Erro Crítico de Conexão:", error);
+    return "Falha ao conectar com o serviço clínico. Verifique sua conexão e tente novamente.";
   }
 };
 
-/**
- * Engine Avançada para RPG: Processa conduta e retorna mudanças de estado e vitais
- */
 export const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: any) => {
   try {
     const response = await fetch('/api/chat', {
@@ -42,9 +38,11 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, context, mode: 'rpg', phaseRules }),
     });
-    if (!response.ok) throw new Error("Server Heat Error");
+    
+    if (!response.ok) throw new Error(`Server Heat Error: ${response.status}`);
     return await response.json(); 
   } catch (error) {
+    console.warn("[Luna Engine] Fallback ativado no RPG:", error);
     return { 
       text: "A equipe aguarda sua decisão técnica.", 
       vitalsUpdate: null, 
@@ -53,9 +51,6 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
   }
 };
 
-/**
- * Helper para extrair JSON de respostas da IA (Blindagem contra Markdown)
- */
 const extractJson = (text: string) => {
   try {
     const clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
@@ -68,14 +63,11 @@ const extractJson = (text: string) => {
     if (start === -1) return JSON.parse(clean);
     return JSON.parse(clean.substring(start, end));
   } catch (e) {
-    console.error("Falha ao parsear resposta da IA:", text);
+    console.error("[Luna Engine] Falha ao parsear JSON da IA:", text);
     return null;
   }
 };
 
-/**
- * GERA FEEDBACK FINAL ESTRUTURADO (DEBRIEFING DO OSCE)
- */
 export const generateFinalFeedback = async (history: { role: string, text: string }[], stationTitle: string) => {
   const chatHistory = history.map(h => `${h.role === 'user' ? 'Aluno' : 'Sistema'}: ${h.text}`).join('\n');
   
@@ -103,9 +95,6 @@ export const generateFinalFeedback = async (history: { role: string, text: strin
   }
 };
 
-/**
- * AVALIADOR MULTITAREFA: Identifica múltiplas ações no OSCE Dinâmico
- */
 export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
   if (!availableTransitions.length) return [];
   
@@ -132,9 +121,6 @@ export const evaluateRpgAction = async (userAction: string, availableTransitions
   }
 };
 
-/**
- * GERADOR DE OPÇÕES SOS (DICA DINÂMICA COM CONSEQUÊNCIA PARA OSCE)
- */
 export const generateRpgOptions = async (validTransitions: any[], narrative: string): Promise<SosOption[]> => {
     if (!validTransitions.length) return [];
     
