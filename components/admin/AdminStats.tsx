@@ -56,10 +56,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   const [pdfLogo, setPdfLogo] = useState<PdfImage | null>(null);
 
   // 0. PREPARA A LOGO DIRETO DA RAIZ (/img/logo.png) E CALCULA PROPORÇÃO
-  useEffect(() => {
+ useEffect(() => {
     const img = new Image();
     img.crossOrigin = "Anonymous";
-    img.src = '/img/logo.png'; 
+    img.src = '/logo.png'; // <--- CORRIGIDO PARA PUXAR DA PASTA PUBLIC
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
@@ -74,7 +74,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       }
     };
     img.onerror = () => {
-      console.warn("Não foi possível carregar a logo em /img/logo.png para o PDF.");
+      console.warn("Não foi possível carregar a logo em /logo.png para o PDF.");
     };
   }, []);
 
