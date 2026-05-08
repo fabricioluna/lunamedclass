@@ -13,15 +13,16 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
+// ⚠️ SEGURANÇA: Nenhuma credencial hardcoded. Tudo puxado do .env
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "monitor-virtual-fms.firebaseapp.com",
-  databaseURL: "https://monitor-virtual-fms-default-rtdb.firebaseio.com",
-  projectId: "monitor-virtual-fms",
-  storageBucket: "monitor-virtual-fms.firebasestorage.app",
-  messagingSenderId: "560311360671",
-  appId: "1:560311360671:web:24fd3c03c865a11e0256aa",
-  measurementId: "G-GJW5RPXJ1S"
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
@@ -30,11 +31,15 @@ if (typeof window !== "undefined") {
   getAnalytics(app);
 }
 
-// Banco Realtime (para o portal original funcionar)
+// ============================================================================
+// ECOSSISTEMA LUNA MEDCLASS - CONEXÕES DE BANCO DE DADOS
+// ============================================================================
+
+// 1. Banco Realtime (Motor de Alta Performance para Simulados, OSCE e Analytics)
 export const db = getDatabase(app);
 export { ref, onValue, push, remove, set, update, off };
 
-// Banco Firestore e Storage (para a nova Central de Materiais)
+// 2. Banco Firestore e Storage (Repositório de Documentos e Mídia)
 export const firestoreDB = getFirestore(app);
 export const storage = getStorage(app);
 
