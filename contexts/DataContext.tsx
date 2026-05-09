@@ -1,12 +1,12 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useFirebaseData } from '../hooks/useFirebaseData.ts';
-import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Room } from '../types.ts';
+import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Period } from '../types.ts';
 
 // 1. Definimos o formato da nossa "Nuvem de Dados"
 interface DataContextType {
   isLoading: boolean;
   isOnline: boolean;
-  rooms: Room[]; 
+  periods: Period[]; 
   disciplines: SimulationInfo[];
   summaries: Summary[];
   questions: Question[];

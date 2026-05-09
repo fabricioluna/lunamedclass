@@ -1,4 +1,4 @@
-export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'osce-mode-selection' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz' | 'survey' | 'survey-report' | 'medical-events';
+export type ViewState = 'period-selection' | 'home' | 'discipline' | 'quiz-setup' | 'quiz' | 'admin' | 'summaries-list' | 'scripts-list' | 'osce-setup' | 'osce-quiz' | 'osce-ai-setup' | 'osce-ai-quiz' | 'osce-mode-selection' | 'calculators' | 'career-quiz' | 'references-view' | 'share-material' | 'lab-list' | 'lab-quiz' | 'survey' | 'survey-report' | 'medical-events';
 
 /**
  * Utilitário global para gerenciar datas oriundas do Firebase (Firestore ou Realtime)
@@ -6,7 +6,7 @@ export type ViewState = 'room-selection' | 'home' | 'discipline' | 'quiz-setup' 
  */
 export type FirebaseTimestamp = number | string | { seconds: number; nanoseconds: number };
 
-export interface Room {
+export interface Period {
   id: string;
   name: string;
   description: string;
@@ -14,6 +14,12 @@ export interface Room {
   workload: string;
   icon: string;
   crest?: string; 
+}
+
+export interface Unit {
+  id: string;
+  title: string;
+  description?: string;
 }
 
 export interface QuizDetail {
@@ -124,7 +130,7 @@ export type OsceStation = StaticOsceStation | DynamicOsceStation;
 
 export interface SimulationInfo {
   id: string;
-  roomId: string; 
+  periodId: string; 
   title: string;
   description: string;
   meta: string;
@@ -134,6 +140,7 @@ export interface SimulationInfo {
   references?: ReferenceMaterial[];
   lockedFeatures?: string[]; 
   isHidden?: boolean; 
+  units?: Unit[]; // Divisão opcional obrigatória para práticas longitudinais
 }
 
 export interface Summary {

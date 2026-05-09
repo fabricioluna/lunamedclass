@@ -1,4 +1,4 @@
-import { Question, SimulationInfo, Room, MedicalEvent } from './types';
+import { Question, SimulationInfo, Period, MedicalEvent } from './types';
 
 export const THEME = {
   primary: '#003366',
@@ -8,21 +8,21 @@ export const THEME = {
   text: '#333333'
 };
 
-// Definição das Salas
-export const ROOMS: Room[] = [
+// Definição dos Períodos
+export const PERIODS: Period[] = [
   {
-    id: 'turma8',
-    name: 'Turma VIII - FMS',
-    description: '2º Período - Ciclo da Homeostase e Prática Clínica Básica.',
+    id: 'periodo2',
+    name: '2º Período',
+    description: 'Ciclo da Homeostase e Prática Clínica Básica.',
     semester: '2026.1',
     workload: '610h',
     icon: '🎓',
     crest: '/turma8.jpg' 
   },
   {
-    id: 'turma9',
-    name: 'Turma IX / HabMed 1',
-    description: '1º Período - Monitoria de Introdução à Prática Médica e Habilidades Básicas.',
+    id: 'periodo1',
+    name: '1º Período',
+    description: 'Monitoria de Introdução à Prática Médica e Habilidades Básicas.',
     semester: '2026.1',
     workload: '120h',
     icon: '🌱'
@@ -32,7 +32,7 @@ export const ROOMS: Room[] = [
 export const SIMULATIONS: SimulationInfo[] = [
   {
     id: 'ucv',
-    roomId: 'turma8',
+    periodId: 'periodo2',
     title: 'UCV - Mecanismos de Agressão e Defesa',
     description: 'Agentes agressores, imunidade inata e adquirida, inflamação, lesão celular e hipersensibilidade.',
     meta: '110h • Mecanismos de Lesão',
@@ -49,7 +49,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'hm2',
-    roomId: 'turma8',
+    periodId: 'periodo2',
     title: 'HM2 - Habilidades Médicas II',
     description: 'Relacionamento médico-paciente, semiologia, anamnese e exame físico geral.',
     meta: '120h • Prática Clínica',
@@ -62,6 +62,11 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Relação Médico-Paciente-Família',
       'Comunicação de Más Notícias'
     ],
+    units: [
+      { id: 'hm2-u1', title: 'Unidade 1 - Comunicação e Anamnese', description: 'Protocolo SPIKES e Anamnese Geral' },
+      { id: 'hm2-u2', title: 'Unidade 2 - Exame Físico Geral', description: 'Sinais Vitais e Ectoscopia' },
+      { id: 'hm2-u3', title: 'Unidade 3 - Semiologia Especializada', description: 'Exame Físico Segmentar' }
+    ],
     references: [
       { id: 'ref7', title: 'Exame Clínico', author: 'Porto & Porto', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/210702' },
       { id: 'ref8', title: 'Bates: Propedêutica Médica', author: 'Bates', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/213400' },
@@ -70,7 +75,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'iesc2',
-    roomId: 'turma8',
+    periodId: 'periodo2',
     title: 'IESC2 - Saúde na Comunidade II',
     description: 'Vigilância em saúde, acolhimento na UBS, índices epidemiológicos e fluxos de referência.',
     meta: '80h • Gestão e Sociedade',
@@ -83,6 +88,10 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Referência e Contrarreferência',
       'Programas de Hipertensão e Diabetes'
     ],
+    units: [
+      { id: 'iesc2-u1', title: 'Unidade 1 - Epidemiologia', description: 'Cálculo de Índices e Indicadores de Saúde' },
+      { id: 'iesc2-u2', title: 'Unidade 2 - Fluxos na APS', description: 'Acolhimento e Programas de Saúde' }
+    ],
     references: [
       { id: 'ref4', title: 'Epidemiologia', author: 'Leon Gordis', type: 'book' },
       { id: 'ref5', title: 'Tratado de Medicina de Família e Comunidade', author: 'Gustavo Gusso', type: 'book' },
@@ -91,7 +100,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'uccg2_3',
-    roomId: 'turma8',
+    periodId: 'periodo2',
     title: 'UCCG2-3 - Análise Social e Relações Étnico-Raciais',
     description: 'Conceitos de sociologia, diversidade, racismo estrutural, e determinantes sociais da saúde.',
     meta: '60h • Ciências Humanas',
@@ -103,6 +112,10 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Equidade e Determinantes Sociais em Saúde',
       'Movimentos Sociais e Saúde'
     ],
+    units: [
+      { id: 'uccg2_3-u1', title: 'Unidade 1 - Sociologia e Minorias', description: 'Bases da Sociologia em Saúde' },
+      { id: 'uccg2_3-u2', title: 'Unidade 2 - Racismo Estrutural', description: 'Impactos no Sistema de Saúde' }
+    ],
     references: [
       { id: 'uccg2_3_ref1', title: 'Educação e Sociologia', author: 'Émile Durkheim', type: 'book' },
       { id: 'uccg2_3_ref2', title: 'Racismo Estrutural', author: 'Silvio Almeida', type: 'book' }
@@ -110,7 +123,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'uccg2_4',
-    roomId: 'turma8',
+    periodId: 'periodo2',
     title: 'UCCG2-4 - Hist., Sociedade e Cultura Afro e Indígena',
     description: 'Contexto histórico e cultural das populações afro-brasileiras e indígenas e seus impactos na saúde.',
     meta: '60h • Cultura e Saúde',
@@ -122,13 +135,17 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Políticas Públicas para Minorias',
       'Medicina Tradicional e Saberes Populares'
     ],
+    units: [
+      { id: 'uccg2_4-u1', title: 'Unidade 1 - Povos Originários', description: 'História Indígena' },
+      { id: 'uccg2_4-u2', title: 'Unidade 2 - Cultura Afro-Brasileira', description: 'Políticas para a População Negra' }
+    ],
     references: [
       { id: 'uccg2_4_ref1', title: 'O Povo Brasileiro', author: 'Darcy Ribeiro', type: 'book' }
     ]
   },
   {
     id: 'uciv',
-    roomId: 'turma8',
+    periodId: 'periodo2',
     title: 'UCIV - Funções Biológicas',
     description: 'Controle neuroendócrino, cardiovascular, respiratório, renal, digestório e equilíbrio ácido-básico.',
     meta: '110h • Ciclo da Homeostase',
@@ -154,7 +171,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'ucvi',
-    roomId: 'turma8',
+    periodId: 'periodo2',
     title: 'UCVI - Percepção, Consciência e Emoção',
     description: 'Neuroanatomia, neurofisiologia e bases biológicas do comportamento humano, psiquiatria e neurologia.',
     meta: '110h • Neurociências',
@@ -170,7 +187,7 @@ export const SIMULATIONS: SimulationInfo[] = [
   },
   {
     id: 'hm1',
-    roomId: 'turma9',
+    periodId: 'periodo1',
     title: 'Habilidades Médicas 1',
     description: 'Introdução à Prática Médica: Biossegurança, sinais vitais, administração de medicamentos e Suporte Básico de Vida (BLS/AHA).',
     meta: 'Módulo Exclusivo',
@@ -182,6 +199,11 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Administração de Medicamentos (IM, SC, IV)',
       'Suporte Básico de Vida (BLS/PCR)',
       'Abordagem Inicial em Urgências (ABCDE)'
+    ],
+    units: [
+      { id: 'hm1-u1', title: 'Unidade 1 - Biossegurança', description: 'EPIs e Higienização das Mãos' },
+      { id: 'hm1-u2', title: 'Unidade 2 - Sinais Vitais', description: 'Aferição de Parâmetros Básicos' },
+      { id: 'hm1-u3', title: 'Unidade 3 - BLS e Urgência', description: 'Protocolo de RCP e ABCDE' }
     ],
     references: [
       { id: 'ref1', title: 'Normas, rotinas e técnicas de enfermagem (5ª ed.)', author: 'MOTTA AL', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/212535' },
