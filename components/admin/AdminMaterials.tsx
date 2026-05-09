@@ -1,19 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationInfo, Summary } from '../../types';
+import { SimulationInfo, Summary, FirebaseTimestamp } from '../../types';
 import { Trash2, Loader2, BadgeCheck } from 'lucide-react';
 import { firestoreDB, storage } from '../../firebase';
 import { collection, query, onSnapshot, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { ROOMS } from '../../constants';
-import { formatFileSize } from '../../utils/formatters'; // <-- IMPORTAÇÃO AQUI
+import { PERIODS } from '../../constants'; // <-- CORRIGIDO PARA PERIODS
+import { formatFileSize } from '../../utils/formatters';
 
 interface AdminMaterialsProps {
   disciplines: SimulationInfo[];
 }
 
+// === HELPER DE TIPAGEM ESTRITA ===
+// Garante extração segura do tempo para ordenação, sem estourar erros no TypeScript
+const getSeconds = (ts?: FirebaseTimestamp): number => {
+  if (!ts) return 0;
+  if (typeof ts === 'object' && 'seconds' in ts) return ts.seconds;
+  if (typeof ts === 'number') return Math.floor(ts / 1000);
+  if (typeof ts === 'string') return Math.floor(new Date(ts).getTime() / 1000);
+  return 0;
+};
+
 const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
   // ESTADOS LOCAIS
-  const [matRoom, setMatRoom] = useState(''); 
+  const [matPeriod, setMatPeriod] = useState(''); // <-- CORRIGIDO PARA PERIOD
   const [matDisc, setMatDisc] = useState('');
   const [matType, setMatType] = useState<'summary' | 'script' | 'other'>('summary');
   const [matTitle, setMatTitle] = useState('');
@@ -32,8 +42,8 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Summary[];
       const sortedDocs = docs.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
+        const timeA = getSeconds(a.createdAt); // <-- CORRIGIDO COM HELPER
+        const timeB = getSeconds(b.createdAt); // <-- CORRIGIDO COM HELPER
         return timeB - timeA;
       });
       setLiveMaterials(sortedDocs);
@@ -160,15 +170,15 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
         <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Publicar Material Oficial</h3>
         <form onSubmit={handlePublishAdminMaterial} className="space-y-4">
           
-          <select value={matRoom} onChange={e => { setMatRoom(e.target.value); setMatDisc(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
-            <option value="">Sala / Turma...</option>
-            {ROOMS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          <select value={matPeriod} onChange={e => { setMatPeriod(e.target.value); setMatDisc(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
+            <option value="">Período...</option>
+            {PERIODS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
 
-          <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading || !matRoom}>
+          <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading || !matPeriod}>
             <option value="">Disciplina...</option>
             {disciplines
-              .filter(d => !matRoom || d.roomId === matRoom)
+              .filter(d => !matPeriod || d.periodId === matPeriod)
               .map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
           </select>
           

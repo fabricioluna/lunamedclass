@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import Header from './components/Header';
-import RoomSelectionView from './views/RoomSelectionView';
+import PeriodSelectionView from './views/PeriodSelectionView'; // <-- CORRIGIDO
 import HomeView from './views/HomeView';
 import DisciplineView from './views/DisciplineView';
 import QuizSetupView from './views/QuizSetupView';
@@ -34,7 +34,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 // IMPORTS PURIFICADOS (SEM EXTENSÕES)
 import { ViewState, Question, OsceStation, LabSimulation } from './types';
-import { ROOMS } from './constants';
+import { PERIODS } from './constants'; // <-- CORRIGIDO
 import { db, ref, push } from './firebase';
 
 import { DataProvider, useData } from './contexts/DataContext';
@@ -110,16 +110,16 @@ const AppContent: React.FC = () => {
     if (viewParam === 'survey') return 'survey';
     if (viewParam === 'survey-report') return 'survey-report';
     if (viewParam === 'medical-events') return 'medical-events'; 
-    return 'room-selection';
+    return 'period-selection'; // <-- CORRIGIDO
   };
 
   const [currentView, setCurrentView] = useState<ViewState | 'ai-test'>(getInitialView());
   
   const [viewHistory, setViewHistory] = useState<(ViewState | 'ai-test')[]>(
-    getInitialView() !== 'room-selection' ? ['room-selection', getInitialView()] : ['room-selection']
+    getInitialView() !== 'period-selection' ? ['period-selection', getInitialView()] : ['period-selection'] // <-- CORRIGIDO
   );
 
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null); // <-- CORRIGIDO
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
   const [quizFilteredQuestions, setQuizFilteredQuestions] = useState<Question[]>([]);
   
@@ -144,16 +144,17 @@ const AppContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView]);
 
-  const handleSelectRoom = (roomId: string) => {
-    setSelectedRoomId(roomId);
-    const roomDiscs = disciplines.filter(d => d.roomId === roomId);
-    if (roomDiscs.length === 1) {
-      setSelectedDisciplineId(roomDiscs[0].id);
+  // <-- CORRIGIDO
+  const handleSelectPeriod = (periodId: string) => {
+    setSelectedPeriodId(periodId);
+    const periodDiscs = disciplines.filter(d => d.periodId === periodId);
+    if (periodDiscs.length === 1) {
+      setSelectedDisciplineId(periodDiscs[0].id);
       setCurrentView('discipline');
-      setViewHistory(['room-selection', 'discipline']);
+      setViewHistory(['period-selection', 'discipline']);
     } else {
       setCurrentView('home');
-      setViewHistory(['room-selection', 'home']);
+      setViewHistory(['period-selection', 'home']);
     }
   };
 
@@ -170,10 +171,10 @@ const AppContent: React.FC = () => {
 
     if (targetView === currentView) return; 
     
-    if (targetView === 'room-selection') {
+    if (targetView === 'period-selection') { // <-- CORRIGIDO
       setSelectedDisciplineId(null);
-      setSelectedRoomId(null);
-      setViewHistory(['room-selection']);
+      setSelectedPeriodId(null);
+      setViewHistory(['period-selection']);
     } else if (targetView === 'home') {
       setSelectedDisciplineId(null);
       setViewHistory(prev => [...prev, 'home']);
@@ -192,9 +193,9 @@ const AppContent: React.FC = () => {
       
       setCurrentView(prevView);
       if (prevView === 'home') setSelectedDisciplineId(null);
-      if (prevView === 'room-selection') {
+      if (prevView === 'period-selection') { // <-- CORRIGIDO
         setSelectedDisciplineId(null);
-        setSelectedRoomId(null);
+        setSelectedPeriodId(null);
         window.history.replaceState({}, '', window.location.pathname);
       }
       if (prevView !== 'lab-list') {
@@ -219,9 +220,10 @@ const AppContent: React.FC = () => {
     );
   }
 
-  const currentRoom = ROOMS.find(r => r.id === selectedRoomId);
+  // <-- CORRIGIDO
+  const currentPeriod = PERIODS.find(r => r.id === selectedPeriodId);
   const currentDiscipline = disciplines.find(s => s.id === selectedDisciplineId);
-  const roomDisciplines = disciplines.filter(d => d.roomId === selectedRoomId);
+  const periodDisciplines = disciplines.filter(d => d.periodId === selectedPeriodId);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
@@ -230,7 +232,7 @@ const AppContent: React.FC = () => {
           onNavigate={handleNavigate as any} 
           onBack={handleBack}
           canGoBack={viewHistory.length > 1}
-          hasRoomSelected={!!selectedRoomId}
+          hasPeriodSelected={!!selectedPeriodId} // <-- CORRIGIDO
         />
       </div>
 
@@ -257,8 +259,10 @@ const AppContent: React.FC = () => {
 
         {currentView === 'medical-events' && <MedicalEventsView onBack={handleBack} />}
 
-        {currentView === 'room-selection' && <RoomSelectionView rooms={ROOMS} onSelectRoom={handleSelectRoom} />}
-        {currentView === 'home' && currentRoom && <HomeView room={currentRoom} disciplines={roomDisciplines} onSelectDiscipline={handleSelectDiscipline} />}
+        {/* <-- CORRIGIDO */}
+        {currentView === 'period-selection' && <PeriodSelectionView periods={PERIODS} onSelectPeriod={handleSelectPeriod} />}
+        {currentView === 'home' && currentPeriod && <HomeView period={currentPeriod} disciplines={periodDisciplines} onSelectDiscipline={handleSelectDiscipline} />}
+        
         {currentView === 'career-quiz' && <CareerQuiz onBack={handleBack} />}
         {currentView === 'discipline' && selectedDisciplineId && (
           <DisciplineView 

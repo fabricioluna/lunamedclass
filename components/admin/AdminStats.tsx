@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { QuizResult, Question, LabSimulation, SimulationInfo, FirebaseTimestamp } from '../../types';
 import { BarChart3, TrendingUp, Layers, AlertTriangle, FileDown, Trash2, CalendarDays, ChevronDown, CheckSquare } from 'lucide-react';
-import { ROOMS } from '../../constants';
+import { PERIODS } from '../../constants'; // <-- ALTERADO DE ROOMS PARA PERIODS
 
 // IMPORTAÇÕES DO FIREBASE PARA DELETAR RESULTADOS ESPECÍFICOS
 import { db, ref, remove } from '../../firebase';
@@ -15,11 +15,11 @@ interface AdminStatsProps {
   questions: Question[];
   labSimulations: LabSimulation[];
   disciplines: SimulationInfo[];
-  statsRoomFilter: string;
+  statsPeriodFilter: string; // <-- ALTERADO PARA PERIOD
   statsDiscFilter: string;
   statsTypeFilter: string;
   statsQuizTitleFilter: string;
-  setStatsRoomFilter: (val: string) => void;
+  setStatsPeriodFilter: (val: string) => void; // <-- ALTERADO PARA PERIOD
   setStatsDiscFilter: (val: string) => void;
   setStatsTypeFilter: (val: string) => void;
   setStatsQuizTitleFilter: (val: string) => void;
@@ -51,10 +51,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   questions,
   labSimulations,
   disciplines,
-  statsRoomFilter,
+  statsPeriodFilter, // <-- ALTERADO
   statsDiscFilter,
   statsTypeFilter,
-  setStatsRoomFilter,
+  setStatsPeriodFilter, // <-- ALTERADO
   setStatsDiscFilter,
   setStatsTypeFilter,
 }) => {
@@ -99,16 +99,17 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   const availableStatTitles = useMemo(() => {
     const titles = new Set<string>();
     quizResults.forEach(qr => {
-      const discDaSala = statsRoomFilter ? disciplines.find(d => d.id === qr.discipline)?.roomId === statsRoomFilter : true;
+      // Filtragem atualizada para periodId
+      const discDoPeriodo = statsPeriodFilter ? disciplines.find(d => d.id === qr.discipline)?.periodId === statsPeriodFilter : true;
       const matchDisc = !statsDiscFilter || qr.discipline === statsDiscFilter;
       const matchType = !statsTypeFilter || qr.type === statsTypeFilter;
       
-      if (qr.quizTitle && matchDisc && matchType && discDaSala) {
+      if (qr.quizTitle && matchDisc && matchType && discDoPeriodo) {
         titles.add(qr.quizTitle);
       }
     });
     return Array.from(titles);
-  }, [quizResults, statsRoomFilter, statsDiscFilter, statsTypeFilter, disciplines]);
+  }, [quizResults, statsPeriodFilter, statsDiscFilter, statsTypeFilter, disciplines]);
 
   useEffect(() => {
     setSelectedQuizzes(availableStatTitles);
@@ -116,9 +117,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({
 
   const analytics = useMemo(() => {
     const filteredResults = quizResults.filter(qr => {
-      if (statsRoomFilter) {
+      if (statsPeriodFilter) {
         const disc = disciplines.find(d => d.id === qr.discipline);
-        if (!disc || disc.roomId !== statsRoomFilter) return false;
+        if (!disc || disc.periodId !== statsPeriodFilter) return false;
       }
       if (statsDiscFilter && qr.discipline !== statsDiscFilter) return false;
       if (statsTypeFilter && qr.type !== statsTypeFilter) return false;
@@ -260,7 +261,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       totalSimulations, totalQuestionsAnswered, globalAccuracy, avgTimeFormatted, 
       masteredThemes, attentionThemes, criticalThemes, hardestQuestions, temporalTrend 
     };
-  }, [quizResults, questions, labSimulations, statsRoomFilter, statsDiscFilter, statsTypeFilter, selectedQuizzes, startDate, endDate, disciplines, availableStatTitles.length]);
+  }, [quizResults, questions, labSimulations, statsPeriodFilter, statsDiscFilter, statsTypeFilter, selectedQuizzes, startDate, endDate, disciplines, availableStatTitles.length]);
 
   const handleGeneratePDF = () => {
     if (analytics.totalSimulations === 0) {
@@ -271,7 +272,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width; 
 
-    const roomName = ROOMS.find(r => r.id === statsRoomFilter)?.name || 'Todas as Turmas (Visão Geral)';
+    // Atualizado para usar PERIODS e statsPeriodFilter
+    const periodName = PERIODS.find(r => r.id === statsPeriodFilter)?.name || 'Todos os Períodos (Visão Geral)';
     const discName = disciplines.find(d => d.id === statsDiscFilter)?.title || 'Todas as Disciplinas';
     const typeName = statsTypeFilter === 'teorico' ? 'Simulados Teóricos' : statsTypeFilter === 'laboratorio' ? 'Laboratórios Virtuais' : statsTypeFilter === 'osce' ? 'OSCE Clínico' : 'Todas as Modalidades';
 
@@ -320,7 +322,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(`Turma/Sala: ${roomName}`, 14, filterStartY + 5);
+    doc.text(`Período: ${periodName}`, 14, filterStartY + 5); // <-- ALTERADO PARA PERÍODO
     doc.text(`Módulo/Disciplina: ${discName}`, 14, filterStartY + 10);
     
     const periodoLabel = (startDate || endDate) 
@@ -447,7 +449,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm gap-4">
         <div>
           <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Filtros de Análise</h3>
-          <p className="text-xs text-gray-500 font-medium">Refine os dados, turmas e combine resultados para montar seu relatório.</p>
+          <p className="text-xs text-gray-500 font-medium">Refine os dados, períodos e combine resultados para montar seu relatório.</p>
         </div>
         <button 
           onClick={handleGeneratePDF}
@@ -479,14 +481,14 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         </div>
 
         <div className="flex-1 min-w-[200px]">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Turma</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Período</label>
           <select 
-            value={statsRoomFilter} 
-            onChange={e => { setStatsRoomFilter(e.target.value); setStatsDiscFilter(''); }} 
+            value={statsPeriodFilter} 
+            onChange={e => { setStatsPeriodFilter(e.target.value); setStatsDiscFilter(''); }} 
             className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors"
           >
             <option value="">Global</option>
-            {ROOMS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            {PERIODS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         </div>
 
@@ -499,7 +501,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           >
             <option value="">Todas</option>
             {disciplines
-              .filter(d => !statsRoomFilter || d.roomId === statsRoomFilter)
+              .filter(d => !statsPeriodFilter || d.periodId === statsPeriodFilter)
               .map(d => <option key={d.id} value={d.id}>{d.title}</option>)
             }
           </select>
@@ -674,7 +676,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
 
       <div className="bg-red-50 p-8 rounded-[2.5rem] border border-red-100 shadow-sm mt-8">
         <h3 className="text-xl font-black text-red-800 uppercase tracking-tighter mb-6 border-b border-red-200 pb-4">
-          Top 10: Maior Taxa de Erro (Déficit de Turma)
+          Top 10: Maior Taxa de Erro (Déficit de Período)
         </h3>
         {analytics.hardestQuestions.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">

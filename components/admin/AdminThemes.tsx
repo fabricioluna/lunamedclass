@@ -1,23 +1,23 @@
 import React, { useState, useMemo } from 'react';
-import { SimulationInfo, Room } from '../../types';
+import { SimulationInfo, Period } from '../../types'; // <-- IMPORT CORRIGIDO
 import { Trash2, Plus, Layers } from 'lucide-react';
 
 interface AdminThemesProps {
-  rooms?: Room[];
+  periods?: Period[]; // <-- ALTERADO DE rooms PARA periods
   disciplines: SimulationInfo[];
   onAddTheme: (disciplineId: string, themeName: string) => void;
   onRemoveTheme: (disciplineId: string, themeName: string) => void;
 }
 
-const AdminThemes: React.FC<AdminThemesProps> = ({ rooms = [], disciplines = [], onAddTheme, onRemoveTheme }) => {
-  const [selectedRoomId, setSelectedRoomId] = useState('');
+const AdminThemes: React.FC<AdminThemesProps> = ({ periods = [], disciplines = [], onAddTheme, onRemoveTheme }) => {
+  const [selectedPeriodId, setSelectedPeriodId] = useState(''); // <-- ALTERADO
   const [selectedDiscId, setSelectedDiscId] = useState('');
   const [newTheme, setNewTheme] = useState('');
 
   const filteredDisciplines = useMemo(() => {
-    if (!selectedRoomId) return [];
-    return disciplines.filter(d => d.roomId === selectedRoomId);
-  }, [disciplines, selectedRoomId]);
+    if (!selectedPeriodId) return [];
+    return disciplines.filter(d => d.periodId === selectedPeriodId); // <-- ALTERADO PARA periodId
+  }, [disciplines, selectedPeriodId]);
 
   const handleAddTheme = () => {
     if (!selectedDiscId || !newTheme) return;
@@ -31,12 +31,12 @@ const AdminThemes: React.FC<AdminThemesProps> = ({ rooms = [], disciplines = [],
         <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Novo Eixo Temático</h3>
         <div className="space-y-4">
           
-          <select value={selectedRoomId} onChange={e => { setSelectedRoomId(e.target.value); setSelectedDiscId(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]">
-            <option value="">Selecione a Sala/Turma...</option>
-            {(rooms || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          <select value={selectedPeriodId} onChange={e => { setSelectedPeriodId(e.target.value); setSelectedDiscId(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]">
+            <option value="">Selecione o Período...</option>
+            {(periods || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
 
-          <select value={selectedDiscId} onChange={e => setSelectedDiscId(e.target.value)} disabled={!selectedRoomId} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017] disabled:opacity-50 disabled:cursor-not-allowed">
+          <select value={selectedDiscId} onChange={e => setSelectedDiscId(e.target.value)} disabled={!selectedPeriodId} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017] disabled:opacity-50 disabled:cursor-not-allowed">
             <option value="">Selecione a Disciplina...</option>
             {filteredDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
           </select>

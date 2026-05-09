@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { SimulationInfo } from '../../types';
+import { SimulationInfo, Period } from '../../types';
 import { 
   Download, TrendingUp, Award, Target, AlertTriangle, 
   Activity, Brain, Clock, BarChart4, ChevronUp, ChevronDown, Printer 
@@ -8,33 +8,33 @@ import {
 interface AdminAnalyticsProps {
   analyticsData: any[];
   disciplines: SimulationInfo[];
-  rooms: any[];
+  periods: Period[]; // <-- Corrigido para periods com tipagem estrita
 }
 
-const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, disciplines, rooms }) => {
-  const [filterRoom, setFilterRoom] = useState('');
+const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, disciplines, periods }) => {
+  const [filterPeriod, setFilterPeriod] = useState('');
   const [filterDisc, setFilterDisc] = useState('');
 
-  const handleRoomChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFilterRoom(e.target.value);
+  const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFilterPeriod(e.target.value);
     setFilterDisc('');
   };
 
-  const availableDisciplines = filterRoom 
-    ? disciplines.filter(d => d.roomId === filterRoom) 
+  const availableDisciplines = filterPeriod 
+    ? disciplines.filter(d => d.periodId === filterPeriod) // <-- Corrigido para periodId
     : disciplines;
 
   const stats = useMemo(() => {
     let filtered = analyticsData || [];
     
-    if (filterRoom) {
-      const roomDiscIds = disciplines
-        .filter(d => d.roomId === filterRoom)
+    if (filterPeriod) {
+      const periodDiscIds = disciplines
+        .filter(d => d.periodId === filterPeriod) // <-- Corrigido para periodId
         .map(d => d.id.toLowerCase());
         
       filtered = filtered.filter(d => {
          const dId = (d.disciplineId || '').toLowerCase();
-         return roomDiscIds.includes(dId);
+         return periodDiscIds.includes(dId);
       });
     }
 
@@ -97,7 +97,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
       bestTheme,
       worstTheme
     };
-  }, [analyticsData, filterRoom, filterDisc, disciplines]);
+  }, [analyticsData, filterPeriod, filterDisc, disciplines]);
 
   const exportToCSV = () => {
     if (analyticsData.length === 0) return;
@@ -166,12 +166,12 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
           
           <div className="flex flex-wrap justify-center xl:justify-end gap-3 relative z-10 w-full xl:w-auto">
             <select 
-              value={filterRoom} 
-              onChange={handleRoomChange} 
+              value={filterPeriod} 
+              onChange={handlePeriodChange} 
               className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-xs font-black uppercase outline-none focus:bg-white focus:text-[#003366] transition-all cursor-pointer"
             >
-              <option value="">Todas as Turmas (Salas)</option>
-              {rooms.map(r => <option key={r.id} value={r.id} className="text-black">{r.name}</option>)}
+              <option value="">Todos os Períodos</option>
+              {periods.map(p => <option key={p.id} value={p.id} className="text-black">{p.name}</option>)}
             </select>
 
             <select 
@@ -334,7 +334,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
             
             <div className="text-xs text-black space-y-1">
               <p className="m-0"><strong>Data da Emissão:</strong> {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}</p>
-              <p className="m-0"><strong>Filtro de Turma:</strong> {filterRoom ? rooms.find(r => r.id === filterRoom)?.name : 'Todas as Turmas (Geral)'}</p>
+              <p className="m-0"><strong>Filtro de Período:</strong> {filterPeriod ? periods.find(p => p.id === filterPeriod)?.name : 'Todos os Períodos (Geral)'}</p>
               <p className="m-0"><strong>Disciplina:</strong> {filterDisc ? disciplines.find(d => d.id === filterDisc)?.title : 'Todas as Disciplinas'}</p>
             </div>
           </div>

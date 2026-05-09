@@ -22,8 +22,8 @@ interface AdminViewProps {
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
-  // 1. PUXANDO DADOS 
-  const { rooms, questions, osceStations, disciplines, summaries, quizResults, labSimulations, osceAnalytics } = useData();
+  // 1. PUXANDO DADOS (Alterado de 'rooms' para 'periods')
+  const { periods, questions, osceStations, disciplines, summaries, quizResults, labSimulations, osceAnalytics } = useData();
 
   const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('fms_admin_auth') === 'true');
   const [login, setLogin] = useState('');
@@ -31,7 +31,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   
   const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access'>('stats');
   
-  const [statsRoomFilter, setStatsRoomFilter] = useState(''); 
+  // Refatorado para Period
+  const [statsPeriodFilter, setStatsPeriodFilter] = useState(''); 
   const [statsDiscFilter, setStatsDiscFilter] = useState('');
   const [statsTypeFilter, setStatsTypeFilter] = useState('');
   const [statsQuizTitleFilter, setStatsQuizTitleFilter] = useState('');
@@ -183,7 +184,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     }
   };
 
-  // Mutações assíncronas para o Firebase
   const handleToggleStatus = async (disciplineId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'locked' : 'active';
     if (db) {
@@ -237,7 +237,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 print:p-0 print:m-0">
       
-      {/* Oculta os botões de administração e cabeçalho na impressão */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-10 border-b pb-8 gap-4 print:hidden">
         <div className="flex items-center gap-4">
            <button onClick={onBack} className="bg-gray-100 p-3 rounded-xl hover:bg-gray-200 transition-all text-[#003366]">←</button>
@@ -253,7 +252,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Oculta as abas de navegação na impressão */}
       <nav className="flex flex-wrap gap-2 mb-12 print:hidden">
         {[
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
@@ -285,23 +283,22 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           questions={questions}
           labSimulations={labSimulations}
           disciplines={disciplines}
-          statsRoomFilter={statsRoomFilter}
+          statsPeriodFilter={statsPeriodFilter}
           statsDiscFilter={statsDiscFilter}
           statsTypeFilter={statsTypeFilter}
           statsQuizTitleFilter={statsQuizTitleFilter}
-          setStatsRoomFilter={setStatsRoomFilter}
+          setStatsPeriodFilter={setStatsPeriodFilter}
           setStatsDiscFilter={setStatsDiscFilter}
           setStatsTypeFilter={setStatsTypeFilter}
           setStatsQuizTitleFilter={setStatsQuizTitleFilter}
         />
       )}
 
-      {/* DASHBOARD DE PESQUISA */}
       {activeTab === 'analytics' && (
         <AdminAnalytics 
           analyticsData={osceAnalytics || []} 
           disciplines={disciplines} 
-          rooms={rooms} 
+          periods={periods} // <-- Prop renomeada
         />
       )}
 
@@ -372,7 +369,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
       {activeTab === 'osce' && (
         <AdminOsce 
-          rooms={rooms}
+          periods={periods} // <-- Prop renomeada
           disciplines={disciplines}
           osceStations={osceStations}
           onAddOsceStations={async (os) => {
@@ -393,7 +390,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       
       {activeTab === 'themes' && (
         <AdminThemes 
-          rooms={rooms}
+          periods={periods} // <-- Prop renomeada
           disciplines={disciplines}
           onAddTheme={handleAddTheme}
           onRemoveTheme={handleRemoveTheme}

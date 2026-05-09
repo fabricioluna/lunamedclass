@@ -6,10 +6,10 @@ interface HeaderProps {
   onNavigate: (view: ViewState) => void;
   onBack: () => void;
   canGoBack: boolean;
-  hasRoomSelected?: boolean;
+  hasPeriodSelected?: boolean; // <-- ALTERADO DE hasRoomSelected
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack, hasRoomSelected }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack, hasPeriodSelected }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigateTo = (view: ViewState) => {
@@ -38,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack, hasRoomS
 
             <div 
               className="flex items-center cursor-pointer group min-w-0 flex-shrink" 
-              onClick={() => navigateTo('room-selection')} // AQUI: Alterado de 'home' para 'room-selection'
+              onClick={() => navigateTo('period-selection')} // <-- ALTERADO PARA period-selection
             >
               <div className="bg-white p-1 md:p-2 rounded-lg md:rounded-xl w-14 h-8 sm:w-24 sm:h-10 md:w-48 md:h-16 flex items-center justify-center overflow-hidden border-2 border-[#D4A017] shadow-lg transition-transform group-hover:scale-105 flex-shrink-0">
                 <img 
@@ -60,12 +60,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack, hasRoomS
 
           {/* Menu Desktop */}
           <nav className="hidden md:flex items-center gap-4">
-            {hasRoomSelected && (
+            {hasPeriodSelected && ( // <-- ALTERADO
               <button 
-                onClick={() => navigateTo('room-selection')}
+                onClick={() => navigateTo('period-selection')} // <-- ALTERADO
                 className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-white/10 text-white px-5 py-2 rounded-lg hover:bg-white hover:text-[#003366] transition-all whitespace-nowrap"
               >
-                🚪 TROCAR SALA
+                🚪 TROCAR PERÍODO
               </button>
             )}
             <button 
@@ -115,12 +115,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onBack, canGoBack, hasRoomS
       {isMenuOpen && (
         <div className="md:hidden bg-[#002244] border-t border-[#D4A017]/20 p-4 animate-in slide-in-from-top duration-300">
           <div className="flex flex-col gap-3">
-            {hasRoomSelected && (
+            {hasPeriodSelected && ( // <-- ALTERADO
               <button 
-                onClick={() => navigateTo('room-selection')}
+                onClick={() => navigateTo('period-selection')} // <-- ALTERADO
                 className="w-full text-left py-3 px-4 text-sm font-black bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
               >
-                🚪 TROCAR DE SALA
+                🚪 TROCAR DE PERÍODO
               </button>
             )}
             <button 

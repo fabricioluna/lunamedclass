@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { SimulationInfo } from '../../types';
 import { Lock, Unlock, ShieldAlert } from 'lucide-react';
-import { ROOMS } from '../../constants';
+import { PERIODS } from '../../constants'; // <-- IMPORT CORRIGIDO PARA PERIODS
 
 /**
  * Interface rigorosa para controle granular de funcionalidades.
@@ -46,17 +46,17 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
       </p>
 
       <div className="space-y-8">
-        {ROOMS.map(room => {
-          const roomDiscs = disciplines.filter(d => d.roomId === room.id);
-          if (roomDiscs.length === 0) return null;
+        {PERIODS.map(period => { // <-- ALTERADO PARA period
+          const periodDiscs = disciplines.filter(d => d.periodId === period.id); // <-- ALTERADO PARA periodId
+          if (periodDiscs.length === 0) return null;
 
           return (
-            <div key={room.id} className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+            <div key={period.id} className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
               <h4 className="text-lg font-black text-[#D4A017] mb-4 uppercase tracking-widest">
-                {room.name}
+                {period.name}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {roomDiscs.map(disc => {
+                {periodDiscs.map(disc => {
                   const isLocked = disc.status === 'locked';
                   const lockedFeatures = disc.lockedFeatures || [];
                   

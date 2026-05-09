@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { OsceStation, SimulationInfo, Room, StaticOsceStation, DynamicOsceStation } from '../../types';
-import { Trash2, ClipboardList, Gamepad2, Bot, Filter, UploadCloud } from 'lucide-react';
+import { OsceStation, SimulationInfo, Period, StaticOsceStation, DynamicOsceStation } from '../../types'; // <-- IMPORT ATUALIZADO
+import { Trash2, ClipboardList, Gamepad2, Bot, UploadCloud } from 'lucide-react';
 
 interface AdminOsceProps {
-  rooms?: Room[]; 
+  periods?: Period[]; // <-- ALTERADO PARA periods
   disciplines: SimulationInfo[];
   osceStations: OsceStation[];
   onAddOsceStations: (os: OsceStation[]) => void;
@@ -12,7 +12,7 @@ interface AdminOsceProps {
 }
 
 const AdminOsce: React.FC<AdminOsceProps> = ({
-  rooms = [],
+  periods = [],
   disciplines = [],
   osceStations = [],
   onAddOsceStations,
@@ -20,28 +20,28 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
   onClearOsce
 }) => {
   // --- FILTROS DE VISUALIZAÇÃO (LADO DIREITO) ---
-  const [roomFilterOsce, setRoomFilterOsce] = useState('');
+  const [periodFilterOsce, setPeriodFilterOsce] = useState(''); // <-- ALTERADO DE roomFilterOsce
   const [discFilterOsce, setDiscFilterOsce] = useState(''); 
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
   const [typeFilter, setTypeFilter] = useState<'all' | 'clinical' | 'rpg' | 'ai'>('all');
 
   // --- ESTADOS DE IMPORTAÇÃO (LADO ESQUERDO) ---
   const [importMode, setImportMode] = useState<'clinical' | 'rpg' | 'ai'>('clinical'); 
-  const [osceRoom, setOsceRoom] = useState('');
+  const [oscePeriod, setOscePeriod] = useState(''); // <-- ALTERADO DE osceRoom
   const [osceDiscipline, setOsceDiscipline] = useState('');
   const [osceTheme, setOsceTheme] = useState('');
   const [osceFile, setOsceFile] = useState<File | null>(null);
   const [oscePreview, setOscePreview] = useState<OsceStation[] | null>(null);
 
   const filteredImportDisciplines = useMemo(() => {
-    if (!osceRoom) return [];
-    return disciplines.filter(d => d.roomId === osceRoom);
-  }, [disciplines, osceRoom]);
+    if (!oscePeriod) return [];
+    return disciplines.filter(d => d.periodId === oscePeriod); // <-- ALTERADO PARA periodId
+  }, [disciplines, oscePeriod]);
 
   const filteredViewDisciplines = useMemo(() => {
-    if (!roomFilterOsce) return disciplines;
-    return disciplines.filter(d => d.roomId === roomFilterOsce);
-  }, [disciplines, roomFilterOsce]);
+    if (!periodFilterOsce) return disciplines;
+    return disciplines.filter(d => d.periodId === periodFilterOsce); // <-- ALTERADO PARA periodId
+  }, [disciplines, periodFilterOsce]);
 
   const handleOsceReadPreview = (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,11 +166,11 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
             </div>
 
             <form onSubmit={handleOsceReadPreview} className="space-y-4">
-              <select value={osceRoom} onChange={e => { setOsceRoom(e.target.value); setOsceDiscipline(''); setOsceTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
-                <option value="">Sala/Turma...</option>
-                {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              <select value={oscePeriod} onChange={e => { setOscePeriod(e.target.value); setOsceDiscipline(''); setOsceTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
+                <option value="">Período...</option>
+                {periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <select value={osceDiscipline} onChange={e => { setDiscFilterOsce(e.target.value); setOsceDiscipline(e.target.value); setOsceTheme(''); }} disabled={!osceRoom} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
+              <select value={osceDiscipline} onChange={e => { setDiscFilterOsce(e.target.value); setOsceDiscipline(e.target.value); setOsceTheme(''); }} disabled={!oscePeriod} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
                 <option value="">Disciplina...</option>
                 {filteredImportDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
               </select>
@@ -224,11 +224,11 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <select value={roomFilterOsce} onChange={e => { setRoomFilterOsce(e.target.value); setDiscFilterOsce(''); setThemeFilterOsce(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
-              <option value="">Todas as Salas</option>
-              {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            <select value={periodFilterOsce} onChange={e => { setPeriodFilterOsce(e.target.value); setDiscFilterOsce(''); setThemeFilterOsce(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+              <option value="">Todos os Períodos</option>
+              {periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            <select value={discFilterOsce} onChange={e => { setDiscFilterOsce(e.target.value); setThemeFilterOsce(''); }} disabled={!roomFilterOsce} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50">
+            <select value={discFilterOsce} onChange={e => { setDiscFilterOsce(e.target.value); setThemeFilterOsce(''); }} disabled={!periodFilterOsce} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50">
               <option value="">Disciplinas...</option>
               {filteredViewDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
             </select>
@@ -242,9 +242,9 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
         {/* LISTA DE ESTAÇÕES */}
         <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
           {osceStations.filter(s => {
-            if (roomFilterOsce) {
+            if (periodFilterOsce) {
               const disc = disciplines.find(d => d.id === s.disciplineId);
-              if (disc?.roomId !== roomFilterOsce) return false;
+              if (disc?.periodId !== periodFilterOsce) return false;
             }
             const matchType = typeFilter === 'all' || s.mode === typeFilter;
             return (!discFilterOsce || s.disciplineId === discFilterOsce) && (!themeFilterOsce || s.theme === themeFilterOsce) && matchType;

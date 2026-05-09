@@ -1,15 +1,15 @@
 import React from 'react';
 import DisciplineCard from '../components/DisciplineCard';
-import { SimulationInfo, Room } from '../types';
+import { SimulationInfo, Period } from '../types'; // <-- IMPORT CORRIGIDO
 import { Lock } from 'lucide-react';
 
 interface HomeViewProps {
-  room: Room;
+  period: Period; // <-- ALTERADO DE room PARA period
   disciplines: SimulationInfo[];
   onSelectDiscipline: (id: string) => void;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ room, disciplines, onSelectDiscipline }) => {
+const HomeView: React.FC<HomeViewProps> = ({ period, disciplines, onSelectDiscipline }) => {
   const activeDisciplines = disciplines.filter(s => s.status === 'active' || s.status === 'coming-soon');
   const otherDisciplines = disciplines.filter(s => s.status === 'locked');
 
@@ -18,24 +18,24 @@ const HomeView: React.FC<HomeViewProps> = ({ room, disciplines, onSelectDiscipli
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-16 border-b border-gray-200 pb-10 gap-6">
         <div className="text-left flex-1">
           <div className="inline-block bg-[#003366]/10 text-[#003366] px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-3">
-            {room.icon} Portal Acadêmico
+            {period.icon} Portal Acadêmico
           </div>
           <h2 className="text-3xl md:text-4xl font-black text-[#003366] uppercase tracking-tighter">
-            {room.name}
+            {period.name}
           </h2>
           <p className="text-gray-500 text-sm mt-2 max-w-xl">
-            {room.description}
+            {period.description}
           </p>
         </div>
         <div className="flex items-center space-x-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0">
           <div className="text-center">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Carga Semestral</p>
-            <p className="text-xl font-black text-[#003366]">{room.workload}</p>
+            <p className="text-xl font-black text-[#003366]">{period.workload}</p>
           </div>
           <div className="h-10 w-px bg-gray-200"></div>
           <div className="text-center px-2">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Semestre</p>
-            <p className="text-xs font-black text-[#D4A017] uppercase italic">{room.semester}</p>
+            <p className="text-xs font-black text-[#D4A017] uppercase italic">{period.semester}</p>
           </div>
         </div>
       </div>
@@ -43,7 +43,7 @@ const HomeView: React.FC<HomeViewProps> = ({ room, disciplines, onSelectDiscipli
       <div className="mb-12">
         {activeDisciplines.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-gray-400 font-medium">Nenhuma disciplina ativa encontrada nesta sala.</p>
+            <p className="text-gray-400 font-medium">Nenhuma disciplina ativa encontrada neste período.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

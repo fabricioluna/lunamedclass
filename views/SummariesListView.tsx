@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Loader2, Search, Plus, FileCheck, X, User, CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck } from 'lucide-react';
+import { SimulationInfo, Summary, FirebaseTimestamp } from '../types.ts'; 
+import { Trash2, Loader2, Search, Plus, FileCheck, X, User, CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck, Download } from 'lucide-react'; // <-- DOWNLOAD ADICIONADO AQUI
 import { firestoreDB as db, storage } from '../firebase.ts';
 import { collection, addDoc, query, where, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import type { Summary, SimulationInfo } from '../types.ts';
+import { formatFileSize } from '../utils/formatters.ts';
 
 interface SummariesListViewProps {
   disciplineId: string;
@@ -12,12 +13,14 @@ interface SummariesListViewProps {
   onShareClick?: () => void;
 }
 
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+// === HELPER DE TIPAGEM ESTRITA ===
+// Garante extração segura do tempo para ordenação, sem estourar erros no TypeScript
+const getSeconds = (ts?: FirebaseTimestamp): number => {
+  if (!ts) return 0;
+  if (typeof ts === 'object' && 'seconds' in ts) return ts.seconds;
+  if (typeof ts === 'number') return Math.floor(ts / 1000);
+  if (typeof ts === 'string') return Math.floor(new Date(ts).getTime() / 1000);
+  return 0;
 };
 
 const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, disciplines, onBack }) => {
@@ -48,8 +51,8 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Summary[];
       
       const sortedDocs = docs.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
+        const timeA = getSeconds(a.createdAt); 
+        const timeB = getSeconds(b.createdAt); 
         return timeB - timeA;
       });
 
