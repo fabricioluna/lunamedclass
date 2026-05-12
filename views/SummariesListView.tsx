@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationInfo, Summary, FirebaseTimestamp } from '../types.ts'; 
-import { Trash2, Loader2, Search, Plus, FileCheck, X, User, CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck, Download } from 'lucide-react'; // <-- DOWNLOAD ADICIONADO AQUI
+import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../types.ts'; 
+import { 
+  Trash2, Loader2, Search, Plus, FileCheck, X, User, 
+  CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck, 
+  Download, Milestone, Layers 
+} from 'lucide-react'; 
 import { firestoreDB as db, storage } from '../firebase.ts';
 import { collection, addDoc, query, where, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -9,12 +13,12 @@ import { formatFileSize } from '../utils/formatters.ts';
 interface SummariesListViewProps {
   disciplineId: string;
   disciplines: SimulationInfo[];
+  selectedUnit: AcademicUnit; // Resolvendo o erro apontado no App.tsx
   onBack: () => void;
   onShareClick?: () => void;
 }
 
 // === HELPER DE TIPAGEM ESTRITA ===
-// Garante extração segura do tempo para ordenação, sem estourar erros no TypeScript
 const getSeconds = (ts?: FirebaseTimestamp): number => {
   if (!ts) return 0;
   if (typeof ts === 'object' && 'seconds' in ts) return ts.seconds;
@@ -23,7 +27,12 @@ const getSeconds = (ts?: FirebaseTimestamp): number => {
   return 0;
 };
 
-const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, disciplines, onBack }) => {
+const SummariesListView: React.FC<SummariesListViewProps> = ({ 
+  disciplineId, 
+  disciplines, 
+  selectedUnit, 
+  onBack 
+}) => {
   const discipline = disciplines.find(d => d.id === disciplineId);
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,9 +51,11 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
   });
 
   useEffect(() => {
+    // FILTRAGEM MODULAR: Agora filtramos por disciplina E por unidade acadêmica
     const q = query(
       collection(db, "materials"), 
-      where("disciplineId", "==", disciplineId)
+      where("disciplineId", "==", disciplineId),
+      where("unit", "==", selectedUnit)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -62,7 +73,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
     });
 
     return () => unsubscribe();
-  }, [disciplineId]);
+  }, [disciplineId, selectedUnit]);
 
   const handleConfirmUpload = async () => {
     if (!formData.title || !formData.author) {
@@ -72,6 +83,19 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
     try {
       setIsUploading(true);
 
+      // Metadados básicos para persistência
+      const baseMaterialData = {
+        title: formData.title,
+        author: formData.author,
+        description: formData.description,
+        type: formData.type,
+        disciplineId,
+        unit: selectedUnit, // Vínculo estrito com a unidade atual
+        date: new Date().toLocaleDateString('pt-BR'),
+        createdAt: serverTimestamp(),
+        isVerified: false 
+      };
+
       if (uploadMode === 'file') {
         if (!selectedFile) return alert("Selecione um arquivo para enviar.");
 
@@ -80,26 +104,19 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
 
         if (selectedFile.size > MAX_BYTES) {
           setIsUploading(false);
-          return alert(`⚠️ Arquivo muito grande!\nO limite é de ${MAX_MB} MB.\nPara arquivos maiores, use a opção "Link Nuvem".`);
+          return alert(`⚠️ Arquivo muito grande!\nO limite é de ${MAX_MB} MB.`);
         }
 
-        const sRef = storageRef(storage, `materials/${disciplineId}/${Date.now()}_${selectedFile.name}`);
+        const sRef = storageRef(storage, `materials/${disciplineId}/${selectedUnit}/${Date.now()}_${selectedFile.name}`);
         const snap = await uploadBytes(sRef, selectedFile);
         const url = await getDownloadURL(snap.ref);
         const fileSize = formatFileSize(selectedFile.size);
 
         await addDoc(collection(db, "materials"), {
-          title: formData.title,
-          author: formData.author,
-          description: formData.description,
-          type: formData.type,
-          disciplineId,
+          ...baseMaterialData,
           url,
-          date: new Date().toLocaleDateString('pt-BR'),
           label: selectedFile.name.split('.').pop()?.toUpperCase() || 'PDF',
           size: fileSize,
-          createdAt: serverTimestamp(),
-          isVerified: false // Material de aluno não é verificado por padrão
         });
 
       } else {
@@ -107,27 +124,20 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
         if (!formData.linkUrl.startsWith('http')) return alert("O link deve começar com http:// ou https://");
 
         await addDoc(collection(db, "materials"), {
-          title: formData.title,
-          author: formData.author,
-          description: formData.description,
-          type: formData.type,
-          disciplineId,
+          ...baseMaterialData,
           url: formData.linkUrl,
-          date: new Date().toLocaleDateString('pt-BR'),
           label: 'LINK',
           size: 'Nuvem Externa',
-          createdAt: serverTimestamp(),
-          isVerified: false // Material de aluno não é verificado por padrão
         });
       }
 
-      alert("Material compartilhado com sucesso!");
+      alert(`Material compartilhado com sucesso na Unidade ${selectedUnit}!`);
       setShowForm(false); 
       setSelectedFile(null);
       setUploadMode('file');
       setFormData({ title: '', author: '', description: '', type: 'summary', linkUrl: '' });
     } catch (e) { 
-      alert("Erro ao compartilhar o material. Verifique se o Firebase Storage e Firestore estão ativados no modo teste."); 
+      alert("Erro ao compartilhar o material."); 
       console.error(e);
     } finally { 
       setIsUploading(false); 
@@ -143,10 +153,17 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
       <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-gray-100 mb-8 relative overflow-hidden text-left transition-colors duration-500">
          <div className="relative z-10 flex flex-col md:flex-row gap-8 justify-between items-start md:items-center">
            <div className="flex-1">
-             <h1 className="text-4xl font-black text-[#003366] mb-2 tracking-tighter leading-tight text-left">Central de Materiais</h1>
+             <div className="flex items-center gap-3 mb-2">
+               <h1 className="text-4xl font-black text-[#003366] tracking-tighter leading-tight">Central de Materiais</h1>
+               {/* INDICADOR DE UNIDADE */}
+               <div className="flex items-center gap-1.5 bg-blue-50 text-[#003366] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">
+                 {selectedUnit === 'N1' ? <Milestone size={12} /> : <Layers size={12} />}
+                 Unidade {selectedUnit}
+               </div>
+             </div>
              <p className="text-[#D4A017] text-[10px] font-black uppercase tracking-[0.3em] mb-4">{discipline.title}</p>
              <p className="text-gray-500 font-medium leading-relaxed text-left max-w-2xl text-sm">
-               Compartilhe materiais com a turma. Arquivos até <b>50MB</b> podem ser enviados direto no portal. Para pastas do Drive/OneDrive ou arquivos mais pesados, adicione um <b>link de compartilhamento</b>.
+               Repositório colaborativo da <b>Unidade {selectedUnit}</b>. O erro é pedagógico, mas o compartilhamento é científico.
              </p>
            </div>
            {!showForm ? (
@@ -159,12 +176,20 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
          {showForm && (
            <div className="mt-8 p-6 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200 animate-in zoom-in duration-300">
              
+             {/* FEEDBACK DE DESTINO DO UPLOAD */}
+             <div className="mb-6 bg-blue-600 text-white p-3 rounded-xl flex items-center gap-2 shadow-md">
+               <BadgeCheck size={16} />
+               <span className="text-[10px] font-black uppercase tracking-wider">
+                 Atenção: Este material será publicado na <b>Unidade {selectedUnit}</b>
+               </span>
+             </div>
+
              <div className="flex p-1 bg-gray-200 rounded-2xl mb-6 shadow-inner overflow-hidden">
                <button onClick={() => setUploadMode('file')} className={`flex-1 py-3 px-2 text-[10px] sm:text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 ${uploadMode === 'file' ? 'bg-white text-[#003366] shadow-sm' : 'text-gray-500 hover:text-[#003366]'}`}>
-                 <FileCheck size={16} /> <span className="hidden sm:inline">Upload de Arquivo (Até 50MB)</span><span className="sm:hidden">Arquivo</span>
+                 <FileCheck size={16} /> <span>Arquivo (Max 50MB)</span>
                </button>
                <button onClick={() => setUploadMode('link')} className={`flex-1 py-3 px-2 text-[10px] sm:text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 ${uploadMode === 'link' ? 'bg-white text-[#003366] shadow-sm' : 'text-gray-500 hover:text-[#003366]'}`}>
-                 <Cloud size={16} /> <span className="hidden sm:inline">Link (Arquivos Grandes / Pastas)</span><span className="sm:hidden">Link Nuvem</span>
+                 <Cloud size={16} /> <span>Link Nuvem</span>
                </button>
              </div>
 
@@ -175,7 +200,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
                  <option value="summary">Resumo / Teórico</option><option value="script">Roteiro / Prática</option><option value="other">Outro / Pasta</option>
                </select>
              </div>
-             <textarea placeholder="Descrição breve do material (Opcional)" className="w-full bg-white p-4 rounded-xl mb-6 min-h-[80px] font-bold text-sm border border-transparent outline-none focus:border-[#D4A017] resize-none transition-colors" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+             <textarea placeholder="Descrição breve (Opcional)" className="w-full bg-white p-4 rounded-xl mb-6 min-h-[80px] font-bold text-sm border border-transparent outline-none focus:border-[#D4A017] resize-none transition-colors" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
              
              {uploadMode === 'file' ? (
                <>
@@ -186,7 +211,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
                    </label>
                  ) : (
                    <div className="bg-white border-2 border-green-200 p-8 rounded-3xl text-center shadow-lg animate-in zoom-in">
-                     <div className="text-green-600 font-black uppercase text-[10px] tracking-widest mb-2"><CheckCircle2 className="inline mr-1" size={16} /> Arquivo Selecionado</div>
+                     <div className="text-green-600 font-black uppercase text-[10px] tracking-widest mb-2"><CheckCircle2 className="inline mr-1" size={16} /> Arquivo Pronto</div>
                      <h4 className="text-[#003366] font-black text-lg mb-1">{selectedFile.name}</h4>
                      <p className="text-gray-400 font-bold text-xs uppercase mb-6">{formatFileSize(selectedFile.size)}</p>
                      <div className="flex gap-3">
@@ -203,18 +228,18 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
                <div className="bg-white border-2 border-[#003366] p-6 rounded-2xl shadow-sm animate-in zoom-in">
                  <div className="flex items-center gap-2 mb-4">
                    <LinkIcon size={18} className="text-[#003366]" />
-                   <span className="font-black text-[#003366] text-xs uppercase tracking-widest">URL de Compartilhamento</span>
+                   <span className="font-black text-[#003366] text-xs uppercase tracking-widest">URL Externa</span>
                  </div>
                  <input
                    type="url"
-                   placeholder="Cole aqui o link (ex: https://drive.google.com/...)"
+                   placeholder="Link do Google Drive, OneDrive ou Notion..."
                    className="w-full bg-gray-50 p-4 rounded-xl outline-none font-bold text-sm border border-transparent focus:border-[#D4A017] mb-6 transition-colors"
                    value={formData.linkUrl}
                    onChange={e => setFormData({...formData, linkUrl: e.target.value})}
                  />
                  <button onClick={handleConfirmUpload} disabled={isUploading} className="w-full bg-[#003366] text-white p-4 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] transition-all">
                     {isUploading ? <Loader2 className="animate-spin" /> : <LinkIcon size={18} />}
-                    {isUploading ? 'SALVANDO...' : 'CONFIRMAR E PUBLICAR LINK'}
+                    {isUploading ? 'SALVANDO...' : 'PUBLICAR LINK NA UNIDADE'}
                  </button>
                </div>
              )}
@@ -224,7 +249,13 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
 
       <div className="mb-8 relative text-left">
         <Search className="absolute inset-y-0 left-6 flex items-center text-gray-400" size={20} />
-        <input type="text" placeholder="Pesquisar material..." className="w-full bg-white pl-14 pr-6 py-5 rounded-2xl border-2 border-transparent focus:border-[#D4A017] outline-none font-bold shadow-sm transition-colors duration-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+        <input 
+          type="text" 
+          placeholder={`Pesquisar na Unidade ${selectedUnit}...`} 
+          className="w-full bg-white pl-14 pr-6 py-5 rounded-2xl border-2 border-transparent focus:border-[#D4A017] outline-none font-bold shadow-sm transition-colors duration-500" 
+          value={searchTerm} 
+          onChange={e => setSearchTerm(e.target.value)} 
+        />
       </div>
 
       <div className="space-y-4 text-left">
@@ -238,7 +269,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
                 <div className="flex items-center gap-3 mb-1 flex-wrap">
                   <h3 className="font-black text-[#003366] text-lg leading-tight">{s.title}</h3>
                   {s.isVerified && (
-                    <span className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest shadow-sm" title="Material Oficial / Revisado por Monitores">
+                    <span className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest shadow-sm">
                       <BadgeCheck size={12} /> Revisado
                     </span>
                   )}
@@ -247,14 +278,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
                   <div className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-wider ${s.isVerified ? 'text-emerald-600' : 'text-[#D4A017]'}`}><User size={12} /> {s.author}</div>
                   <span className="text-gray-300">|</span>
                   <span className="text-[10px] font-bold text-gray-400 uppercase">{s.date}</span>
-                  
-                  {s.size && (
-                    <>
-                      <span className="text-gray-300">|</span>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase">{s.size}</span>
-                    </>
-                  )}
-
+                  <span className="text-gray-300">|</span>
                   <span className={`px-2 py-0.5 rounded text-[9px] font-black ${s.label === 'LINK' ? 'bg-[#003366]/10 text-[#003366]' : 'bg-gray-100 text-gray-500'}`}>
                     {s.label}
                   </span>
@@ -269,7 +293,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({ disciplineId, dis
         ))}
         {summaries.length === 0 && (
           <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 text-gray-400 font-bold uppercase text-[10px] tracking-[0.3em] transition-colors duration-500">
-             Nenhum material compartilhado ainda.
+             Nenhum material na {selectedUnit} ainda.
           </div>
         )}
       </div>

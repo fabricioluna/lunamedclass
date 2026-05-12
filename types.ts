@@ -6,6 +6,10 @@ export type ViewState = 'period-selection' | 'home' | 'discipline' | 'quiz-setup
  */
 export type FirebaseTimestamp = number | string | { seconds: number; nanoseconds: number };
 
+// === NOVOS TIPOS: CATEGORIZAÇÃO E UNIDADES ACADÊMICAS ===
+export type DisciplineCategory = 'UC' | 'HABMED' | 'IESC' | 'UCCG';
+export type AcademicUnit = 'N1' | 'N2';
+
 export interface Period {
   id: string;
   name: string;
@@ -32,6 +36,7 @@ export interface Question {
   id: string;
   firebaseId?: string;
   disciplineId: string;
+  unit?: AcademicUnit; // Suporte à separação N1/N2. Undefined = legado (N1)
   theme: string;
   q: string;
   options: string[];
@@ -77,6 +82,7 @@ export interface StaticOsceStation {
   id: string;
   firebaseId?: string;
   disciplineId: string;
+  unit?: AcademicUnit; // Suporte à separação N1/N2
   theme: string;
   title: string;
   scenario: string;
@@ -112,6 +118,7 @@ export interface DynamicOsceStation {
   id: string;
   firebaseId?: string;
   disciplineId: string;
+  unit?: AcademicUnit; // Suporte à separação N1/N2
   theme: string;
   title: string;
   scenario: string;
@@ -132,6 +139,7 @@ export interface SimulationInfo {
   id: string;
   periodId: string; 
   title: string;
+  category: DisciplineCategory; // Obrigatório para o roteador saber se exige filtro N1/N2
   description: string;
   meta: string;
   icon: string;
@@ -147,6 +155,7 @@ export interface Summary {
   id: string;
   firebaseId?: string;
   disciplineId: string;
+  unit?: AcademicUnit; // Suporte à separação N1/N2
   label: string;
   url: string;
   type: 'summary' | 'script' | 'other';
@@ -167,6 +176,7 @@ export interface QuizResult {
   total: number;
   date: string;
   discipline?: string;
+  unit?: AcademicUnit; // Estatística vinculada à unidade correta
   quizTitle?: string; 
   type?: 'teorico' | 'laboratorio' | 'osce'; 
   timeSpent?: number; 
@@ -179,6 +189,7 @@ export interface AnalyticsResult {
   id?: string;
   firebaseId?: string;
   disciplineId?: string;
+  unit?: AcademicUnit; // Permite ao admin avaliar lacunas N1 vs N2 separadamente
   theme?: string;
   stationTitle?: string;
   quizTitle?: string;
@@ -216,6 +227,7 @@ export interface LabSimulation {
   id: string;
   firebaseId?: string;
   disciplineId: string;
+  unit?: AcademicUnit; // Suporte à separação N1/N2
   title: string;
   author: string;
   description: string;

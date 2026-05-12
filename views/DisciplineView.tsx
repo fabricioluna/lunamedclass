@@ -1,24 +1,34 @@
-import React, { useState } from 'react';
-import { SimulationInfo, Summary } from '../types';
-import { Lock, Stethoscope, BookOpen, FolderOpen, PenTool, ArrowRight, Microscope, Pill, Activity, ClipboardList, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { SimulationInfo, Summary, AcademicUnit } from '../types';
+import { Lock, Stethoscope, BookOpen, FolderOpen, PenTool, Activity, Microscope, Pill, ClipboardList, ChevronDown, ChevronUp, Milestone, Layers } from 'lucide-react';
 
 interface DisciplineViewProps {
   disciplineId: string;
   disciplines: SimulationInfo[];
   summaries: Summary[];
   onBack: () => void;
-  onSelectOption: (type: string) => void;
+  // Assinatura atualizada: Agora o componente pai pode receber a Unidade selecionada para injetar no Context/Filtro
+  onSelectOption: (type: string, unit?: AcademicUnit) => void; 
 }
 
 const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplines, summaries, onBack, onSelectOption }) => {
   const [showLabCategories, setShowLabCategories] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState<AcademicUnit | null>(null);
 
   const discipline = disciplines.find(d => d.id === disciplineId);
+
+  // Reseta a unidade selecionada caso o aluno mude de disciplina
+  useEffect(() => {
+    setSelectedUnit(null);
+  }, [disciplineId]);
+
   if (!discipline) return null;
 
   // IDENTIFICADORES AUTOMÁTICOS
-  const isUC = disciplineId.toLowerCase().startsWith('uc');
-  // Verifica se é a UC V (cobre variações comuns de ID)
+  const isUC = discipline.category === 'UC';
+  const isModular = discipline.category === 'HABMED' || discipline.category === 'IESC' || discipline.category === 'UCCG';
+  
+  // Verifica se é a UC V para expandir categorias exclusivas
   const isUCV = disciplineId.toLowerCase() === 'uc5' || disciplineId.toLowerCase() === 'uc-v' || discipline.title.toLowerCase().includes('uc v');
 
   // VERIFICA QUAIS BOTÕES ESTÃO BLOQUEADOS NO FIREBASE
@@ -28,12 +38,24 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
   const isQuizLocked = locked.includes('quiz');
   const isPracticalLocked = locked.includes('lab_osce');
 
+  // HANDLERS
+  const handleBack = () => {
+    // Se for modular e já tiver unidade selecionada, voltar para a escolha da unidade
+    if (isModular && selectedUnit) {
+      setSelectedUnit(null);
+    } else {
+      // Caso contrário, volta para a tela inicial/períodos
+      onBack();
+    }
+  };
+
   const handleAction = (featureId: string, action: string) => {
     if (locked.includes(featureId)) {
       alert("Esta funcionalidade está temporariamente bloqueada pela administração.");
       return;
     }
-    onSelectOption(action);
+    // Passa a ação e a unidade selecionada (se houver) para o controlador de rotas
+    onSelectOption(action, selectedUnit || undefined);
   };
 
   const handleLabClick = () => {
@@ -42,22 +64,75 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
       return;
     }
 
-    // Se for UC V, expande as categorias. Caso contrário, segue o fluxo normal.
     if (isUCV) {
       setShowLabCategories(!showLabCategories);
     } else {
-      onSelectOption(isUC ? 'lab-list' : 'osce-mode-selection');
+      onSelectOption(isUC ? 'lab-list' : 'osce-mode-selection', selectedUnit || undefined);
     }
   };
 
+  // === INTERCEPTAÇÃO: TELA DE SELEÇÃO DE UNIDADE (N1 / N2) ===
+  if (isModular && !selectedUnit) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32">
+        <button 
+          onClick={handleBack} 
+          className="group flex items-center text-[#003366] font-bold mb-12 hover:text-[#D4A017] transition-all"
+        >
+          <span className="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
+          Voltar aos Períodos
+        </button>
+
+        <div className="text-center mb-12 animate-in zoom-in-95 duration-500">
+          <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center text-5xl shadow-xl border-4 border-[#003366] mb-6">
+            {discipline.icon}
+          </div>
+          <h2 className="text-3xl md:text-4xl font-black text-[#003366] tracking-tighter mb-4">
+            Selecione a Unidade
+          </h2>
+          <p className="text-gray-500 font-medium max-w-lg mx-auto">
+            A disciplina <strong className="text-[#003366]">{discipline.title}</strong> é modular. Escolha qual unidade acadêmica você deseja acessar para carregar os conteúdos específicos.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          {/* BOTÃO N1 (LEGADO E ATUAL) */}
+          <button 
+            onClick={() => setSelectedUnit('N1')}
+            className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden text-left flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-500"
+          >
+            <div className="w-16 h-16 bg-blue-50 text-[#003366] rounded-2xl flex items-center justify-center mb-6 group-hover:bg-[#003366] group-hover:text-white transition-colors">
+               <Milestone size={32} />
+            </div>
+            <h3 className="text-2xl font-black text-[#003366] mb-2 uppercase tracking-tight">Unidade N1</h3>
+            <p className="text-sm text-gray-500 font-medium">Avaliações teóricas, checklists e materiais referentes ao 1º Bimestre.</p>
+          </button>
+
+          {/* BOTÃO N2 */}
+          <button 
+            onClick={() => setSelectedUnit('N2')}
+            className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden text-left flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-700"
+          >
+            <div className="w-16 h-16 bg-blue-50 text-[#003366] rounded-2xl flex items-center justify-center mb-6 group-hover:bg-[#003366] group-hover:text-white transition-colors">
+               <Layers size={32} />
+            </div>
+            <h3 className="text-2xl font-black text-[#003366] mb-2 uppercase tracking-tight">Unidade N2</h3>
+            <p className="text-sm text-gray-500 font-medium">Avaliações teóricas, checklists e materiais referentes ao 2º Bimestre.</p>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // === DASHBOARD NORMAL DA DISCIPLINA ===
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32">
       <button 
-        onClick={onBack} 
+        onClick={handleBack} 
         className="group flex items-center text-[#003366] font-bold mb-8 hover:text-[#D4A017] transition-all"
       >
         <span className="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
-        Voltar ao Início
+        {isModular ? 'Trocar Unidade' : 'Voltar ao Início'}
       </button>
 
       <div className="bg-white rounded-[3rem] p-8 md:p-14 shadow-2xl border border-gray-100 mb-8 relative overflow-hidden">
@@ -69,9 +144,14 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
           </div>
 
           <div className="text-center md:text-left">
-            <span className="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block shadow-sm">
+            <span className="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block shadow-sm mr-2">
               Módulo Ativo
             </span>
+            {selectedUnit && (
+              <span className="bg-blue-100 text-[#003366] px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block shadow-sm">
+                Unidade {selectedUnit}
+              </span>
+            )}
             <h1 className="text-4xl md:text-5xl font-black text-[#003366] mb-4 tracking-tighter leading-tight">
               {discipline.title}
             </h1>
@@ -154,7 +234,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
           {isUCV && showLabCategories && !isPracticalLocked && (
             <div className="p-4 pt-0 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-4">
               <button 
-                onClick={() => onSelectOption('lab-list-anatomia')}
+                onClick={() => onSelectOption('lab-list-anatomia', selectedUnit || undefined)}
                 className="flex flex-col items-center justify-center p-4 bg-white/10 hover:bg-[#D4A017] hover:text-[#003366] text-white rounded-xl transition-colors group"
               >
                 <Activity size={24} className="mb-2 opacity-80 group-hover:opacity-100" />
@@ -162,7 +242,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
               </button>
               
               <button 
-                onClick={() => onSelectOption('lab-list-histologia')}
+                onClick={() => onSelectOption('lab-list-histologia', selectedUnit || undefined)}
                 className="flex flex-col items-center justify-center p-4 bg-white/10 hover:bg-[#D4A017] hover:text-[#003366] text-white rounded-xl transition-colors group"
               >
                 <Microscope size={24} className="mb-2 opacity-80 group-hover:opacity-100" />
@@ -170,7 +250,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
               </button>
 
               <button 
-                onClick={() => onSelectOption('lab-list-farmacologia')}
+                onClick={() => onSelectOption('lab-list-farmacologia', selectedUnit || undefined)}
                 className="flex flex-col items-center justify-center p-4 bg-white/10 hover:bg-[#D4A017] hover:text-[#003366] text-white rounded-xl transition-colors group"
               >
                 <Pill size={24} className="mb-2 opacity-80 group-hover:opacity-100" />
@@ -178,7 +258,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
               </button>
 
               <button 
-                onClick={() => onSelectOption('lab-list-exames')}
+                onClick={() => onSelectOption('lab-list-exames', selectedUnit || undefined)}
                 className="flex flex-col items-center justify-center p-4 bg-white/10 hover:bg-[#D4A017] hover:text-[#003366] text-white rounded-xl transition-colors group"
               >
                 <ClipboardList size={24} className="mb-2 opacity-80 group-hover:opacity-100" />
