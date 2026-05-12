@@ -1,22 +1,30 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { SimulationInfo, Question } from '../types';
+import { SimulationInfo, Question, AcademicUnit } from '../types';
+import { Milestone, Layers, BadgeCheck } from 'lucide-react';
 
 interface QuizSetupViewProps {
   discipline: SimulationInfo;
   availableQuestions: Question[];
+  selectedUnit: AcademicUnit; // Resolvendo contrato com App.tsx
   onStart: (filteredQuestions: Question[]) => void;
   onBack: () => void;
 }
 
-const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQuestions, onStart, onBack }) => {
+const QuizSetupView: React.FC<QuizSetupViewProps> = ({ 
+  discipline, 
+  availableQuestions, 
+  selectedUnit, 
+  onStart, 
+  onBack 
+}) => {
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [selectedQuizTitles, setSelectedQuizTitles] = useState<string[]>([]); 
   const [quantity, setQuantity] = useState(10);
   const [orderMode, setOrderMode] = useState<'random' | 'sequential'>('random'); 
 
-  // ESTADOS DO AUTO-SAVE
-  const storageKey = `quiz_progress_${discipline.title.replace(/\s+/g, '_')}`;
-  const questionsKey = `quiz_questions_${discipline.title.replace(/\s+/g, '_')}`;
+  // ESTADOS DO AUTO-SAVE (Injetando a Unidade na chave para evitar conflito N1 vs N2)
+  const storageKey = `quiz_progress_${discipline.id}_${selectedUnit}`;
+  const questionsKey = `quiz_questions_${discipline.id}_${selectedUnit}`;
   const [showPrompt, setShowPrompt] = useState(false);
 
   // Verifica se há um simulado pendente mal a tela abre
@@ -42,19 +50,29 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQues
     setShowPrompt(false);
   };
 
-  // Identifica todos os títulos de simulados únicos nesta disciplina
+  // Identifica todos os títulos de simulados únicos nesta disciplina e UNIDADE
   const uniqueQuizTitles = useMemo(() => {
     const titles = availableQuestions
-      .filter(q => q.disciplineId === discipline.id && q.quizTitle)
+      .filter(q => {
+        const isCorrectDisc = q.disciplineId === discipline.id;
+        // Lógica Luna: Se não tem unit, é legado (N1). UCs ignoram filtro de unit.
+        const qUnit = q.unit || 'N1';
+        const isCorrectUnit = discipline.category === 'UC' ? true : qUnit === selectedUnit;
+        
+        return isCorrectDisc && isCorrectUnit && q.quizTitle;
+      })
       .map(q => q.quizTitle!);
     return Array.from(new Set(titles));
-  }, [availableQuestions, discipline.id]);
+  }, [availableQuestions, discipline.id, discipline.category, selectedUnit]);
 
-  // Conta quantas questões estão disponíveis com os filtros atuais
+  // Conta quantas questões estão disponíveis com os filtros atuais (Disciplina + Unidade + Temas)
   const totalAvailableInSelectedThemes = useMemo(() => {
     return availableQuestions.filter(q => {
       if (q.disciplineId !== discipline.id) return false;
       
+      const qUnit = q.unit || 'N1';
+      if (discipline.category !== 'UC' && qUnit !== selectedUnit) return false;
+
       if (selectedQuizTitles.length > 0 && q.quizTitle && !selectedQuizTitles.includes(q.quizTitle)) {
         return false;
       }
@@ -65,7 +83,7 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQues
 
       return true;
     }).length;
-  }, [availableQuestions, discipline.id, selectedThemes, selectedQuizTitles]);
+  }, [availableQuestions, discipline.id, discipline.category, selectedThemes, selectedQuizTitles, selectedUnit]);
 
   const toggleTheme = (theme: string) => {
     setSelectedQuizTitles([]);
@@ -100,6 +118,11 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQues
 
     let filtered = availableQuestions.filter(q => {
       if (q.disciplineId !== discipline.id) return false;
+      
+      // Filtro de Unidade
+      const qUnit = q.unit || 'N1';
+      if (discipline.category !== 'UC' && qUnit !== selectedUnit) return false;
+
       if (selectedQuizTitles.length > 0) {
         return q.quizTitle && selectedQuizTitles.includes(q.quizTitle);
       }
@@ -139,8 +162,11 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQues
           <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl max-w-lg w-full animate-in zoom-in duration-300">
             <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-4xl mb-6 mx-auto">💾</div>
             <h3 className="text-2xl font-black text-[#003366] mb-4 tracking-tight text-center">Simulado em Andamento</h3>
-            <p className="text-gray-500 mb-8 leading-relaxed text-center font-medium">
-              Detectamos que você não finalizou o seu último simulado. Deseja continuar exatamente de onde parou ou prefere configurar um novo?
+            <p className="text-gray-500 mb-2 leading-relaxed text-center font-medium">
+              Detectamos um simulado não finalizado na <b>Unidade {selectedUnit}</b>.
+            </p>
+            <p className="text-gray-400 text-xs mb-8 text-center uppercase tracking-widest font-black">
+              {discipline.title}
             </p>
             <div className="flex flex-col gap-3">
               <button onClick={handleContinueSaved} className="w-full bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-[#D4A017] hover:text-[#003366] transition-all shadow-xl">
@@ -157,19 +183,32 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQues
       <div className={`bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl border border-gray-100 mb-20 ${showPrompt ? 'opacity-30 pointer-events-none' : ''}`}>
         <div className="text-center mb-10">
           <div className="text-5xl mb-4">{discipline.icon}</div>
-          <h2 className="text-3xl font-black text-[#003366] uppercase mb-2 tracking-tighter">
-            Simulado Teórico
-          </h2>
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter">
+              Simulado Teórico
+            </h2>
+            {discipline.category !== 'UC' && (
+              <div className="flex items-center gap-1.5 bg-blue-50 text-[#003366] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">
+                {selectedUnit === 'N1' ? <Milestone size={12} /> : <Layers size={12} />}
+                Unidade {selectedUnit}
+              </div>
+            )}
+          </div>
           <p className="text-[#D4A017] text-[10px] font-black uppercase tracking-[0.3em]">{discipline.title}</p>
         </div>
 
         {/* MODO 1: SIMULADOS FECHADOS */}
         {uniqueQuizTitles.length > 0 && (
           <div className="mb-10 bg-blue-50/50 p-6 rounded-3xl border border-blue-100">
-            <label className="block text-[10px] font-black uppercase tracking-widest text-blue-800 mb-4 text-center">Simulados Completos</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-blue-800 mb-4 text-center">Simulados Completos da Unidade</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {uniqueQuizTitles.map(title => {
-                const count = availableQuestions.filter(q => q.disciplineId === discipline.id && q.quizTitle === title).length;
+                const count = availableQuestions.filter(q => {
+                  const isCorrectDisc = q.disciplineId === discipline.id;
+                  const qUnit = q.unit || 'N1';
+                  const isCorrectUnit = discipline.category === 'UC' ? true : qUnit === selectedUnit;
+                  return isCorrectDisc && isCorrectUnit && q.quizTitle === title;
+                }).length;
                 const isSelected = selectedQuizTitles.includes(title);
                 return (
                   <button
@@ -200,7 +239,12 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({ discipline, availableQues
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {discipline.themes.map(theme => {
-              const count = availableQuestions.filter(q => q.disciplineId === discipline.id && q.theme === theme).length;
+              const count = availableQuestions.filter(q => {
+                const isCorrectDisc = q.disciplineId === discipline.id;
+                const qUnit = q.unit || 'N1';
+                const isCorrectUnit = discipline.category === 'UC' ? true : qUnit === selectedUnit;
+                return isCorrectDisc && isCorrectUnit && q.theme === theme;
+              }).length;
               const isSelected = selectedThemes.includes(theme);
               return (
                 <button

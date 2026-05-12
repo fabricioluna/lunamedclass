@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
-import { SimulationInfo, OsceStation } from '../types';
+import { SimulationInfo, OsceStation, AcademicUnit } from '../types';
+import { Milestone, Layers } from 'lucide-react';
 
 interface OsceSetupViewProps {
   discipline: SimulationInfo;
   availableStations: OsceStation[];
+  selectedUnit: AcademicUnit; // Resolvendo contrato final com App.tsx
   onStart: (station: OsceStation) => void;
   onBack: () => void;
   setupMode?: 'static' | 'rpg' | 'ai' | 'lab' | 'all'; 
 }
 
-const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStations, onStart, onBack, setupMode = 'all' }) => {
+const OsceSetupView: React.FC<OsceSetupViewProps> = ({ 
+  discipline, 
+  availableStations, 
+  selectedUnit,
+  onStart, 
+  onBack, 
+  setupMode = 'all' 
+}) => {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
 
-  const isUC = discipline.id.toLowerCase().startsWith('uc');
+  const isUC = discipline.category === 'UC';
 
-  // Lógica inteligente para herdar Título e Emoji exatos dos botões anteriores
+  // LUNA ENGINE 2.0: Lógica de Cabeçalho Contextual
   let headerEmoji = '🩺';
   let headerTitle = 'Laboratório de Habilidades';
   let headerSubtitle = discipline.title;
@@ -29,11 +38,11 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
   } else if (setupMode === 'rpg') {
     headerEmoji = '🎮';
     headerTitle = 'Simulado RPG';
-    headerSubtitle = 'Decisões com consequências e vitais dinâmicos';
+    headerSubtitle = 'Decisões dinâmicas e vitais em tempo real';
   } else if (setupMode === 'static') {
     headerEmoji = '📋';
     headerTitle = 'Simulado Estático';
-    headerSubtitle = 'Checklists sequenciais e protocolos';
+    headerSubtitle = 'Checklists sequenciais e protocolos oficiais';
   }
 
   const handleSurpriseAll = () => {
@@ -60,24 +69,36 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
       </button>
       
       <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl border border-gray-100">
-        {/* CABEÇALHO DINÂMICO */}
+        {/* CABEÇALHO DINÂMICO COM CONTEXTO DE UNIDADE */}
         <div className="text-center mb-10 border-b pb-8">
           <div className="text-5xl mb-4">{headerEmoji}</div>
-          <h2 className="text-3xl font-black text-[#003366] uppercase mb-2 tracking-tighter">
-            {headerTitle}
-          </h2>
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <h2 className="text-3xl font-black text-[#003366] uppercase mb-2 tracking-tighter">
+              {headerTitle}
+            </h2>
+            
+            {/* BADGE DE UNIDADE: Essencial para Habilidades Médicas */}
+            {!isUC && (
+              <div className="flex items-center gap-1.5 bg-blue-50 text-[#003366] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">
+                {selectedUnit === 'N1' ? <Milestone size={12} /> : <Layers size={12} />}
+                Unidade {selectedUnit}
+              </div>
+            )}
+          </div>
           <p className="text-[#D4A017] text-[10px] font-black uppercase tracking-[0.3em]">
             {headerSubtitle}
           </p>
         </div>
 
         {availableStations.length === 0 ? (
-           <div className="text-center py-10 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+           <div className="text-center py-12 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
               <span className="text-4xl opacity-20 block mb-4">📁</span>
-              <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Nenhuma estação disponível no momento.</p>
+              <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">
+                Nenhuma estação disponível para a {isUC ? 'disciplina' : `Unidade ${selectedUnit}`} neste modo.
+              </p>
            </div>
         ) : selectedTheme === null ? (
-          <div>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-6 text-center">
               1º Passo: Selecione o Eixo de Treinamento
             </label>
@@ -94,7 +115,9 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
                     <h3 className="text-lg font-black uppercase tracking-tight">
                       {isUC ? 'Bancada Surpresa (Geral)' : 'Caso Surpresa (Geral)'}
                     </h3>
-                    <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Sorteia entre todas as {availableStations.length} estações</p>
+                    <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">
+                      Sorteia entre as {availableStations.length} estações da {isUC ? 'UC' : `Unidade ${selectedUnit}`}
+                    </p>
                   </div>
                 </div>
                 <div className="font-black text-2xl opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all">→</div>
@@ -140,10 +163,10 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
                   <div className="text-3xl group-hover:animate-spin">🎲</div>
                   <div>
                     <h3 className="text-md font-black uppercase tracking-tight">
-                      {isUC ? 'Bancada Surpresa neste Eixo' : 'Caso Surpresa neste Eixo'}
+                      Caso Surpresa neste Eixo
                     </h3>
                     <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">
-                      {isUC ? `Sorteia uma bancada aleatória de ${selectedTheme}` : `Sorteia um caso aleatório de ${selectedTheme}`}
+                      Sorteia um cenário aleatório de {selectedTheme}
                     </p>
                   </div>
                 </div>
@@ -164,7 +187,6 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
                       <h3 className="text-md font-black text-[#003366] group-hover:text-[#D4A017] transition-colors leading-tight pr-4">
                         {station.title}
                       </h3>
-                      {/* BADGES DE TIPO DE ESTAÇÃO */}
                       <div className="flex gap-2 mt-2">
                         {station.mode === 'rpg' ? (
                           <span className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
@@ -177,6 +199,13 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({ discipline, availableStat
                         ) : (
                           <span className="bg-blue-100 text-blue-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1">
                             📋 Simulado Estático
+                          </span>
+                        )}
+                        
+                        {/* TAG DE UNIDADE PARA CONFERÊNCIA FINAL */}
+                        {!isUC && (
+                          <span className="bg-blue-50 text-[#003366] text-[8px] font-black uppercase px-2 py-0.5 rounded border border-blue-100">
+                            {station.unit || 'N1'}
                           </span>
                         )}
                       </div>
