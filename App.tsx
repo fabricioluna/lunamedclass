@@ -1,5 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import PeriodSelectionView from './views/PeriodSelectionView'; 
 import HomeView from './views/HomeView';
@@ -20,47 +20,32 @@ import ShareMaterialView from './views/ShareMaterialView';
 import LabListView from './views/LabListView';
 import LabQuizView from './views/LabQuizView';
 
-// TELAS DE PESQUISA INSTITUCIONAL
 import SurveyView from './views/SurveyView';
 import SurveyReportView from './views/SurveyReportView';
-
-// SANDBOX DA IA
 import AITestView from './views/AITestView';
-
-// TELA DE CONGRESSOS MÉDICOS
 import MedicalEventsView from './views/MedicalEventsView';
 
-// ÍCONES PARA O ERROR BOUNDARY E CONTEXTO
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
+import { PERIODS } from './constants'; 
+import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
 
-const APP_VERSION = "9.0.0 - Luna Semantic Router";
+const APP_VERSION = "9.1.1 - Luna Semantic Router (Patched)";
 
 // ============================================================================
 // ERROR BOUNDARY
 // ============================================================================
-interface ErrorBoundaryProps {
-  children: ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
+interface ErrorBoundaryProps { children: ReactNode; }
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Luna MedClass Interceptou um Erro Crítico:", error, errorInfo);
-  }
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState { return { hasError: true, error }; }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) { console.error("Erro Crítico:", error, errorInfo); }
 
   render() {
     if (this.state.hasError) {
@@ -71,13 +56,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           </div>
           <h1 className="text-3xl font-black text-[#003366] tracking-tighter uppercase mb-2">Ops! Instabilidade Crítica.</h1>
           <p className="text-sm font-bold text-gray-500 uppercase tracking-widest max-w-md mb-8">
-            Ocorreu uma falha inesperada na renderização deste módulo. Nossos protocolos de segurança já registraram o incidente.
+            Ocorreu uma falha inesperada na renderização.
           </p>
-          <div className="bg-white p-4 rounded-2xl border border-gray-200 text-left max-w-lg w-full mb-8 overflow-auto max-h-32 shadow-sm">
-            <p className="text-[10px] font-mono text-red-500 font-bold">
-              {this.state.error?.toString()}
-            </p>
-          </div>
           <button 
             onClick={() => window.location.href = '/'}
             className="flex items-center gap-2 bg-[#003366] text-white px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#D4A017] transition-all shadow-xl hover:scale-105"
@@ -92,14 +72,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 // ============================================================================
-// STATUS BAR E PROTEÇÃO DE ROTAS (Wrapper)
+// WRAPPER DE LAYOUT E PROTEÇÃO DE STATUS
 // ============================================================================
 const AppLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isLoading, isOnline } = useData();
-
-  // Garante que o scroll volte para o topo ao trocar de rota
   const { pathname } = useLocation();
-  React.useEffect(() => {
+
+  useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
 
@@ -131,38 +110,230 @@ const AppLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
 
       <footer className="print:hidden bg-white border-t py-4 flex flex-col items-center gap-1 mt-auto text-center px-4">
         <div className="text-gray-400 text-[9px] font-black uppercase tracking-widest">© 2026 Luna MedClass</div>
-        <div className="text-gray-500 text-[8px] font-medium uppercase max-w-md">
-          Simuladores de Alto Rendimento para Medicina.
-        </div>
         <div className="text-[#D4A017] text-[9px] font-black uppercase tracking-[0.1em]">Desenvolvido por Fabrício Luna</div>
-        
-        <div className="text-[7px] text-gray-300 font-black uppercase tracking-tighter mt-1">
-          Build {APP_VERSION}
-        </div>
+        <div className="text-[7px] text-gray-300 font-black uppercase tracking-tighter mt-1">Build {APP_VERSION}</div>
       </footer>
     </div>
   );
 };
 
 // ============================================================================
-// ORQUESTRADOR DE ROTAS (A Nova Engenharia)
+// HELPER PARA EXTRAIR A UNIDADE DA URL (?unit=N1)
+// ============================================================================
+const useAcademicUnit = (): AcademicUnit => {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  return (params.get('unit') as AcademicUnit) || 'N1';
+};
+
+// ============================================================================
+// FLUXOS DE ROTEAMENTO (Substituem os antigos if/else)
+// ============================================================================
+
+const PeriodFlow = () => {
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const handleSelectPeriod = (periodId: string) => {
+    const periodDiscs = disciplines.filter(d => d.periodId === periodId);
+    if (periodDiscs.length === 1) navigate(`/disciplina/${periodDiscs[0].id}`);
+    else navigate(`/periodo/${periodId}`);
+  };
+  return <PeriodSelectionView periods={PERIODS} onSelectPeriod={handleSelectPeriod} />;
+};
+
+const HomeFlow = () => {
+  const { periodId } = useParams();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const period = PERIODS.find(p => p.id === periodId);
+  
+  if (!period) return <Navigate to="/" replace />;
+  const periodDiscs = disciplines.filter(d => d.periodId === periodId);
+  return <HomeView period={period} disciplines={periodDiscs} onSelectDiscipline={(id) => navigate(`/disciplina/${id}`)} />;
+};
+
+const DisciplineFlow = () => {
+  const { disciplineId } = useParams();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  
+  const handleSelectOption = (type: string, unit?: AcademicUnit) => {
+    const base = `/disciplina/${disciplineId}`;
+    const query = unit ? `?unit=${unit}` : '';
+    
+    if (type === 'quiz-setup') navigate(`${base}/simulado${query}`);
+    if (type === 'summaries-list') navigate(`${base}/materiais${query}`);
+    if (type === 'references-view') navigate(`${base}/referencias${query}`);
+    if (type === 'osce-mode-selection') navigate(`${base}/osce${query}`);
+    if (type.startsWith('lab-list')) {
+       const cat = type.replace('lab-list-', '');
+       navigate(`${base}/lab${query}${cat && cat !== 'lab-list' ? (query ? '&' : '?') + 'cat=' + cat : ''}`);
+    }
+  };
+
+  return <DisciplineView disciplineId={disciplineId!} disciplines={disciplines} summaries={[]} onBack={() => navigate(-1)} onSelectOption={handleSelectOption as any} />;
+};
+
+const QuizFlow = () => {
+  const { disciplineId } = useParams();
+  const unit = useAcademicUnit();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const discipline = disciplines.find(d => d.id === disciplineId);
+  
+  const [step, setStep] = useState<'setup' | 'quiz'>('setup');
+  const [questions, setQuestions] = useState<Question[]>([]);
+
+  if (!discipline) return <Navigate to="/" replace />;
+
+  if (step === 'setup') {
+     return <QuizSetupView discipline={discipline} selectedUnit={unit} onBack={() => navigate(-1)} onStart={(q) => { setQuestions(q); setStep('quiz'); }} />;
+  }
+  return (
+    <QuizView 
+      questions={questions} 
+      discipline={discipline} 
+      onBack={() => setStep('setup')} 
+      onSaveResult={(score, total, title, type, time, details) => {
+        if (db) push(ref(db, 'quizResults'), { score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });
+      }} 
+    />
+  );
+};
+
+const OsceFlow = () => {
+  const { disciplineId } = useParams();
+  const unit = useAcademicUnit();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const discipline = disciplines.find(d => d.id === disciplineId);
+  
+  const [step, setStep] = useState<'mode' | 'setup' | 'quiz' | 'ai-setup' | 'ai-quiz'>('mode');
+  const [mode, setMode] = useState<'static' | 'rpg' | 'ai' | 'all'>('all');
+  const [station, setStation] = useState<OsceStation | null>(null);
+
+  if (!discipline) return <Navigate to="/" replace />;
+
+  if (step === 'mode') {
+     return <OsceModeSelectionView onBack={() => navigate(-1)} onSelectMode={(m) => {
+        if (m === 'ai') { setStep('ai-setup'); } else { setMode(m); setStep('setup'); }
+     }} />;
+  }
+  if (step === 'setup') {
+     return <OsceSetupView discipline={discipline} selectedUnit={unit} setupMode={mode} onBack={() => setStep('mode')} onStart={(s) => { setStation(s); setStep('quiz'); }} />;
+  }
+  if (step === 'quiz' && station) {
+     if (station.mode === 'rpg') {
+       return <DynamicOsceView station={station} onBack={() => setStep('setup')} onSaveResult={(score, total, time, analytics) => {
+           if (db) {
+              push(ref(db, 'quizResults'), { score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-rpg' });
+              push(ref(db, 'osceAnalytics'), { ...analytics, unit, date: new Date().toLocaleString(), studentId: 'anon_student' });
+           }
+       }} />;
+     }
+     return <OsceView station={station} onBack={() => setStep('setup')} onSaveResult={(score, total, time, analytics) => {
+         if (db) {
+            push(ref(db, 'quizResults'), { score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-estatico' });
+            push(ref(db, 'osceAnalytics'), { ...analytics, unit, date: new Date().toLocaleString() });
+         }
+     }} />;
+  }
+  if (step === 'ai-setup') {
+     return <OsceSetupView discipline={discipline} selectedUnit={unit} setupMode="ai" onBack={() => setStep('mode')} onStart={(s) => { setStation(s); setStep('ai-quiz'); }} />;
+  }
+  if (step === 'ai-quiz' && station) {
+     return <OsceAIView station={station} onBack={() => setStep('ai-setup')} />;
+  }
+  return null;
+};
+
+const LabFlow = () => {
+  const { disciplineId } = useParams();
+  const unit = useAcademicUnit();
+  const { search } = useLocation();
+  const cat = new URLSearchParams(search).get('cat');
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const discipline = disciplines.find(d => d.id === disciplineId);
+  
+  const [step, setStep] = useState<'list' | 'quiz'>('list');
+  const [sim, setSim] = useState<LabSimulation | null>(null);
+
+  if (!discipline) return <Navigate to="/" replace />;
+
+  if (step === 'list') {
+     return <LabListView disciplineId={discipline.id} disciplines={disciplines} selectedUnit={unit} categoryFilter={cat} onStart={(s) => { setSim(s); setStep('quiz'); }} />;
+  }
+  if (step === 'quiz' && sim) {
+     return <LabQuizView simulation={sim} onBack={() => setStep('list')} onSaveResult={(score, total, time, details) => {
+         if (db) push(ref(db, 'quizResults'), { score, total, date: new Date().toLocaleString(), discipline: sim.disciplineId, unit, quizTitle: sim.title, type: 'laboratorio', timeSpent: time || 0, details: details || [] });
+     }} />;
+  }
+  return null;
+};
+
+const MaterialsFlow = () => {
+  const { disciplineId } = useParams();
+  const unit = useAcademicUnit();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const discipline = disciplines.find(d => d.id === disciplineId);
+
+  const [step, setStep] = useState<'list' | 'share'>('list');
+
+  if (!discipline) return <Navigate to="/" replace />;
+
+  if (step === 'list') {
+     return <SummariesListView disciplineId={discipline.id} disciplines={disciplines} selectedUnit={unit} onBack={() => navigate(-1)} onShareClick={() => setStep('share')} />;
+  }
+  if (step === 'share') {
+     return <ShareMaterialView discipline={discipline} onBack={() => setStep('list')} onShare={(s) => {
+         if (db) push(ref(db, 'summaries'), { ...s, unit });
+     }} />;
+  }
+  return null;
+};
+
+// === NOVO FLUXO: Referências Bibliográficas (Corrigindo o Erro do TypeScript) ===
+const ReferencesFlow = () => {
+  const { disciplineId } = useParams();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const discipline = disciplines.find(d => d.id === disciplineId);
+
+  if (!discipline) return <Navigate to="/" replace />;
+
+  return <ReferencesView discipline={discipline} onBack={() => navigate(-1)} />;
+};
+
+// ============================================================================
+// APP ROUTER (O Coração da Aplicação)
 // ============================================================================
 const AppRouter: React.FC = () => {
   return (
     <Router>
       <AppLayout>
         <Routes>
-          {/* Rotas Públicas e Utilitárias */}
-          <Route path="/" element={<PeriodSelectionView periods={[]} onSelectPeriod={() => {}} />} />
-          <Route path="/admin" element={<AdminView onBack={() => {}} />} />
-          <Route path="/calculators" element={<CalculatorsView onBack={() => {}} />} />
-          <Route path="/career-quiz" element={<CareerQuiz onBack={() => {}} />} />
-          <Route path="/medical-events" element={<MedicalEventsView onBack={() => {}} />} />
-          <Route path="/survey" element={<SurveyView onBack={() => {}} onSaveResult={() => {}} />} />
-          <Route path="/survey-report" element={<SurveyReportView onBack={() => {}} />} />
+          {/* Rotas Core */}
+          <Route path="/" element={<PeriodFlow />} />
+          <Route path="/periodo/:periodId" element={<HomeFlow />} />
+          <Route path="/disciplina/:disciplineId" element={<DisciplineFlow />} />
+          
+          {/* Sub-rotas Curriculares */}
+          <Route path="/disciplina/:disciplineId/simulado" element={<QuizFlow />} />
+          <Route path="/disciplina/:disciplineId/osce" element={<OsceFlow />} />
+          <Route path="/disciplina/:disciplineId/lab" element={<LabFlow />} />
+          <Route path="/disciplina/:disciplineId/materiais" element={<MaterialsFlow />} />
+          <Route path="/disciplina/:disciplineId/referencias" element={<ReferencesFlow />} />
+
+          {/* Rotas Utilitárias e Públicas */}
+          <Route path="/admin" element={<AdminView onBack={() => window.history.back()} />} />
+          <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
+          <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
+          <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
           <Route path="/ai-test" element={<AITestView />} />
           
-          {/* Rota Coringa para Fallback */}
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>
