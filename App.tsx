@@ -1,4 +1,5 @@
-import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import PeriodSelectionView from './views/PeriodSelectionView'; 
 import HomeView from './views/HomeView';
@@ -29,17 +30,11 @@ import AITestView from './views/AITestView';
 // TELA DE CONGRESSOS MÉDICOS
 import MedicalEventsView from './views/MedicalEventsView';
 
-// ÍCONES PARA O ERROR BOUNDARY
+// ÍCONES PARA O ERROR BOUNDARY E CONTEXTO
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-
-// IMPORTS PURIFICADOS (SEM EXTENSÕES)
-import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
-import { PERIODS } from './constants'; 
-import { db, ref, push } from './firebase';
-
 import { DataProvider, useData } from './contexts/DataContext';
 
-const APP_VERSION = "8.2.0 - Luna Modular Engine (Clean)";
+const APP_VERSION = "9.0.0 - Luna Semantic Router";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -97,134 +92,16 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 // ============================================================================
-// COMPONENTE PRINCIPAL DE ROTEAMENTO (AppContent)
+// STATUS BAR E PROTEÇÃO DE ROTAS (Wrapper)
 // ============================================================================
-const AppContent: React.FC = () => {
-  
-  const getInitialView = (): ViewState | 'ai-test' => {
-    const params = new URLSearchParams(window.location.search);
-    const viewParam = params.get('view');
-    if (viewParam === 'survey') return 'survey';
-    if (viewParam === 'survey-report') return 'survey-report';
-    if (viewParam === 'medical-events') return 'medical-events'; 
-    return 'period-selection';
-  };
+const AppLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { isLoading, isOnline } = useData();
 
-  const [currentView, setCurrentView] = useState<ViewState | 'ai-test'>(getInitialView());
-  const [viewHistory, setViewHistory] = useState<(ViewState | 'ai-test')[]>(
-    getInitialView() !== 'period-selection' ? ['period-selection', getInitialView()] : ['period-selection']
-  );
-
-  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
-  const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
-  
-  // === ESTADO NATIVO DO REACT: Controle da Unidade Acadêmica (N1/N2) ===
-  const [selectedUnit, setSelectedUnit] = useState<AcademicUnit | null>(null); 
-  
-  const [quizFilteredQuestions, setQuizFilteredQuestions] = useState<Question[]>([]);
-  const [currentOsceStation, setCurrentOsceStation] = useState<OsceStation | null>(null);
-  const [currentOsceAIStation, setCurrentOsceAIStation] = useState<OsceStation | null>(null);
-  const [currentLabSimulation, setCurrentLabSimulation] = useState<LabSimulation | null>(null); 
-
-  const [osceFilterMode, setOsceFilterMode] = useState<'static' | 'rpg' | 'all'>('all');
-  const [labCategoryFilter, setLabCategoryFilter] = useState<string | null>(null);
-
-  const { 
-    isLoading, 
-    isOnline, 
-    disciplines, 
-    summaries, 
-    questions, 
-    osceStations, 
-    labSimulations 
-  } = useData();
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentView]);
-
-  const handleSelectPeriod = (periodId: string) => {
-    setSelectedPeriodId(periodId);
-    setSelectedUnit(null); // Reseta a unidade ao trocar o período
-    const periodDiscs = disciplines.filter(d => d.periodId === periodId);
-    if (periodDiscs.length === 1) {
-      setSelectedDisciplineId(periodDiscs[0].id);
-      setCurrentView('discipline');
-      setViewHistory(['period-selection', 'discipline']);
-    } else {
-      setCurrentView('home');
-      setViewHistory(['period-selection', 'home']);
-    }
-  };
-
-  const handleNavigate = (view: ViewState | 'ai-test' | string, unit?: AcademicUnit) => {
-    let targetView = view as ViewState | 'ai-test';
-
-    // Grava no state a unidade que a tela selecionou
-    if (unit) {
-      setSelectedUnit(unit);
-    }
-
-    if (typeof view === 'string' && view.startsWith('lab-list-')) {
-      const category = view.replace('lab-list-', '');
-      setLabCategoryFilter(category);
-      targetView = 'lab-list';
-    } else if (view === 'lab-list') {
-      setLabCategoryFilter(null);
-    }
-
-    if (targetView === currentView) return; 
-    
-    if (targetView === 'period-selection') {
-      setSelectedDisciplineId(null);
-      setSelectedPeriodId(null);
-      setSelectedUnit(null);
-      setViewHistory(['period-selection']);
-    } else if (targetView === 'home') {
-      setSelectedDisciplineId(null);
-      setSelectedUnit(null);
-      setViewHistory(prev => [...prev, 'home']);
-    } else {
-      setViewHistory(prev => [...prev, targetView]);
-    }
-    setCurrentView(targetView);
-  };
-
-  const handleBack = () => {
-    setViewHistory(prev => {
-      if (prev.length <= 1) return prev; 
-      const newHistory = [...prev];
-      newHistory.pop(); 
-      const prevView = newHistory[newHistory.length - 1]; 
-      
-      setCurrentView(prevView);
-      if (prevView === 'home') {
-        setSelectedDisciplineId(null);
-        setSelectedUnit(null);
-      }
-      if (prevView === 'discipline') {
-        // Ao voltar para a tela da disciplina, resetamos a unidade para obrigar a exibir o "pedágio"
-        setSelectedUnit(null);
-      }
-      if (prevView === 'period-selection') {
-        setSelectedDisciplineId(null);
-        setSelectedPeriodId(null);
-        setSelectedUnit(null);
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-      if (prevView !== 'lab-list') {
-        setLabCategoryFilter(null);
-      }
-      
-      return newHistory;
-    });
-  };
-
-  const handleSelectDiscipline = (id: string) => {
-    setSelectedDisciplineId(id);
-    setSelectedUnit(null); // Reseta a unidade ao selecionar nova disciplina
-    handleNavigate('discipline');
-  };
+  // Garante que o scroll volte para o topo ao trocar de rota
+  const { pathname } = useLocation();
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   if (isLoading) {
     return (
@@ -235,22 +112,10 @@ const AppContent: React.FC = () => {
     );
   }
 
-  const currentPeriod = PERIODS.find(r => r.id === selectedPeriodId);
-  const currentDiscipline = disciplines.find(s => s.id === selectedDisciplineId);
-  const periodDisciplines = disciplines.filter(d => d.periodId === selectedPeriodId);
-
-  // Valor seguro da unidade para uso nas filtragens. Se for UC, N1 será usado no banco como padrão.
-  const activeUnit: AcademicUnit = selectedUnit || 'N1';
-
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
       <div className="print:hidden">
-        <Header 
-          onNavigate={handleNavigate as any} 
-          onBack={handleBack}
-          canGoBack={viewHistory.length > 1}
-          hasPeriodSelected={!!selectedPeriodId}
-        />
+        <Header />
       </div>
 
       <div className={`print:hidden py-1 px-4 flex justify-center items-center gap-2 border-b transition-all duration-700 ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
@@ -261,236 +126,7 @@ const AppContent: React.FC = () => {
       </div>
 
       <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col relative">
-        {currentView === 'ai-test' && <AITestView />}
-
-        {currentView === 'survey' && (
-          <SurveyView 
-            onBack={handleBack} 
-            onSaveResult={(data: any) => {
-              if (db) push(ref(db, 'surveys'), data);
-            }} 
-          />
-        )}
-        
-        {currentView === 'survey-report' && <SurveyReportView onBack={handleBack} />}
-
-        {currentView === 'medical-events' && <MedicalEventsView onBack={handleBack} />}
-
-        {currentView === 'period-selection' && <PeriodSelectionView periods={PERIODS} onSelectPeriod={handleSelectPeriod} />}
-        {currentView === 'home' && currentPeriod && <HomeView period={currentPeriod} disciplines={periodDisciplines} onSelectDiscipline={handleSelectDiscipline} />}
-        
-        {currentView === 'career-quiz' && <CareerQuiz onBack={handleBack} />}
-        {currentView === 'discipline' && selectedDisciplineId && (
-          <DisciplineView 
-            disciplineId={selectedDisciplineId} 
-            disciplines={disciplines}
-            summaries={summaries}
-            onBack={handleBack} 
-            // Injeta a unidade ao disparar a navegação a partir dos botões da view
-            onSelectOption={(type, unit) => handleNavigate(type, unit as AcademicUnit)}
-          />
-        )}
-        
-        {currentView === 'references-view' && currentDiscipline && <ReferencesView discipline={currentDiscipline} onBack={handleBack} />}
-        
-        {currentView === 'share-material' && currentDiscipline && (
-          <ShareMaterialView 
-            discipline={currentDiscipline} 
-            onShare={(s) => {
-              const materialWithUnit = { ...s, unit: activeUnit };
-              if (db) push(ref(db, 'summaries'), materialWithUnit);
-            }} 
-            onBack={handleBack} 
-          />
-        )}
-        
-        {currentView === 'quiz-setup' && selectedDisciplineId && (
-          <QuizSetupView 
-            discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
-            // FILTRAGEM DE QUESTÕES
-            availableQuestions={questions.filter(q => {
-              if (currentDiscipline?.category === 'UC') return true;
-              return q.unit === activeUnit;
-            })}
-            selectedUnit={activeUnit} // <--- PROPRIEDADE INJETADA AQUI!
-            onBack={handleBack}
-            onStart={(filtered) => { setQuizFilteredQuestions(filtered); handleNavigate('quiz'); }}
-          />
-        )}
-        
-        {currentView === 'quiz' && (
-          <QuizView 
-            questions={quizFilteredQuestions} 
-            discipline={currentDiscipline!} 
-            onBack={handleBack} 
-            onSaveResult={(score, total, quizTitle, type, timeSpent, details) => {
-              if (db) {
-                push(ref(db, 'quizResults'), { 
-                  score, total, date: new Date().toLocaleString(), 
-                  discipline: currentDiscipline?.id || 'Geral',
-                  unit: activeUnit, // SALVA A UNIDADE NO FIREBASE
-                  quizTitle: quizTitle || 'Misto',
-                  type: type || 'teorico',
-                  timeSpent: timeSpent || 0,
-                  details: details || []
-                });
-              }
-            }} 
-          />
-        )}
-        
-        {currentView === 'summaries-list' && selectedDisciplineId && (
-          <SummariesListView 
-            disciplineId={selectedDisciplineId} 
-            disciplines={disciplines} 
-            selectedUnit={activeUnit} // <--- PROPRIEDADE INJETADA AQUI!
-            onBack={handleBack}
-            onShareClick={() => handleNavigate('share-material')} 
-          />
-        )}
-
-        {currentView === 'osce-mode-selection' && (
-          <OsceModeSelectionView 
-            onBack={handleBack}
-            onSelectMode={(mode) => {
-              if (mode === 'static') {
-                setOsceFilterMode('static');
-                handleNavigate('osce-setup');
-              } else if (mode === 'ai') {
-                handleNavigate('osce-ai-setup');
-              } else if (mode === 'rpg') {
-                setOsceFilterMode('rpg');
-                handleNavigate('osce-setup');
-              }
-            }}
-          />
-        )}
-        
-        {currentView === 'osce-setup' && selectedDisciplineId && (
-          <OsceSetupView 
-            discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
-            // FILTRAGEM DE ESTAÇÕES CLÍNICAS/RPG
-            availableStations={osceStations.filter(s => {
-              const isCorrectDisc = s.disciplineId === selectedDisciplineId;
-              const isCorrectUnit = currentDiscipline?.category === 'UC' ? true : s.unit === activeUnit;
-              
-              if (!isCorrectDisc || !isCorrectUnit) return false;
-              if (osceFilterMode === 'static') return s.mode === 'clinical'; 
-              if (osceFilterMode === 'rpg') return s.mode === 'rpg';
-              return true;
-            })}
-            selectedUnit={activeUnit} // <--- PROPRIEDADE INJETADA AQUI!
-            onBack={handleBack}
-            onStart={(station) => { 
-              setCurrentOsceStation(station); 
-              handleNavigate('osce-quiz'); 
-            }}
-            setupMode={osceFilterMode}
-          />
-        )}
-        
-        {currentView === 'osce-quiz' && currentOsceStation && (
-          currentOsceStation.mode === 'rpg' ? (
-            <DynamicOsceView 
-              station={currentOsceStation} 
-              onBack={handleBack} 
-              onSaveResult={(score, total, timeSpent, analytics) => {
-                if (db) {
-                  push(ref(db, 'quizResults'), {
-                    score, total, timeSpent,
-                    date: new Date().toLocaleString(),
-                    discipline: currentOsceStation.disciplineId,
-                    unit: activeUnit, // SALVA A UNIDADE
-                    quizTitle: currentOsceStation.title,
-                    type: 'osce-rpg'
-                  });
-                  push(ref(db, 'osceAnalytics'), {
-                    ...analytics,
-                    unit: activeUnit, // SALVA A UNIDADE NO ANALYTICS
-                    date: new Date().toLocaleString(),
-                    studentId: "anon_student"
-                  });
-                }
-              }}
-            />
-          ) : (
-            <OsceView 
-              station={currentOsceStation} 
-              onBack={handleBack} 
-              onSaveResult={(score, total, timeSpent, analytics) => {
-                if (db) {
-                  push(ref(db, 'quizResults'), {
-                    score, total, timeSpent,
-                    date: new Date().toLocaleString(),
-                    discipline: currentOsceStation.disciplineId,
-                    unit: activeUnit, // SALVA A UNIDADE
-                    quizTitle: currentOsceStation.title,
-                    type: 'osce-estatico'
-                  });
-                  push(ref(db, 'osceAnalytics'), {
-                    ...analytics,
-                    unit: activeUnit, // SALVA A UNIDADE NO ANALYTICS
-                    date: new Date().toLocaleString()
-                  });
-                }
-              }}
-            />
-          )
-        )}
-
-        {currentView === 'osce-ai-setup' && selectedDisciplineId && (
-          <OsceSetupView 
-            discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
-            // FILTRAGEM DE ESTAÇÕES IA
-            availableStations={osceStations.filter(s => {
-               const isCorrectUnit = currentDiscipline?.category === 'UC' ? true : s.unit === activeUnit;
-               return s.disciplineId === selectedDisciplineId && s.mode === 'ai' && isCorrectUnit;
-            })} 
-            selectedUnit={activeUnit} // <--- PROPRIEDADE INJETADA AQUI!
-            onBack={handleBack}
-            onStart={(station) => { setCurrentOsceAIStation(station); handleNavigate('osce-ai-quiz'); }}
-            setupMode="ai"
-          />
-        )}
-        {currentView === 'osce-ai-quiz' && currentOsceAIStation && <OsceAIView station={currentOsceAIStation} onBack={handleBack} />}
-
-        {currentView === 'calculators' && <CalculatorsView onBack={handleBack} />}
-        
-        {currentView === 'lab-list' && selectedDisciplineId && (
-          <LabListView 
-            disciplineId={selectedDisciplineId} 
-            disciplines={disciplines} 
-            selectedUnit={activeUnit} // <--- PROPRIEDADE INJETADA AQUI!
-            simulations={labSimulations.filter(ls => {
-              if (currentDiscipline?.category === 'UC') return true;
-              return ls.unit === activeUnit;
-            })} 
-            categoryFilter={labCategoryFilter}
-            onStart={(sim) => { setCurrentLabSimulation(sim); handleNavigate('lab-quiz'); }} 
-          />
-        )}
-        
-        {currentView === 'lab-quiz' && currentLabSimulation && (
-          <LabQuizView 
-            simulation={currentLabSimulation} 
-            onBack={handleBack} 
-            onSaveResult={(score, total, timeSpent, details) => {
-              if (db) {
-                push(ref(db, 'quizResults'), {
-                  score, total, date: new Date().toLocaleString(),
-                  discipline: currentLabSimulation.disciplineId,
-                  unit: activeUnit, // SALVA A UNIDADE
-                  quizTitle: currentLabSimulation.title,
-                  type: 'laboratorio',
-                  timeSpent: timeSpent || 0,
-                  details: details || []
-                });
-              }
-            }}
-          />
-        )}
-
-        {currentView === 'admin' && <AdminView onBack={handleBack} />}
+        {children}
       </main>
 
       <footer className="print:hidden bg-white border-t py-4 flex flex-col items-center gap-1 mt-auto text-center px-4">
@@ -500,10 +136,7 @@ const AppContent: React.FC = () => {
         </div>
         <div className="text-[#D4A017] text-[9px] font-black uppercase tracking-[0.1em]">Desenvolvido por Fabrício Luna</div>
         
-        <div 
-          onClick={() => handleNavigate('ai-test')}
-          className="text-[7px] text-gray-300 font-black uppercase tracking-tighter cursor-pointer hover:text-blue-500 transition-colors mt-1"
-        >
+        <div className="text-[7px] text-gray-300 font-black uppercase tracking-tighter mt-1">
           Build {APP_VERSION}
         </div>
       </footer>
@@ -511,11 +144,37 @@ const AppContent: React.FC = () => {
   );
 };
 
+// ============================================================================
+// ORQUESTRADOR DE ROTAS (A Nova Engenharia)
+// ============================================================================
+const AppRouter: React.FC = () => {
+  return (
+    <Router>
+      <AppLayout>
+        <Routes>
+          {/* Rotas Públicas e Utilitárias */}
+          <Route path="/" element={<PeriodSelectionView periods={[]} onSelectPeriod={() => {}} />} />
+          <Route path="/admin" element={<AdminView onBack={() => {}} />} />
+          <Route path="/calculators" element={<CalculatorsView onBack={() => {}} />} />
+          <Route path="/career-quiz" element={<CareerQuiz onBack={() => {}} />} />
+          <Route path="/medical-events" element={<MedicalEventsView onBack={() => {}} />} />
+          <Route path="/survey" element={<SurveyView onBack={() => {}} onSaveResult={() => {}} />} />
+          <Route path="/survey-report" element={<SurveyReportView onBack={() => {}} />} />
+          <Route path="/ai-test" element={<AITestView />} />
+          
+          {/* Rota Coringa para Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppLayout>
+    </Router>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <DataProvider>
-        <AppContent />
+        <AppRouter />
       </DataProvider>
     </ErrorBoundary>
   );
