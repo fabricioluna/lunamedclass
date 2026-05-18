@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Microscope, Play, User, Activity, Pill, ClipboardList, FilterX, LayoutGrid, Milestone, Layers } from 'lucide-react';
 import { LabSimulation, SimulationInfo, AcademicUnit } from '../types';
+import { db } from '../firebase';
+import { ref, get } from 'firebase/database';
 
 interface Props {
   disciplineId: string;
-  simulations: LabSimulation[];
+  simulations?: LabSimulation[]; // Agora opcional, não usaremos mais o Global Fetch
   disciplines: SimulationInfo[];
-  selectedUnit: AcademicUnit; // Resolvendo contrato de tipagem estrita
+  selectedUnit: AcademicUnit;
   categoryFilter?: string | null;
   onStart: (sim: LabSimulation) => void;
 }
 
 const LabListView: React.FC<Props> = ({ 
   disciplineId, 
-  simulations, 
   disciplines, 
   selectedUnit,
   categoryFilter, 
@@ -21,16 +22,45 @@ const LabListView: React.FC<Props> = ({
 }) => {
   const discipline = disciplines.find(d => d.id === disciplineId);
   
+  // === NOVO: BUSCA SOB DEMANDA (ON-DEMAND FETCHING) ===
+  const [localSimulations, setLocalSimulations] = useState<LabSimulation[]>([]);
+  const [isFetching, setIsFetching] = useState(true);
+
   // LUNA ENGINE 2.0: Estado local para as abas.
   const [activeTab, setActiveTab] = useState<string>(
     categoryFilter ? categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1).toLowerCase() : 'Todos'
   );
 
-  // Verifica a categoria da disciplina para regras de filtragem
   const isUC = discipline?.category === 'UC';
 
-  // Filtro Híbrido Luna: Disciplina -> Unidade -> Categoria (Aba)
-  const filtered = simulations.filter(s => {
+  useEffect(() => {
+    const fetchLabSimulationsOnDemand = async () => {
+      try {
+        setIsFetching(true);
+        // Bate no banco apenas uma vez (get) ao invés de manter conexão aberta
+        const snapshot = await get(ref(db, 'labSimulations'));
+        
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const parsedSimulations = Object.keys(data)
+            .filter(k => data[k])
+            .map(k => ({ ...data[k], firebaseId: k })) as LabSimulation[];
+            
+          setLocalSimulations(parsedSimulations);
+        }
+      } catch (error) {
+        console.error("Erro ao sincronizar o laboratório virtual:", error);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchLabSimulationsOnDemand();
+  }, []);
+  // ======================================================
+
+  // Filtro Híbrido Luna: Usa os dados locais recém-buscados
+  const filtered = localSimulations.filter(s => {
     const matchesDiscipline = s.disciplineId === disciplineId;
     
     // Lógica de Unidade: UCs mostram tudo. Modulares filtram por N1/N2.
@@ -89,7 +119,7 @@ const LabListView: React.FC<Props> = ({
       </div>
 
       {/* BARRA DE NAVEGAÇÃO DE CATEGORIAS (TABS) */}
-      {isUC && (
+      {isUC && !isFetching && (
         <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 mb-10 animate-in fade-in zoom-in duration-500">
           {tabs.map(tab => (
             <button
@@ -108,65 +138,74 @@ const LabListView: React.FC<Props> = ({
         </div>
       )}
 
-      {/* LISTA DE SIMULADOS FILTRADOS */}
-      <div className="space-y-6">
-        {filtered.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center shadow-sm animate-in fade-in">
-            <FilterX size={48} className="text-gray-300 mb-4" />
-            <p className="text-gray-500 font-bold text-sm uppercase tracking-widest">
-              Nenhum simulado disponível na <span className="text-[#D4A017]">{!isUC ? `Unidade ${selectedUnit}` : activeTab}</span>.
-            </p>
-            <p className="text-gray-400 text-xs font-medium mt-2 max-w-md px-4">
-              Aguarde a publicação de novos conteúdos por parte da monitoria ou coordenação.
-            </p>
-          </div>
-        ) : (
-          filtered.map(sim => (
-            <div key={sim.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-[#D4A017] transition-all animate-in fade-in slide-in-from-bottom-4">
-               <div>
-                 <div className="flex items-center gap-2 mb-3">
-                   {sim.category ? (
-                     <span className="flex items-center gap-1 bg-[#f4f7f6] text-[#003366] px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-gray-200">
-                       {getCategoryIcon(sim.category, 12)}
-                       {tabs.find(t => t.id.toLowerCase() === sim.category?.toLowerCase())?.label || sim.category}
-                     </span>
-                   ) : (
-                     <span className="flex items-center gap-1 bg-gray-50 text-gray-400 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-gray-100">
-                       Geral
-                     </span>
-                   )}
-                   
-                   {/* Badge discreta de unidade para conferência */}
-                   {!isUC && (
-                     <span className="bg-blue-50 text-[#003366] px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-blue-100">
-                       {sim.unit || 'N1'}
-                     </span>
-                   )}
-                 </div>
-                 
-                 <h3 className="text-xl font-black text-[#003366] mb-2 leading-tight">{sim.title}</h3>
-                 <p className="text-gray-500 text-sm font-medium mb-4">{sim.description}</p>
-                 
-                 <div className="flex flex-wrap items-center gap-4">
-                   <span className="flex items-center gap-1.5 text-[10px] font-black text-[#D4A017] uppercase tracking-widest">
-                     <User size={14}/> {sim.author}
-                   </span>
-                   <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                     <Play size={14}/> {sim.questions.length} Lâminas/Peças
-                   </span>
-                 </div>
-               </div>
-               
-               <button 
-                 onClick={() => onStart(sim)} 
-                 className="bg-[#003366] text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 shadow-lg hover:bg-[#D4A017] hover:scale-105 transition-all shrink-0 w-full md:w-auto justify-center group-hover:shadow-xl"
-               >
-                 <span className="text-[#D4A017]">{getCategoryIcon(sim.category, 16)}</span> Iniciar Prática
-               </button>
+      {/* FEEDBACK VISUAL DE CARREGAMENTO SOB DEMANDA */}
+      {isFetching ? (
+        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[2.5rem] shadow-xl border border-gray-100 mb-8">
+           <div className="w-12 h-12 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
+           <h3 className="text-[#003366] font-black uppercase tracking-widest text-xs">Sincronizando Lâminas e Peças...</h3>
+           <p className="text-gray-400 text-[10px] font-bold mt-2 uppercase">Preparando ambiente laboratorial</p>
+        </div>
+      ) : (
+        /* LISTA DE SIMULADOS FILTRADOS */
+        <div className="space-y-6">
+          {filtered.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center shadow-sm animate-in fade-in">
+              <FilterX size={48} className="text-gray-300 mb-4" />
+              <p className="text-gray-500 font-bold text-sm uppercase tracking-widest">
+                Nenhum simulado disponível na <span className="text-[#D4A017]">{!isUC ? `Unidade ${selectedUnit}` : activeTab}</span>.
+              </p>
+              <p className="text-gray-400 text-xs font-medium mt-2 max-w-md px-4">
+                Aguarde a publicação de novos conteúdos por parte da monitoria ou coordenação.
+              </p>
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            filtered.map(sim => (
+              <div key={sim.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-[#D4A017] transition-all animate-in fade-in slide-in-from-bottom-4">
+                 <div>
+                   <div className="flex items-center gap-2 mb-3">
+                     {sim.category ? (
+                       <span className="flex items-center gap-1 bg-[#f4f7f6] text-[#003366] px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-gray-200">
+                         {getCategoryIcon(sim.category, 12)}
+                         {tabs.find(t => t.id.toLowerCase() === sim.category?.toLowerCase())?.label || sim.category}
+                       </span>
+                     ) : (
+                       <span className="flex items-center gap-1 bg-gray-50 text-gray-400 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-gray-100">
+                         Geral
+                       </span>
+                     )}
+                     
+                     {/* Badge discreta de unidade para conferência */}
+                     {!isUC && (
+                       <span className="bg-blue-50 text-[#003366] px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-blue-100">
+                         {sim.unit || 'N1'}
+                       </span>
+                     )}
+                   </div>
+                   
+                   <h3 className="text-xl font-black text-[#003366] mb-2 leading-tight">{sim.title}</h3>
+                   <p className="text-gray-500 text-sm font-medium mb-4">{sim.description}</p>
+                   
+                   <div className="flex flex-wrap items-center gap-4">
+                     <span className="flex items-center gap-1.5 text-[10px] font-black text-[#D4A017] uppercase tracking-widest">
+                       <User size={14}/> {sim.author}
+                     </span>
+                     <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                       <Play size={14}/> {sim.questions.length} Lâminas/Peças
+                     </span>
+                   </div>
+                 </div>
+                 
+                 <button 
+                   onClick={() => onStart(sim)} 
+                   className="bg-[#003366] text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 shadow-lg hover:bg-[#D4A017] hover:scale-105 transition-all shrink-0 w-full md:w-auto justify-center group-hover:shadow-xl"
+                 >
+                   <span className="text-[#D4A017]">{getCategoryIcon(sim.category, 16)}</span> Iniciar Prática
+                 </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };
