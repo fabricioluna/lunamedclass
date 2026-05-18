@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { SimulationInfo, Question, AcademicUnit } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { Question, SimulationInfo, AcademicUnit } from '../../types';
 import { Trash2, Edit3, X } from 'lucide-react';
 
 interface AdminQuestionsProps {
@@ -23,13 +23,14 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
 }) => {
   // ESTADOS DE FILTRO
   const [discFilter, setDiscFilter] = useState(''); 
+  const [unitFilter, setUnitFilter] = useState<AcademicUnit | ''>(''); // NOVO: Filtro de Unidade na lista
   const [themeFilter, setThemeFilter] = useState('');
   const [quizFilter, setQuizFilter] = useState(''); 
 
   // ESTADOS DE IMPORTAÇÃO JSON (Refatorado)
   const [qDiscipline, setQDiscipline] = useState('');
   const [qTheme, setQTheme] = useState('');
-  const [qUnit, setQUnit] = useState<AcademicUnit>('N1'); // NOVO: Controle de Unidade no Import
+  const [qUnit, setQUnit] = useState<AcademicUnit>('N1'); // Controle de Unidade no Import
   const [qTitle, setQTitle] = useState(''); 
   const [qAuthor, setQAuthor] = useState(''); 
   const [qFile, setQFile] = useState<File | null>(null);
@@ -41,7 +42,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   
   const [mqDiscipline, setMqDiscipline] = useState('');
   const [mqTheme, setMqTheme] = useState('');
-  const [mqUnit, setMqUnit] = useState<AcademicUnit>('N1'); // NOVO: Controle de Unidade no Manual
+  const [mqUnit, setMqUnit] = useState<AcademicUnit>('N1'); // Controle de Unidade no Manual
   const [mqQuizTitle, setMqQuizTitle] = useState('');
   const [mqText, setMqText] = useState('');
   const [mqOptions, setMqOptions] = useState<string[]>(['', '', '', '']);
@@ -51,12 +52,16 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   const uniqueQuizzes = useMemo(() => {
     const titles = new Set<string>();
     questions.forEach(q => {
-      if (q.quizTitle && (!discFilter || q.disciplineId === discFilter)) {
+      // Filtra os simulados respeitando disciplina e unidade
+      const matchDisc = !discFilter || q.disciplineId === discFilter;
+      const matchUnit = !unitFilter || (q.unit || 'N1') === unitFilter;
+      
+      if (q.quizTitle && matchDisc && matchUnit) {
         titles.add(q.quizTitle);
       }
     });
     return Array.from(titles).sort();
-  }, [questions, discFilter]);
+  }, [questions, discFilter, unitFilter]);
 
   // FUNÇÃO REFATORADA: Importação restrita a JSON Teórico
   const handleQuestionImport = (e: React.FormEvent) => {
@@ -89,7 +94,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
           return {
             id: `q_${Date.now()}_${idx}`,
             disciplineId: qDiscipline,
-            unit: targetUnit, // <-- INJETADO: Grava a unidade do bloco
+            unit: targetUnit, // <-- Grava a unidade do bloco
             theme: qTheme,
             q: item.pergunta.trim(),
             options: item.alternativas.map((opt: string) => opt.trim()),
@@ -125,7 +130,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     setEditingQId('');
     setMqDiscipline(discFilter || '');
     setMqTheme(themeFilter || '');
-    setMqUnit('N1');
+    setMqUnit(unitFilter || 'N1');
     setMqQuizTitle(quizFilter || '');
     setMqText('');
     setMqOptions(['', '', '', '']);
@@ -198,6 +203,17 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     setIsQuestionModalOpen(false);
   };
 
+  // Helper para facilitar os filtros da lista principal
+  const filteredQuestionsList = useMemo(() => {
+    return questions.filter(q => {
+      const matchDisc = !discFilter || q.disciplineId === discFilter;
+      const matchUnit = !unitFilter || (q.unit || 'N1') === unitFilter;
+      const matchTheme = !themeFilter || q.theme === themeFilter;
+      const matchQuiz = !quizFilter || q.quizTitle === quizFilter;
+      return matchDisc && matchUnit && matchTheme && matchQuiz;
+    });
+  }, [questions, discFilter, unitFilter, themeFilter, quizFilter]);
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
@@ -257,10 +273,19 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
               </div>
               
               <div className="flex flex-wrap gap-2 items-center">
-                  <select value={discFilter} onChange={e => { setDiscFilter(e.target.value); setThemeFilter(''); setQuizFilter(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                  <select value={discFilter} onChange={e => { setDiscFilter(e.target.value); setUnitFilter(''); setThemeFilter(''); setQuizFilter(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
                     <option value="">Todas Disciplinas</option>
                     {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
                   </select>
+
+                  {/* NOVO FILTRO DE UNIDADE */}
+                  {discFilter && disciplines.find(d => d.id === discFilter)?.category !== 'UC' && (
+                    <select value={unitFilter} onChange={e => setUnitFilter(e.target.value as AcademicUnit | '')} className="p-3 bg-blue-50 text-blue-900 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                      <option value="">Ambas Unidades</option>
+                      <option value="N1">Unidade N1</option>
+                      <option value="N2">Unidade N2</option>
+                    </select>
+                  )}
                   
                   <select value={themeFilter} onChange={e => setThemeFilter(e.target.value)} disabled={!discFilter} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50 disabled:cursor-not-allowed">
                     <option value="">Todos os Temas</option>
@@ -291,7 +316,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
             </div>
             
             <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
-              {questions.filter(q => (!discFilter || q.disciplineId === discFilter) && (!themeFilter || q.theme === themeFilter) && (!quizFilter || q.quizTitle === quizFilter)).map(q => (
+              {filteredQuestionsList.map(q => (
                 <div key={q.id} className="p-4 bg-gray-50 rounded-2xl border flex justify-between items-start gap-4 group hover:border-[#D4A017] transition-all">
                   <div>
                     <p className="text-xs font-bold text-gray-700 leading-snug">{q.q}</p>
@@ -313,7 +338,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
                   </div>
                 </div>
               ))}
-              {questions.filter(q => (!discFilter || q.disciplineId === discFilter) && (!themeFilter || q.theme === themeFilter) && (!quizFilter || q.quizTitle === quizFilter)).length === 0 && (
+              {filteredQuestionsList.length === 0 && (
                 <p className="text-center py-10 text-gray-300 italic font-bold">Nenhuma questão encontrada para este filtro.</p>
               )}
             </div>

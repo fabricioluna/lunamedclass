@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { SimulationInfo } from '../../types';
-import { Lock, Unlock, ShieldAlert } from 'lucide-react';
-import { PERIODS } from '../../constants'; // <-- IMPORT CORRIGIDO PARA PERIODS
+import { Lock, Unlock, ShieldAlert, Layers } from 'lucide-react';
+import { PERIODS } from '../../constants';
 
 /**
  * Interface rigorosa para controle granular de funcionalidades.
@@ -46,8 +46,8 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
       </p>
 
       <div className="space-y-8">
-        {PERIODS.map(period => { // <-- ALTERADO PARA period
-          const periodDiscs = disciplines.filter(d => d.periodId === period.id); // <-- ALTERADO PARA periodId
+        {PERIODS.map(period => { 
+          const periodDiscs = disciplines.filter(d => d.periodId === period.id); 
           if (periodDiscs.length === 0) return null;
 
           return (
@@ -59,6 +59,7 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
                 {periodDiscs.map(disc => {
                   const isLocked = disc.status === 'locked';
                   const lockedFeatures = disc.lockedFeatures || [];
+                  const isUC = disc.category === 'UC';
                   
                   return (
                     <div 
@@ -70,7 +71,7 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
                       }`}
                     >
                       {/* TOPO: CONTROLE TOTAL DO MÓDULO */}
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-transform ${
                             isLocked ? 'bg-red-50 grayscale scale-95' : 'bg-emerald-50 scale-100'
@@ -83,7 +84,7 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
                             }`}>
                               {disc.title}
                             </p>
-                            <p className={`text-[9px] font-black uppercase tracking-widest ${
+                            <p className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${
                               isLocked ? 'text-red-500' : 'text-emerald-500'
                             }`}>
                               {isLocked ? 'Módulo Fechado' : 'Módulo Aberto'}
@@ -103,8 +104,18 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
                         </button>
                       </div>
 
+                      {/* INDICAÇÃO DE UNIDADES (N1/N2) */}
+                      {!isUC && (
+                        <div className={`flex items-center gap-2 mb-3 bg-blue-50/50 p-2 rounded-lg border border-blue-100 transition-opacity ${isLocked ? 'opacity-40 grayscale' : ''}`}>
+                          <Layers size={14} className="text-blue-500" />
+                          <span className="text-[9px] font-black uppercase text-blue-800 tracking-widest">
+                            Aplica a N1 e N2 Simetricamente
+                          </span>
+                        </div>
+                      )}
+
                       {/* BASE: CONTROLE GRANULAR DAS FUNCIONALIDADES */}
-                      <div className={`border-t border-gray-100 pt-3 grid grid-cols-2 gap-2 transition-opacity duration-300 ${
+                      <div className={`grid grid-cols-2 gap-2 transition-opacity duration-300 ${
                         isLocked ? 'opacity-40 pointer-events-none grayscale' : 'opacity-100'
                       }`}>
                         <div className="col-span-2 text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">

@@ -21,9 +21,13 @@ const AdminLab: React.FC<AdminLabProps> = ({
   onClearLab
 }) => {
   const [discFilterLab, setDiscFilterLab] = useState('');
+  
+  // === NOVO: Filtro de unidade na listagem visual ===
+  const [unitFilterLab, setUnitFilterLab] = useState<AcademicUnit | ''>(''); 
+  
   const [labDisc, setLabDisc] = useState('');
   
-  // === NOVO: ESTADO DA UNIDADE PARA LABORATÓRIO ===
+  // === NOVO: ESTADO DA UNIDADE PARA LABORATÓRIO (UPLOAD) ===
   const [labUnit, setLabUnit] = useState<AcademicUnit>('N1');
 
   const [labTitle, setLabTitle] = useState('');
@@ -231,13 +235,27 @@ const AdminLab: React.FC<AdminLabProps> = ({
               <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Labs em Nuvem</h3>
               <button onClick={() => { if (prompt(`⚠️ Apagar Labs?\nSenha (fmst8):`) === 'fmst8') onClearLab && onClearLab(discFilterLab || undefined); }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit">Apagar {discFilterLab ? 'da Disciplina' : 'Tudo'} 🗑️</button>
             </div>
-            <select value={discFilterLab} onChange={e => setDiscFilterLab(e.target.value)} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
-              <option value="">Todas Disciplinas</option>
-              {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
-            </select>
+            <div className="flex flex-wrap gap-2">
+              <select value={discFilterLab} onChange={e => { setDiscFilterLab(e.target.value); setUnitFilterLab(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                <option value="">Todas Disciplinas</option>
+                {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+              </select>
+
+              {/* NOVO: SELETOR DE UNIDADE NO FILTRO VISUAL */}
+              {discFilterLab && disciplines.find(d => d.id === discFilterLab)?.category !== 'UC' && (
+                <select value={unitFilterLab} onChange={e => setUnitFilterLab(e.target.value as AcademicUnit | '')} className="p-3 bg-blue-50 text-blue-900 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                  <option value="">Ambas Unidades</option>
+                  <option value="N1">Unidade N1</option>
+                  <option value="N2">Unidade N2</option>
+                </select>
+              )}
+            </div>
          </div>
          <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
-            {(labSimulations || []).filter(s => !discFilterLab || s.disciplineId === discFilterLab).map(s => (
+            {(labSimulations || [])
+              .filter(s => !discFilterLab || s.disciplineId === discFilterLab)
+              .filter(s => !unitFilterLab || (s.unit || 'N1') === unitFilterLab) // Aplica o filtro da unidade
+              .map(s => (
               <div key={s.id} className="p-5 bg-emerald-50/40 rounded-[1.5rem] border border-emerald-100 flex justify-between items-center group transition-all hover:border-red-100">
                 <div>
                   <h4 className="font-bold text-[#003366] text-sm mb-1">{s.title} <span className="text-gray-400 font-medium text-xs">({s.questions.length} peças)</span></h4>
@@ -253,7 +271,10 @@ const AdminLab: React.FC<AdminLabProps> = ({
                 </button>
               </div>
             ))}
-            {(labSimulations || []).filter(s => !discFilterLab || s.disciplineId === discFilterLab).length === 0 && <p className="text-center py-10 text-gray-300 italic font-bold">Nenhum simulado de laboratório cadastrado.</p>}
+            {(labSimulations || [])
+              .filter(s => !discFilterLab || s.disciplineId === discFilterLab)
+              .filter(s => !unitFilterLab || (s.unit || 'N1') === unitFilterLab)
+              .length === 0 && <p className="text-center py-10 text-gray-300 italic font-bold">Nenhum simulado de laboratório cadastrado.</p>}
          </div>
       </div>
     </div>

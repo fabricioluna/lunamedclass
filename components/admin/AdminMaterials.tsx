@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../../types';
 import { Trash2, Loader2, BadgeCheck } from 'lucide-react';
 import { firestoreDB, storage } from '../../firebase';
@@ -37,7 +37,10 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
   const [matFile, setMatFile] = useState<File | null>(null);
   const [matIsVerified, setMatIsVerified] = useState(true);
   const [isMatUploading, setIsMatUploading] = useState(false);
+  
+  // FILTROS DA LISTA
   const [discFilterMat, setDiscFilterMat] = useState(''); 
+  const [unitFilterMat, setUnitFilterMat] = useState<AcademicUnit | ''>(''); // NOVO: Filtro de Unidade na lista
   const [liveMaterials, setLiveMaterials] = useState<Summary[]>([]);
 
   // BUSCAR MATERIAIS EM TEMPO REAL
@@ -161,14 +164,18 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
     const pass = prompt(`⚠️ AÇÃO DESTRUTIVA: Apagar os materiais ${discFilterMat ? 'da disciplina selecionada' : 'de TODAS as disciplinas'} e DESTRUIR OS ARQUIVOS PDFs DO SERVIDOR?\nDigite a senha (fmst8) para confirmar:`);
     if (pass === 'fmst8') {
       try {
-        const matsToDelete = liveMaterials.filter(m => !discFilterMat || m.disciplineId === discFilterMat);
+        const matsToDelete = liveMaterials.filter(m => {
+          const matchDisc = !discFilterMat || m.disciplineId === discFilterMat;
+          const matchUnit = !unitFilterMat || (m.unit || 'N1') === unitFilterMat;
+          return matchDisc && matchUnit;
+        });
         for (const mat of matsToDelete) {
           await deleteDoc(doc(firestoreDB, "materials", mat.id));
           if (mat.url && mat.url.includes("firebasestorage")) {
             try { await deleteObject(storageRef(storage, mat.url)); } catch (e) {}
           }
         }
-        alert("✅ Todos os materiais e arquivos foram apagados com sucesso.");
+        alert("✅ Materiais e arquivos selecionados foram apagados com sucesso.");
       } catch (error) {
         alert("Erro ao limpar materiais.");
       }
@@ -176,6 +183,15 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
       alert("❌ Senha incorreta.");
     }
   };
+
+  // Memoização do filtro da lista de materiais
+  const filteredMaterialsList = useMemo(() => {
+    return liveMaterials.filter(s => {
+      const matchDisc = !discFilterMat || s.disciplineId === discFilterMat;
+      const matchUnit = !unitFilterMat || (s.unit || 'N1') === unitFilterMat;
+      return matchDisc && matchUnit;
+    });
+  }, [liveMaterials, discFilterMat, unitFilterMat]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
@@ -251,19 +267,28 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
                 onClick={handleClearLiveMaterials}
                 className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit shadow-sm"
               >
-                Apagar {discFilterMat ? 'da Disciplina' : 'Tudo'} (INCLUI ARQUIVOS) 🗑️
+                Apagar {discFilterMat ? 'da Seleção' : 'Tudo'} (INCLUI ARQUIVOS) 🗑️
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-                <select value={discFilterMat} onChange={e => setDiscFilterMat(e.target.value)} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                <select value={discFilterMat} onChange={e => { setDiscFilterMat(e.target.value); setUnitFilterMat(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
                   <option value="">Todas Disciplinas</option>
                   {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
                 </select>
+
+                {/* NOVO: SELETOR DE UNIDADE NO FILTRO DA LISTAGEM */}
+                {discFilterMat && disciplines.find(d => d.id === discFilterMat)?.category !== 'UC' && (
+                  <select value={unitFilterMat} onChange={e => setUnitFilterMat(e.target.value as AcademicUnit | '')} className="p-3 bg-blue-50 text-blue-900 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                    <option value="">Ambas Unidades</option>
+                    <option value="N1">Unidade N1</option>
+                    <option value="N2">Unidade N2</option>
+                  </select>
+                )}
             </div>
          </div>
          
          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-            {liveMaterials.filter(s => !discFilterMat || s.disciplineId === discFilterMat).map(s => (
+            {filteredMaterialsList.map(s => (
               <div key={s.id} className="p-4 bg-gray-50 rounded-2xl border flex justify-between items-center group hover:border-red-100 transition-all">
                 <div className="flex items-center gap-4">
                    <span className="text-2xl">{s.label === 'LINK' ? '🔗' : '📄'}</span>
@@ -282,7 +307,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
                 </button>
               </div>
             ))}
-            {liveMaterials.filter(s => !discFilterMat || s.disciplineId === discFilterMat).length === 0 && (
+            {filteredMaterialsList.length === 0 && (
               <p className="text-center py-10 text-gray-300 italic font-bold">Nenhum material encontrado.</p>
             )}
          </div>

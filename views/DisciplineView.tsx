@@ -7,7 +7,6 @@ interface DisciplineViewProps {
   disciplines: SimulationInfo[];
   summaries: Summary[];
   onBack: () => void;
-  // Assinatura atualizada: Agora o componente pai pode receber a Unidade selecionada para injetar no Context/Filtro
   onSelectOption: (type: string, unit?: AcademicUnit) => void; 
 }
 
@@ -96,7 +95,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          {/* BOTÃO N1 (LEGADO E ATUAL) */}
+          {/* BOTÃO N1 */}
           <button 
             onClick={() => setSelectedUnit('N1')}
             className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden text-left flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-500"

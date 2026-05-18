@@ -22,6 +22,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
   // --- FILTROS DE VISUALIZAÇÃO (LADO DIREITO) ---
   const [periodFilterOsce, setPeriodFilterOsce] = useState(''); 
   const [discFilterOsce, setDiscFilterOsce] = useState(''); 
+  const [unitFilterOsce, setUnitFilterOsce] = useState<AcademicUnit | ''>(''); // NOVO: Filtro de Unidade
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
   const [typeFilter, setTypeFilter] = useState<'all' | 'clinical' | 'rpg' | 'ai'>('all');
 
@@ -182,7 +183,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                 {periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               
-              <select value={osceDiscipline} onChange={e => { setDiscFilterOsce(e.target.value); setOsceDiscipline(e.target.value); setOsceTheme(''); }} disabled={!oscePeriod} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
+              <select value={osceDiscipline} onChange={e => { setDiscFilterOsce(e.target.value); setUnitFilterOsce(''); setOsceDiscipline(e.target.value); setOsceTheme(''); }} disabled={!oscePeriod} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
                 <option value="">Disciplina...</option>
                 {filteredImportDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
               </select>
@@ -244,15 +245,24 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
             <button onClick={() => setTypeFilter('ai')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'ai' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-400 border-green-100'}`}><Bot size={12}/> Virtual</button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <select value={periodFilterOsce} onChange={e => { setPeriodFilterOsce(e.target.value); setDiscFilterOsce(''); setThemeFilterOsce(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <select value={periodFilterOsce} onChange={e => { setPeriodFilterOsce(e.target.value); setDiscFilterOsce(''); setUnitFilterOsce(''); setThemeFilterOsce(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
               <option value="">Todos os Períodos</option>
               {periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            <select value={discFilterOsce} onChange={e => { setDiscFilterOsce(e.target.value); setThemeFilterOsce(''); }} disabled={!periodFilterOsce} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50">
+            
+            <select value={discFilterOsce} onChange={e => { setDiscFilterOsce(e.target.value); setUnitFilterOsce(''); setThemeFilterOsce(''); }} disabled={!periodFilterOsce} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50">
               <option value="">Disciplinas...</option>
               {filteredViewDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
             </select>
+
+            {/* NOVO: SELETOR DE UNIDADE NO FILTRO */}
+            <select value={unitFilterOsce} onChange={e => setUnitFilterOsce(e.target.value as AcademicUnit | '')} disabled={!discFilterOsce || disciplines.find(d => d.id === discFilterOsce)?.category === 'UC'} className="p-3 bg-blue-50 text-blue-900 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:bg-gray-50 disabled:text-gray-400 disabled:opacity-50">
+              <option value="">Ambas Unidades</option>
+              <option value="N1">Unidade N1</option>
+              <option value="N2">Unidade N2</option>
+            </select>
+
             <select value={themeFilterOsce} onChange={e => setThemeFilterOsce(e.target.value)} disabled={!discFilterOsce} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50">
               <option value="">Temas...</option>
               {discFilterOsce && disciplines.find(d => d.id === discFilterOsce)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
@@ -268,7 +278,11 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
               if (disc?.periodId !== periodFilterOsce) return false;
             }
             const matchType = typeFilter === 'all' || s.mode === typeFilter;
-            return (!discFilterOsce || s.disciplineId === discFilterOsce) && (!themeFilterOsce || s.theme === themeFilterOsce) && matchType;
+            const matchDisc = !discFilterOsce || s.disciplineId === discFilterOsce;
+            const matchUnit = !unitFilterOsce || (s.unit || 'N1') === unitFilterOsce;
+            const matchTheme = !themeFilterOsce || s.theme === themeFilterOsce;
+            
+            return matchDisc && matchUnit && matchTheme && matchType;
           }).map((station, idx) => (
             <div key={idx} className={`p-4 rounded-[1.5rem] border flex justify-between items-center transition-all hover:shadow-md ${
               station.mode === 'rpg' ? 'bg-purple-50/40 border-purple-100' : 
@@ -287,7 +301,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-[#003366] text-sm leading-tight">{station.title}</h4>
-                  <div className="flex gap-2 mt-1">
+                  <div className="flex gap-2 mt-1 items-center">
                     <p className="text-[8px] font-black uppercase text-gray-400">{station.disciplineId}</p>
                     {/* MOSTRA A UNIDADE NA LISTAGEM */}
                     <p className="text-[8px] font-black uppercase text-[#003366] bg-blue-50 px-1 rounded border border-blue-100">{station.unit || 'N1'}</p>
