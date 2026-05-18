@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Question, SimulationInfo } from '../../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { SimulationInfo, Question, AcademicUnit } from '../../types';
 import { Trash2, Edit3, X } from 'lucide-react';
 
 interface AdminQuestionsProps {
@@ -29,6 +29,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   // ESTADOS DE IMPORTAÇÃO JSON (Refatorado)
   const [qDiscipline, setQDiscipline] = useState('');
   const [qTheme, setQTheme] = useState('');
+  const [qUnit, setQUnit] = useState<AcademicUnit>('N1'); // NOVO: Controle de Unidade no Import
   const [qTitle, setQTitle] = useState(''); 
   const [qAuthor, setQAuthor] = useState(''); 
   const [qFile, setQFile] = useState<File | null>(null);
@@ -40,6 +41,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   
   const [mqDiscipline, setMqDiscipline] = useState('');
   const [mqTheme, setMqTheme] = useState('');
+  const [mqUnit, setMqUnit] = useState<AcademicUnit>('N1'); // NOVO: Controle de Unidade no Manual
   const [mqQuizTitle, setMqQuizTitle] = useState('');
   const [mqText, setMqText] = useState('');
   const [mqOptions, setMqOptions] = useState<string[]>(['', '', '', '']);
@@ -63,6 +65,10 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
       return alert('Por favor, preencha a disciplina, o tema e dê um título ao simulado!');
     }
 
+    const selectedDiscObj = disciplines.find(d => d.id === qDiscipline);
+    const isUC = selectedDiscObj?.category === 'UC';
+    const targetUnit = isUC ? 'N1' : qUnit;
+
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -83,6 +89,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
           return {
             id: `q_${Date.now()}_${idx}`,
             disciplineId: qDiscipline,
+            unit: targetUnit, // <-- INJETADO: Grava a unidade do bloco
             theme: qTheme,
             q: item.pergunta.trim(),
             options: item.alternativas.map((opt: string) => opt.trim()),
@@ -96,7 +103,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
         });
         
         onAddQuestions(newQs);
-        alert(`✅ ${newQs.length} questões teóricas adicionadas ao simulado "${qTitle}"!`);
+        alert(`✅ ${newQs.length} questões teóricas adicionadas ao simulado "${qTitle}" da unidade ${targetUnit}!`);
         
         setQFile(null);
         setQTitle('');
@@ -118,6 +125,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     setEditingQId('');
     setMqDiscipline(discFilter || '');
     setMqTheme(themeFilter || '');
+    setMqUnit('N1');
     setMqQuizTitle(quizFilter || '');
     setMqText('');
     setMqOptions(['', '', '', '']);
@@ -131,6 +139,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     setEditingQId(q.id);
     setMqDiscipline(q.disciplineId);
     setMqTheme(q.theme);
+    setMqUnit(q.unit || 'N1'); // <-- Carrega a unidade existente ou o fallback
     setMqQuizTitle(q.quizTitle || '');
     setMqText(q.q);
     
@@ -148,6 +157,10 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
       return alert("Preencha a Disciplina, Tema, Simulado, o Enunciado e as 4 Alternativas!");
     }
 
+    const selectedDiscObj = disciplines.find(d => d.id === mqDiscipline);
+    const isUC = selectedDiscObj?.category === 'UC';
+    const targetUnit = isUC ? 'N1' : mqUnit;
+
     if (modalMode === 'edit') {
       const existingQ = questions.find(q => q.id === editingQId);
       if (existingQ) {
@@ -155,6 +168,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
           ...existingQ,
           disciplineId: mqDiscipline,
           theme: mqTheme,
+          unit: targetUnit, // <-- Atualiza a unidade
           quizTitle: mqQuizTitle,
           q: mqText,
           options: mqOptions,
@@ -168,6 +182,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
         id: `q_manual_${Date.now()}`,
         disciplineId: mqDiscipline,
         theme: mqTheme,
+        unit: targetUnit, // <-- Insere a unidade
         quizTitle: mqQuizTitle,
         q: mqText,
         options: mqOptions,
@@ -189,13 +204,22 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
         <div className="lg:col-span-4 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
           <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Importar JSON Teórico</h3>
           <form onSubmit={handleQuestionImport} className="space-y-4">
-            <select value={qDiscipline} onChange={e => setQDiscipline(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
+            <select value={qDiscipline} onChange={e => { setQDiscipline(e.target.value); setQTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
               <option value="">Disciplina...</option>
               {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
             </select>
-            <select value={qTheme} onChange={e => setQTheme(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
+            
+            {/* SELETOR DE UNIDADE NO IMPORT (Oculto se for UC) */}
+            {qDiscipline && disciplines.find(d => d.id === qDiscipline)?.category !== 'UC' && (
+              <select value={qUnit} onChange={e => setQUnit(e.target.value as AcademicUnit)} className="w-full p-4 bg-blue-50 text-blue-900 rounded-xl font-black text-sm outline-none border-2 border-blue-200 focus:border-[#003366]" required>
+                <option value="N1">Unidade N1 (1º Ciclo)</option>
+                <option value="N2">Unidade N2 (2º Ciclo)</option>
+              </select>
+            )}
+
+            <select value={qTheme} onChange={e => setQTheme(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required disabled={!qDiscipline}>
               <option value="">Eixo Temático...</option>
-              {disciplines.find(d => d.id === qDiscipline)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
+              {qDiscipline && disciplines.find(d => d.id === qDiscipline)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             
             <input type="text" placeholder="Nome do Simulado (Ex: P1 Cárdio Fafá)" value={qTitle} onChange={e => setQTitle(e.target.value)} maxLength={50} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required />
@@ -271,13 +295,15 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
                 <div key={q.id} className="p-4 bg-gray-50 rounded-2xl border flex justify-between items-start gap-4 group hover:border-[#D4A017] transition-all">
                   <div>
                     <p className="text-xs font-bold text-gray-700 leading-snug">{q.q}</p>
-                    <div className="flex gap-2 mt-2 flex-wrap">
+                    <div className="flex gap-2 mt-2 flex-wrap items-center">
                         <span className="text-[8px] font-black uppercase tracking-widest bg-white px-2 py-0.5 rounded border text-[#003366]">{q.disciplineId}</span>
+                        {/* MOSTRA A UNIDADE NA LISTAGEM */}
+                        <span className="text-[8px] font-black uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[#003366]">{q.unit || 'N1'}</span>
                         <span className="text-[8px] font-black uppercase tracking-widest bg-white px-2 py-0.5 rounded border text-[#D4A017]">{q.theme}</span>
                         {q.quizTitle && <span className="text-[8px] font-black uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-blue-800">📄 {q.quizTitle}</span>}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 pt-1">
+                  <div className="flex flex-col gap-2 pt-1 shrink-0">
                     <button onClick={() => handleOpenEditModal(q)} className="text-blue-400 hover:text-blue-600 transition-colors bg-white p-1.5 rounded-lg border shadow-sm" title="Editar Questão">
                       <Edit3 size={16}/>
                     </button>
@@ -317,7 +343,19 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
                      {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
                    </select>
                  </div>
-                 <div>
+
+                 {/* SELETOR DE UNIDADE NO MODAL MANUAL */}
+                 {mqDiscipline && disciplines.find(d => d.id === mqDiscipline)?.category !== 'UC' && (
+                   <div className="md:col-span-1">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Ciclo / Unidade</label>
+                     <select value={mqUnit} onChange={e => setMqUnit(e.target.value as AcademicUnit)} className="w-full p-4 bg-blue-50 text-blue-900 rounded-xl font-black text-sm border border-blue-200 focus:border-[#003366] outline-none">
+                       <option value="N1">N1 (1º Ciclo)</option>
+                       <option value="N2">N2 (2º Ciclo)</option>
+                     </select>
+                   </div>
+                 )}
+
+                 <div className="md:col-span-2">
                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Tema</label>
                    <select value={mqTheme} onChange={e => setMqTheme(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm border focus:border-[#003366] outline-none" disabled={!mqDiscipline}>
                      <option value="">Selecione o Eixo...</option>

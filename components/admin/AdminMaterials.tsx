@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationInfo, Summary, FirebaseTimestamp } from '../../types';
+import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../../types';
 import { Trash2, Loader2, BadgeCheck } from 'lucide-react';
 import { firestoreDB, storage } from '../../firebase';
 import { collection, query, onSnapshot, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { PERIODS } from '../../constants'; // <-- CORRIGIDO PARA PERIODS
+import { PERIODS } from '../../constants'; 
 import { formatFileSize } from '../../utils/formatters';
 
 interface AdminMaterialsProps {
@@ -23,8 +23,12 @@ const getSeconds = (ts?: FirebaseTimestamp): number => {
 
 const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
   // ESTADOS LOCAIS
-  const [matPeriod, setMatPeriod] = useState(''); // <-- CORRIGIDO PARA PERIOD
+  const [matPeriod, setMatPeriod] = useState(''); 
   const [matDisc, setMatDisc] = useState('');
+  
+  // === NOVO: ESTADO DA UNIDADE ===
+  const [matUnit, setMatUnit] = useState<AcademicUnit>('N1'); 
+  
   const [matType, setMatType] = useState<'summary' | 'script' | 'other'>('summary');
   const [matTitle, setMatTitle] = useState('');
   const [matAuthor, setMatAuthor] = useState('');
@@ -42,14 +46,18 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Summary[];
       const sortedDocs = docs.sort((a, b) => {
-        const timeA = getSeconds(a.createdAt); // <-- CORRIGIDO COM HELPER
-        const timeB = getSeconds(b.createdAt); // <-- CORRIGIDO COM HELPER
+        const timeA = getSeconds(a.createdAt); 
+        const timeB = getSeconds(b.createdAt); 
         return timeB - timeA;
       });
       setLiveMaterials(sortedDocs);
     });
     return () => unsubscribe();
   }, []);
+
+  // Verifica se a disciplina selecionada é UC (pois UC não usa N1/N2 obrigatoriamente)
+  const selectedDisciplineObj = disciplines.find(d => d.id === matDisc);
+  const isUC = selectedDisciplineObj?.category === 'UC';
 
   // FUNÇÕES DE AÇÃO
   const handlePublishAdminMaterial = async (e: React.FormEvent) => {
@@ -63,13 +71,16 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
     try {
       setIsMatUploading(true);
 
+      // Se for UC, salva sempre como N1 para compatibilidade, senão pega do state
+      const targetUnit = isUC ? 'N1' : matUnit;
+
       if (matUploadMode === 'file') {
         if (!matFile) {
           setIsMatUploading(false);
           return alert("Selecione um arquivo para enviar.");
         }
 
-        const sRef = storageRef(storage, `materials/${matDisc}/${Date.now()}_${matFile.name}`);
+        const sRef = storageRef(storage, `materials/${matDisc}/${targetUnit}/${Date.now()}_${matFile.name}`);
         const snap = await uploadBytes(sRef, matFile);
         const url = await getDownloadURL(snap.ref);
         const fileSize = formatFileSize(matFile.size);
@@ -80,6 +91,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
           description: "Adicionado via Painel Admin",
           type: matType,
           disciplineId: matDisc,
+          unit: targetUnit, // <-- INJETADO
           url: url,
           date: new Date().toLocaleDateString('pt-BR'),
           label: matFile.name.split('.').pop()?.toUpperCase() || 'ARQUIVO',
@@ -100,6 +112,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
           description: "Adicionado via Painel Admin",
           type: matType,
           disciplineId: matDisc,
+          unit: targetUnit, // <-- INJETADO
           url: matUrl,
           date: new Date().toLocaleDateString('pt-BR'),
           label: 'LINK',
@@ -113,7 +126,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
       setMatAuthor('');
       setMatUrl(''); 
       setMatFile(null);
-      alert(`Material ${matIsVerified ? 'Oficial ' : ''}publicado com sucesso!`);
+      alert(`Material ${matIsVerified ? 'Oficial ' : ''}publicado com sucesso${!isUC ? ` na unidade ${targetUnit}` : ''}!`);
       const fileInput = document.getElementById('adminFileInput') as HTMLInputElement;
       if(fileInput) fileInput.value = '';
 
@@ -181,6 +194,14 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
               .filter(d => !matPeriod || d.periodId === matPeriod)
               .map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
           </select>
+
+          {/* SELETOR DE UNIDADE (Oculto se for UC, pois não precisa dividir) */}
+          {!isUC && matDisc && (
+            <select value={matUnit} onChange={e => setMatUnit(e.target.value as AcademicUnit)} className="w-full p-4 bg-blue-50 text-blue-900 rounded-xl font-black text-sm outline-none border-2 border-blue-200 focus:border-[#003366]" required disabled={isMatUploading}>
+              <option value="N1">Unidade N1 (1º Ciclo)</option>
+              <option value="N2">Unidade N2 (2º Ciclo)</option>
+            </select>
+          )}
           
           <select value={matType} onChange={e => setMatType(e.target.value as any)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
             <option value="summary">Resumo Teórico</option>
@@ -252,7 +273,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
                         {s.isVerified && <span title="Material Verificado"><BadgeCheck size={14} className="text-emerald-500" /></span>}
                       </div>
                       <p className="text-[9px] font-black uppercase text-gray-400 mt-1">
-                        {s.disciplineId} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date} {s.author ? `• por ${s.author}` : ''}
+                        {s.disciplineId} • {s.unit ? `[${s.unit}]` : '[N1]'} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date} {s.author ? `• por ${s.author}` : ''}
                       </p>
                    </div>
                 </div>

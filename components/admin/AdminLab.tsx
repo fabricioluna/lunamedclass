@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SimulationInfo, LabSimulation, LabQuestion } from '../../types';
+import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit } from '../../types';
 import { Trash2, Microscope, Loader2 } from 'lucide-react';
 import { firestoreDB, storage } from '../../firebase';
 import { deleteObject, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -22,6 +22,10 @@ const AdminLab: React.FC<AdminLabProps> = ({
 }) => {
   const [discFilterLab, setDiscFilterLab] = useState('');
   const [labDisc, setLabDisc] = useState('');
+  
+  // === NOVO: ESTADO DA UNIDADE PARA LABORATÓRIO ===
+  const [labUnit, setLabUnit] = useState<AcademicUnit>('N1');
+
   const [labTitle, setLabTitle] = useState('');
   const [labAuthor, setLabAuthor] = useState('');
   const [labDesc, setLabDesc] = useState('');
@@ -39,6 +43,10 @@ const AdminLab: React.FC<AdminLabProps> = ({
     setIsLabUploading(true);
 
     try {
+      const selectedDiscObj = disciplines.find(d => d.id === labDisc);
+      const isUC = selectedDiscObj?.category === 'UC';
+      const targetUnit = isUC ? 'N1' : labUnit;
+
       const filesArray = Array.from(labImageFiles as FileList); 
       
       setLabUploadProgress('Analisando arquivo CSV e extraindo dicas...');
@@ -95,7 +103,8 @@ const AdminLab: React.FC<AdminLabProps> = ({
           throw new Error(`A imagem referente a "${item.filename}" não foi encontrada. Certifique-se de que selecionou todas as imagens no painel.`);
         }
 
-        const sRef = storageRef(storage, `lab_images/${labDisc}/${Date.now()}_${imageFile.name}`);
+        // Subpasta da unidade no Storage
+        const sRef = storageRef(storage, `lab_images/${labDisc}/${targetUnit}/${Date.now()}_${imageFile.name}`);
         const snap = await uploadBytes(sRef, imageFile as File); 
         const imageUrl = await getDownloadURL(snap.ref);
 
@@ -116,6 +125,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
       const newSim: LabSimulation = {
         id: `lab_sim_${Date.now()}`,
         disciplineId: labDisc,
+        unit: targetUnit, // <-- INJETADO: Grava a unidade do bloco
         title: labTitle,
         author: labAuthor,
         description: labDesc,
@@ -126,7 +136,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
       if (onAddLabSimulation) onAddLabSimulation(newSim);
       
       // RELATÓRIO FINAL DE INTEGRIDADE
-      let finalMessage = `✅ Sucesso Absoluto! Simulado com ${finalQuestions.length} peças criado em tempo recorde (Via Planilha) e publicado!`;
+      let finalMessage = `✅ Sucesso Absoluto! Simulado com ${finalQuestions.length} peças criado em tempo recorde e publicado na unidade ${targetUnit}!`;
       
       if (warnings.length > 0) {
         finalMessage += `\n\n⚠️ ALERTA DE INTEGRIDADE (Linhas Incompletas):\nO sistema protegeu o banco de dados ignorando as seguintes linhas do CSV:\n\n` + warnings.join('\n');
@@ -178,6 +188,15 @@ const AdminLab: React.FC<AdminLabProps> = ({
             <option value="">Selecione a Disciplina...</option>
             {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
           </select>
+
+          {/* SELETOR DE UNIDADE NO IMPORT (Oculto se for UC) */}
+          {labDisc && disciplines.find(d => d.id === labDisc)?.category !== 'UC' && (
+            <select value={labUnit} onChange={e => setLabUnit(e.target.value as AcademicUnit)} className="w-full p-4 bg-blue-50 text-blue-900 rounded-xl font-black text-sm outline-none border-2 border-blue-200 focus:border-[#003366]" required disabled={isLabUploading}>
+              <option value="N1">Unidade N1 (1º Ciclo)</option>
+              <option value="N2">Unidade N2 (2º Ciclo)</option>
+            </select>
+          )}
+
           <input type="text" placeholder="Título (Ex: P1 Histologia)" value={labTitle} onChange={e => setLabTitle(e.target.value)} maxLength={50} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" required disabled={isLabUploading} />
           <input type="text" placeholder="Autor (Seu Nome)" value={labAuthor} onChange={e => setLabAuthor(e.target.value)} maxLength={30} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" required disabled={isLabUploading} />
           <textarea placeholder="Descrição para os alunos..." value={labDesc} onChange={e => setLabDesc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none resize-none" rows={2} disabled={isLabUploading}></textarea>
@@ -222,7 +241,12 @@ const AdminLab: React.FC<AdminLabProps> = ({
               <div key={s.id} className="p-5 bg-emerald-50/40 rounded-[1.5rem] border border-emerald-100 flex justify-between items-center group transition-all hover:border-red-100">
                 <div>
                   <h4 className="font-bold text-[#003366] text-sm mb-1">{s.title} <span className="text-gray-400 font-medium text-xs">({s.questions.length} peças)</span></h4>
-                  <p className="text-[9px] font-black uppercase text-[#D4A017] tracking-widest">{s.disciplineId} • Por {s.author}</p>
+                  <div className="flex gap-2 items-center">
+                    <p className="text-[9px] font-black uppercase text-[#D4A017] tracking-widest">{s.disciplineId}</p>
+                    {/* MOSTRA A UNIDADE NA LISTAGEM */}
+                    <p className="text-[8px] font-black uppercase text-[#003366] bg-blue-50 px-1 rounded border border-blue-100">{s.unit || 'N1'}</p>
+                    <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">• Por {s.author}</p>
+                  </div>
                 </div>
                 <button onClick={() => handleDeleteLab(s.id)} className="text-red-300 hover:text-red-500 transition-colors p-2" title="Deletar Simulado e Imagens do Servidor">
                   <Trash2 size={20}/>

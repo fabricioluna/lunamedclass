@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { OsceStation, SimulationInfo, Period, StaticOsceStation, DynamicOsceStation } from '../../types'; // <-- IMPORT ATUALIZADO
+import { OsceStation, SimulationInfo, Period, StaticOsceStation, DynamicOsceStation, AcademicUnit } from '../../types'; 
 import { Trash2, ClipboardList, Gamepad2, Bot, UploadCloud } from 'lucide-react';
 
 interface AdminOsceProps {
-  periods?: Period[]; // <-- ALTERADO PARA periods
+  periods?: Period[]; 
   disciplines: SimulationInfo[];
   osceStations: OsceStation[];
   onAddOsceStations: (os: OsceStation[]) => void;
@@ -20,32 +20,40 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
   onClearOsce
 }) => {
   // --- FILTROS DE VISUALIZAÇÃO (LADO DIREITO) ---
-  const [periodFilterOsce, setPeriodFilterOsce] = useState(''); // <-- ALTERADO DE roomFilterOsce
+  const [periodFilterOsce, setPeriodFilterOsce] = useState(''); 
   const [discFilterOsce, setDiscFilterOsce] = useState(''); 
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
   const [typeFilter, setTypeFilter] = useState<'all' | 'clinical' | 'rpg' | 'ai'>('all');
 
   // --- ESTADOS DE IMPORTAÇÃO (LADO ESQUERDO) ---
   const [importMode, setImportMode] = useState<'clinical' | 'rpg' | 'ai'>('clinical'); 
-  const [oscePeriod, setOscePeriod] = useState(''); // <-- ALTERADO DE osceRoom
+  const [oscePeriod, setOscePeriod] = useState(''); 
   const [osceDiscipline, setOsceDiscipline] = useState('');
+  
+  // === NOVO: ESTADO DA UNIDADE PARA OSCE ===
+  const [osceUnit, setOsceUnit] = useState<AcademicUnit>('N1'); 
+  
   const [osceTheme, setOsceTheme] = useState('');
   const [osceFile, setOsceFile] = useState<File | null>(null);
   const [oscePreview, setOscePreview] = useState<OsceStation[] | null>(null);
 
   const filteredImportDisciplines = useMemo(() => {
     if (!oscePeriod) return [];
-    return disciplines.filter(d => d.periodId === oscePeriod); // <-- ALTERADO PARA periodId
+    return disciplines.filter(d => d.periodId === oscePeriod); 
   }, [disciplines, oscePeriod]);
 
   const filteredViewDisciplines = useMemo(() => {
     if (!periodFilterOsce) return disciplines;
-    return disciplines.filter(d => d.periodId === periodFilterOsce); // <-- ALTERADO PARA periodId
+    return disciplines.filter(d => d.periodId === periodFilterOsce); 
   }, [disciplines, periodFilterOsce]);
 
   const handleOsceReadPreview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!osceFile || !osceDiscipline || !osceTheme) return;
+
+    const selectedDiscObj = disciplines.find(d => d.id === osceDiscipline);
+    const isUC = selectedDiscObj?.category === 'UC';
+    const targetUnit = isUC ? 'N1' : osceUnit;
     
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -63,6 +71,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
           const base = {
             id: `osce_${Date.now()}_${idx}`,
             disciplineId: osceDiscipline,
+            unit: targetUnit, // <-- INJETADO: Grava a unidade vinculada
             theme: osceTheme,
             title: item.title || item.tema || 'Estação sem título',
             scenario: item.scenario || item.cenario_inicial || '',
@@ -127,6 +136,8 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
     alert(`✅ Sucesso! ${firebaseSafePayload.length} estações enviadas.`);
     setOscePreview(null);
     setOsceFile(null);
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if(fileInput) fileInput.value = '';
   };
 
   return (
@@ -170,10 +181,20 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                 <option value="">Período...</option>
                 {periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
+              
               <select value={osceDiscipline} onChange={e => { setDiscFilterOsce(e.target.value); setOsceDiscipline(e.target.value); setOsceTheme(''); }} disabled={!oscePeriod} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
                 <option value="">Disciplina...</option>
                 {filteredImportDisciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
               </select>
+
+              {/* SELETOR DE UNIDADE NO IMPORT (Oculto se for UC) */}
+              {osceDiscipline && disciplines.find(d => d.id === osceDiscipline)?.category !== 'UC' && (
+                <select value={osceUnit} onChange={e => setOsceUnit(e.target.value as AcademicUnit)} className="w-full p-4 bg-blue-50 text-blue-900 rounded-xl font-black text-sm outline-none border-2 border-blue-200 focus:border-[#003366]" required>
+                  <option value="N1">Unidade N1 (1º Ciclo)</option>
+                  <option value="N2">Unidade N2 (2º Ciclo)</option>
+                </select>
+              )}
+
               <select value={osceTheme} onChange={e => setOsceTheme(e.target.value)} disabled={!osceDiscipline} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
                 <option value="">Eixo Temático...</option>
                 {disciplines.find(d => d.id === osceDiscipline)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
@@ -268,6 +289,8 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                   <h4 className="font-bold text-[#003366] text-sm leading-tight">{station.title}</h4>
                   <div className="flex gap-2 mt-1">
                     <p className="text-[8px] font-black uppercase text-gray-400">{station.disciplineId}</p>
+                    {/* MOSTRA A UNIDADE NA LISTAGEM */}
+                    <p className="text-[8px] font-black uppercase text-[#003366] bg-blue-50 px-1 rounded border border-blue-100">{station.unit || 'N1'}</p>
                     <p className="text-[8px] font-black uppercase text-[#D4A017] tracking-widest">• {station.theme}</p>
                   </div>
                 </div>
