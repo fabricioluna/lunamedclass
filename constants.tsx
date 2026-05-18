@@ -65,9 +65,9 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Comunicação de Más Notícias'
     ],
     units: [
-      { id: 'hm2-u1', title: 'Unidade 1 - Comunicação e Anamnese', description: 'Protocolo SPIKES e Anamnese Geral' },
-      { id: 'hm2-u2', title: 'Unidade 2 - Exame Físico Geral', description: 'Sinais Vitais e Ectoscopia' },
-      { id: 'hm2-u3', title: 'Unidade 3 - Semiologia Especializada', description: 'Exame Físico Segmentar' }
+      { id: 'N1', title: 'Unidade 1 - Comunicação e Anamnese', description: 'Protocolo SPIKES e Anamnese Geral' },
+      { id: 'N2', title: 'Unidade 2 - Exame Físico Geral', description: 'Sinais Vitais e Ectoscopia' },
+      { id: 'N3', title: 'Unidade 3 - Semiologia Especializada', description: 'Exame Físico Segmentar' }
     ],
     references: [
       { id: 'ref7', title: 'Exame Clínico', author: 'Porto & Porto', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/210702' },
@@ -92,8 +92,8 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Programas de Hipertensão e Diabetes'
     ],
     units: [
-      { id: 'iesc2-u1', title: 'Unidade 1 - Epidemiologia', description: 'Cálculo de Índices e Indicadores de Saúde' },
-      { id: 'iesc2-u2', title: 'Unidade 2 - Fluxos na APS', description: 'Acolhimento e Programas de Saúde' }
+      { id: 'N1', title: 'Unidade 1 - Epidemiologia', description: 'Cálculo de Índices e Indicadores de Saúde' },
+      { id: 'N2', title: 'Unidade 2 - Fluxos na APS', description: 'Acolhimento e Programas de Saúde' }
     ],
     references: [
       { id: 'ref4', title: 'Epidemiologia', author: 'Leon Gordis', type: 'book' },
@@ -117,8 +117,8 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Movimentos Sociais e Saúde'
     ],
     units: [
-      { id: 'uccg2_3-u1', title: 'Unidade 1 - Sociologia e Minorias', description: 'Bases da Sociologia em Saúde' },
-      { id: 'uccg2_3-u2', title: 'Unidade 2 - Racismo Estrutural', description: 'Impactos no Sistema de Saúde' }
+      { id: 'N1', title: 'Unidade 1 - Sociologia e Minorias', description: 'Bases da Sociologia em Saúde' },
+      { id: 'N2', title: 'Unidade 2 - Racismo Estrutural', description: 'Impactos no Sistema de Saúde' }
     ],
     references: [
       { id: 'uccg2_3_ref1', title: 'Educação e Sociologia', author: 'Émile Durkheim', type: 'book' },
@@ -141,8 +141,8 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Medicina Tradicional e Saberes Populares'
     ],
     units: [
-      { id: 'uccg2_4-u1', title: 'Unidade 1 - Povos Originários', description: 'História Indígena' },
-      { id: 'uccg2_4-u2', title: 'Unidade 2 - Cultura Afro-Brasileira', description: 'Políticas para a População Negra' }
+      { id: 'N1', title: 'Unidade 1 - Povos Originários', description: 'História Indígena' },
+      { id: 'N2', title: 'Unidade 2 - Cultura Afro-Brasileira', description: 'Políticas para a População Negra' }
     ],
     references: [
       { id: 'uccg2_4_ref1', title: 'O Povo Brasileiro', author: 'Darcy Ribeiro', type: 'book' }
@@ -209,9 +209,9 @@ export const SIMULATIONS: SimulationInfo[] = [
       'Abordagem Inicial em Urgências (ABCDE)'
     ],
     units: [
-      { id: 'hm1-u1', title: 'Unidade 1 - Biossegurança', description: 'EPIs e Higienização das Mãos' },
-      { id: 'hm1-u2', title: 'Unidade 2 - Sinais Vitais', description: 'Aferição de Parâmetros Básicos' },
-      { id: 'hm1-u3', title: 'Unidade 3 - BLS e Urgência', description: 'Protocolo de RCP e ABCDE' }
+      { id: 'N1', title: 'Unidade 1 - Biossegurança', description: 'EPIs e Higienização das Mãos' },
+      { id: 'N2', title: 'Unidade 2 - Sinais Vitais', description: 'Aferição de Parâmetros Básicos' },
+      { id: 'N3', title: 'Unidade 3 - BLS e Urgência', description: 'Protocolo de RCP e ABCDE' }
     ],
     references: [
       { id: 'ref1', title: 'Normas, rotinas e técnicas de enfermagem (5ª ed.)', author: 'MOTTA AL', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/212535' },

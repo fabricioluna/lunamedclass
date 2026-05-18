@@ -39,7 +39,7 @@ import { db, ref, push } from './firebase';
 
 import { DataProvider, useData } from './contexts/DataContext';
 
-const APP_VERSION = "8.0.0 - Luna Modular Engine";
+const APP_VERSION = "8.1.3 - Luna Modular Engine (Clean)";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -117,7 +117,9 @@ const AppContent: React.FC = () => {
 
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
-  const [selectedUnit, setSelectedUnit] = useState<AcademicUnit | null>(null); // NOVO: Controle de N1/N2
+  
+  // === ESTADO NATIVO DO REACT PARA UNIDADE ACADÊMICA ===
+  const [selectedUnit, setSelectedUnit] = useState<AcademicUnit | null>(null); 
   
   const [quizFilteredQuestions, setQuizFilteredQuestions] = useState<Question[]>([]);
   const [currentOsceStation, setCurrentOsceStation] = useState<OsceStation | null>(null);
@@ -143,7 +145,7 @@ const AppContent: React.FC = () => {
 
   const handleSelectPeriod = (periodId: string) => {
     setSelectedPeriodId(periodId);
-    setSelectedUnit(null); // Reseta unidade ao trocar período
+    setSelectedUnit(null); // Reseta a unidade ao trocar o período
     const periodDiscs = disciplines.filter(d => d.periodId === periodId);
     if (periodDiscs.length === 1) {
       setSelectedDisciplineId(periodDiscs[0].id);
@@ -155,13 +157,12 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Aceita o parâmetro de unidade vindo do DisciplineView
   const handleNavigate = (view: ViewState | 'ai-test' | string, unit?: AcademicUnit) => {
     let targetView = view as ViewState | 'ai-test';
 
-    // Se uma unidade for passada (via DisciplineView), ela é salva no estado global
-    if (unit) {
-      setSelectedUnit(unit);
-    }
+    // Grava no state a unidade que a tela selecionou
+    if (unit) setSelectedUnit(unit);
 
     if (typeof view === 'string' && view.startsWith('lab-list-')) {
       const category = view.replace('lab-list-', '');
@@ -201,7 +202,8 @@ const AppContent: React.FC = () => {
         setSelectedUnit(null);
       }
       if (prevView === 'discipline') {
-        // Se voltar para a disciplina, mantemos a unidade pois ela é controlada lá
+        // Ao voltar para a tela de disciplina, obriga o aluno a selecionar N1/N2 novamente
+        setSelectedUnit(null);
       }
       if (prevView === 'period-selection') {
         setSelectedDisciplineId(null);
@@ -219,7 +221,7 @@ const AppContent: React.FC = () => {
 
   const handleSelectDiscipline = (id: string) => {
     setSelectedDisciplineId(id);
-    setSelectedUnit(null); // Reseta ao selecionar nova disciplina
+    setSelectedUnit(null); 
     handleNavigate('discipline');
   };
 
@@ -235,6 +237,9 @@ const AppContent: React.FC = () => {
   const currentPeriod = PERIODS.find(r => r.id === selectedPeriodId);
   const currentDiscipline = disciplines.find(s => s.id === selectedDisciplineId);
   const periodDisciplines = disciplines.filter(d => d.periodId === selectedPeriodId);
+
+  // Valor de fallback para garantir que o tipo não seja nulo quando repassado (usado por UCs)
+  const activeUnit: AcademicUnit = selectedUnit || 'N1';
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
@@ -274,24 +279,26 @@ const AppContent: React.FC = () => {
         {currentView === 'home' && currentPeriod && <HomeView period={currentPeriod} disciplines={periodDisciplines} onSelectDiscipline={handleSelectDiscipline} />}
         
         {currentView === 'career-quiz' && <CareerQuiz onBack={handleBack} />}
+        
         {currentView === 'discipline' && selectedDisciplineId && (
           <DisciplineView 
             disciplineId={selectedDisciplineId} 
             disciplines={disciplines}
             summaries={summaries}
             onBack={handleBack} 
-            // Agora recebe a unidade da DisciplineView
-            onSelectOption={(type, unit) => handleNavigate(type, unit)}
+            // Injeta a unidade ao disparar a navegação
+            onSelectOption={(type, unit) => handleNavigate(type, unit as AcademicUnit)}
           />
         )}
         
         {currentView === 'references-view' && currentDiscipline && <ReferencesView discipline={currentDiscipline} onBack={handleBack} />}
+        
         {currentView === 'share-material' && currentDiscipline && (
           <ShareMaterialView 
             discipline={currentDiscipline} 
             onShare={(s) => {
-              // Ao compartilhar, injetamos a unidade atual no objeto
-              const materialWithUnit = { ...s, unit: selectedUnit || 'N1' };
+              // Garante que materiais criados recebam o rótulo do ciclo
+              const materialWithUnit = { ...s, unit: activeUnit };
               if (db) push(ref(db, 'summaries'), materialWithUnit);
             }} 
             onBack={handleBack} 
@@ -301,12 +308,11 @@ const AppContent: React.FC = () => {
         {currentView === 'quiz-setup' && selectedDisciplineId && (
           <QuizSetupView 
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
-            // Filtra questões pela unidade selecionada (ou N1 se for legado)
             availableQuestions={questions.filter(q => {
               if (currentDiscipline?.category === 'UC') return true;
-              const qUnit = q.unit || 'N1';
-              return qUnit === selectedUnit;
+              return q.unit === activeUnit;
             })}
+            selectedUnit={activeUnit} 
             onBack={handleBack}
             onStart={(filtered) => { setQuizFilteredQuestions(filtered); handleNavigate('quiz'); }}
           />
@@ -322,7 +328,7 @@ const AppContent: React.FC = () => {
                 push(ref(db, 'quizResults'), { 
                   score, total, date: new Date().toLocaleString(), 
                   discipline: currentDiscipline?.id || 'Geral',
-                  unit: selectedUnit || 'N1', // Salva a unidade no resultado
+                  unit: activeUnit, 
                   quizTitle: quizTitle || 'Misto',
                   type: type || 'teorico',
                   timeSpent: timeSpent || 0,
@@ -337,8 +343,7 @@ const AppContent: React.FC = () => {
           <SummariesListView 
             disciplineId={selectedDisciplineId} 
             disciplines={disciplines} 
-            // Injetamos a unidade para filtro interno na lista
-            selectedUnit={selectedUnit || 'N1'} 
+            selectedUnit={activeUnit} 
             onBack={handleBack}
             onShareClick={() => handleNavigate('share-material')} 
           />
@@ -366,14 +371,14 @@ const AppContent: React.FC = () => {
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
             availableStations={osceStations.filter(s => {
               const isCorrectDisc = s.disciplineId === selectedDisciplineId;
-              const sUnit = s.unit || 'N1';
-              const isCorrectUnit = currentDiscipline?.category === 'UC' ? true : sUnit === selectedUnit;
+              const isCorrectUnit = currentDiscipline?.category === 'UC' ? true : s.unit === activeUnit;
               
               if (!isCorrectDisc || !isCorrectUnit) return false;
               if (osceFilterMode === 'static') return s.mode === 'clinical'; 
               if (osceFilterMode === 'rpg') return s.mode === 'rpg';
               return true;
             })}
+            selectedUnit={activeUnit} // <-- INJETADO
             onBack={handleBack}
             onStart={(station) => { 
               setCurrentOsceStation(station); 
@@ -394,13 +399,13 @@ const AppContent: React.FC = () => {
                     score, total, timeSpent,
                     date: new Date().toLocaleString(),
                     discipline: currentOsceStation.disciplineId,
-                    unit: selectedUnit || 'N1',
+                    unit: activeUnit,
                     quizTitle: currentOsceStation.title,
                     type: 'osce-rpg'
                   });
                   push(ref(db, 'osceAnalytics'), {
                     ...analytics,
-                    unit: selectedUnit || 'N1',
+                    unit: activeUnit,
                     date: new Date().toLocaleString(),
                     studentId: "anon_student"
                   });
@@ -417,13 +422,13 @@ const AppContent: React.FC = () => {
                     score, total, timeSpent,
                     date: new Date().toLocaleString(),
                     discipline: currentOsceStation.disciplineId,
-                    unit: selectedUnit || 'N1',
+                    unit: activeUnit,
                     quizTitle: currentOsceStation.title,
                     type: 'osce-estatico'
                   });
                   push(ref(db, 'osceAnalytics'), {
                     ...analytics,
-                    unit: selectedUnit || 'N1',
+                    unit: activeUnit,
                     date: new Date().toLocaleString()
                   });
                 }
@@ -436,10 +441,10 @@ const AppContent: React.FC = () => {
           <OsceSetupView 
             discipline={disciplines.find(s => s.id === selectedDisciplineId)!}
             availableStations={osceStations.filter(s => {
-               const sUnit = s.unit || 'N1';
-               const isCorrectUnit = currentDiscipline?.category === 'UC' ? true : sUnit === selectedUnit;
+               const isCorrectUnit = currentDiscipline?.category === 'UC' ? true : s.unit === activeUnit;
                return s.disciplineId === selectedDisciplineId && s.mode === 'ai' && isCorrectUnit;
             })} 
+            selectedUnit={activeUnit} // <-- INJETADO
             onBack={handleBack}
             onStart={(station) => { setCurrentOsceAIStation(station); handleNavigate('osce-ai-quiz'); }}
             setupMode="ai"
@@ -453,11 +458,10 @@ const AppContent: React.FC = () => {
           <LabListView 
             disciplineId={selectedDisciplineId} 
             disciplines={disciplines} 
-            // Filtro de unidade para laboratórios
+            selectedUnit={activeUnit} // <-- INJETADO
             simulations={labSimulations.filter(ls => {
               if (currentDiscipline?.category === 'UC') return true;
-              const lsUnit = ls.unit || 'N1';
-              return lsUnit === selectedUnit;
+              return ls.unit === activeUnit;
             })} 
             categoryFilter={labCategoryFilter}
             onStart={(sim) => { setCurrentLabSimulation(sim); handleNavigate('lab-quiz'); }} 
@@ -473,7 +477,7 @@ const AppContent: React.FC = () => {
                 push(ref(db, 'quizResults'), {
                   score, total, date: new Date().toLocaleString(),
                   discipline: currentLabSimulation.disciplineId,
-                  unit: selectedUnit || 'N1',
+                  unit: activeUnit,
                   quizTitle: currentLabSimulation.title,
                   type: 'laboratorio',
                   timeSpent: timeSpent || 0,
