@@ -1,6 +1,6 @@
 /**
  * LUNA ENGINE - AI SERVICE 
- * Versão: 3.2 (Estável - Foco Exclusivo no Módulo OSCE e RPG)
+ * Versão: 4.0 (Blindada - Resiliência e Fallback)
  */
 
 export interface SosOption {
@@ -10,47 +10,79 @@ export interface SosOption {
   transitionRef: any | null;
 }
 
-export const getAIResponse = async (prompt: string, context: string = "", isFinalEvaluation: boolean = false) => {
-  try {
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, context, isFinalEvaluation }),
-    });
+// ============================================================================
+// CORE DA LUNA ENGINE: Fetch com Timeout e Retry Automático
+// ============================================================================
+const fetchWithRetry = async (url: string, options: RequestInit, retries = 2, timeoutMs = 20000) => {
+  for (let i = 0; i <= retries; i++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    // Tratamento de falhas HTTP (ex: 504 Gateway Timeout)
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      // Se for a última tentativa, repassa o erro para acionar o Fallback da UI
+      if (i === retries) throw error;
+      
+      console.warn(`[Luna Engine] Instabilidade detectada. Tentativa ${i + 1} falhou. Retentando em 1.5s...`);
+      await new Promise(res => setTimeout(res, 1500)); // Aguarda 1.5s antes de tentar novamente
     }
-
-    const data = await response.json();
-    return data.response || data.text || "Sem resposta da engine."; 
-  } catch (error) {
-    console.error("[Luna Engine] Erro Crítico de Conexão:", error);
-    return "Falha ao conectar com o serviço clínico. Verifique sua conexão e tente novamente.";
   }
 };
 
+// ============================================================================
+// REQUISIÇÕES PADRÃO (Chat de Feedback e RPG Simples)
+// ============================================================================
+export const getAIResponse = async (prompt: string, context: string = "", isFinalEvaluation: boolean = false) => {
+  try {
+    const data = await fetchWithRetry('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, context, isFinalEvaluation }),
+    }, 2, 20000); // Tenta 3 vezes no total, com 20s de limite cada
+
+    return data.response || data.text || "Sem resposta da engine."; 
+  } catch (error) {
+    console.error("[Luna Engine] Erro Crítico de Conexão:", error);
+    return "⚠️ [SISTEMA] Doutor(a), a conexão com o prontuário eletrônico está instável. Por favor, reavalie os dados e tente enviar novamente em alguns segundos.";
+  }
+};
+
+// ============================================================================
+// REQUISIÇÕES AVANÇADAS (RPG Dinâmico com Mudança de Sinais Vitais)
+// ============================================================================
 export const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: any) => {
   try {
-    const response = await fetch('/api/chat', {
+    const data = await fetchWithRetry('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, context, mode: 'rpg', phaseRules }),
-    });
+    }, 2, 25000); // 25s de limite, pois o RPG processa Sinais Vitais JSON
     
-    if (!response.ok) throw new Error(`Server Heat Error: ${response.status}`);
-    return await response.json(); 
+    return data; 
   } catch (error) {
-    console.warn("[Luna Engine] Fallback ativado no RPG:", error);
+    console.warn("[Luna Engine] Fallback Imersivo ativado no RPG:", error);
     return { 
-      text: "A equipe aguarda sua decisão técnica.", 
+      // Resposta imersiva que impede o app de quebrar
+      text: "⚠️ [BIP DO MONITOR] Doutor(a), perdemos temporariamente o sinal com a central de monitorização. O paciente segue sob nossos cuidados locais. Por favor, repita sua última conduta para validarmos no sistema.", 
       vitalsUpdate: null, 
       newPhaseId: null 
     };
   }
 };
 
+// ============================================================================
+// PARSER DE JSON ULTRA-RESILIENTE
+// ============================================================================
 const extractJson = (text: string) => {
   try {
     const clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
@@ -68,6 +100,9 @@ const extractJson = (text: string) => {
   }
 };
 
+// ============================================================================
+// AVALIADOR DE FEEDBACK
+// ============================================================================
 export const generateFinalFeedback = async (history: { role: string, text: string }[], stationTitle: string) => {
   const chatHistory = history.map(h => `${h.role === 'user' ? 'Aluno' : 'Sistema'}: ${h.text}`).join('\n');
   
@@ -89,12 +124,15 @@ export const generateFinalFeedback = async (history: { role: string, text: strin
   try {
     const res = await getAIResponse(prompt, "Avaliador de Debriefing");
     const feedback = extractJson(res);
-    return feedback || { postura: "Avaliação indisponível.", acertos: [], omissoes: [], nota: 5.0 };
+    return feedback || { postura: "Avaliação indisponível devido a instabilidade.", acertos: [], omissoes: [], nota: 5.0 };
   } catch (err) {
-    return { postura: "Erro ao processar feedback.", acertos: [], omissoes: [], nota: 0.0 };
+    return { postura: "Erro na conexão com o preceptor virtual.", acertos: [], omissoes: [], nota: 0.0 };
   }
 };
 
+// ============================================================================
+// EXTRATOR DE AÇÕES (Para comparar o texto livre com os botões)
+// ============================================================================
 export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
   if (!availableTransitions.length) return [];
   
@@ -121,6 +159,9 @@ export const evaluateRpgAction = async (userAction: string, availableTransitions
   }
 };
 
+// ============================================================================
+// GERADOR DE BOTÕES SOS
+// ============================================================================
 export const generateRpgOptions = async (validTransitions: any[], narrative: string): Promise<SosOption[]> => {
     if (!validTransitions.length) return [];
     
@@ -154,9 +195,10 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
         }).sort(() => Math.random() - 0.5);
 
     } catch (error) {
+        // Fallback de Segurança se a IA falhar: Devolve a conduta correta como única opção salvadora
         return [{ 
             id: 'emergency-fallback', 
-            text: correctTrigger, 
+            text: `[Conduta Padrão] ${correctTrigger}`, 
             isCorrect: true, 
             transitionRef: validTransitions[0] 
         }];
