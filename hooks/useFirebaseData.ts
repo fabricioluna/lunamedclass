@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { db, ref, onValue } from '../firebase.ts';
-// 1. Importação das constantes e tipos
 import { INITIAL_QUESTIONS, SIMULATIONS, PERIODS } from '../constants.tsx';
 import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Period } from '../types.ts';
 
@@ -8,17 +7,19 @@ export const useFirebaseData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
 
-  // ESTADOS DOS DADOS
+  // ESTADOS GLOBAIS ESTRUTURAIS (Leves - Mantidos na memória)
   const [periods, setPeriods] = useState<Period[]>(PERIODS); 
   const [disciplines, setDisciplines] = useState<SimulationInfo[]>(SIMULATIONS);
-  const [summaries, setSummaries] = useState<Summary[]>([]);
-  const [questions, setQuestions] = useState<Question[]>(INITIAL_QUESTIONS);
-  const [osceStations, setOsceStations] = useState<OsceStation[]>([]);
-  const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
-  const [labSimulations, setLabSimulations] = useState<LabSimulation[]>([]); 
   
-  // NOVO: Estado para armazenar os dados brutos de pesquisa (Analytics)
-  const [osceAnalytics, setOsceAnalytics] = useState<any[]>([]); 
+  // DADOS PESADOS (Sangria Estancada)
+  // Eles não serão mais baixados no boot da aplicação (Global Fetch). 
+  // Retornamos arrays vazios para não quebrar o contrato com o App.tsx nesta etapa.
+  const summaries: Summary[] = [];
+  const questions: Question[] = [];
+  const osceStations: OsceStation[] = [];
+  const quizResults: QuizResult[] = [];
+  const labSimulations: LabSimulation[] = []; 
+  const osceAnalytics: any[] = []; 
 
   useEffect(() => {
     if (!db) {
@@ -26,12 +27,12 @@ export const useFirebaseData = () => {
       return;
     }
 
-    // Monitorar o status de conexão do Firebase
+    // Monitorar o status de conexão (Mantido no Realtime DB pois é nativo e não consome cota)
     onValue(ref(db, ".info/connected"), (snap) => {
       setIsOnline(snap.val() === true);
     });
 
-    // Carregar configurações das disciplinas (temas, referências, status)
+    // Carregar apenas as configurações de bloqueio e status das disciplinas
     onValue(ref(db, 'discipline_config'), (snap) => {
       const config = snap.val();
       if (config) {
@@ -51,36 +52,8 @@ export const useFirebaseData = () => {
       }
     });
 
-    // Mapeamento e Sincronização Dinâmica das Coleções
-    const collections = [
-      { path: 'questions', setter: (data: any) => setQuestions([...INITIAL_QUESTIONS, ...Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))]) },
-      { path: 'summaries', setter: (data: any) => setSummaries(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))) },
-      { path: 'osce', setter: (data: any) => setOsceStations(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))) },
-      { path: 'quizResults', setter: (data: any) => setQuizResults(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], id: k }))) },
-      { path: 'labSimulations', setter: (data: any) => setLabSimulations(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))) },
-      // ADICIONADO: Sincronização da coleção de Analytics para pesquisa
-      { path: 'osceAnalytics', setter: (data: any) => setOsceAnalytics(Object.keys(data).filter(k => data[k]).map(k => ({ ...data[k], firebaseId: k }))) }
-    ];
-
-    collections.forEach(col => {
-      onValue(ref(db, col.path), (snap) => {
-        const val = snap.val();
-        if (val) {
-          col.setter(val);
-        } else {
-          // Defaults caso a coleção esteja vazia
-          if (col.path === 'questions') setQuestions(INITIAL_QUESTIONS);
-          if (col.path === 'summaries') setSummaries([]);
-          if (col.path === 'osce') setOsceStations([]);
-          if (col.path === 'quizResults') setQuizResults([]);
-          if (col.path === 'labSimulations') setLabSimulations([]); 
-          if (col.path === 'osceAnalytics') setOsceAnalytics([]); 
-        }
-      });
-    });
-
-    // Timer de segurança para encerrar o loading inicial
-    const timer = setTimeout(() => setIsLoading(false), 2000);
+    // Tempo de boot da aplicação agora será quase instantâneo
+    const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -94,7 +67,6 @@ export const useFirebaseData = () => {
     osceStations,
     quizResults,
     labSimulations,
-    // NOVO: Retornamos os dados de analytics para o Contexto
     osceAnalytics 
   };
 };
