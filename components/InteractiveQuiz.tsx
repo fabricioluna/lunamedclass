@@ -107,7 +107,13 @@ const NavigationGridDrawer = ({ onClose, questions, answers, currentIndex, onJum
 // COMPONENTE PRINCIPAL (MAESTRO)
 // ============================================================================
 const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, onAnswerQuestion, storageKey, resumeState }) => {
-  const [currentIndex, setCurrentIndex] = useState(resumeState?.currentIndex || 0);
+  
+  // LUNA ENGINE: Inicialização Segura. Se o índice em cache for maior que o array de questões, reseta para 0.
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const savedIdx = resumeState?.currentIndex || 0;
+    return savedIdx < questions.length ? savedIdx : 0;
+  });
+
   const [answers, setAnswers] = useState<Record<string, number>>(resumeState?.answers || {});
   const [score, setScore] = useState(resumeState?.score || 0);
   const [draftAnswers, setDraftAnswers] = useState<Record<string, number>>(resumeState?.draftAnswers || {});
@@ -118,6 +124,17 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
     const stateToSave = { currentIndex, answers, score, draftAnswers, eliminatedOptions };
     localStorage.setItem(storageKey, JSON.stringify(stateToSave));
   }, [currentIndex, answers, score, draftAnswers, eliminatedOptions, storageKey]);
+
+  // LUNA ENGINE: Guarda de Renderização. Se as questões ainda não chegaram ou o array quebrou, previne tela branca.
+  const q = questions[currentIndex];
+  if (!q || questions.length === 0) {
+    return (
+      <div className="py-32 flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#003366]/20 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
+        <h3 className="text-[#003366] font-black uppercase tracking-widest text-xs">Preparando Caderno de Provas...</h3>
+      </div>
+    );
+  }
 
   const handleSelectOption = (questionId: string, optionIndex: number) => {
     if (answers[questionId] !== undefined) return; 
@@ -158,8 +175,7 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
     if (isCorrect) setScore((prev: number) => prev + 1);
 
     if (onAnswerQuestion) {
-      const q = questions.find(x => x.id === questionId);
-      if (q) onAnswerQuestion(questionId, isCorrect, q.theme);
+      onAnswerQuestion(questionId, isCorrect, q.theme);
     }
   };
 
@@ -183,17 +199,16 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const q = questions[currentIndex];
   const userAnswer = answers[q.id];
   const isAnswered = userAnswer !== undefined;
   const isCorrect = isAnswered && userAnswer === q.answer;
   const isLastQuestion = currentIndex === questions.length - 1;
-  const progress = ((currentIndex + 1) / questions.length) * 100;
+  const progress = ((currentIndex + 1) / Math.max(1, questions.length)) * 100;
   
   const unansweredCount = questions.length - Object.keys(answers).length;
 
   return (
-    <div className="pb-32">
+    <div className="pb-32 relative">
       
       <TopProgressBar progress={progress} currentIndex={currentIndex} totalQuestions={questions.length} />
 
