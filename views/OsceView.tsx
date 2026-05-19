@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { OsceStation, StaticOsceStation } from '../types';
 import { 
-  ClipboardList, 
-  Timer, 
-  CheckCircle2, 
-  XCircle, 
-  AlertCircle, 
-  ChevronRight, 
-  RotateCcw, 
-  Map,
-  Trophy,
-  History,
-  FlaskConical
+  ClipboardList, Timer, CheckCircle2, AlertCircle, ChevronRight, RotateCcw, Map, Trophy, History, FlaskConical
 } from 'lucide-react';
 
 interface OsceViewProps {
@@ -20,26 +10,203 @@ interface OsceViewProps {
   onSaveResult?: (score: number, total: number, timeSpent: number, analytics: any) => void;
 }
 
+// ============================================================================
+// MICRO-COMPONENTES (UI)
+// ============================================================================
+
+const ModeMismatchWarning = ({ onBack, requiredMode }: { onBack: () => void, requiredMode: string }) => (
+  <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+    <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
+    <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase">Modo Incompatível</h2>
+    <p className="text-gray-600 mb-8 font-medium">Esta estação requer o motor {requiredMode}.</p>
+    <button onClick={onBack} className="bg-[#003366] text-white px-8 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-[#D4A017] transition-all">
+      Voltar para Seleção
+    </button>
+  </div>
+);
+
+const StationHeader = ({ onBack, theme }: { onBack: () => void, theme: string }) => (
+  <div className="flex justify-between items-center mb-10 border-b pb-6">
+    <button onClick={onBack} className="text-[#003366] font-black uppercase text-[10px] flex items-center gap-2 hover:text-[#D4A017] transition-colors">
+      <RotateCcw size={14} /> Sair da Estação
+    </button>
+    <div className="text-right">
+      <span className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">{theme}</span>
+      <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">📋 SIMULADO ESTÁTICO</h2>
+    </div>
+  </div>
+);
+
+const ContextPanel = ({ isUC, scenario, task }: { isUC: boolean, scenario: string, task: string }) => (
+  <div className="bg-white p-8 rounded-[2rem] shadow-xl border-t-8 border-[#003366]">
+    <h3 className="text-[10px] font-black text-[#003366] uppercase mb-4 tracking-widest flex items-center gap-2">
+      {isUC ? <FlaskConical size={14}/> : <ClipboardList size={14}/>} 
+      {isUC ? 'Contexto da Bancada' : 'Cenário Clínico'}
+    </h3>
+    <p className="text-gray-700 leading-relaxed font-medium mb-6">"{scenario}"</p>
+    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+      <h4 className="text-[9px] font-black text-blue-800 uppercase mb-1 tracking-widest">🎯 Missão</h4>
+      <p className="text-xs text-blue-900 font-bold">{task}</p>
+    </div>
+  </div>
+);
+
+const TimerDisplay = ({ timer, formatTime }: { timer: number, formatTime: (s: number) => string }) => (
+  <div className="bg-white p-6 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
+    <span className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+      <Timer size={14} /> Cronômetro
+    </span>
+    <span className={`text-xl font-mono font-bold ${timer > 480 ? 'text-red-500 animate-pulse' : 'text-[#003366]'}`}>
+      {formatTime(timer)}
+    </span>
+  </div>
+);
+
+const InteractionArea = ({ selectedActions, safeActionCloud, isUC, onToggleAction }: any) => (
+  <div className="space-y-8">
+    <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-dashed border-blue-100">
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4 flex items-center gap-2">
+        <History size={12}/> Sua Sequência de Ações:
+      </label>
+      <div className="flex flex-wrap gap-3 min-h-[120px] items-start content-start">
+        {selectedActions.length === 0 && (
+          <p className="text-gray-300 text-sm italic w-full text-center py-8">Toque nas ações da nuvem abaixo na ordem correta...</p>
+        )}
+        {selectedActions.map((idx: number, i: number) => (
+          <div key={i} className="bg-white pl-2 pr-4 py-2 rounded-xl shadow-md border-2 border-[#003366] text-xs font-black text-[#003366] flex items-center gap-3 animate-in zoom-in">
+            <span className="bg-[#003366] text-white w-6 h-6 rounded-lg flex items-center justify-center text-[10px]">{i + 1}</span>
+            {safeActionCloud[idx]}
+            <button onClick={() => onToggleAction(idx)} className="text-red-400 hover:text-red-600 transition-colors">✕</button>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100">
+      <h3 className="text-[10px] font-black text-gray-400 uppercase mb-8 tracking-[0.2em] text-center">
+        {isUC ? 'Nuvem de Itens e Procedimentos' : 'Nuvem de Ações e Condutas'}
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {safeActionCloud.map((action: string, idx: number) => (
+          <button
+            key={idx}
+            disabled={selectedActions.includes(idx)}
+            onClick={() => onToggleAction(idx)}
+            className={`p-5 rounded-2xl text-left text-xs font-bold transition-all border-2
+              ${selectedActions.includes(idx) 
+                ? 'bg-gray-50 border-gray-50 text-gray-200 opacity-40 cursor-not-allowed' 
+                : 'bg-white border-gray-100 text-[#003366] hover:border-[#D4A017] hover:shadow-xl active:scale-95'}
+            `}
+          >
+            {action}
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const ResultsDashboard = ({ score, timer, selectedActions, safeActionCloud, safeOrderIndices, checklist, formatTime }: any) => (
+  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
+    {/* BOX DE NOTA */}
+    <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-b-8 border-[#D4A017] relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-8 opacity-10 text-[#003366]"><Trophy size={120}/></div>
+      <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Desempenho Técnico</p>
+      <h4 className="text-8xl font-black text-[#003366] tracking-tighter">{score.toFixed(1)}</h4>
+      <div className="mt-4 flex items-center justify-center gap-4">
+          <span className="px-4 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+              Tempo de Execução: {formatTime(timer)}
+          </span>
+          <span className="px-4 py-1 bg-purple-50 text-purple-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+              {selectedActions.length} Etapas Realizadas
+          </span>
+      </div>
+    </div>
+
+    {/* AVALIAÇÃO PASSO A PASSO */}
+    <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
+      <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3">
+        <Map size={20} className="text-[#D4A017]"/> Análise Passo a Passo
+      </h4>
+      <div className="space-y-3">
+        {selectedActions.length === 0 && (
+          <p className="text-sm text-red-500 font-bold">Nenhuma ação foi selecionada.</p>
+        )}
+        {selectedActions.map((actionIdx: number, userPos: number) => {
+          const correctPos = safeOrderIndices.indexOf(actionIdx);
+          const isCorrect = correctPos !== -1;
+          const onTime = correctPos === userPos;
+
+          return (
+            <div key={userPos} className={`p-5 rounded-2xl border-2 flex items-center justify-between gap-4 transition-all
+              ${!isCorrect ? 'bg-red-50 border-red-100' : onTime ? 'bg-green-50 border-green-100' : 'bg-yellow-50 border-yellow-100'}
+            `}>
+              <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-sm
+                  ${!isCorrect ? 'bg-red-500 text-white' : onTime ? 'bg-green-600 text-white' : 'bg-yellow-500 text-white'}
+                `}>
+                  {userPos + 1}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-800">{safeActionCloud[actionIdx]}</p>
+                  <span className={`text-[9px] font-black uppercase tracking-tighter mt-1 block
+                      ${!isCorrect ? 'text-red-500' : onTime ? 'text-green-600' : 'text-yellow-600'}
+                  `}>
+                      {!isCorrect ? '❌ Conduta Incorreta (Penalidade)' : onTime ? '✅ Na Ordem Correta' : `⚠️ Fora de Sequência (Deveria ser o ${correctPos + 1}º)`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* GABARITO E CHECKLIST */}
+    <div className="grid grid-cols-1 gap-6">
+      <div className="bg-[#003366] p-10 rounded-[3rem] shadow-2xl text-white">
+        <h4 className="text-lg font-black text-[#D4A017] uppercase mb-8 flex items-center gap-3 border-b border-white/10 pb-4">
+          <CheckCircle2 size={20}/> Gabarito Oficial (Padrão-Ouro)
+        </h4>
+        <div className="space-y-4">
+          {safeOrderIndices.map((idx: number, i: number) => (
+            <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+              <span className="text-[#D4A017] font-black text-xs bg-white/10 w-6 h-6 rounded flex items-center justify-center">{i + 1}</span>
+              <p className="text-sm font-medium">{safeActionCloud[idx]}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {checklist && checklist.length > 0 && (
+        <div className="bg-white p-10 rounded-[3rem] border-2 border-gray-100 shadow-xl">
+          <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3 border-b pb-4">
+            <span>📋</span> Critérios de Avaliação (Checklist)
+          </h4>
+          <ul className="space-y-3">
+            {checklist.map((item: string, i: number) => (
+              <li key={i} className="flex items-start gap-3 text-xs font-bold text-gray-500">
+                <span className="text-[#D4A017]">●</span> {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+// ============================================================================
+// COMPONENTE PRINCIPAL (MAESTRO)
+// ============================================================================
 const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) => {
   const [selectedActions, setSelectedActions] = useState<number[]>([]);
   const [isFinished, setIsFinished] = useState(false);
   const [score, setScore] = useState(0);
   const [timer, setTimer] = useState(0);
 
-  // === PROTEÇÃO DE MOTOR (TYPE GUARD) ===
   if (station.mode !== 'clinical') {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
-        <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase">Modo Incompatível</h2>
-        <p className="text-gray-600 mb-8 font-medium">
-          Esta estação requer o motor {station.mode === 'rpg' ? 'Luna Engine (RPG)' : 'Paciente Virtual (IA)'}.
-        </p>
-        <button onClick={onBack} className="bg-[#003366] text-white px-8 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-[#D4A017] transition-all">
-          Voltar para Seleção
-        </button>
-      </div>
-    );
+    return <ModeMismatchWarning onBack={onBack} requiredMode={station.mode === 'rpg' ? 'Luna Engine (RPG)' : 'Paciente Virtual (IA)'} />;
   }
 
   const staticStation = station as StaticOsceStation;
@@ -111,194 +278,39 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 pb-40">
-      
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-10 border-b pb-6">
-        <button onClick={onBack} className="text-[#003366] font-black uppercase text-[10px] flex items-center gap-2 hover:text-[#D4A017] transition-colors">
-          <RotateCcw size={14} /> Sair da Estação
-        </button>
-        <div className="text-right">
-          <span className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">{staticStation.theme}</span>
-          <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">📋 SIMULADO ESTÁTICO</h2>
-        </div>
-      </div>
+      <StationHeader onBack={onBack} theme={staticStation.theme} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        
-        {/* CONTEXTO DA ESTAÇÃO */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white p-8 rounded-[2rem] shadow-xl border-t-8 border-[#003366]">
-            <h3 className="text-[10px] font-black text-[#003366] uppercase mb-4 tracking-widest flex items-center gap-2">
-              {isUC ? <FlaskConical size={14}/> : <ClipboardList size={14}/>} 
-              {isUC ? 'Contexto da Bancada' : 'Cenário Clínico'}
-            </h3>
-            <p className="text-gray-700 leading-relaxed font-medium mb-6">"{staticStation.scenario}"</p>
-            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-              <h4 className="text-[9px] font-black text-blue-800 uppercase mb-1 tracking-widest">🎯 Missão</h4>
-              <p className="text-xs text-blue-900 font-bold">{staticStation.task}</p>
-            </div>
-          </div>
-
-          {!isFinished && (
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
-              <span className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                <Timer size={14} /> Cronômetro
-              </span>
-              <span className={`text-xl font-mono font-bold ${timer > 480 ? 'text-red-500 animate-pulse' : 'text-[#003366]'}`}>
-                {formatTime(timer)}
-              </span>
-            </div>
-          )}
+          <ContextPanel isUC={isUC} scenario={staticStation.scenario} task={staticStation.task} />
+          {!isFinished && <TimerDisplay timer={timer} formatTime={formatTime} />}
         </div>
 
-        {/* ÁREA DE INTERAÇÃO E RESULTADOS */}
         <div className="lg:col-span-2">
           {!isFinished ? (
-            <div className="space-y-8">
-              {/* NUVEM DE SELEÇÃO DO ALUNO */}
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-dashed border-blue-100">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4 flex items-center gap-2">
-                  <History size={12}/> Sua Sequência de Ações:
-                </label>
-                <div className="flex flex-wrap gap-3 min-h-[120px] items-start content-start">
-                  {selectedActions.length === 0 && (
-                    <p className="text-gray-300 text-sm italic w-full text-center py-8">Toque nas ações da nuvem abaixo na ordem correta...</p>
-                  )}
-                  {selectedActions.map((idx, i) => (
-                    <div key={i} className="bg-white pl-2 pr-4 py-2 rounded-xl shadow-md border-2 border-[#003366] text-xs font-black text-[#003366] flex items-center gap-3 animate-in zoom-in">
-                      <span className="bg-[#003366] text-white w-6 h-6 rounded-lg flex items-center justify-center text-[10px]">{i + 1}</span>
-                      {safeActionCloud[idx]}
-                      <button onClick={() => toggleAction(idx)} className="text-red-400 hover:text-red-600 transition-colors">✕</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* OPÇÕES DA NUVEM */}
-              <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100">
-                <h3 className="text-[10px] font-black text-gray-400 uppercase mb-8 tracking-[0.2em] text-center">
-                  {isUC ? 'Nuvem de Itens e Procedimentos' : 'Nuvem de Ações e Condutas'}
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {safeActionCloud.map((action, idx) => (
-                    <button
-                      key={idx}
-                      disabled={selectedActions.includes(idx)}
-                      onClick={() => toggleAction(idx)}
-                      className={`p-5 rounded-2xl text-left text-xs font-bold transition-all border-2
-                        ${selectedActions.includes(idx) 
-                          ? 'bg-gray-50 border-gray-50 text-gray-200 opacity-40 cursor-not-allowed' 
-                          : 'bg-white border-gray-100 text-[#003366] hover:border-[#D4A017] hover:shadow-xl active:scale-95'}
-                      `}
-                    >
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <InteractionArea 
+              selectedActions={selectedActions} 
+              safeActionCloud={safeActionCloud} 
+              isUC={isUC} 
+              onToggleAction={toggleAction} 
+            />
           ) : (
-            
-            // === RESULTADOS ===
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
-              
-              {/* BOX DE NOTA */}
-              <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-b-8 border-[#D4A017] relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-10 text-[#003366]"><Trophy size={120}/></div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Desempenho Técnico</p>
-                <h4 className="text-8xl font-black text-[#003366] tracking-tighter">{score.toFixed(1)}</h4>
-                <div className="mt-4 flex items-center justify-center gap-4">
-                    <span className="px-4 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                        Tempo de Execução: {formatTime(timer)}
-                    </span>
-                    <span className="px-4 py-1 bg-purple-50 text-purple-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                        {selectedActions.length} Etapas Realizadas
-                    </span>
-                </div>
-              </div>
-
-              {/* AVALIAÇÃO DA PERFORMANCE */}
-              <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
-                <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3">
-                  <Map size={20} className="text-[#D4A017]"/> Análise Passo a Passo
-                </h4>
-                <div className="space-y-3">
-                  {selectedActions.length === 0 && (
-                    <p className="text-sm text-red-500 font-bold">Nenhuma ação foi selecionada.</p>
-                  )}
-                  {selectedActions.map((actionIdx, userPos) => {
-                    const correctPos = safeOrderIndices.indexOf(actionIdx);
-                    const isCorrect = correctPos !== -1;
-                    const onTime = correctPos === userPos;
-
-                    return (
-                      <div key={userPos} className={`p-5 rounded-2xl border-2 flex items-center justify-between gap-4 transition-all
-                        ${!isCorrect ? 'bg-red-50 border-red-100' : onTime ? 'bg-green-50 border-green-100' : 'bg-yellow-50 border-yellow-100'}
-                      `}>
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-sm
-                            ${!isCorrect ? 'bg-red-500 text-white' : onTime ? 'bg-green-600 text-white' : 'bg-yellow-500 text-white'}
-                          `}>
-                            {userPos + 1}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-gray-800">{safeActionCloud[actionIdx]}</p>
-                            <span className={`text-[9px] font-black uppercase tracking-tighter mt-1 block
-                               ${!isCorrect ? 'text-red-500' : onTime ? 'text-green-600' : 'text-yellow-600'}
-                            `}>
-                                {!isCorrect ? '❌ Conduta Incorreta (Penalidade)' : onTime ? '✅ Na Ordem Correta' : `⚠️ Fora de Sequência (Deveria ser o ${correctPos + 1}º)`}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* GABARITO OFICIAL */}
-              <div className="grid grid-cols-1 gap-6">
-                <div className="bg-[#003366] p-10 rounded-[3rem] shadow-2xl text-white">
-                  <h4 className="text-lg font-black text-[#D4A017] uppercase mb-8 flex items-center gap-3 border-b border-white/10 pb-4">
-                    <CheckCircle2 size={20}/> Gabarito Oficial (Padrão-Ouro)
-                  </h4>
-                  <div className="space-y-4">
-                    {safeOrderIndices.map((idx, i) => (
-                      <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
-                        <span className="text-[#D4A017] font-black text-xs bg-white/10 w-6 h-6 rounded flex items-center justify-center">{i + 1}</span>
-                        <p className="text-sm font-medium">{safeActionCloud[idx]}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* CHECKLIST / CRITÉRIOS DE AVALIAÇÃO */}
-                {staticStation.checklist && staticStation.checklist.length > 0 && (
-                  <div className="bg-white p-10 rounded-[3rem] border-2 border-gray-100 shadow-xl">
-                    <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3 border-b pb-4">
-                      <span>📋</span> Critérios de Avaliação (Checklist)
-                    </h4>
-                    <ul className="space-y-3">
-                      {staticStation.checklist.map((item, i) => (
-                        <li key={i} className="flex items-start gap-3 text-xs font-bold text-gray-500">
-                          <span className="text-[#D4A017]">●</span> {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              {/* BOTÃO FINAL */}
+            <>
+              <ResultsDashboard 
+                score={score} 
+                timer={timer} 
+                selectedActions={selectedActions} 
+                safeActionCloud={safeActionCloud} 
+                safeOrderIndices={safeOrderIndices} 
+                checklist={staticStation.checklist} 
+                formatTime={formatTime} 
+              />
               <div className="pt-6 flex justify-center">
-                <button 
-                    onClick={onBack} 
-                    className="w-full md:w-auto bg-[#D4A017] text-[#003366] px-16 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
-                >
+                <button onClick={onBack} className="w-full md:w-auto bg-[#D4A017] text-[#003366] px-16 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">
                   Sair da Estação
                 </button>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -307,10 +319,7 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
       {!isFinished && selectedActions.length > 0 && (
         <div className="fixed bottom-10 left-0 right-0 px-4 z-50 animate-in slide-in-from-bottom-10">
           <div className="max-w-md mx-auto">
-            <button 
-              onClick={calculateDetailedScore}
-              className="w-full bg-[#003366] text-white py-6 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.2em] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-[#D4A017] hover:bg-[#D4A017] hover:text-[#003366] transition-all flex items-center justify-center gap-4"
-            >
+            <button onClick={calculateDetailedScore} className="w-full bg-[#003366] text-white py-6 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.2em] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-[#D4A017] hover:bg-[#D4A017] hover:text-[#003366] transition-all flex items-center justify-center gap-4">
               Encerrar Simulação <ChevronRight size={20}/>
             </button>
           </div>
