@@ -4,7 +4,7 @@ import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, Rota
 import { fetchAdvancedAI, generateRpgOptions, generateFinalFeedback } from '../services/aiService';
 
 // ============================================================================
-// LUNA ENGINE: Sintetizador de Áudio Clínico (Web Audio API) - INTEGRAL
+// LUNA ENGINE: Sintetizador de Áudio Clínico (Mantido Intacto)
 // ============================================================================
 const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: boolean) => {
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -56,7 +56,173 @@ const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: b
 };
 
 // ============================================================================
+// MICRO-COMPONENTES DE UI (CLEAN CODE)
+// Estes componentes cuidam APENAS do visual, deixando as lógicas para o Maestro.
+// ============================================================================
 
+const SimulationHeader = ({ title, onManualEnd, onBack }: any) => (
+  <header className="h-[50px] md:h-[56px] bg-white border-b border-gray-200 flex justify-between items-center px-4 md:px-6 shrink-0 z-50 shadow-sm">
+    <div className="flex items-center gap-2 overflow-hidden mr-2">
+      <Zap size={16} className="text-blue-600 fill-blue-600 shrink-0"/>
+      <h2 className="text-[10px] md:text-[12px] font-black text-[#003366] uppercase tracking-wider truncate">{title}</h2>
+    </div>
+    <div className="flex gap-2 md:gap-4 items-center shrink-0">
+      <button onClick={onManualEnd} className="bg-red-50 text-red-600 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 md:gap-2">
+        <XCircle size={12} className="md:w-3.5 md:h-3.5"/> <span className="hidden sm:inline">Finalizar Atendimento</span><span className="sm:hidden">Finalizar</span>
+      </button>
+      <RotateCcw size={16} className="md:w-4 md:h-4 text-gray-300 cursor-pointer hover:text-red-500" onClick={onBack}/>
+    </div>
+  </header>
+);
+
+const VitalsMonitor = ({ vitals, isConnected, isCritical, isMuted, onToggleMute, onInitAudio }: any) => (
+  <div className={`bg-[#0a0f18] p-3 md:p-6 rounded-[1.25rem] md:rounded-3xl border-2 md:border-4 transition-all duration-500 shrink-0 ${isCritical ? 'border-red-600 shadow-[0_0_20px_rgba(220,0,0,0.4)] animate-pulse' : 'border-gray-800 shadow-lg'}`}>
+    <div className="flex justify-between items-center mb-2 md:mb-4 border-b border-white/5 pb-1.5 md:pb-2">
+      <div className="flex items-center gap-1.5 md:gap-2">
+        <Activity className={isConnected ? 'text-green-500' : 'text-gray-700'} size={14}/>
+        <span className="text-[8px] md:text-[10px] font-black uppercase text-gray-500 tracking-widest">Sinais Vitais</span>
+      </div>
+      <button onClick={() => { onInitAudio(); onToggleMute(); }} className="text-gray-600 hover:text-white transition-colors">
+        {isMuted ? <VolumeX size={16}/> : <Volume2 size={16}/>}
+      </button>
+    </div>
+
+    {isConnected ? (
+      <div className="grid grid-cols-3 lg:flex lg:flex-col gap-2 lg:gap-0 lg:space-y-4 font-mono">
+        <div className="flex flex-col lg:flex-row lg:justify-between items-center lg:items-end lg:border-b border-white/5 lg:pb-2 bg-white/5 lg:bg-transparent rounded-lg lg:rounded-none py-1">
+          <span className="text-[8px] md:text-[10px] text-gray-500 font-black">FC</span>
+          <span className={`${vitals.hr > 120 || vitals.hr < 45 || vitals.hr === 0 ? 'text-red-500' : 'text-green-500'} text-2xl md:text-5xl font-black leading-none mt-0.5 lg:mt-0`}>{vitals.hr}</span>
+        </div>
+        <div className="flex flex-col lg:flex-row lg:justify-between items-center lg:items-end lg:border-b border-white/5 lg:pb-2 bg-white/5 lg:bg-transparent rounded-lg lg:rounded-none py-1">
+          <span className="text-[8px] md:text-[10px] text-gray-500 font-black">PA</span>
+          <span className="text-blue-400 text-sm md:text-3xl font-black leading-none mt-0.5 lg:mt-0">{vitals.bp}</span>
+        </div>
+        <div className="flex flex-col lg:flex-row lg:justify-between items-center lg:items-end bg-white/5 lg:bg-transparent rounded-lg lg:rounded-none py-1">
+          <span className="text-[8px] md:text-[10px] text-gray-500 font-black">SpO2</span>
+          <span className={`${vitals.sat < 92 ? 'text-red-500' : 'text-green-400'} text-xl md:text-4xl font-black leading-none mt-0.5 lg:mt-0`}>{vitals.sat}%</span>
+        </div>
+      </div>
+    ) : (
+      <div className="py-4 md:py-14 text-center text-gray-800 text-[9px] md:text-[11px] font-black uppercase tracking-widest leading-relaxed opacity-40 italic">Aguardando Conexão</div>
+    )}
+    
+    <div className={`mt-2 md:mt-4 py-1.5 md:py-2 px-3 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-bold text-center uppercase tracking-widest ${isConnected ? (isCritical ? 'bg-red-900/40 text-red-200' : 'bg-gray-800 text-green-400') : 'bg-gray-800/50 text-gray-600'}`}>
+      {isConnected ? vitals.status : 'OFFLINE'}
+    </div>
+  </div>
+);
+
+const CompactHistory = ({ history }: { history: any[] }) => (
+  <div className="bg-white p-3 md:p-4 rounded-[1.25rem] md:rounded-3xl border border-gray-200 flex-grow max-h-[70px] lg:max-h-none overflow-hidden flex flex-col shadow-sm">
+    <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-3 border-b pb-1 md:pb-2 shrink-0">
+      <History size={12} className="text-gray-400 md:w-3.5 md:h-3.5"/>
+      <span className="text-[8px] md:text-[10px] font-black uppercase text-gray-400">Histórico Compacto</span>
+    </div>
+    <div className="overflow-y-auto space-y-1 md:space-y-2 flex-grow custom-scrollbar pr-2">
+      {history.filter(h => h.role === 'user').map((h, i) => (
+        <div key={i} className="text-[9px] md:text-[10px] text-gray-400 italic border-l-2 border-blue-100 pl-2 leading-tight truncate md:whitespace-normal">"{h.text}"</div>
+      ))}
+    </div>
+  </div>
+);
+
+const ChatBoard = ({ narrative, history, isProcessing, chatRef }: any) => (
+  <>
+    <div className="bg-[#003366] text-white p-3 md:p-4 rounded-[1.25rem] md:rounded-3xl shadow-xl shrink-0 border-l-[4px] md:border-l-[6px] border-[#D4A017] min-h-[60px] md:min-h-[100px] max-h-[15vh] md:max-h-[25vh] flex flex-col overflow-hidden relative">
+      <div className="flex items-center gap-1.5 md:gap-2 mb-1 shrink-0 opacity-70">
+        <ShieldCheck size={12} className="text-[#D4A017] md:w-3.5 md:h-3.5"/>
+        <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em]">Contexto Clínico</span>
+      </div>
+      <div className="overflow-y-auto custom-scrollbar-white pr-2">
+        <p className="text-xs md:text-base font-medium leading-relaxed italic">{narrative}</p>
+      </div>
+    </div>
+
+    <div className="flex-grow flex-1 min-h-0 bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative mt-2 md:mt-3">
+      <div ref={chatRef} className="flex-grow overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6 bg-gray-50/20 custom-scrollbar">
+        {history.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center opacity-10">
+            <UserCircle size={40} strokeWidth={1} className="text-[#003366] mb-2 md:w-16 md:h-16"/>
+            <p className="font-black uppercase text-[9px] md:text-[11px] tracking-[0.3em] md:tracking-[0.4em]">Protocolo Luna Engine</p>
+          </div>
+        ) : (
+          history.map((msg: any, i: number) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
+              <div className={`max-w-[85%] md:max-w-[80%] p-2.5 px-4 md:p-3 md:px-5 rounded-xl md:rounded-2xl text-xs md:text-sm shadow-sm border ${
+                msg.role === 'user' ? 'bg-[#003366] text-white border-blue-800 rounded-tr-none' : 'bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium'
+              }`}>
+                {msg.role === 'narrator' && <span className="block text-[7px] md:text-[8px] font-black text-blue-500 uppercase mb-0.5 tracking-widest">Equipe / Paciente</span>}
+                {msg.text}
+              </div>
+            </div>
+          ))
+        )}
+        {isProcessing && (
+          <div className="flex justify-start items-center gap-2 animate-pulse">
+            <div className="bg-gray-200 h-8 md:h-10 w-20 md:w-24 rounded-full md:rounded-3xl"></div>
+            <span className="text-[8px] md:text-[10px] font-black text-gray-300 uppercase"> Analisando...</span>
+          </div>
+        )}
+      </div>
+    </div>
+  </>
+);
+
+const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => (
+  <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-4 md:p-6 text-center overflow-y-auto">
+    <div className="max-w-2xl w-full bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500 my-auto">
+      {endReason === 'death' ? <XCircle size={60} className="text-red-500 mb-4 md:mb-6 mx-auto animate-pulse md:w-20 md:h-20" /> : <Award size={60} className="text-[#003366] mb-4 md:mb-6 mx-auto animate-bounce md:w-20 md:h-20" />}
+      <h2 className="text-xl md:text-3xl font-black text-[#003366] uppercase mb-2 md:mb-4 tracking-tighter">
+        {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
+      </h2>
+      
+      {!feedback ? (
+        <div className="py-8 md:py-10 flex flex-col items-center">
+          <div className="w-8 h-8 md:w-10 md:h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-3 md:mb-4"></div>
+          <p className="text-gray-400 font-bold text-[9px] md:text-[10px] uppercase tracking-widest">Luna está avaliando seu desempenho...</p>
+        </div>
+      ) : (
+        <div className="text-left space-y-4 md:space-y-6 animate-in fade-in duration-700 mt-4">
+          <div className="bg-blue-50/50 p-4 md:p-5 rounded-xl md:rounded-2xl border border-blue-100">
+            <h4 className="text-[9px] md:text-[10px] font-black text-[#003366] uppercase mb-1.5 md:mb-2">🤝 Postura e Comunicação</h4>
+            <p className="text-gray-600 text-xs md:text-sm italic">"{feedback.postura}"</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="bg-green-50 p-3 md:p-4 rounded-xl md:rounded-2xl">
+              <h4 className="text-[9px] md:text-[10px] font-black text-green-600 uppercase mb-1.5 md:mb-2">🎯 Acertos</h4>
+              <ul className="text-[10px] md:text-[11px] text-green-700 space-y-1">
+                {feedback.acertos.map((a:string, i:number) => <li key={i}>• {a}</li>)}
+              </ul>
+            </div>
+            <div className="bg-red-50 p-3 md:p-4 rounded-xl md:rounded-2xl">
+              <h4 className="text-[9px] md:text-[10px] font-black text-red-600 uppercase mb-1.5 md:mb-2">⚠️ Omissões</h4>
+              <ul className="text-[10px] md:text-[11px] text-red-700 space-y-1">
+                {feedback.omissoes.map((o:string, i:number) => <li key={i}>• {o}</li>)}
+              </ul>
+            </div>
+          </div>
+          <div className="bg-[#003366] p-4 md:p-6 rounded-2xl md:rounded-3xl flex justify-between items-center shadow-xl mt-4">
+            <div>
+              <span className="text-blue-300 text-[9px] md:text-[10px] font-black uppercase">Nota Final</span>
+              <div className="text-3xl md:text-4xl font-black text-white">{Number(feedback.nota).toFixed(1)}</div>
+            </div>
+            <button 
+              onClick={onFinish} 
+              className="bg-[#D4A017] text-white px-6 py-3 md:px-10 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs hover:scale-105 transition-all shadow-lg"
+            >
+              Finalizar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+// ============================================================================
+// O ORQUESTRADOR PRINCIPAL (MAESTRO)
+// Este componente agora é extremamente limpo. Ele só lida com ESTADO e REGRAS.
+// ============================================================================
 interface DynamicOsceViewProps {
   station: DynamicOsceStation;
   onBack: () => void;
@@ -78,7 +244,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const [finalFeedback, setFinalFeedback] = useState<any | null>(null);
 
   const currentPhase = station.phases[currentPhaseId];
-  // ALTERAÇÃO DE SCROLL: Referência ao container inteiro em vez do elemento final
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const isCritical = isMonitorConnected && (vitals.sat < 90 || vitals.hr > 125 || vitals.hr < 45 || vitals.hr === 0);
@@ -91,18 +256,12 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     setSosOptions(null);
   }, [currentPhaseId]);
 
-  // ALTERAÇÃO DE SCROLL: Forçar o scroll APENAS dentro do chat
   useEffect(() => {
     if (chatContainerRef.current) {
         const container = chatContainerRef.current;
-        container.scrollTo({
-            top: container.scrollHeight,
-            behavior: 'smooth'
-        });
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
-    if (vitals.hr === 0 && isMonitorConnected && !isFinished) {
-       handleFinishSim('death');
-    }
+    if (vitals.hr === 0 && isMonitorConnected && !isFinished) handleFinishSim('death');
   }, [history, isProcessing, vitals.hr, isFinished]);
 
   const handleFinishSim = async (reason: 'success' | 'death' | 'manual') => {
@@ -169,230 +328,57 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   };
 
   const handleManualEnd = () => {
-    if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) {
-      handleFinishSim('manual');
-    }
+    if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) handleFinishSim('manual');
   };
 
-  if (isFinished) return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-4 md:p-6 text-center overflow-y-auto">
-        <div className="max-w-2xl w-full bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500 my-auto">
-            {endReason === 'death' ? <XCircle size={60} className="text-red-500 mb-4 md:mb-6 mx-auto animate-pulse md:w-20 md:h-20" /> : <Award size={60} className="text-[#003366] mb-4 md:mb-6 mx-auto animate-bounce md:w-20 md:h-20" />}
-            <h2 className="text-xl md:text-3xl font-black text-[#003366] uppercase mb-2 md:mb-4 tracking-tighter">
-              {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
-            </h2>
-            
-            {!finalFeedback ? (
-              <div className="py-8 md:py-10 flex flex-col items-center">
-                <div className="w-8 h-8 md:w-10 md:h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-3 md:mb-4"></div>
-                <p className="text-gray-400 font-bold text-[9px] md:text-[10px] uppercase tracking-widest">Luna está avaliando seu desempenho...</p>
-              </div>
-            ) : (
-              <div className="text-left space-y-4 md:space-y-6 animate-in fade-in duration-700 mt-4">
-                <div className="bg-blue-50/50 p-4 md:p-5 rounded-xl md:rounded-2xl border border-blue-100">
-                  <h4 className="text-[9px] md:text-[10px] font-black text-[#003366] uppercase mb-1.5 md:mb-2">🤝 Postura e Comunicação</h4>
-                  <p className="text-gray-600 text-xs md:text-sm italic">"{finalFeedback.postura}"</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                  <div className="bg-green-50 p-3 md:p-4 rounded-xl md:rounded-2xl">
-                    <h4 className="text-[9px] md:text-[10px] font-black text-green-600 uppercase mb-1.5 md:mb-2">🎯 Acertos</h4>
-                    <ul className="text-[10px] md:text-[11px] text-green-700 space-y-1">
-                      {finalFeedback.acertos.map((a:string, i:number) => <li key={i}>• {a}</li>)}
-                    </ul>
-                  </div>
-                  <div className="bg-red-50 p-3 md:p-4 rounded-xl md:rounded-2xl">
-                    <h4 className="text-[9px] md:text-[10px] font-black text-red-600 uppercase mb-1.5 md:mb-2">⚠️ Omissões</h4>
-                    <ul className="text-[10px] md:text-[11px] text-red-700 space-y-1">
-                      {finalFeedback.omissoes.map((o:string, i:number) => <li key={i}>• {o}</li>)}
-                    </ul>
-                  </div>
-                </div>
-                <div className="bg-[#003366] p-4 md:p-6 rounded-2xl md:rounded-3xl flex justify-between items-center shadow-xl mt-4">
-                  <div>
-                    <span className="text-blue-300 text-[9px] md:text-[10px] font-black uppercase">Nota Final</span>
-                    <div className="text-3xl md:text-4xl font-black text-white">{Number(finalFeedback.nota).toFixed(1)}</div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      if(onSaveResult && finalFeedback) onSaveResult(finalFeedback.nota, 10, 0, { history, feedback: finalFeedback });
-                      onBack();
-                    }} 
-                    className="bg-[#D4A017] text-white px-6 py-3 md:px-10 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs hover:scale-105 transition-all shadow-lg"
-                  >
-                    Finalizar
-                  </button>
-                </div>
-              </div>
-            )}
-        </div>
-    </div>
-  );
+  // RENDERIZAÇÃO FINAL ORQUESTRADA (Note como ficou limpo!)
+  if (isFinished) return <FeedbackScreen endReason={endReason} feedback={finalFeedback} onFinish={() => { if(onSaveResult && finalFeedback) onSaveResult(finalFeedback.nota, 10, 0, { history, feedback: finalFeedback }); onBack(); }} />;
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-100 select-none">
+      <SimulationHeader title={station.title} onManualEnd={handleManualEnd} onBack={onBack} />
       
-      {/* HEADER FIXO */}
-      <header className="h-[50px] md:h-[56px] bg-white border-b border-gray-200 flex justify-between items-center px-4 md:px-6 shrink-0 z-50 shadow-sm">
-        <div className="flex items-center gap-2 overflow-hidden mr-2">
-          <Zap size={16} className="text-blue-600 fill-blue-600 shrink-0"/>
-          <h2 className="text-[10px] md:text-[12px] font-black text-[#003366] uppercase tracking-wider truncate">{station.title}</h2>
-        </div>
-        <div className="flex gap-2 md:gap-4 items-center shrink-0">
-          <button onClick={handleManualEnd} className="bg-red-50 text-red-600 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 md:gap-2">
-            <XCircle size={12} className="md:w-3.5 md:h-3.5"/> <span className="hidden sm:inline">Finalizar Atendimento</span><span className="sm:hidden">Finalizar</span>
-          </button>
-          <RotateCcw size={16} className="md:w-4 md:h-4 text-gray-300 cursor-pointer hover:text-red-500" onClick={onBack}/>
-        </div>
-      </header>
-
-      {/* ÁREA DE TRABALHO PRINCIPAL - Uso de min-h-0 vital para scroll interno */}
       <main className="flex-grow flex flex-col lg:flex-row p-2 md:p-3 gap-2 md:gap-3 overflow-hidden min-h-0">
-        
-        {/* COLUNA ESQUERDA - FOCO EM VITAIS E HISTÓRICO */}
         <aside className="w-full lg:w-[340px] flex flex-col gap-2 md:gap-3 shrink-0 h-auto lg:h-full lg:overflow-hidden">
-          
-          {/* MONITOR CARDIÁCO - Otimizado para Mobile */}
-          <div className={`bg-[#0a0f18] p-3 md:p-6 rounded-[1.25rem] md:rounded-3xl border-2 md:border-4 transition-all duration-500 shrink-0 ${isCritical ? 'border-red-600 shadow-[0_0_20px_rgba(220,0,0,0.4)] animate-pulse' : 'border-gray-800 shadow-lg'}`}>
-            <div className="flex justify-between items-center mb-2 md:mb-4 border-b border-white/5 pb-1.5 md:pb-2">
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <Activity className={isMonitorConnected ? 'text-green-500' : 'text-gray-700'} size={14}/>
-                <span className="text-[8px] md:text-[10px] font-black uppercase text-gray-500 tracking-widest">Sinais Vitais</span>
-              </div>
-              <button onClick={() => { initAudio(); toggleMute(); }} className="text-gray-600 hover:text-white transition-colors">
-                {isMuted ? <VolumeX size={16}/> : <Volume2 size={16}/>}
-              </button>
-            </div>
+          <VitalsMonitor vitals={vitals} isConnected={isMonitorConnected} isCritical={isCritical} isMuted={isMuted} onToggleMute={toggleMute} onInitAudio={initAudio} />
+          <CompactHistory history={history} />
+        </aside>
 
-            {isMonitorConnected ? (
-              <div className="grid grid-cols-3 lg:flex lg:flex-col gap-2 lg:gap-0 lg:space-y-4 font-mono">
-                <div className="flex flex-col lg:flex-row lg:justify-between items-center lg:items-end lg:border-b border-white/5 lg:pb-2 bg-white/5 lg:bg-transparent rounded-lg lg:rounded-none py-1">
-                    <span className="text-[8px] md:text-[10px] text-gray-500 font-black">FC</span>
-                    <span className={`${vitals.hr > 120 || vitals.hr < 45 || vitals.hr === 0 ? 'text-red-500' : 'text-green-500'} text-2xl md:text-5xl font-black leading-none mt-0.5 lg:mt-0`}>{vitals.hr}</span>
+        <section className="flex-grow flex flex-col h-full overflow-hidden min-h-0 relative">
+          <ChatBoard narrative={dynamicNarrative} history={history} isProcessing={isProcessing} chatRef={chatContainerRef} />
+          
+          <div className="p-2 md:p-4 bg-white border-t border-gray-100 shrink-0 absolute bottom-0 left-0 right-0 z-10 rounded-b-[1.5rem] md:rounded-b-[2.5rem]">
+            {sosOptions ? (
+              <div className="animate-in slide-in-from-bottom-2 space-y-2 md:space-y-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase flex items-center gap-1.5 md:gap-2"><HelpCircle size={12} className="md:w-3.5 md:h-3.5"/> SOS MÉDICO</span>
+                  <button onClick={() => setSosOptions(null)} className="text-[9px] md:text-[10px] font-black text-gray-400 hover:text-red-500 uppercase">Voltar</button>
                 </div>
-                <div className="flex flex-col lg:flex-row lg:justify-between items-center lg:items-end lg:border-b border-white/5 lg:pb-2 bg-white/5 lg:bg-transparent rounded-lg lg:rounded-none py-1">
-                    <span className="text-[8px] md:text-[10px] text-gray-500 font-black">PA</span>
-                    <span className="text-blue-400 text-sm md:text-3xl font-black leading-none mt-0.5 lg:mt-0">{vitals.bp}</span>
-                </div>
-                <div className="flex flex-col lg:flex-row lg:justify-between items-center lg:items-end bg-white/5 lg:bg-transparent rounded-lg lg:rounded-none py-1">
-                    <span className="text-[8px] md:text-[10px] text-gray-500 font-black">SpO2</span>
-                    <span className={`${vitals.sat < 92 ? 'text-red-500' : 'text-green-400'} text-xl md:text-4xl font-black leading-none mt-0.5 lg:mt-0`}>{vitals.sat}%</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 max-h-[30vh] overflow-y-auto custom-scrollbar">
+                  {sosOptions.map(opt => (
+                    <button key={opt.id} onClick={() => handleSosChoice(opt)} className="bg-white border-2 border-orange-100 p-3 md:p-4 rounded-xl md:rounded-3xl text-left text-[11px] md:text-xs font-bold hover:border-orange-500 hover:bg-orange-50/50 transition-all flex justify-between items-center group shadow-sm">
+                        <span className="leading-snug pr-2 md:pr-4 truncate block">{opt.text}</span>
+                        <ChevronRight className="text-orange-200 group-hover:text-orange-500 shrink-0" size={16}/>
+                    </button>
+                  ))}
                 </div>
               </div>
             ) : (
-              <div className="py-4 md:py-14 text-center text-gray-800 text-[9px] md:text-[11px] font-black uppercase tracking-widest leading-relaxed opacity-40 italic">Aguardando Conexão</div>
-            )}
-            
-            <div className={`mt-2 md:mt-4 py-1.5 md:py-2 px-3 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-bold text-center uppercase tracking-widest ${isMonitorConnected ? (isCritical ? 'bg-red-900/40 text-red-200' : 'bg-gray-800 text-green-400') : 'bg-gray-800/50 text-gray-600'}`}>
-                {isMonitorConnected ? vitals.status : 'OFFLINE'}
-            </div>
-          </div>
-
-          {/* HISTÓRICO - Comprimido no Mobile */}
-          <div className="bg-white p-3 md:p-4 rounded-[1.25rem] md:rounded-3xl border border-gray-200 flex-grow max-h-[70px] lg:max-h-none overflow-hidden flex flex-col shadow-sm">
-             <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-3 border-b pb-1 md:pb-2 shrink-0">
-               <History size={12} className="text-gray-400 md:w-3.5 md:h-3.5"/>
-               <span className="text-[8px] md:text-[10px] font-black uppercase text-gray-400">Histórico Compacto</span>
-             </div>
-             <div className="overflow-y-auto space-y-1 md:space-y-2 flex-grow custom-scrollbar pr-2">
-                {history.filter(h => h.role === 'user').map((h, i) => (
-                    <div key={i} className="text-[9px] md:text-[10px] text-gray-400 italic border-l-2 border-blue-100 pl-2 leading-tight truncate md:whitespace-normal">"{h.text}"</div>
-                ))}
-             </div>
-          </div>
-        </aside>
-
-        {/* COLUNA DIREITA - CENÁRIO E CHAT */}
-        <section className="flex-grow flex flex-col gap-2 md:gap-3 h-full overflow-hidden min-h-0">
-          
-          {/* CENÁRIO */}
-          <div className="bg-[#003366] text-white p-3 md:p-4 rounded-[1.25rem] md:rounded-3xl shadow-xl shrink-0 border-l-[4px] md:border-l-[6px] border-[#D4A017] min-h-[60px] md:min-h-[100px] max-h-[15vh] md:max-h-[25vh] flex flex-col overflow-hidden relative">
-            <div className="flex items-center gap-1.5 md:gap-2 mb-1 shrink-0 opacity-70">
-                <ShieldCheck size={12} className="text-[#D4A017] md:w-3.5 md:h-3.5"/>
-                <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em]">Contexto Clínico</span>
-            </div>
-            <div className="overflow-y-auto custom-scrollbar-white pr-2">
-              <p className="text-xs md:text-base font-medium leading-relaxed italic">{dynamicNarrative}</p>
-            </div>
-          </div>
-
-          {/* CHAT - QUADRO DE CONVERSA OTIMIZADO */}
-          <div className="flex-grow flex-1 min-h-0 bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative">
-            {/* Div Container de Mensagens - onde ocorre o scroll isolado */}
-            <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6 bg-gray-50/20 custom-scrollbar">
-              {history.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center opacity-10">
-                      <UserCircle size={40} strokeWidth={1} className="text-[#003366] mb-2 md:w-16 md:h-16"/>
-                      <p className="font-black uppercase text-[9px] md:text-[11px] tracking-[0.3em] md:tracking-[0.4em]">Protocolo Luna Engine</p>
-                  </div>
-              ) : (
-                  history.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
-                          <div className={`max-w-[85%] md:max-w-[80%] p-2.5 px-4 md:p-3 md:px-5 rounded-xl md:rounded-2xl text-xs md:text-sm shadow-sm border ${
-                              msg.role === 'user' 
-                              ? 'bg-[#003366] text-white border-blue-800 rounded-tr-none' 
-                              : 'bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium'
-                          }`}>
-                              {msg.role === 'narrator' && <span className="block text-[7px] md:text-[8px] font-black text-blue-500 uppercase mb-0.5 tracking-widest">Equipe / Paciente</span>}
-                              {msg.text}
-                          </div>
-                      </div>
-                  ))
-              )}
-              {isProcessing && (
-                <div className="flex justify-start items-center gap-2 animate-pulse">
-                  <div className="bg-gray-200 h-8 md:h-10 w-20 md:w-24 rounded-full md:rounded-3xl"></div>
-                  <span className="text-[8px] md:text-[10px] font-black text-gray-300 uppercase"> Analisando...</span>
-                </div>
-              )}
-            </div>
-
-            {/* BARRA DE INPUT - FIXA NO RODAPÉ */}
-            <div className="p-2 md:p-4 bg-white border-t border-gray-100 shrink-0">
-                {sosOptions ? (
-                  <div className="animate-in slide-in-from-bottom-2 space-y-2 md:space-y-4">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase flex items-center gap-1.5 md:gap-2"><HelpCircle size={12} className="md:w-3.5 md:h-3.5"/> SOS MÉDICO</span>
-                      <button onClick={() => setSosOptions(null)} className="text-[9px] md:text-[10px] font-black text-gray-400 hover:text-red-500 uppercase">Voltar</button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 max-h-[30vh] overflow-y-auto custom-scrollbar">
-                      {sosOptions.map(opt => (
-                        <button key={opt.id} onClick={() => handleSosChoice(opt)} className="bg-white border-2 border-orange-100 p-3 md:p-4 rounded-xl md:rounded-3xl text-left text-[11px] md:text-xs font-bold hover:border-orange-500 hover:bg-orange-50/50 transition-all flex justify-between items-center group shadow-sm">
-                            <span className="leading-snug pr-2 md:pr-4 truncate block">{opt.text}</span>
-                            <ChevronRight className="text-orange-200 group-hover:text-orange-500 shrink-0" size={16}/>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-1.5 md:gap-3 items-center max-w-5xl mx-auto px-1 md:px-2">
-                    <div className="flex-grow flex bg-gray-100/50 rounded-xl md:rounded-2xl border-2 border-transparent focus-within:border-blue-600 focus-within:bg-white shadow-inner p-1 md:p-1.5 transition-all group">
-                        <input 
-                          type="text" 
-                          value={inputText} 
-                          onChange={e => setInputText(e.target.value)} 
-                          onKeyDown={e => e.key === 'Enter' && processAction(inputText)}
-                          placeholder="Conduta clínica..." 
-                          className="flex-grow bg-transparent px-3 py-2 md:px-5 md:py-2.5 outline-none font-medium text-[#003366] text-xs md:text-base placeholder:text-gray-400 min-w-0"
-                          disabled={isProcessing}
-                        />
-                        <button 
-                          onClick={() => processAction(inputText)} 
-                          disabled={isProcessing || !inputText.trim()} 
-                          className="bg-[#003366] text-white p-2.5 md:p-3.5 rounded-lg md:rounded-xl active:scale-95 hover:bg-blue-700 transition-all shadow-xl disabled:opacity-10 shrink-0"
-                        >
-                          <Send size={16} className="md:w-5 md:h-5" />
-                        </button>
-                    </div>
-                    <button 
-                      onClick={handleRequestHelp} 
-                      disabled={isProcessing}
-                      className="bg-orange-50 text-orange-600 h-full px-4 py-2.5 md:px-7 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[9px] md:text-[10px] border border-orange-100 hover:bg-orange-600 hover:text-white transition-all shadow-sm shrink-0 flex items-center justify-center"
-                    >
-                      SOS
+              <div className="flex gap-1.5 md:gap-3 items-center max-w-5xl mx-auto px-1 md:px-2">
+                <div className="flex-grow flex bg-gray-100/50 rounded-xl md:rounded-2xl border-2 border-transparent focus-within:border-blue-600 focus-within:bg-white shadow-inner p-1 md:p-1.5 transition-all group">
+                    <input 
+                      type="text" value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && processAction(inputText)}
+                      placeholder="Conduta clínica..." className="flex-grow bg-transparent px-3 py-2 md:px-5 md:py-2.5 outline-none font-medium text-[#003366] text-xs md:text-base placeholder:text-gray-400 min-w-0" disabled={isProcessing}
+                    />
+                    <button onClick={() => processAction(inputText)} disabled={isProcessing || !inputText.trim()} className="bg-[#003366] text-white p-2.5 md:p-3.5 rounded-lg md:rounded-xl active:scale-95 hover:bg-blue-700 transition-all shadow-xl disabled:opacity-10 shrink-0">
+                      <Send size={16} className="md:w-5 md:h-5" />
                     </button>
-                  </div>
-                )}
-            </div>
+                </div>
+                <button onClick={handleRequestHelp} disabled={isProcessing} className="bg-orange-50 text-orange-600 h-full px-4 py-2.5 md:px-7 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[9px] md:text-[10px] border border-orange-100 hover:bg-orange-600 hover:text-white transition-all shadow-sm shrink-0 flex items-center justify-center">
+                  SOS
+                </button>
+              </div>
+            )}
           </div>
         </section>
       </main>
