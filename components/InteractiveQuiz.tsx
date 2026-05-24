@@ -317,9 +317,22 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
                     <p className="font-bold text-sm md:text-base">Feedback Acadêmico</p>
                   </div>
                 </div>
-                <p className="text-xs md:text-sm leading-relaxed font-medium opacity-90 italic">
-                  {q.explanation}
-                </p>
+                
+                {/* --- MUDANÇA CIRÚRGICA: DIVISÃO EM PARÁGRAFOS --- */}
+                <div className="space-y-3 mt-4 border-t pt-4 border-black/5">
+                  {q.explanation.split('. ').map((frase, idx) => {
+                    if (!frase.trim()) return null;
+                    // Retorna o ponto final caso a função split o tenha removido
+                    const texto = frase.trim() + (frase.trim().endsWith('.') ? '' : '.');
+                    return (
+                      <p key={idx} className="text-xs md:text-sm leading-relaxed font-medium opacity-90">
+                        {texto}
+                      </p>
+                    );
+                  })}
+                </div>
+                {/* ----------------------------------------------- */}
+
               </div>
             )}
           </div>
