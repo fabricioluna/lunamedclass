@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial } from '../types.ts';
+import React, { useState, useEffect } from 'react';
+import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult } from '../types.ts';
 import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit } from 'lucide-react'; 
 
 // IMPORTAÇÃO DA NOSSA "NUVEM" DE DADOS E FIREBASE
 import { useData } from '../contexts/DataContext.tsx';
-import { db, ref, push, remove, set } from '../firebase.ts';
+import { db, ref, push, remove, set, onValue } from '../firebase.ts'; // <-- Adicionado onValue
 
 // IMPORTAÇÕES DOS COMPONENTES MODULARIZADOS
 import AdminStats from '../components/admin/AdminStats.tsx';
@@ -22,8 +22,9 @@ interface AdminViewProps {
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
-  // 1. PUXANDO DADOS (Alterado de 'rooms' para 'periods')
-  const { periods, questions, osceStations, disciplines, summaries, quizResults, labSimulations, osceAnalytics } = useData();
+  // 1. PUXANDO APENAS OS DADOS ESTRUTURAIS (Leves)
+  // Como fizemos a "Sangria Estancada" no Contexto, os dados pesados não vêm mais daqui.
+  const { periods, disciplines } = useData();
 
   const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('fms_admin_auth') === 'true');
   const [login, setLogin] = useState('');
@@ -36,6 +37,43 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [statsDiscFilter, setStatsDiscFilter] = useState('');
   const [statsTypeFilter, setStatsTypeFilter] = useState('');
   const [statsQuizTitleFilter, setStatsQuizTitleFilter] = useState('');
+
+  // =========================================================================
+  // NOVO: LAZY LOADING (ON-DEMAND FETCHING) APENAS PARA O ADMIN
+  // =========================================================================
+  const [adminQuestions, setAdminQuestions] = useState<Question[]>([]);
+  const [adminOsceStations, setAdminOsceStations] = useState<OsceStation[]>([]);
+  const [adminLabSimulations, setAdminLabSimulations] = useState<LabSimulation[]>([]);
+  const [adminQuizResults, setAdminQuizResults] = useState<QuizResult[]>([]);
+  const [adminOsceAnalytics, setAdminOsceAnalytics] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isAuthorized || !db) return;
+
+    // Busca os dados diretamente da nuvem APENAS se a senha estiver correta
+    const refs = [
+      { path: 'questions', setter: (data: any) => setAdminQuestions(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
+      { path: 'osce', setter: (data: any) => setAdminOsceStations(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
+      { path: 'labSimulations', setter: (data: any) => setAdminLabSimulations(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
+      { path: 'quizResults', setter: (data: any) => setAdminQuizResults(Object.keys(data).map(k => ({ ...data[k], id: k }))) },
+      { path: 'osceAnalytics', setter: (data: any) => setAdminOsceAnalytics(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) }
+    ];
+
+    const unsubscribes = refs.map(r => {
+      return onValue(ref(db, r.path), snap => {
+        const val = snap.val();
+        if (val) {
+          r.setter(val);
+        } else {
+          r.setter([]); // Garante array vazio se não houver dados
+        }
+      });
+    });
+
+    // Limpa os listeners se o admin sair
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [isAuthorized]);
+  // =========================================================================
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +139,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     if (db) {
       try {
         if (discId) {
-          const promises = questions
+          const promises = adminQuestions
             .filter(q => q.disciplineId === discId && q.firebaseId)
             .map(q => remove(ref(db, `questions/${q.firebaseId}`)));
           await Promise.all(promises);
@@ -118,7 +156,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     if (db) {
       try {
         if (discId) {
-          const promises = osceStations
+          const promises = adminOsceStations
             .filter(o => o.disciplineId === discId && o.firebaseId)
             .map(o => remove(ref(db, `osce/${o.firebaseId}`)));
           await Promise.all(promises);
@@ -135,7 +173,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     if (db) {
       try {
         if (discId) {
-          const promises = labSimulations
+          const promises = adminLabSimulations
             .filter(s => s.disciplineId === discId && s.firebaseId)
             .map(s => remove(ref(db, `labSimulations/${s.firebaseId}`)));
           await Promise.all(promises);
@@ -276,12 +314,12 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         ))}
       </nav>
 
-      {/* RENDERIZAÇÃO DOS COMPONENTES */}
+      {/* RENDERIZAÇÃO DOS COMPONENTES (Injetando o Local State admin*) */}
       {activeTab === 'stats' && (
         <AdminStats 
-          quizResults={quizResults}
-          questions={questions}
-          labSimulations={labSimulations}
+          quizResults={adminQuizResults}
+          questions={adminQuestions}
+          labSimulations={adminLabSimulations}
           disciplines={disciplines}
           statsPeriodFilter={statsPeriodFilter}
           statsDiscFilter={statsDiscFilter}
@@ -296,9 +334,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
       {activeTab === 'analytics' && (
         <AdminAnalytics 
-          analyticsData={osceAnalytics || []} 
+          analyticsData={adminOsceAnalytics || []} 
           disciplines={disciplines} 
-          periods={periods} // <-- Prop renomeada
+          periods={periods}
         />
       )}
 
@@ -316,7 +354,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
       {activeTab === 'questions' && (
         <AdminQuestions 
-          questions={questions}
+          questions={adminQuestions}
           disciplines={disciplines}
           onAddQuestions={async (qs) => {
             if (db) {
@@ -330,7 +368,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
             }
           }}
           onRemoveQuestion={async (id) => { 
-            const q = questions.find(item => item.id === id); 
+            const q = adminQuestions.find(item => item.id === id); 
             if (db && q?.firebaseId) {
               await remove(ref(db, `questions/${q.firebaseId}`)).catch(console.error);
             }
@@ -339,7 +377,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           onRemoveQuiz={async (title, discId) => {
             if (db) {
               const promises: Promise<void>[] = [];
-              questions.forEach(q => {
+              adminQuestions.forEach(q => {
                 if (q.quizTitle === title && (!discId || q.disciplineId === discId)) {
                   if (q.firebaseId) promises.push(remove(ref(db, `questions/${q.firebaseId}`)));
                 }
@@ -353,12 +391,12 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       {activeTab === 'lab' && (
         <AdminLab 
           disciplines={disciplines}
-          labSimulations={labSimulations}
+          labSimulations={adminLabSimulations}
           onAddLabSimulation={async (sim) => {
             if (db) await push(ref(db, 'labSimulations'), sim).catch(console.error);
           }}
           onRemoveLabSimulation={async (id) => { 
-            const sim = labSimulations.find(item => item.id === id); 
+            const sim = adminLabSimulations.find(item => item.id === id); 
             if (db && sim?.firebaseId) {
               await remove(ref(db, `labSimulations/${sim.firebaseId}`)).catch(console.error);
             }
@@ -369,9 +407,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
       {activeTab === 'osce' && (
         <AdminOsce 
-          periods={periods} // <-- Prop renomeada
+          periods={periods}
           disciplines={disciplines}
-          osceStations={osceStations}
+          osceStations={adminOsceStations}
           onAddOsceStations={async (os) => {
             if (db) {
               const promises = os.map(o => push(ref(db, 'osce'), o));
@@ -379,7 +417,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
             }
           }}
           onRemoveOsceStation={async (id) => { 
-            const o = osceStations.find(item => item.id === id); 
+            const o = adminOsceStations.find(item => item.id === id); 
             if (db && o?.firebaseId) {
               await remove(ref(db, `osce/${o.firebaseId}`)).catch(console.error);
             }
@@ -390,7 +428,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       
       {activeTab === 'themes' && (
         <AdminThemes 
-          periods={periods} // <-- Prop renomeada
+          periods={periods}
           disciplines={disciplines}
           onAddTheme={handleAddTheme}
           onRemoveTheme={handleRemoveTheme}
