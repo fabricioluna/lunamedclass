@@ -1,6 +1,8 @@
+// components/admin/AdminQuestions.tsx
 import React, { useState, useMemo } from 'react';
 import { Question, SimulationInfo, AcademicUnit } from '../../types';
 import { Trash2, Edit3, X } from 'lucide-react';
+import { parseResilientCSV } from '../../utils/csvHelper'; // <-- Importação do Parser CSV
 
 interface AdminQuestionsProps {
   questions: Question[];
@@ -23,14 +25,14 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
 }) => {
   // ESTADOS DE FILTRO
   const [discFilter, setDiscFilter] = useState(''); 
-  const [unitFilter, setUnitFilter] = useState<AcademicUnit | ''>(''); // NOVO: Filtro de Unidade na lista
+  const [unitFilter, setUnitFilter] = useState<AcademicUnit | ''>(''); 
   const [themeFilter, setThemeFilter] = useState('');
   const [quizFilter, setQuizFilter] = useState(''); 
 
-  // ESTADOS DE IMPORTAÇÃO JSON (Refatorado)
+  // ESTADOS DE IMPORTAÇÃO CSV (Refatorado)
   const [qDiscipline, setQDiscipline] = useState('');
   const [qTheme, setQTheme] = useState('');
-  const [qUnit, setQUnit] = useState<AcademicUnit>('N1'); // Controle de Unidade no Import
+  const [qUnit, setQUnit] = useState<AcademicUnit>('N1'); 
   const [qTitle, setQTitle] = useState(''); 
   const [qAuthor, setQAuthor] = useState(''); 
   const [qFile, setQFile] = useState<File | null>(null);
@@ -42,7 +44,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   
   const [mqDiscipline, setMqDiscipline] = useState('');
   const [mqTheme, setMqTheme] = useState('');
-  const [mqUnit, setMqUnit] = useState<AcademicUnit>('N1'); // Controle de Unidade no Manual
+  const [mqUnit, setMqUnit] = useState<AcademicUnit>('N1'); 
   const [mqQuizTitle, setMqQuizTitle] = useState('');
   const [mqText, setMqText] = useState('');
   const [mqOptions, setMqOptions] = useState<string[]>(['', '', '', '']);
@@ -52,7 +54,6 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   const uniqueQuizzes = useMemo(() => {
     const titles = new Set<string>();
     questions.forEach(q => {
-      // Filtra os simulados respeitando disciplina e unidade
       const matchDisc = !discFilter || q.disciplineId === discFilter;
       const matchUnit = !unitFilter || (q.unit || 'N1') === unitFilter;
       
@@ -63,7 +64,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     return Array.from(titles).sort();
   }, [questions, discFilter, unitFilter]);
 
-  // FUNÇÃO REFATORADA: Importação restrita a JSON Teórico
+  // FUNÇÃO REFATORADA: Importação restrita a CSV Teórico com validação rigorosa
   const handleQuestionImport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!qFile || !qDiscipline || !qTheme || !qTitle) {
@@ -78,28 +79,55 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
-        const parsedData = JSON.parse(text);
+        const parsedData = parseResilientCSV(text);
 
-        if (!Array.isArray(parsedData)) {
-          throw new Error("O arquivo JSON deve conter uma lista (array) de questões.");
+        if (parsedData.length < 2) {
+          throw new Error("O arquivo CSV está vazio ou não possui a linha de cabeçalho.");
         }
-        
-        const newQs: Question[] = parsedData.map((item, idx) => {
-          // Type Guard Rigoroso focado no Novo Padrão Teórico
-          if (!item.pergunta || !Array.isArray(item.alternativas) || item.alternativas.length !== 4 || typeof item.correta !== 'number') {
-             throw new Error(`A questão na posição ${idx + 1} possui formato inválido. Deve conter 'pergunta', 'alternativas' (4 itens), 'correta' (número 0-3) e 'explicacao'.`);
+
+        // Ignoramos a primeira linha (cabeçalho) e filtramos linhas inteiramente vazias
+        const dataRows = parsedData.slice(1).filter(row => row.length > 0 && row.some(cell => cell.trim() !== ''));
+
+        const newQs: Question[] = dataRows.map((row, idx) => {
+          // Garante a existência mínima das 6 colunas essenciais
+          if (row.length < 6) {
+            throw new Error(`A linha ${idx + 2} do CSV possui formato inválido. Deve conter: Pergunta; Alt A; Alt B; Alt C; Alt D; Correta; Explicação.`);
           }
 
-          // Mapper: Traduz o JSON amigável para a tipagem estrita do sistema (types.ts)
+          const pergunta = row[0].trim();
+          const opts = [row[1].trim(), row[2].trim(), row[3].trim(), row[4].trim()];
+          const corretaRaw = row[5].trim().toUpperCase();
+          const explicacao = row[6] ? row[6].trim() : ''; // Feedback estruturado (Opcional)
+
+          if (!pergunta || opts.some(o => !o)) {
+            throw new Error(`A linha ${idx + 2} possui pergunta ou alternativas em branco.`);
+          }
+
+          // Motor Lógico de Identificação da Resposta Correta
+          let answerIdx = -1;
+          if (['A', '1'].includes(corretaRaw)) answerIdx = 0;
+          else if (['B', '2'].includes(corretaRaw)) answerIdx = 1;
+          else if (['C', '3'].includes(corretaRaw)) answerIdx = 2;
+          else if (['D', '4'].includes(corretaRaw)) answerIdx = 3;
+          else {
+            // Se o professor digitou o texto da resposta, fazemos um match exato
+            answerIdx = opts.findIndex(opt => opt.toUpperCase() === corretaRaw);
+          }
+
+          if (answerIdx === -1 || answerIdx > 3) {
+            throw new Error(`A linha ${idx + 2} tem uma resposta correta inválida ("${row[5]}"). Especifique A, B, C, D, 1, 2, 3, 4 ou digite o texto exato da alternativa.`);
+          }
+
+          // Mapper: Traduz o CSV para a tipagem estrita do sistema (types.ts)
           return {
             id: `q_${Date.now()}_${idx}`,
             disciplineId: qDiscipline,
-            unit: targetUnit, // <-- Grava a unidade do bloco
+            unit: targetUnit, 
             theme: qTheme,
-            q: item.pergunta.trim(),
-            options: item.alternativas.map((opt: string) => opt.trim()),
-            answer: item.correta,
-            explanation: item.explicacao?.trim() || '',
+            q: pergunta,
+            options: opts,
+            answer: answerIdx,
+            explanation: explicacao,
             tag: 'Teórica', // Forçado como Teórica
             isPractical: false, // Desliga o modo prático
             quizTitle: qTitle,   
@@ -108,21 +136,21 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
         });
         
         onAddQuestions(newQs);
-        alert(`✅ ${newQs.length} questões teóricas adicionadas ao simulado "${qTitle}" da unidade ${targetUnit}!`);
+        alert(`✅ ${newQs.length} questões teóricas processadas do CSV e adicionadas ao simulado "${qTitle}" da unidade ${targetUnit}!`);
         
         setQFile(null);
         setQTitle('');
         setQAuthor('');
         
         // Limpa o input file visualmente
-        const fileInput = document.getElementById('jsonFileInput') as HTMLInputElement;
+        const fileInput = document.getElementById('csvFileInput') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
 
       } catch (err: any) { 
-        alert('❌ Erro de integridade no JSON: ' + err.message); 
+        alert('❌ Erro de integridade no arquivo CSV: ' + err.message); 
       }
     };
-    reader.readAsText(qFile);
+    reader.readAsText(qFile); // CSVs geralmente são UTF-8, garantimos a leitura de texto plano
   };
 
   const handleOpenAddModal = () => {
@@ -144,7 +172,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     setEditingQId(q.id);
     setMqDiscipline(q.disciplineId);
     setMqTheme(q.theme);
-    setMqUnit(q.unit || 'N1'); // <-- Carrega a unidade existente ou o fallback
+    setMqUnit(q.unit || 'N1'); 
     setMqQuizTitle(q.quizTitle || '');
     setMqText(q.q);
     
@@ -173,7 +201,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
           ...existingQ,
           disciplineId: mqDiscipline,
           theme: mqTheme,
-          unit: targetUnit, // <-- Atualiza a unidade
+          unit: targetUnit, 
           quizTitle: mqQuizTitle,
           q: mqText,
           options: mqOptions,
@@ -187,7 +215,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
         id: `q_manual_${Date.now()}`,
         disciplineId: mqDiscipline,
         theme: mqTheme,
-        unit: targetUnit, // <-- Insere a unidade
+        unit: targetUnit, 
         quizTitle: mqQuizTitle,
         q: mqText,
         options: mqOptions,
@@ -203,7 +231,6 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     setIsQuestionModalOpen(false);
   };
 
-  // Helper para facilitar os filtros da lista principal
   const filteredQuestionsList = useMemo(() => {
     return questions.filter(q => {
       const matchDisc = !discFilter || q.disciplineId === discFilter;
@@ -218,7 +245,7 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     <>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
         <div className="lg:col-span-4 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
-          <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Importar JSON Teórico</h3>
+          <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Importar CSV Teórico</h3>
           <form onSubmit={handleQuestionImport} className="space-y-4">
             <select value={qDiscipline} onChange={e => { setQDiscipline(e.target.value); setQTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
               <option value="">Disciplina...</option>
@@ -241,8 +268,13 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
             <input type="text" placeholder="Nome do Simulado (Ex: P1 Cárdio Fafá)" value={qTitle} onChange={e => setQTitle(e.target.value)} maxLength={50} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required />
             <input type="text" placeholder="Autor (opcional)" value={qAuthor} onChange={e => setQAuthor(e.target.value)} maxLength={30} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" />
 
-            <input id="jsonFileInput" type="file" accept=".json" onChange={e => setQFile(e.target.files ? e.target.files[0] : null)} className="w-full text-[10px] text-gray-400 font-black uppercase p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200" required/>
-            <button type="submit" disabled={!qFile} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50">Subir JSON Teórico 🚀</button>
+            <div className="text-[9px] text-gray-400 uppercase tracking-widest font-black mb-1">
+              * O CSV deve conter: Pergunta; Alt A; Alt B; Alt C; Alt D; Correta; Explicação
+            </div>
+            
+            {/* INPUT REFATORADO PARA CSV */}
+            <input id="csvFileInput" type="file" accept=".csv" onChange={e => setQFile(e.target.files ? e.target.files[0] : null)} className="w-full text-[10px] text-gray-400 font-black uppercase p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200" required/>
+            <button type="submit" disabled={!qFile} className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#D4A017] transition-all disabled:opacity-50">Subir CSV Teórico 🚀</button>
           </form>
         </div>
         

@@ -1,3 +1,9 @@
+// utils/csvHelper.ts
+
+/**
+ * Utilitário global para gerenciar e processar arquivos CSV.
+ * Lida de forma resiliente com aspas escapadas ("") e quebras de linha irregulares (\r\n).
+ */
 export const parseResilientCSV = (text: string): string[][] => {
   const result: string[][] = [];
   let currentLine: string[] = [];
