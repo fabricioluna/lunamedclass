@@ -15,11 +15,11 @@ interface AdminStatsProps {
   questions: Question[];
   labSimulations: LabSimulation[];
   disciplines: SimulationInfo[];
-  statsPeriodFilter: string; // <-- ALTERADO PARA PERIOD
+  statsPeriodFilter: string; // <-- IGNORADO NO COMPONENTE PARA USO DE MULTI-SELEÇÃO LOCAL
   statsDiscFilter: string;
   statsTypeFilter: string;
   statsQuizTitleFilter: string;
-  setStatsPeriodFilter: (val: string) => void; // <-- ALTERADO PARA PERIOD
+  setStatsPeriodFilter: (val: string) => void; 
   setStatsDiscFilter: (val: string) => void;
   setStatsTypeFilter: (val: string) => void;
   setStatsQuizTitleFilter: (val: string) => void;
@@ -51,10 +51,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   questions,
   labSimulations,
   disciplines,
-  statsPeriodFilter, 
+  statsPeriodFilter,
   statsDiscFilter,
   statsTypeFilter,
-  setStatsPeriodFilter, 
+  setStatsPeriodFilter,
   setStatsDiscFilter,
   setStatsTypeFilter,
 }) => {
@@ -62,16 +62,15 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
-  // LUNA ENGINE: NOVOS ESTADOS PARA MULTI-SELEÇÃO (ARRAYS)
+  // LUNA ENGINE: ESTADOS DE FILTRO MULTI-SELEÇÃO (ARRAYS)
   const [filterPeriods, setFilterPeriods] = useState<string[]>([]);
   const [filterDiscs, setFilterDiscs] = useState<string[]>([]);
   const [filterUnits, setFilterUnits] = useState<string[]>([]);
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
-  
+
   const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([]);
-  
-  // Controlador unificado de Dropdowns abertos
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null); 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false); 
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const [pdfLogo, setPdfLogo] = useState<PdfImage | null>(null);
 
@@ -104,18 +103,23 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     }
   };
 
+  // Garante a lista dinâmica de disciplinas baseada nos períodos escolhidos
+  const availableDisciplines = filterPeriods.length > 0 
+    ? disciplines.filter(d => filterPeriods.includes(d.periodId)) 
+    : disciplines;
+
   const availableStatTitles = useMemo(() => {
     const titles = new Set<string>();
     quizResults.forEach(qr => {
       const discObj = disciplines.find(d => d.id === qr.discipline);
       const qrPeriod = discObj?.periodId || '';
       
-      // Validação segura com || '' para evitar erro do TypeScript (undefined is not assignable to string)
+      // FIX LUNA ENGINE: '|| ''' previne o erro "undefined is not assignable to string"
       const matchPeriod = filterPeriods.length === 0 || filterPeriods.includes(qrPeriod);
       const matchDisc = filterDiscs.length === 0 || filterDiscs.includes(qr.discipline || '');
       const matchType = filterTypes.length === 0 || filterTypes.includes(qr.type || '');
       
-      // BUG-DATA-006: Tratamento de Unidade com fallback para N1 caso nulo
+      // BUG-DATA-006: Fallback seguro de unidade para evitar o erro 404 e perda de dados "Vias de admin"
       const qrUnit = qr.unit || 'N1';
       const matchUnit = filterUnits.length === 0 || filterUnits.includes(qrUnit);
       
@@ -135,12 +139,12 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       
       const discObj = disciplines.find(d => d.id === qr.discipline);
       const qrPeriod = discObj?.periodId || '';
-      if (filterPeriods.length > 0 && !filterPeriods.includes(qrPeriod)) return false;
       
+      if (filterPeriods.length > 0 && !filterPeriods.includes(qrPeriod)) return false;
       if (filterDiscs.length > 0 && !filterDiscs.includes(qr.discipline || '')) return false;
       if (filterTypes.length > 0 && !filterTypes.includes(qr.type || '')) return false;
       
-      // LUNA ENGINE: Aplicação do filtro estrito de unidade
+      // LUNA ENGINE: Aplicação do filtro estrito de unidade (Array Multi-select com Fallback)
       const qrUnit = qr.unit || 'N1';
       if (filterUnits.length > 0 && !filterUnits.includes(qrUnit)) return false;
 
@@ -292,7 +296,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width; 
 
-    const periodName = filterPeriods.length === 0 ? 'Todos os Períodos (Visão Geral)' : filterPeriods.map(id => PERIODS.find(r => r.id === id)?.name).filter(Boolean).join(', ');
+    // LUNA ENGINE FIX: Atualizado para suportar Map de Arrays no PDF
+    const periodName = filterPeriods.length === 0 ? 'Todos os Períodos' : filterPeriods.map(id => PERIODS.find(r => r.id === id)?.name).filter(Boolean).join(', ');
     const discName = filterDiscs.length === 0 ? 'Todas as Disciplinas' : filterDiscs.map(id => disciplines.find(d => d.id === id)?.title).filter(Boolean).join(', ');
     const typeName = filterTypes.length === 0 ? 'Todas as Modalidades' : filterTypes.map(t => t === 'teorico' ? 'Teórico' : t === 'laboratorio' ? 'Lab Virtual' : 'OSCE Clínico').join(', ');
     const unitName = filterUnits.length === 0 ? 'Geral (N1 + N2)' : filterUnits.map(u => `Unidade ${u}`).join(', ');
@@ -501,6 +506,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           />
         </div>
 
+        {/* LUNA ENGINE: DROPDOWN DE PERÍODO (MULTI-SELEÇÃO) */}
         <div className="flex-1 min-w-[150px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Período</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'period' ? null : 'period')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
@@ -534,6 +540,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           )}
         </div>
 
+        {/* LUNA ENGINE: DROPDOWN DE DISCIPLINA (MULTI-SELEÇÃO) */}
         <div className="flex-1 min-w-[180px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Disciplina</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'disc' ? null : 'disc')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
@@ -545,11 +552,11 @@ const AdminStats: React.FC<AdminStatsProps> = ({
               <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
               <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
                  <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
-                   <button onClick={() => setFilterDiscs(disciplines.map(d => d.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Todas</button>
+                   <button onClick={() => setFilterDiscs(availableDisciplines.map(d => d.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Todas</button>
                    <button onClick={() => setFilterDiscs([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
                  </div>
                  <div className="max-h-60 overflow-y-auto p-2">
-                   {disciplines.map(d => {
+                   {availableDisciplines.map(d => {
                      const isChecked = filterDiscs.includes(d.id);
                      return (
                        <label key={d.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
@@ -567,6 +574,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           )}
         </div>
 
+        {/* LUNA ENGINE: DROPDOWN DE UNIDADE (MULTI-SELEÇÃO) */}
         <div className="flex-1 min-w-[130px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Unidade</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'unit' ? null : 'unit')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
@@ -598,6 +606,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           )}
         </div>
 
+        {/* LUNA ENGINE: DROPDOWN DE MODALIDADE (MULTI-SELEÇÃO) */}
         <div className="flex-1 min-w-[150px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Modalidade</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
