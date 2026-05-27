@@ -119,16 +119,15 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
   const [eliminatedOptions, setEliminatedOptions] = useState<Record<string, number[]>>(resumeState?.eliminatedOptions || {});
   const [isGridOpen, setIsGridOpen] = useState(false);
 
-  // LUNA ENGINE FIX (BUG-UI-004): Purga de Estado Fantasma
-  // Sempre que as questions ou o storageKey mudarem, garantimos que não haja lixo de simulados antigos na view atual
+  // LUNA ENGINE FIX (BUG-UI-004): State Purge - Limpa o lixo de cache se um novo simulado carregar
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
     const parsedState = saved ? JSON.parse(saved) : null;
     
+    // Purga respostas fantasmas validando apenas IDs do caderno atual
     const validAnswers: Record<string, number> = {};
     const currentAnswers = parsedState?.answers || {};
     
-    // Purga respostas que não pertencem ao array de questões montado no momento
     Object.keys(currentAnswers).forEach(key => {
       if (questions.some(q => q.id === key)) {
         validAnswers[key] = currentAnswers[key];
@@ -140,7 +139,7 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
 
   // LUNA ENGINE: Single Source of Truth (Fonte Única de Verdade)
   const score = questions.filter(q => answers[q.id] !== undefined && answers[q.id] === q.answer).length;
-  // LUNA ENGINE FIX: Contagem precisa apenas das questões atuais respondidas
+  // LUNA ENGINE FIX: O número de respostas passa a ignorar estado obsoleto
   const answeredCount = Object.keys(answers).filter(id => questions.some(q => q.id === id)).length;
   const unansweredCount = questions.length - answeredCount;
 
@@ -227,7 +226,7 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
   const isCorrect = isAnswered && userAnswer === q.answer;
   const isLastQuestion = currentIndex === questions.length - 1;
   
-  // LUNA ENGINE FIX (BUG-UI-004): Progresso Superior atrelado às respostas e não ao índice
+  // LUNA ENGINE FIX: A evolução no TopProgressBar atende rigorosamente as respostas atuais atreladas à sessão, não o índice da página.
   const progress = (answeredCount / Math.max(1, questions.length)) * 100;
 
   return (

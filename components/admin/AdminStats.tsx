@@ -15,11 +15,11 @@ interface AdminStatsProps {
   questions: Question[];
   labSimulations: LabSimulation[];
   disciplines: SimulationInfo[];
-  statsPeriodFilter: string; // <-- ALTERADO PARA PERIOD
+  statsPeriodFilter: string; // <-- IGNORADO NO COMPONENTE PARA USO DE MULTI-SELEÇÃO LOCAL
   statsDiscFilter: string;
   statsTypeFilter: string;
   statsQuizTitleFilter: string;
-  setStatsPeriodFilter: (val: string) => void; // <-- ALTERADO PARA PERIOD
+  setStatsPeriodFilter: (val: string) => void; 
   setStatsDiscFilter: (val: string) => void;
   setStatsTypeFilter: (val: string) => void;
   setStatsQuizTitleFilter: (val: string) => void;
@@ -51,21 +51,26 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   questions,
   labSimulations,
   disciplines,
-  statsPeriodFilter, // <-- ALTERADO
+  statsPeriodFilter,
   statsDiscFilter,
   statsTypeFilter,
-  setStatsPeriodFilter, // <-- ALTERADO
+  setStatsPeriodFilter,
   setStatsDiscFilter,
   setStatsTypeFilter,
 }) => {
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  // LUNA ENGINE: Novo Estado Interno para Filtro de Unidade (N1/N2)
-  const [unitFilter, setUnitFilter] = useState('');
   
+  // LUNA ENGINE: ESTADOS DE FILTRO MULTI-SELEÇÃO (ARRAYS)
+  const [filterPeriods, setFilterPeriods] = useState<string[]>([]);
+  const [filterDiscs, setFilterDiscs] = useState<string[]>([]);
+  const [filterUnits, setFilterUnits] = useState<string[]>([]);
+  const [filterTypes, setFilterTypes] = useState<string[]>([]);
+
   const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); 
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const [pdfLogo, setPdfLogo] = useState<PdfImage | null>(null);
 
@@ -101,18 +106,23 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   const availableStatTitles = useMemo(() => {
     const titles = new Set<string>();
     quizResults.forEach(qr => {
-      // Filtragem atualizada para periodId e Unit
-      const discDoPeriodo = statsPeriodFilter ? disciplines.find(d => d.id === qr.discipline)?.periodId === statsPeriodFilter : true;
-      const matchDisc = !statsDiscFilter || qr.discipline === statsDiscFilter;
-      const matchType = !statsTypeFilter || qr.type === statsTypeFilter;
-      const matchUnit = !unitFilter || (qr.unit || 'N1') === unitFilter;
+      const discObj = disciplines.find(d => d.id === qr.discipline);
+      const qrPeriod = discObj?.periodId || '';
       
-      if (qr.quizTitle && matchDisc && matchType && discDoPeriodo && matchUnit) {
+      const matchPeriod = filterPeriods.length === 0 || filterPeriods.includes(qrPeriod);
+      const matchDisc = filterDiscs.length === 0 || filterDiscs.includes(qr.discipline || '');
+      const matchType = filterTypes.length === 0 || filterTypes.includes(qr.type || '');
+      
+      // Fallback seguro de unidade para evitar o erro 404 e perda de dados "Vias de admin"
+      const qrUnit = qr.unit || 'N1';
+      const matchUnit = filterUnits.length === 0 || filterUnits.includes(qrUnit);
+      
+      if (qr.quizTitle && matchDisc && matchType && matchPeriod && matchUnit) {
         titles.add(qr.quizTitle);
       }
     });
     return Array.from(titles);
-  }, [quizResults, statsPeriodFilter, statsDiscFilter, statsTypeFilter, unitFilter, disciplines]);
+  }, [quizResults, filterPeriods, filterDiscs, filterTypes, filterUnits, disciplines]);
 
   useEffect(() => {
     setSelectedQuizzes(availableStatTitles);
@@ -120,15 +130,17 @@ const AdminStats: React.FC<AdminStatsProps> = ({
 
   const analytics = useMemo(() => {
     const filteredResults = quizResults.filter(qr => {
-      if (statsPeriodFilter) {
-        const disc = disciplines.find(d => d.id === qr.discipline);
-        if (!disc || disc.periodId !== statsPeriodFilter) return false;
-      }
-      if (statsDiscFilter && qr.discipline !== statsDiscFilter) return false;
-      if (statsTypeFilter && qr.type !== statsTypeFilter) return false;
       
-      // LUNA ENGINE: Aplicação do filtro estrito de unidade
-      if (unitFilter && (qr.unit || 'N1') !== unitFilter) return false;
+      const discObj = disciplines.find(d => d.id === qr.discipline);
+      const qrPeriod = discObj?.periodId || '';
+      if (filterPeriods.length > 0 && !filterPeriods.includes(qrPeriod)) return false;
+      
+      if (filterDiscs.length > 0 && !filterDiscs.includes(qr.discipline || '')) return false;
+      if (filterTypes.length > 0 && !filterTypes.includes(qr.type || '')) return false;
+      
+      // LUNA ENGINE: Aplicação do filtro estrito de unidade (Array Multi-select)
+      const qrUnit = qr.unit || 'N1';
+      if (filterUnits.length > 0 && !filterUnits.includes(qrUnit)) return false;
 
       if (qr.quizTitle) {
         if (!selectedQuizzes.includes(qr.quizTitle)) return false;
@@ -267,7 +279,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       totalSimulations, totalQuestionsAnswered, globalAccuracy, avgTimeFormatted, 
       masteredThemes, attentionThemes, criticalThemes, hardestQuestions, temporalTrend 
     };
-  }, [quizResults, questions, labSimulations, statsPeriodFilter, statsDiscFilter, statsTypeFilter, unitFilter, selectedQuizzes, startDate, endDate, disciplines, availableStatTitles.length]);
+  }, [quizResults, questions, labSimulations, filterPeriods, filterDiscs, filterTypes, filterUnits, selectedQuizzes, startDate, endDate, disciplines, availableStatTitles.length]);
 
   const handleGeneratePDF = () => {
     if (analytics.totalSimulations === 0) {
@@ -278,10 +290,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width; 
 
-    // Atualizado para usar PERIODS e statsPeriodFilter
-    const periodName = PERIODS.find(r => r.id === statsPeriodFilter)?.name || 'Todos os Períodos (Visão Geral)';
-    const discName = disciplines.find(d => d.id === statsDiscFilter)?.title || 'Todas as Disciplinas';
-    const typeName = statsTypeFilter === 'teorico' ? 'Simulados Teóricos' : statsTypeFilter === 'laboratorio' ? 'Laboratórios Virtuais' : statsTypeFilter === 'osce' ? 'OSCE Clínico' : 'Todas as Modalidades';
+    const periodName = filterPeriods.length === 0 ? 'Todos os Períodos (Visão Geral)' : filterPeriods.map(id => PERIODS.find(r => r.id === id)?.name).join(', ');
+    const discName = filterDiscs.length === 0 ? 'Todas as Disciplinas' : filterDiscs.map(id => disciplines.find(d => d.id === id)?.title).join(', ');
+    const typeName = filterTypes.length === 0 ? 'Todas as Modalidades' : filterTypes.join(', ');
+    const unitName = filterUnits.length === 0 ? 'Geral (N1 + N2)' : filterUnits.join(', ');
 
     const quizFilterLabel = selectedQuizzes.length === availableStatTitles.length 
       ? 'Todos os simulados disponíveis' 
@@ -330,10 +342,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     doc.setFont("helvetica", "normal");
     doc.text(`Período: ${periodName}`, 14, filterStartY + 5); 
     doc.text(`Módulo/Disciplina: ${discName}`, 14, filterStartY + 10);
-    doc.text(`Unidade Acadêmica: ${unitFilter ? unitFilter : 'Geral (N1 + N2)'}`, 14, filterStartY + 15);
+    doc.text(`Unidade Acadêmica: ${unitName}`, 14, filterStartY + 15);
     
     const periodoLabel = (startDate || endDate) 
-        ? `${startDate ? new Date(startDate+'T00:00:00').toLocaleDateString('pt-BR') : 'Início'} até ${endDate ? new Date(endDate+'T00:00:00').toLocaleDateString('pt-BR') : 'Hoje'}`
+        ? `${startDate ? new Date(startDate+'T00:00:00').toLocaleDateString('pt-BR') : 'Início'} até ${endDate ? new Date(endDate+'T23:59:59').toLocaleDateString('pt-BR') : 'Hoje'}`
         : 'Histórico Completo';
 
     doc.text(`Modalidade: ${typeName}`, 110, filterStartY + 5);
@@ -487,51 +499,137 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           />
         </div>
 
-        <div className="flex-1 min-w-[150px]">
+        {/* ========================================== */}
+        {/* MULTI-SELECT LUNA ENGINE - NOVOS FILTROS  */}
+        {/* ========================================== */}
+        
+        <div className="flex-1 min-w-[150px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Período</label>
-          <select 
-            value={statsPeriodFilter} 
-            onChange={e => { setStatsPeriodFilter(e.target.value); setStatsDiscFilter(''); }} 
-            className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors"
-          >
-            <option value="">Global</option>
-            {PERIODS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
+          <div onClick={() => setOpenDropdown(openDropdown === 'period' ? null : 'period')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
+            <span className="truncate mr-2">{filterPeriods.length === 0 ? 'Todos' : `${filterPeriods.length} Marcados`}</span>
+            <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'period' ? 'rotate-180' : ''}`} />
+          </div>
+          {openDropdown === 'period' && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
+                <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
+                  <button onClick={() => setFilterPeriods(PERIODS.map(p => p.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Todos</button>
+                  <button onClick={() => setFilterPeriods([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
+                </div>
+                <div className="max-h-60 overflow-y-auto p-2">
+                  {PERIODS.map(p => {
+                    const isChecked = filterPeriods.includes(p.id);
+                    return (
+                      <label key={p.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                        <input type="checkbox" checked={isChecked} onChange={(e) => {
+                          if (e.target.checked) setFilterPeriods([...filterPeriods, p.id]);
+                          else setFilterPeriods(filterPeriods.filter(id => id !== p.id));
+                        }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                        <span className={`text-xs font-bold ${isChecked ? 'text-[#003366]' : 'text-gray-500'}`}>{p.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="flex-1 min-w-[180px]">
+        <div className="flex-1 min-w-[180px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Disciplina</label>
-          <select 
-            value={statsDiscFilter} 
-            onChange={e => { setStatsDiscFilter(e.target.value); }} 
-            className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors"
-          >
-            <option value="">Todas</option>
-            {disciplines
-              .filter(d => !statsPeriodFilter || d.periodId === statsPeriodFilter)
-              .map(d => <option key={d.id} value={d.id}>{d.title}</option>)
-            }
-          </select>
+          <div onClick={() => setOpenDropdown(openDropdown === 'disc' ? null : 'disc')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
+            <span className="truncate mr-2">{filterDiscs.length === 0 ? 'Todas' : `${filterDiscs.length} Marcadas`}</span>
+            <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'disc' ? 'rotate-180' : ''}`} />
+          </div>
+          {openDropdown === 'disc' && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
+                <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
+                  <button onClick={() => setFilterDiscs(disciplines.map(d => d.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Todas</button>
+                  <button onClick={() => setFilterDiscs([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
+                </div>
+                <div className="max-h-60 overflow-y-auto p-2">
+                  {disciplines.map(d => {
+                    const isChecked = filterDiscs.includes(d.id);
+                    // Aplica apenas como auxílio visual a relação com o período selecionado
+                    if (filterPeriods.length > 0 && !filterPeriods.includes(d.periodId)) return null;
+                    return (
+                      <label key={d.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                        <input type="checkbox" checked={isChecked} onChange={(e) => {
+                          if (e.target.checked) setFilterDiscs([...filterDiscs, d.id]);
+                          else setFilterDiscs(filterDiscs.filter(id => id !== d.id));
+                        }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                        <span className={`text-xs font-bold ${isChecked ? 'text-[#003366]' : 'text-gray-500'}`}>{d.title}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* LUNA ENGINE: Novo select para filtro de Unidade */}
-        <div className="flex-1 min-w-[130px]">
+        <div className="flex-1 min-w-[130px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Unidade</label>
-          <select value={unitFilter} onChange={e => { setUnitFilter(e.target.value); }} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors">
-            <option value="">Todas</option>
-            <option value="N1">Unidade N1</option>
-            <option value="N2">Unidade N2</option>
-          </select>
+          <div onClick={() => setOpenDropdown(openDropdown === 'unit' ? null : 'unit')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
+            <span className="truncate mr-2">{filterUnits.length === 0 ? 'Todas' : `${filterUnits.length} Marcadas`}</span>
+            <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'unit' ? 'rotate-180' : ''}`} />
+          </div>
+          {openDropdown === 'unit' && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
+              <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
+                <div className="p-2">
+                  <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                    <input type="checkbox" checked={filterUnits.includes('N1')} onChange={(e) => {
+                      if (e.target.checked) setFilterUnits([...filterUnits, 'N1']);
+                      else setFilterUnits(filterUnits.filter(u => u !== 'N1'));
+                    }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                    <span className={`text-xs font-bold ${filterUnits.includes('N1') ? 'text-[#003366]' : 'text-gray-500'}`}>Unidade N1</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                    <input type="checkbox" checked={filterUnits.includes('N2')} onChange={(e) => {
+                      if (e.target.checked) setFilterUnits([...filterUnits, 'N2']);
+                      else setFilterUnits(filterUnits.filter(u => u !== 'N2'));
+                    }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                    <span className={`text-xs font-bold ${filterUnits.includes('N2') ? 'text-[#003366]' : 'text-gray-500'}`}>Unidade N2</span>
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="flex-1 min-w-[150px]">
+        <div className="flex-1 min-w-[150px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Modalidade</label>
-          <select value={statsTypeFilter} onChange={e => { setStatsTypeFilter(e.target.value); }} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors">
-            <option value="">Todas</option>
-            <option value="teorico">Teórico</option>
-            <option value="laboratorio">Lab Virtual</option>
-            <option value="osce">OSCE</option>
-          </select>
+          <div onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
+            <span className="truncate mr-2">{filterTypes.length === 0 ? 'Todas' : `${filterTypes.length} Marcadas`}</span>
+            <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'type' ? 'rotate-180' : ''}`} />
+          </div>
+          {openDropdown === 'type' && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
+              <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
+                <div className="p-2">
+                  {[
+                    { id: 'teorico', label: 'Teórico' },
+                    { id: 'laboratorio', label: 'Lab Virtual' },
+                    { id: 'osce', label: 'OSCE Clínico' }
+                  ].map(type => (
+                    <label key={type.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                      <input type="checkbox" checked={filterTypes.includes(type.id)} onChange={(e) => {
+                        if (e.target.checked) setFilterTypes([...filterTypes, type.id]);
+                        else setFilterTypes(filterTypes.filter(t => t !== type.id));
+                      }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                      <span className={`text-xs font-bold ${filterTypes.includes(type.id) ? 'text-[#003366]' : 'text-gray-500'}`}>{type.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex-1 min-w-[200px] relative">
