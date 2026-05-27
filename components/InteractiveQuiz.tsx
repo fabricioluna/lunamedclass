@@ -119,10 +119,29 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
   const [eliminatedOptions, setEliminatedOptions] = useState<Record<string, number[]>>(resumeState?.eliminatedOptions || {});
   const [isGridOpen, setIsGridOpen] = useState(false);
 
+  // LUNA ENGINE FIX (BUG-UI-004): Purga de Estado Fantasma
+  // Sempre que as questions ou o storageKey mudarem, garantimos que não haja lixo de simulados antigos na view atual
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    const parsedState = saved ? JSON.parse(saved) : null;
+    
+    const validAnswers: Record<string, number> = {};
+    const currentAnswers = parsedState?.answers || {};
+    
+    // Purga respostas que não pertencem ao array de questões montado no momento
+    Object.keys(currentAnswers).forEach(key => {
+      if (questions.some(q => q.id === key)) {
+        validAnswers[key] = currentAnswers[key];
+      }
+    });
+    
+    setAnswers(validAnswers);
+  }, [storageKey, questions]);
+
   // LUNA ENGINE: Single Source of Truth (Fonte Única de Verdade)
-  // Calculamos a pontuação e progresso cruzando apenas com os IDs do array "questions" atual
   const score = questions.filter(q => answers[q.id] !== undefined && answers[q.id] === q.answer).length;
-  const answeredCount = questions.filter(q => answers[q.id] !== undefined).length;
+  // LUNA ENGINE FIX: Contagem precisa apenas das questões atuais respondidas
+  const answeredCount = Object.keys(answers).filter(id => questions.some(q => q.id === id)).length;
   const unansweredCount = questions.length - answeredCount;
 
   useEffect(() => {
@@ -207,7 +226,9 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
   const isAnswered = userAnswer !== undefined;
   const isCorrect = isAnswered && userAnswer === q.answer;
   const isLastQuestion = currentIndex === questions.length - 1;
-  const progress = ((currentIndex + 1) / Math.max(1, questions.length)) * 100;
+  
+  // LUNA ENGINE FIX (BUG-UI-004): Progresso Superior atrelado às respostas e não ao índice
+  const progress = (answeredCount / Math.max(1, questions.length)) * 100;
 
   return (
     <div className="pb-32 relative">

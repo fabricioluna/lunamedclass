@@ -8,30 +8,27 @@ import {
 interface AdminAnalyticsProps {
   analyticsData: any[];
   disciplines: SimulationInfo[];
-  periods: Period[]; // <-- Corrigido para periods com tipagem estrita
+  periods: Period[]; 
 }
 
 const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, disciplines, periods }) => {
-  const [filterPeriod, setFilterPeriod] = useState('');
-  const [filterDisc, setFilterDisc] = useState('');
-  // LUNA ENGINE: Novo Estado para Filtro de Unidade (N1/N2)
-  const [filterUnit, setFilterUnit] = useState('');
+  // LUNA ENGINE FIX (REQ-LOGIC-005): Arrays para permitir Multi-Seleção nos Filtros
+  const [filterPeriods, setFilterPeriods] = useState<string[]>([]);
+  const [filterDiscs, setFilterDiscs] = useState<string[]>([]);
+  const [filterUnits, setFilterUnits] = useState<string[]>([]);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFilterPeriod(e.target.value);
-    setFilterDisc('');
-  };
-
-  const availableDisciplines = filterPeriod 
-    ? disciplines.filter(d => d.periodId === filterPeriod) // <-- Corrigido para periodId
+  const availableDisciplines = filterPeriods.length > 0 
+    ? disciplines.filter(d => filterPeriods.includes(d.periodId)) 
     : disciplines;
 
   const stats = useMemo(() => {
     let filtered = analyticsData || [];
     
-    if (filterPeriod) {
+    // Filtro Multi-Seleção de Períodos
+    if (filterPeriods.length > 0) {
       const periodDiscIds = disciplines
-        .filter(d => d.periodId === filterPeriod) // <-- Corrigido para periodId
+        .filter(d => filterPeriods.includes(d.periodId)) 
         .map(d => d.id.toLowerCase());
         
       filtered = filtered.filter(d => {
@@ -40,13 +37,14 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
       });
     }
 
-    if (filterDisc) {
-      filtered = filtered.filter(d => (d.disciplineId || '').toLowerCase() === filterDisc.toLowerCase());
+    // Filtro Multi-Seleção de Disciplinas
+    if (filterDiscs.length > 0) {
+      filtered = filtered.filter(d => filterDiscs.includes((d.disciplineId || '').toLowerCase()));
     }
 
-    // LUNA ENGINE: Aplicação do filtro estrito por Unidade
-    if (filterUnit) {
-      filtered = filtered.filter(d => (d.unit || 'N1') === filterUnit);
+    // LUNA ENGINE FIX (BUG-DATA-006): Multi-Seleção e Fallback de Unidade
+    if (filterUnits.length > 0) {
+      filtered = filtered.filter(d => filterUnits.includes(d.unit || 'N1'));
     }
 
     if (filtered.length === 0) return null;
@@ -104,7 +102,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
       bestTheme,
       worstTheme
     };
-  }, [analyticsData, filterPeriod, filterDisc, filterUnit, disciplines]);
+  }, [analyticsData, filterPeriods, filterDiscs, filterUnits, disciplines]);
 
   const exportToCSV = () => {
     if (analyticsData.length === 0) return;
@@ -173,34 +171,97 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
           </div>
           
           <div className="flex flex-wrap justify-center xl:justify-end gap-3 relative z-10 w-full xl:w-auto">
-            <select 
-              value={filterPeriod} 
-              onChange={handlePeriodChange} 
-              className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-xs font-black uppercase outline-none focus:bg-white focus:text-[#003366] transition-all cursor-pointer"
-            >
-              <option value="">Todos os Períodos</option>
-              {periods.map(p => <option key={p.id} value={p.id} className="text-black">{p.name}</option>)}
-            </select>
+            
+            {/* SELETOR MULTIPLO DE PERÍODOS */}
+            <div className="relative">
+              <div onClick={() => setOpenDropdown(openDropdown === 'period' ? null : 'period')} className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-xs font-black uppercase flex items-center justify-between cursor-pointer min-w-[160px] hover:bg-white/20 transition-all">
+                 <span className="truncate mr-2">{filterPeriods.length === 0 ? 'Períodos (Todos)' : `Períodos (${filterPeriods.length})`}</span>
+                 <ChevronDown size={14} className={`transition-transform ${openDropdown === 'period' ? 'rotate-180' : ''}`} />
+              </div>
+              {openDropdown === 'period' && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
+                     <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
+                       <button onClick={() => setFilterPeriods(periods.map(p => p.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Marcar Todos</button>
+                       <button onClick={() => setFilterPeriods([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
+                     </div>
+                     <div className="max-h-60 overflow-y-auto p-2">
+                       {periods.map(p => (
+                         <label key={p.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                           <input type="checkbox" checked={filterPeriods.includes(p.id)} onChange={(e) => {
+                             if(e.target.checked) setFilterPeriods([...filterPeriods, p.id]);
+                             else setFilterPeriods(filterPeriods.filter(id => id !== p.id));
+                           }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                           <span className="text-xs font-bold text-[#003366]">{p.name}</span>
+                         </label>
+                       ))}
+                     </div>
+                  </div>
+                </>
+              )}
+            </div>
 
-            <select 
-              value={filterDisc} 
-              onChange={e => setFilterDisc(e.target.value)} 
-              className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-xs font-black uppercase outline-none focus:bg-white focus:text-[#003366] transition-all cursor-pointer"
-            >
-              <option value="">Todas as Disciplinas</option>
-              {availableDisciplines.map(d => <option key={d.id} value={d.id} className="text-black">{d.title}</option>)}
-            </select>
+            {/* SELETOR MULTIPLO DE DISCIPLINAS */}
+            <div className="relative">
+              <div onClick={() => setOpenDropdown(openDropdown === 'disc' ? null : 'disc')} className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-xs font-black uppercase flex items-center justify-between cursor-pointer min-w-[160px] hover:bg-white/20 transition-all">
+                 <span className="truncate mr-2">{filterDiscs.length === 0 ? 'Disciplinas (Todas)' : `Disciplinas (${filterDiscs.length})`}</span>
+                 <ChevronDown size={14} className={`transition-transform ${openDropdown === 'disc' ? 'rotate-180' : ''}`} />
+              </div>
+              {openDropdown === 'disc' && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
+                     <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
+                       <button onClick={() => setFilterDiscs(availableDisciplines.map(d => d.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Marcar Todas</button>
+                       <button onClick={() => setFilterDiscs([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
+                     </div>
+                     <div className="max-h-60 overflow-y-auto p-2">
+                       {availableDisciplines.map(d => (
+                         <label key={d.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                           <input type="checkbox" checked={filterDiscs.includes(d.id)} onChange={(e) => {
+                             if(e.target.checked) setFilterDiscs([...filterDiscs, d.id]);
+                             else setFilterDiscs(filterDiscs.filter(id => id !== d.id));
+                           }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                           <span className="text-xs font-bold text-[#003366]">{d.title}</span>
+                         </label>
+                       ))}
+                     </div>
+                  </div>
+                </>
+              )}
+            </div>
 
-            {/* SELETOR DE UNIDADE N1/N2 */}
-            <select 
-              value={filterUnit} 
-              onChange={e => setFilterUnit(e.target.value)} 
-              className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-xs font-black uppercase outline-none focus:bg-white focus:text-[#003366] transition-all cursor-pointer"
-            >
-              <option value="">Todas Unidades</option>
-              <option value="N1" className="text-black">Unidade 1 (N1)</option>
-              <option value="N2" className="text-black">Unidade 2 (N2)</option>
-            </select>
+            {/* SELETOR MULTIPLO DE UNIDADES (N1/N2) */}
+            <div className="relative">
+              <div onClick={() => setOpenDropdown(openDropdown === 'unit' ? null : 'unit')} className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-xs font-black uppercase flex items-center justify-between cursor-pointer min-w-[130px] hover:bg-white/20 transition-all">
+                 <span className="truncate mr-2">{filterUnits.length === 0 ? 'Unidades (Todas)' : `Unidades (${filterUnits.length})`}</span>
+                 <ChevronDown size={14} className={`transition-transform ${openDropdown === 'unit' ? 'rotate-180' : ''}`} />
+              </div>
+              {openDropdown === 'unit' && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
+                     <div className="p-2">
+                         <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                           <input type="checkbox" checked={filterUnits.includes('N1')} onChange={(e) => {
+                             if(e.target.checked) setFilterUnits([...filterUnits, 'N1']);
+                             else setFilterUnits(filterUnits.filter(u => u !== 'N1'));
+                           }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                           <span className="text-xs font-bold text-[#003366]">Unidade 1 (N1)</span>
+                         </label>
+                         <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                           <input type="checkbox" checked={filterUnits.includes('N2')} onChange={(e) => {
+                             if(e.target.checked) setFilterUnits([...filterUnits, 'N2']);
+                             else setFilterUnits(filterUnits.filter(u => u !== 'N2'));
+                           }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                           <span className="text-xs font-bold text-[#003366]">Unidade 2 (N2)</span>
+                         </label>
+                     </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <button 
               onClick={exportToCSV} 
@@ -341,7 +402,6 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
       {stats && (
         <div className="hidden print:block w-full bg-white text-black text-sm" style={{ fontFamily: 'Arial, sans-serif' }}>
           
-          {/* CABEÇALHO LIMPO, EM BLOCO (SEM FLEX HORIZONTAL PARA NÃO QUEBRAR LINHA) */}
           <div className="border-b-2 border-black pb-4 mb-6">
             <div className="flex items-center gap-4 mb-5">
               <img src="/logo.png" alt="Luna MedClass Logo" className="h-12 object-contain" />
@@ -353,18 +413,16 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
             
             <div className="text-xs text-black space-y-1">
               <p className="m-0"><strong>Data da Emissão:</strong> {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}</p>
-              <p className="m-0"><strong>Filtro de Período:</strong> {filterPeriod ? periods.find(p => p.id === filterPeriod)?.name : 'Todos os Períodos (Geral)'}</p>
-              <p className="m-0"><strong>Disciplina:</strong> {filterDisc ? disciplines.find(d => d.id === filterDisc)?.title : 'Todas as Disciplinas'}</p>
-              <p className="m-0"><strong>Unidade Acadêmica:</strong> {filterUnit ? filterUnit : 'Geral (N1 + N2)'}</p>
+              <p className="m-0"><strong>Filtros de Período:</strong> {filterPeriods.length === 0 ? 'Todos (Geral)' : filterPeriods.map(id => periods.find(p => p.id === id)?.name).join(', ')}</p>
+              <p className="m-0"><strong>Disciplinas:</strong> {filterDiscs.length === 0 ? 'Todas' : filterDiscs.map(id => disciplines.find(d => d.id === id)?.title).join(', ')}</p>
+              <p className="m-0"><strong>Unidades:</strong> {filterUnits.length === 0 ? 'Geral (N1 + N2)' : filterUnits.join(', ')}</p>
             </div>
           </div>
 
-          {/* PARÁGRAFO INTRODUTÓRIO */}
           <p className="mb-6 text-justify text-xs leading-relaxed text-black">
             Este relatório consolida os dados de desempenho clínico simulado obtidos através do Luna MedClass. Os indicadores refletem a proficiência técnica e o raciocínio diagnóstico nas estações de Exame Clínico Objetivado Estruturado (OSCE), englobando checklists estáticos, simulações baseadas em roteiro dinâmico (RPG) e anamnese via Inteligência Artificial.
           </p>
 
-          {/* BLOCO 1: INDICADORES GLOBAIS POR METODOLOGIA */}
           <div className="mb-8">
               <h3 className="text-xs font-bold uppercase border-b border-black pb-1 mb-3 text-black">1. Indicadores Globais de Engajamento e Desempenho</h3>
               <table className="w-full text-xs border-collapse border border-black text-center table-fixed">
@@ -410,7 +468,6 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
               </table>
           </div>
 
-          {/* BLOCO 2: ESTATÍSTICAS POR TEMA */}
           <div className="mb-8">
               <h3 className="text-xs font-bold uppercase border-b border-black pb-1 mb-3 text-black">2. Diagnóstico Curricular por Eixo Temático (Domínios de Conhecimento)</h3>
               <table className="w-full text-xs border-collapse border border-black text-center table-fixed">
@@ -443,7 +500,6 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
               </table>
           </div>
 
-          {/* BLOCO 3: SEGURANÇA DO PACIENTE */}
           <div className="mb-8">
               <h3 className="text-xs font-bold uppercase border-b border-black pb-1 mb-3 text-black">3. Segurança do Paciente e Erros Críticos</h3>
               <div className="border border-black p-4 flex items-center justify-between bg-gray-50">
