@@ -108,28 +108,56 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
   const storageKey = `quiz_progress_${discipline.title.replace(/\s+/g, '_')}`;
   const questionsKey = `quiz_questions_${discipline.title.replace(/\s+/g, '_')}`;
 
-  // Lista de questões ativas (pode ser total ou só as erradas)
   const [activeQuestions, setActiveQuestions] = useState<Question[]>(questions);
-  const [quizKey, setQuizKey] = useState(0); 
+  const [quizKey, setQuizKey] = useState(Date.now()); 
   const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
 
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [themeStats, setThemeStats] = useState<{theme: string, correct: number, total: number}[]>([]);
   
-  // Puxa o estado salvo (se houver) apenas na montagem inicial
+  // LUNA ENGINE FIX (BUG-UI-004): Inicialização Segura do Cache.
+  // Antes de repassar o estado salvo, valida se as questões do cache pertencem ao novo simulado aberto.
   const [savedState, setSavedState] = useState<any>(() => {
     const saved = localStorage.getItem(storageKey);
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    
+    try {
+      const parsed = JSON.parse(saved);
+      // Extrai os IDs do cache para validar se pertencem à sessão ativa
+      const savedAnswersIds = Object.keys(parsed.answers || {});
+      const currentQuestionsIds = questions.map(q => q.id);
+      
+      // Se não houver sobreposição entre as chaves, o cache é de OUTRO simulado e deve ser expurgado
+      const isValidCache = savedAnswersIds.length === 0 || savedAnswersIds.some(id => currentQuestionsIds.includes(id));
+      
+      if (!isValidCache) {
+        localStorage.removeItem(storageKey);
+        return null;
+      }
+      return parsed;
+    } catch (e) {
+      return null;
+    }
   });
 
   // IDENTIFICADORES ANALÍTICOS
   const [sessionId] = useState(() => `sess_${Date.now()}_${Math.random().toString(36).substring(2,9)}`);
   const lastQuestionTimeRef = useRef(Date.now());
 
+  // LUNA ENGINE FIX: Sincronização Dinâmica (Zera tudo se a props questions mudar 100%)
   useEffect(() => {
-    setActiveQuestions(questions);
-  }, [questions]);
+    const currentIds = questions.map(q => q.id).sort().join(',');
+    const activeIds = activeQuestions.map(q => q.id).sort().join(',');
+    
+    // Se a matriz principal mudou, zera o simulado e destrói o cache
+    if (currentIds !== activeIds) {
+      setActiveQuestions(questions);
+      setSavedState(null);
+      localStorage.removeItem(storageKey);
+      setQuizKey(Date.now());
+    }
+  }, [questions, activeQuestions, storageKey]);
 
   // GRAVAÇÃO PARCIAL (GOTA A GOTA COM ANALYTICS)
   const handlePartialAnswer = (questionId: string, isCorrect: boolean, theme: string) => {
@@ -178,7 +206,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     localStorage.removeItem(storageKey);
     
     setActiveQuestions(questions);
-    setQuizKey(k => k + 1); 
+    setQuizKey(Date.now()); 
     setIsFinished(false);
     setFinalScore(0);
     lastQuestionTimeRef.current = Date.now();
@@ -194,7 +222,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     localStorage.removeItem(storageKey);
     
     setActiveQuestions(wrongQ);
-    setQuizKey(k => k + 1);
+    setQuizKey(Date.now());
     setIsFinished(false);
     setFinalScore(0);
     lastQuestionTimeRef.current = Date.now();
