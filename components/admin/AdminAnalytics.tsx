@@ -14,6 +14,8 @@ interface AdminAnalyticsProps {
 const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, disciplines, periods }) => {
   const [filterPeriod, setFilterPeriod] = useState('');
   const [filterDisc, setFilterDisc] = useState('');
+  // LUNA ENGINE: Novo Estado para Filtro de Unidade (N1/N2)
+  const [filterUnit, setFilterUnit] = useState('');
 
   const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFilterPeriod(e.target.value);
@@ -40,6 +42,11 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
 
     if (filterDisc) {
       filtered = filtered.filter(d => (d.disciplineId || '').toLowerCase() === filterDisc.toLowerCase());
+    }
+
+    // LUNA ENGINE: Aplicação do filtro estrito por Unidade
+    if (filterUnit) {
+      filtered = filtered.filter(d => (d.unit || 'N1') === filterUnit);
     }
 
     if (filtered.length === 0) return null;
@@ -97,13 +104,13 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
       bestTheme,
       worstTheme
     };
-  }, [analyticsData, filterPeriod, filterDisc, disciplines]);
+  }, [analyticsData, filterPeriod, filterDisc, filterUnit, disciplines]);
 
   const exportToCSV = () => {
     if (analyticsData.length === 0) return;
     
     const headers = [
-      "Data_Hora", "Motor_Usado", "Disciplina", "Eixo_Tematico", "Caso_Clinico", 
+      "Data_Hora", "Unidade", "Motor_Usado", "Disciplina", "Eixo_Tematico", "Caso_Clinico", 
       "Tempo_Segundos", "Nota_Final", "Teve_Erro_Fatal", "Transcricao_ou_Caminho"
     ];
 
@@ -115,6 +122,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
 
       return [
         d.date || d.completedAt || new Date().toLocaleString(),
+        d.unit || 'N1',
         d.mode || 'clinical',
         d.disciplineId || '',
         d.theme || '',
@@ -181,6 +189,17 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
             >
               <option value="">Todas as Disciplinas</option>
               {availableDisciplines.map(d => <option key={d.id} value={d.id} className="text-black">{d.title}</option>)}
+            </select>
+
+            {/* SELETOR DE UNIDADE N1/N2 */}
+            <select 
+              value={filterUnit} 
+              onChange={e => setFilterUnit(e.target.value)} 
+              className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-xs font-black uppercase outline-none focus:bg-white focus:text-[#003366] transition-all cursor-pointer"
+            >
+              <option value="">Todas Unidades</option>
+              <option value="N1" className="text-black">Unidade 1 (N1)</option>
+              <option value="N2" className="text-black">Unidade 2 (N2)</option>
             </select>
 
             <button 
@@ -336,6 +355,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
               <p className="m-0"><strong>Data da Emissão:</strong> {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}</p>
               <p className="m-0"><strong>Filtro de Período:</strong> {filterPeriod ? periods.find(p => p.id === filterPeriod)?.name : 'Todos os Períodos (Geral)'}</p>
               <p className="m-0"><strong>Disciplina:</strong> {filterDisc ? disciplines.find(d => d.id === filterDisc)?.title : 'Todas as Disciplinas'}</p>
+              <p className="m-0"><strong>Unidade Acadêmica:</strong> {filterUnit ? filterUnit : 'Geral (N1 + N2)'}</p>
             </div>
           </div>
 

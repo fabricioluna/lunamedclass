@@ -61,6 +61,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  // LUNA ENGINE: Novo Estado Interno para Filtro de Unidade (N1/N2)
+  const [unitFilter, setUnitFilter] = useState('');
   
   const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); 
@@ -99,17 +101,18 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   const availableStatTitles = useMemo(() => {
     const titles = new Set<string>();
     quizResults.forEach(qr => {
-      // Filtragem atualizada para periodId
+      // Filtragem atualizada para periodId e Unit
       const discDoPeriodo = statsPeriodFilter ? disciplines.find(d => d.id === qr.discipline)?.periodId === statsPeriodFilter : true;
       const matchDisc = !statsDiscFilter || qr.discipline === statsDiscFilter;
       const matchType = !statsTypeFilter || qr.type === statsTypeFilter;
+      const matchUnit = !unitFilter || (qr.unit || 'N1') === unitFilter;
       
-      if (qr.quizTitle && matchDisc && matchType && discDoPeriodo) {
+      if (qr.quizTitle && matchDisc && matchType && discDoPeriodo && matchUnit) {
         titles.add(qr.quizTitle);
       }
     });
     return Array.from(titles);
-  }, [quizResults, statsPeriodFilter, statsDiscFilter, statsTypeFilter, disciplines]);
+  }, [quizResults, statsPeriodFilter, statsDiscFilter, statsTypeFilter, unitFilter, disciplines]);
 
   useEffect(() => {
     setSelectedQuizzes(availableStatTitles);
@@ -124,6 +127,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       if (statsDiscFilter && qr.discipline !== statsDiscFilter) return false;
       if (statsTypeFilter && qr.type !== statsTypeFilter) return false;
       
+      // LUNA ENGINE: Aplicação do filtro estrito de unidade
+      if (unitFilter && (qr.unit || 'N1') !== unitFilter) return false;
+
       if (qr.quizTitle) {
         if (!selectedQuizzes.includes(qr.quizTitle)) return false;
       } else {
@@ -261,7 +267,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       totalSimulations, totalQuestionsAnswered, globalAccuracy, avgTimeFormatted, 
       masteredThemes, attentionThemes, criticalThemes, hardestQuestions, temporalTrend 
     };
-  }, [quizResults, questions, labSimulations, statsPeriodFilter, statsDiscFilter, statsTypeFilter, selectedQuizzes, startDate, endDate, disciplines, availableStatTitles.length]);
+  }, [quizResults, questions, labSimulations, statsPeriodFilter, statsDiscFilter, statsTypeFilter, unitFilter, selectedQuizzes, startDate, endDate, disciplines, availableStatTitles.length]);
 
   const handleGeneratePDF = () => {
     if (analytics.totalSimulations === 0) {
@@ -322,8 +328,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(`Período: ${periodName}`, 14, filterStartY + 5); // <-- ALTERADO PARA PERÍODO
+    doc.text(`Período: ${periodName}`, 14, filterStartY + 5); 
     doc.text(`Módulo/Disciplina: ${discName}`, 14, filterStartY + 10);
+    doc.text(`Unidade Acadêmica: ${unitFilter ? unitFilter : 'Geral (N1 + N2)'}`, 14, filterStartY + 15);
     
     const periodoLabel = (startDate || endDate) 
         ? `${startDate ? new Date(startDate+'T00:00:00').toLocaleDateString('pt-BR') : 'Início'} até ${endDate ? new Date(endDate+'T00:00:00').toLocaleDateString('pt-BR') : 'Hoje'}`
@@ -480,7 +487,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           />
         </div>
 
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-[150px]">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Período</label>
           <select 
             value={statsPeriodFilter} 
@@ -492,7 +499,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           </select>
         </div>
 
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-[180px]">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Disciplina</label>
           <select 
             value={statsDiscFilter} 
@@ -507,6 +514,16 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           </select>
         </div>
 
+        {/* LUNA ENGINE: Novo select para filtro de Unidade */}
+        <div className="flex-1 min-w-[130px]">
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Unidade</label>
+          <select value={unitFilter} onChange={e => { setUnitFilter(e.target.value); }} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors">
+            <option value="">Todas</option>
+            <option value="N1">Unidade N1</option>
+            <option value="N2">Unidade N2</option>
+          </select>
+        </div>
+
         <div className="flex-1 min-w-[150px]">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Modalidade</label>
           <select value={statsTypeFilter} onChange={e => { setStatsTypeFilter(e.target.value); }} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent focus:border-[#D4A017] transition-colors">
@@ -517,7 +534,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           </select>
         </div>
 
-        <div className="flex-1 min-w-[250px] relative">
+        <div className="flex-1 min-w-[200px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-[#003366] mb-2 flex items-center gap-1">
             <CheckSquare size={12}/> Selecionar Simulados
           </label>
@@ -533,7 +550,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
                   ? 'Todos os Simulados' 
                   : selectedQuizzes.length === 0 
                     ? 'Nenhum Selecionado' 
-                    : `${selectedQuizzes.length} Simulado(s) Marcado(s)`}
+                    : `${selectedQuizzes.length} Marcados`}
             </span>
             <ChevronDown size={16} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
           </div>
@@ -714,6 +731,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Data / Hora</th>
+                <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Unidade</th>
                 <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Simulado</th>
                 <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Modalidade</th>
                 <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-center">Acertos</th>
@@ -729,6 +747,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
                 return (
                   <tr key={qr.id || idx} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="p-4 font-medium text-gray-600 text-xs">{displayDate}</td>
+                    <td className="p-4 text-xs font-bold text-[#003366] uppercase tracking-wide">{qr.unit || 'N1'}</td>
                     <td className="p-4 font-bold text-[#003366]">{qr.quizTitle || 'Geral'}</td>
                     <td className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wide">{qr.type || 'teorico'}</td>
                     <td className="p-4 text-center font-black">
@@ -751,7 +770,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
               })}
               {analytics.rawResults.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400 text-xs font-bold">
+                  <td colSpan={6} className="p-8 text-center text-gray-400 text-xs font-bold">
                     Nenhum resultado encontrado para o período/filtro selecionado.
                   </td>
                 </tr>
