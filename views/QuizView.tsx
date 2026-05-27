@@ -4,7 +4,6 @@ import { Question, SimulationInfo, QuizDetail } from '../types';
 
 // ============================================================================
 // MICRO-COMPONENTES DE UI (CLEAN CODE)
-// Foco estrito em renderização visual. Nenhuma regra de negócio avançada.
 // ============================================================================
 
 const ScoreDashboard = ({ finalScore, total }: { finalScore: number, total: number }) => (
@@ -109,34 +108,35 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
   const questionsKey = `quiz_questions_${discipline.title.replace(/\s+/g, '_')}`;
 
   const [activeQuestions, setActiveQuestions] = useState<Question[]>(questions);
-  const [quizKey, setQuizKey] = useState(Date.now()); 
+  const [quizKey, setQuizKey] = useState(0); 
   const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
 
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [themeStats, setThemeStats] = useState<{theme: string, correct: number, total: number}[]>([]);
   
-  // LUNA ENGINE FIX (BUG-UI-004): Inicialização Segura do Cache.
-  // Antes de repassar o estado salvo, valida se as questões do cache pertencem ao novo simulado aberto.
+  // FIX BUG-UI-004: Validação de Cache Rígida.
   const [savedState, setSavedState] = useState<any>(() => {
     const saved = localStorage.getItem(storageKey);
     if (!saved) return null;
-    
     try {
       const parsed = JSON.parse(saved);
-      // Extrai os IDs do cache para validar se pertencem à sessão ativa
-      const savedAnswersIds = Object.keys(parsed.answers || {});
-      const currentQuestionsIds = questions.map(q => q.id);
+      const currentSignature = questions.map(q => q.id).join(',');
       
-      // Se não houver sobreposição entre as chaves, o cache é de OUTRO simulado e deve ser expurgado
-      const isValidCache = savedAnswersIds.length === 0 || savedAnswersIds.some(id => currentQuestionsIds.includes(id));
-      
-      if (!isValidCache) {
+      // Se a assinatura for diferente (ou seja, é um simulado diferente!), DESTRÓI o cache.
+      if (parsed.quizSignature && parsed.quizSignature !== currentSignature) {
         localStorage.removeItem(storageKey);
         return null;
       }
+      
+      // Proteção extra para caches antigos (legados)
+      if (!parsed.quizSignature && parsed.currentIndex >= questions.length) {
+        localStorage.removeItem(storageKey);
+        return null;
+      }
+      
       return parsed;
-    } catch (e) {
+    } catch(e) {
       return null;
     }
   });
@@ -145,19 +145,9 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
   const [sessionId] = useState(() => `sess_${Date.now()}_${Math.random().toString(36).substring(2,9)}`);
   const lastQuestionTimeRef = useRef(Date.now());
 
-  // LUNA ENGINE FIX: Sincronização Dinâmica (Zera tudo se a props questions mudar 100%)
   useEffect(() => {
-    const currentIds = questions.map(q => q.id).sort().join(',');
-    const activeIds = activeQuestions.map(q => q.id).sort().join(',');
-    
-    // Se a matriz principal mudou, zera o simulado e destrói o cache
-    if (currentIds !== activeIds) {
-      setActiveQuestions(questions);
-      setSavedState(null);
-      localStorage.removeItem(storageKey);
-      setQuizKey(Date.now());
-    }
-  }, [questions, activeQuestions, storageKey]);
+    setActiveQuestions(questions);
+  }, [questions]);
 
   // GRAVAÇÃO PARCIAL (GOTA A GOTA COM ANALYTICS)
   const handlePartialAnswer = (questionId: string, isCorrect: boolean, theme: string) => {
@@ -206,7 +196,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     localStorage.removeItem(storageKey);
     
     setActiveQuestions(questions);
-    setQuizKey(Date.now()); 
+    setQuizKey(k => k + 1); 
     setIsFinished(false);
     setFinalScore(0);
     lastQuestionTimeRef.current = Date.now();
@@ -222,7 +212,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     localStorage.removeItem(storageKey);
     
     setActiveQuestions(wrongQ);
-    setQuizKey(Date.now());
+    setQuizKey(k => k + 1);
     setIsFinished(false);
     setFinalScore(0);
     lastQuestionTimeRef.current = Date.now();

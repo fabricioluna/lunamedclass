@@ -119,35 +119,19 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
   const [eliminatedOptions, setEliminatedOptions] = useState<Record<string, number[]>>(resumeState?.eliminatedOptions || {});
   const [isGridOpen, setIsGridOpen] = useState(false);
 
-  // LUNA ENGINE FIX (BUG-UI-004): Assinatura do Simulado para reset forçado.
-  // Ao injetar um simulado novo na mesma tela, as questões mudam. Se a assinatura mudar, zeramos o state!
-  const [quizSignature, setQuizSignature] = useState(questions.map(q => q.id).join(','));
-
-  useEffect(() => {
-    const currentSignature = questions.map(q => q.id).join(',');
-    if (currentSignature !== quizSignature) {
-      // O Array de perguntas mudou completamente. É um simulado NOVO!
-      setQuizSignature(currentSignature); // Atualiza a assinatura
-      setCurrentIndex(0); // <-- ESTA É A CORREÇÃO. Força voltar para a Questão 1
-      setAnswers({});     // Limpa respostas fantasmas
-      setDraftAnswers({});
-      setEliminatedOptions({});
-      setIsGridOpen(false);
-    }
-  }, [questions, quizSignature]);
-
   // LUNA ENGINE: Single Source of Truth (Fonte Única de Verdade)
   const score = questions.filter(q => answers[q.id] !== undefined && answers[q.id] === q.answer).length;
-  // LUNA ENGINE FIX: Contagem precisa apenas das questões atuais respondidas
+  // FIX: Contagem exata de respondidas apenas para as questões atuais
   const answeredCount = Object.keys(answers).filter(id => questions.some(q => q.id === id)).length;
   const unansweredCount = questions.length - answeredCount;
 
   useEffect(() => {
-    const stateToSave = { currentIndex, answers, score, draftAnswers, eliminatedOptions };
+    // FIX BUG-UI-004: Adicionamos a "Assinatura" do simulado no cache.
+    const quizSignature = questions.map(q => q.id).join(',');
+    const stateToSave = { currentIndex, answers, score, draftAnswers, eliminatedOptions, quizSignature };
     localStorage.setItem(storageKey, JSON.stringify(stateToSave));
-  }, [currentIndex, answers, score, draftAnswers, eliminatedOptions, storageKey]);
+  }, [currentIndex, answers, score, draftAnswers, eliminatedOptions, storageKey, questions]);
 
-  // LUNA ENGINE: Guarda de Renderização. Se as questões ainda não chegaram ou o array quebrou, previne tela branca.
   const q = questions[currentIndex];
   if (!q || questions.length === 0) {
     return (
@@ -224,8 +208,6 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
   const isAnswered = userAnswer !== undefined;
   const isCorrect = isAnswered && userAnswer === q.answer;
   const isLastQuestion = currentIndex === questions.length - 1;
-  
-  // LUNA ENGINE FIX (BUG-UI-004): Progresso Superior atrelado às respostas e não ao índice
   const progress = (answeredCount / Math.max(1, questions.length)) * 100;
 
   return (
@@ -339,11 +321,9 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
                   </div>
                 </div>
                 
-                {/* --- MUDANÇA CIRÚRGICA: DIVISÃO EM PARÁGRAFOS --- */}
                 <div className="space-y-3 mt-4 border-t pt-4 border-black/5">
                   {q.explanation.split('. ').map((frase, idx) => {
                     if (!frase.trim()) return null;
-                    // Retorna o ponto final caso a função split o tenha removido
                     const texto = frase.trim() + (frase.trim().endsWith('.') ? '' : '.');
                     return (
                       <p key={idx} className="text-xs md:text-sm leading-relaxed font-medium opacity-90">
@@ -352,8 +332,6 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
                     );
                   })}
                 </div>
-                {/* ----------------------------------------------- */}
-
               </div>
             )}
           </div>
