@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { QuizResult, Question, LabSimulation, SimulationInfo, FirebaseTimestamp } from '../../types';
 import { BarChart3, TrendingUp, Layers, AlertTriangle, FileDown, Trash2, CalendarDays, ChevronDown, CheckSquare } from 'lucide-react';
-import { PERIODS } from '../../constants'; // <-- ALTERADO DE ROOMS PARA PERIODS
+import { PERIODS } from '../../constants'; 
 
 // IMPORTAÇÕES DO FIREBASE PARA DELETAR RESULTADOS ESPECÍFICOS
 import { db, ref, remove } from '../../firebase';
@@ -15,7 +15,7 @@ interface AdminStatsProps {
   questions: Question[];
   labSimulations: LabSimulation[];
   disciplines: SimulationInfo[];
-  statsPeriodFilter: string; // <-- IGNORADO NO COMPONENTE PARA USO DE MULTI-SELEÇÃO LOCAL
+  statsPeriodFilter: string; 
   statsDiscFilter: string;
   statsTypeFilter: string;
   statsQuizTitleFilter: string;
@@ -31,14 +31,12 @@ interface PdfImage {
 }
 
 // === HELPER DE TIPAGEM ESTrita ===
-// Converte o FirebaseTimestamp misto em um número de milissegundos puro para cálculos matemáticos
 const normalizeTimestamp = (ts?: FirebaseTimestamp, fallbackDateStr?: string): number | null => {
   if (ts) {
     if (typeof ts === 'number') return ts;
     if (typeof ts === 'string') return new Date(ts).getTime();
     if (typeof ts === 'object' && 'seconds' in ts) return ts.seconds * 1000;
   }
-  // Tratamento legado
   if (fallbackDateStr) {
     const dStr = String(fallbackDateStr);
     return new Date(dStr.split(/[\s,T]+/)[0].split('/').reverse().join('-')).getTime();
@@ -62,7 +60,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
-  // LUNA ENGINE: ESTADOS DE FILTRO MULTI-SELEÇÃO (ARRAYS)
   const [filterPeriods, setFilterPeriods] = useState<string[]>([]);
   const [filterDiscs, setFilterDiscs] = useState<string[]>([]);
   const [filterUnits, setFilterUnits] = useState<string[]>([]);
@@ -103,7 +100,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     }
   };
 
-  // Garante a lista dinâmica de disciplinas baseada nos períodos escolhidos
   const availableDisciplines = filterPeriods.length > 0 
     ? disciplines.filter(d => filterPeriods.includes(d.periodId)) 
     : disciplines;
@@ -114,12 +110,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       const discObj = disciplines.find(d => d.id === qr.discipline);
       const qrPeriod = discObj?.periodId || '';
       
-      // FIX LUNA ENGINE: '|| ''' previne o erro "undefined is not assignable to string"
       const matchPeriod = filterPeriods.length === 0 || filterPeriods.includes(qrPeriod);
       const matchDisc = filterDiscs.length === 0 || filterDiscs.includes(qr.discipline || '');
       const matchType = filterTypes.length === 0 || filterTypes.includes(qr.type || '');
-      
-      // BUG-DATA-006: Fallback seguro de unidade para evitar o erro 404 e perda de dados "Vias de admin"
       const qrUnit = qr.unit || 'N1';
       const matchUnit = filterUnits.length === 0 || filterUnits.includes(qrUnit);
       
@@ -136,7 +129,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
 
   const analytics = useMemo(() => {
     const filteredResults = quizResults.filter(qr => {
-      
       const discObj = disciplines.find(d => d.id === qr.discipline);
       const qrPeriod = discObj?.periodId || '';
       
@@ -144,7 +136,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       if (filterDiscs.length > 0 && !filterDiscs.includes(qr.discipline || '')) return false;
       if (filterTypes.length > 0 && !filterTypes.includes(qr.type || '')) return false;
       
-      // LUNA ENGINE: Aplicação do filtro estrito de unidade (Array Multi-select com Fallback)
       const qrUnit = qr.unit || 'N1';
       if (filterUnits.length > 0 && !filterUnits.includes(qrUnit)) return false;
 
@@ -287,6 +278,40 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     };
   }, [quizResults, questions, labSimulations, filterPeriods, filterDiscs, filterTypes, filterUnits, selectedQuizzes, startDate, endDate, disciplines, availableStatTitles.length]);
 
+  // LUNA ENGINE: Função de Exclusão em Lote (Limpeza de Estatísticas)
+  const handleDeleteFilteredResults = async () => {
+    const count = analytics.rawResults.length;
+    if (count === 0) {
+      alert("Não há resultados para excluir com os filtros atuais.");
+      return;
+    }
+
+    const confirmMessage = `⚠️ ATENÇÃO EXTREMA: Você está prestes a EXCLUIR PERMANENTEMENTE ${count} resultados de simulados.\n\nEsta ação apagará todo o histórico correspondente aos filtros selecionados e recalculará as estatísticas. Deseja realmente prosseguir?`;
+
+    if (window.confirm(confirmMessage)) {
+      const doubleCheck = window.prompt(`Para confirmar a exclusão de ${count} resultados, digite a palavra "DELETAR" abaixo (sem as aspas):`);
+      
+      if (doubleCheck === "DELETAR") {
+        try {
+          if (!db) throw new Error("Banco de dados não conectado.");
+          
+          const deletePromises = analytics.rawResults.map(qr => {
+            if (qr.id) return remove(ref(db, `quizResults/${qr.id}`));
+            return Promise.resolve();
+          });
+          
+          await Promise.all(deletePromises);
+          alert(`✅ Sucesso: ${count} resultados foram excluídos permanentemente.`);
+        } catch (error) {
+          console.error("Erro ao excluir resultados em lote:", error);
+          alert("Ocorreu um erro ao tentar excluir alguns resultados. Verifique sua conexão e tente novamente.");
+        }
+      } else {
+        alert("Palavra de segurança incorreta. A exclusão foi cancelada.");
+      }
+    }
+  };
+
   const handleGeneratePDF = () => {
     if (analytics.totalSimulations === 0) {
       alert("Não há dados suficientes para gerar um relatório com os filtros atuais.");
@@ -296,7 +321,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width; 
 
-    // LUNA ENGINE FIX: Atualizado para suportar Map de Arrays no PDF
     const periodName = filterPeriods.length === 0 ? 'Todos os Períodos' : filterPeriods.map(id => PERIODS.find(r => r.id === id)?.name).filter(Boolean).join(', ');
     const discName = filterDiscs.length === 0 ? 'Todas as Disciplinas' : filterDiscs.map(id => disciplines.find(d => d.id === id)?.title).filter(Boolean).join(', ');
     const typeName = filterTypes.length === 0 ? 'Todas as Modalidades' : filterTypes.map(t => t === 'teorico' ? 'Teórico' : t === 'laboratorio' ? 'Lab Virtual' : 'OSCE Clínico').join(', ');
@@ -506,7 +530,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           />
         </div>
 
-        {/* LUNA ENGINE: DROPDOWN DE PERÍODO (MULTI-SELEÇÃO) */}
+        {/* ========================================== */}
+        {/* MULTI-SELECT LUNA ENGINE - NOVOS FILTROS  */}
+        {/* ========================================== */}
+        
         <div className="flex-1 min-w-[150px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Período</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'period' ? null : 'period')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
@@ -540,7 +567,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           )}
         </div>
 
-        {/* LUNA ENGINE: DROPDOWN DE DISCIPLINA (MULTI-SELEÇÃO) */}
         <div className="flex-1 min-w-[180px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Disciplina</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'disc' ? null : 'disc')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
@@ -574,7 +600,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           )}
         </div>
 
-        {/* LUNA ENGINE: DROPDOWN DE UNIDADE (MULTI-SELEÇÃO) */}
         <div className="flex-1 min-w-[130px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Unidade</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'unit' ? null : 'unit')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
@@ -606,7 +631,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           )}
         </div>
 
-        {/* LUNA ENGINE: DROPDOWN DE MODALIDADE (MULTI-SELEÇÃO) */}
         <div className="flex-1 min-w-[150px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Modalidade</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
@@ -824,10 +848,28 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       </div>
 
       <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm mt-8">
-        <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter mb-2">
-          Gerenciamento de Resultados (Histórico Bruto)
-        </h3>
-        <p className="text-xs text-gray-500 font-medium mb-6">Listagem dos resultados que compõem as estatísticas atuais. Exclua execuções de teste para limpar os gráficos.</p>
+        
+        {/* LUNA ENGINE: NOVA FUNCIONALIDADE DE EXCLUSÃO EM LOTE (LIMPAR ESTATÍSTICAS) */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-6">
+          <div>
+            <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter mb-2">
+              Gerenciamento de Resultados (Histórico Bruto)
+            </h3>
+            <p className="text-xs text-gray-500 font-medium">
+              Listagem dos resultados que compõem as estatísticas atuais. Você pode excluir execuções unitárias ou limpar em lote.
+            </p>
+          </div>
+          
+          {analytics.rawResults.length > 0 && (
+            <button 
+              onClick={handleDeleteFilteredResults}
+              className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm flex-shrink-0"
+              title="Excluir permanentemente TODOS os resultados atualmente filtrados"
+            >
+              <Trash2 size={16} /> Limpar {analytics.rawResults.length} Filtrados
+            </button>
+          )}
+        </div>
         
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
