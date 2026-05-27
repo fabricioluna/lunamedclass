@@ -15,11 +15,11 @@ interface AdminStatsProps {
   questions: Question[];
   labSimulations: LabSimulation[];
   disciplines: SimulationInfo[];
-  statsPeriodFilter: string; // <-- IGNORADO NO COMPONENTE PARA USO DE MULTI-SELEÇÃO LOCAL
+  statsPeriodFilter: string; // <-- ALTERADO PARA PERIOD
   statsDiscFilter: string;
   statsTypeFilter: string;
   statsQuizTitleFilter: string;
-  setStatsPeriodFilter: (val: string) => void; 
+  setStatsPeriodFilter: (val: string) => void; // <-- ALTERADO PARA PERIOD
   setStatsDiscFilter: (val: string) => void;
   setStatsTypeFilter: (val: string) => void;
   setStatsQuizTitleFilter: (val: string) => void;
@@ -51,10 +51,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   questions,
   labSimulations,
   disciplines,
-  statsPeriodFilter,
+  statsPeriodFilter, 
   statsDiscFilter,
   statsTypeFilter,
-  setStatsPeriodFilter,
+  setStatsPeriodFilter, 
   setStatsDiscFilter,
   setStatsTypeFilter,
 }) => {
@@ -62,15 +62,16 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
-  // LUNA ENGINE: ESTADOS DE FILTRO MULTI-SELEÇÃO (ARRAYS)
+  // LUNA ENGINE: NOVOS ESTADOS PARA MULTI-SELEÇÃO (ARRAYS)
   const [filterPeriods, setFilterPeriods] = useState<string[]>([]);
   const [filterDiscs, setFilterDiscs] = useState<string[]>([]);
   const [filterUnits, setFilterUnits] = useState<string[]>([]);
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
-
+  
   const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false); 
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  
+  // Controlador unificado de Dropdowns abertos
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null); 
 
   const [pdfLogo, setPdfLogo] = useState<PdfImage | null>(null);
 
@@ -109,11 +110,12 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       const discObj = disciplines.find(d => d.id === qr.discipline);
       const qrPeriod = discObj?.periodId || '';
       
+      // Validação segura com || '' para evitar erro do TypeScript (undefined is not assignable to string)
       const matchPeriod = filterPeriods.length === 0 || filterPeriods.includes(qrPeriod);
       const matchDisc = filterDiscs.length === 0 || filterDiscs.includes(qr.discipline || '');
       const matchType = filterTypes.length === 0 || filterTypes.includes(qr.type || '');
       
-      // Fallback seguro de unidade para evitar o erro 404 e perda de dados "Vias de admin"
+      // BUG-DATA-006: Tratamento de Unidade com fallback para N1 caso nulo
       const qrUnit = qr.unit || 'N1';
       const matchUnit = filterUnits.length === 0 || filterUnits.includes(qrUnit);
       
@@ -138,7 +140,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       if (filterDiscs.length > 0 && !filterDiscs.includes(qr.discipline || '')) return false;
       if (filterTypes.length > 0 && !filterTypes.includes(qr.type || '')) return false;
       
-      // LUNA ENGINE: Aplicação do filtro estrito de unidade (Array Multi-select)
+      // LUNA ENGINE: Aplicação do filtro estrito de unidade
       const qrUnit = qr.unit || 'N1';
       if (filterUnits.length > 0 && !filterUnits.includes(qrUnit)) return false;
 
@@ -290,10 +292,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width; 
 
-    const periodName = filterPeriods.length === 0 ? 'Todos os Períodos (Visão Geral)' : filterPeriods.map(id => PERIODS.find(r => r.id === id)?.name).join(', ');
-    const discName = filterDiscs.length === 0 ? 'Todas as Disciplinas' : filterDiscs.map(id => disciplines.find(d => d.id === id)?.title).join(', ');
-    const typeName = filterTypes.length === 0 ? 'Todas as Modalidades' : filterTypes.join(', ');
-    const unitName = filterUnits.length === 0 ? 'Geral (N1 + N2)' : filterUnits.join(', ');
+    const periodName = filterPeriods.length === 0 ? 'Todos os Períodos (Visão Geral)' : filterPeriods.map(id => PERIODS.find(r => r.id === id)?.name).filter(Boolean).join(', ');
+    const discName = filterDiscs.length === 0 ? 'Todas as Disciplinas' : filterDiscs.map(id => disciplines.find(d => d.id === id)?.title).filter(Boolean).join(', ');
+    const typeName = filterTypes.length === 0 ? 'Todas as Modalidades' : filterTypes.map(t => t === 'teorico' ? 'Teórico' : t === 'laboratorio' ? 'Lab Virtual' : 'OSCE Clínico').join(', ');
+    const unitName = filterUnits.length === 0 ? 'Geral (N1 + N2)' : filterUnits.map(u => `Unidade ${u}`).join(', ');
 
     const quizFilterLabel = selectedQuizzes.length === availableStatTitles.length 
       ? 'Todos os simulados disponíveis' 
@@ -499,38 +501,34 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           />
         </div>
 
-        {/* ========================================== */}
-        {/* MULTI-SELECT LUNA ENGINE - NOVOS FILTROS  */}
-        {/* ========================================== */}
-        
         <div className="flex-1 min-w-[150px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Período</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'period' ? null : 'period')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
-            <span className="truncate mr-2">{filterPeriods.length === 0 ? 'Todos' : `${filterPeriods.length} Marcados`}</span>
-            <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'period' ? 'rotate-180' : ''}`} />
+             <span className="truncate mr-2">{filterPeriods.length === 0 ? 'Todos' : `${filterPeriods.length} Marcados`}</span>
+             <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'period' ? 'rotate-180' : ''}`} />
           </div>
           {openDropdown === 'period' && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
               <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
-                <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
-                  <button onClick={() => setFilterPeriods(PERIODS.map(p => p.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Todos</button>
-                  <button onClick={() => setFilterPeriods([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
-                </div>
-                <div className="max-h-60 overflow-y-auto p-2">
-                  {PERIODS.map(p => {
-                    const isChecked = filterPeriods.includes(p.id);
-                    return (
-                      <label key={p.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                        <input type="checkbox" checked={isChecked} onChange={(e) => {
-                          if (e.target.checked) setFilterPeriods([...filterPeriods, p.id]);
-                          else setFilterPeriods(filterPeriods.filter(id => id !== p.id));
-                        }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
-                        <span className={`text-xs font-bold ${isChecked ? 'text-[#003366]' : 'text-gray-500'}`}>{p.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                 <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
+                   <button onClick={() => setFilterPeriods(PERIODS.map(p => p.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Todos</button>
+                   <button onClick={() => setFilterPeriods([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
+                 </div>
+                 <div className="max-h-60 overflow-y-auto p-2">
+                   {PERIODS.map(p => {
+                     const isChecked = filterPeriods.includes(p.id);
+                     return (
+                       <label key={p.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                         <input type="checkbox" checked={isChecked} onChange={(e) => {
+                           if(e.target.checked) setFilterPeriods([...filterPeriods, p.id]);
+                           else setFilterPeriods(filterPeriods.filter(id => id !== p.id));
+                         }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                         <span className={`text-xs font-bold ${isChecked ? 'text-[#003366]' : 'text-gray-500'}`}>{p.name}</span>
+                       </label>
+                     );
+                   })}
+                 </div>
               </div>
             </>
           )}
@@ -539,33 +537,31 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         <div className="flex-1 min-w-[180px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Disciplina</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'disc' ? null : 'disc')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
-            <span className="truncate mr-2">{filterDiscs.length === 0 ? 'Todas' : `${filterDiscs.length} Marcadas`}</span>
-            <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'disc' ? 'rotate-180' : ''}`} />
+             <span className="truncate mr-2">{filterDiscs.length === 0 ? 'Todas' : `${filterDiscs.length} Marcadas`}</span>
+             <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'disc' ? 'rotate-180' : ''}`} />
           </div>
           {openDropdown === 'disc' && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
               <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
-                <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
-                  <button onClick={() => setFilterDiscs(disciplines.map(d => d.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Todas</button>
-                  <button onClick={() => setFilterDiscs([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
-                </div>
-                <div className="max-h-60 overflow-y-auto p-2">
-                  {disciplines.map(d => {
-                    const isChecked = filterDiscs.includes(d.id);
-                    // Aplica apenas como auxílio visual a relação com o período selecionado
-                    if (filterPeriods.length > 0 && !filterPeriods.includes(d.periodId)) return null;
-                    return (
-                      <label key={d.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                        <input type="checkbox" checked={isChecked} onChange={(e) => {
-                          if (e.target.checked) setFilterDiscs([...filterDiscs, d.id]);
-                          else setFilterDiscs(filterDiscs.filter(id => id !== d.id));
-                        }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
-                        <span className={`text-xs font-bold ${isChecked ? 'text-[#003366]' : 'text-gray-500'}`}>{d.title}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                 <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
+                   <button onClick={() => setFilterDiscs(disciplines.map(d => d.id))} className="text-[10px] font-black text-[#003366] hover:text-[#D4A017] uppercase tracking-widest transition-colors px-2 py-1">Todas</button>
+                   <button onClick={() => setFilterDiscs([])} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors px-2 py-1">Limpar</button>
+                 </div>
+                 <div className="max-h-60 overflow-y-auto p-2">
+                   {disciplines.map(d => {
+                     const isChecked = filterDiscs.includes(d.id);
+                     return (
+                       <label key={d.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                         <input type="checkbox" checked={isChecked} onChange={(e) => {
+                           if(e.target.checked) setFilterDiscs([...filterDiscs, d.id]);
+                           else setFilterDiscs(filterDiscs.filter(id => id !== d.id));
+                         }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                         <span className={`text-xs font-bold ${isChecked ? 'text-[#003366]' : 'text-gray-500'}`}>{d.title}</span>
+                       </label>
+                     );
+                   })}
+                 </div>
               </div>
             </>
           )}
@@ -574,29 +570,29 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         <div className="flex-1 min-w-[130px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Unidade</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'unit' ? null : 'unit')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
-            <span className="truncate mr-2">{filterUnits.length === 0 ? 'Todas' : `${filterUnits.length} Marcadas`}</span>
-            <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'unit' ? 'rotate-180' : ''}`} />
+             <span className="truncate mr-2">{filterUnits.length === 0 ? 'Todas' : `${filterUnits.length} Marcadas`}</span>
+             <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'unit' ? 'rotate-180' : ''}`} />
           </div>
           {openDropdown === 'unit' && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
               <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
-                <div className="p-2">
-                  <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                    <input type="checkbox" checked={filterUnits.includes('N1')} onChange={(e) => {
-                      if (e.target.checked) setFilterUnits([...filterUnits, 'N1']);
-                      else setFilterUnits(filterUnits.filter(u => u !== 'N1'));
-                    }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
-                    <span className={`text-xs font-bold ${filterUnits.includes('N1') ? 'text-[#003366]' : 'text-gray-500'}`}>Unidade N1</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                    <input type="checkbox" checked={filterUnits.includes('N2')} onChange={(e) => {
-                      if (e.target.checked) setFilterUnits([...filterUnits, 'N2']);
-                      else setFilterUnits(filterUnits.filter(u => u !== 'N2'));
-                    }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
-                    <span className={`text-xs font-bold ${filterUnits.includes('N2') ? 'text-[#003366]' : 'text-gray-500'}`}>Unidade N2</span>
-                  </label>
-                </div>
+                 <div className="p-2">
+                     <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                       <input type="checkbox" checked={filterUnits.includes('N1')} onChange={(e) => {
+                         if(e.target.checked) setFilterUnits([...filterUnits, 'N1']);
+                         else setFilterUnits(filterUnits.filter(u => u !== 'N1'));
+                       }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                       <span className={`text-xs font-bold ${filterUnits.includes('N1') ? 'text-[#003366]' : 'text-gray-500'}`}>Unidade N1</span>
+                     </label>
+                     <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                       <input type="checkbox" checked={filterUnits.includes('N2')} onChange={(e) => {
+                         if(e.target.checked) setFilterUnits([...filterUnits, 'N2']);
+                         else setFilterUnits(filterUnits.filter(u => u !== 'N2'));
+                       }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                       <span className={`text-xs font-bold ${filterUnits.includes('N2') ? 'text-[#003366]' : 'text-gray-500'}`}>Unidade N2</span>
+                     </label>
+                 </div>
               </div>
             </>
           )}
@@ -605,28 +601,28 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         <div className="flex-1 min-w-[150px] relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Modalidade</label>
           <div onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')} className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center">
-            <span className="truncate mr-2">{filterTypes.length === 0 ? 'Todas' : `${filterTypes.length} Marcadas`}</span>
-            <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'type' ? 'rotate-180' : ''}`} />
+             <span className="truncate mr-2">{filterTypes.length === 0 ? 'Todas' : `${filterTypes.length} Marcadas`}</span>
+             <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'type' ? 'rotate-180' : ''}`} />
           </div>
           {openDropdown === 'type' && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
               <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden text-black">
-                <div className="p-2">
-                  {[
-                    { id: 'teorico', label: 'Teórico' },
-                    { id: 'laboratorio', label: 'Lab Virtual' },
-                    { id: 'osce', label: 'OSCE Clínico' }
-                  ].map(type => (
-                    <label key={type.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                      <input type="checkbox" checked={filterTypes.includes(type.id)} onChange={(e) => {
-                        if (e.target.checked) setFilterTypes([...filterTypes, type.id]);
-                        else setFilterTypes(filterTypes.filter(t => t !== type.id));
-                      }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
-                      <span className={`text-xs font-bold ${filterTypes.includes(type.id) ? 'text-[#003366]' : 'text-gray-500'}`}>{type.label}</span>
-                    </label>
-                  ))}
-                </div>
+                 <div className="p-2">
+                    {[
+                      { id: 'teorico', label: 'Teórico' },
+                      { id: 'laboratorio', label: 'Lab Virtual' },
+                      { id: 'osce', label: 'OSCE' }
+                    ].map(type => (
+                      <label key={type.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                         <input type="checkbox" checked={filterTypes.includes(type.id)} onChange={(e) => {
+                           if(e.target.checked) setFilterTypes([...filterTypes, type.id]);
+                           else setFilterTypes(filterTypes.filter(t => t !== type.id));
+                         }} className="accent-[#003366] w-4 h-4 cursor-pointer" />
+                         <span className={`text-xs font-bold ${filterTypes.includes(type.id) ? 'text-[#003366]' : 'text-gray-500'}`}>{type.label}</span>
+                      </label>
+                    ))}
+                 </div>
               </div>
             </>
           )}
@@ -638,7 +634,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           </label>
           
           <div 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            onClick={() => setOpenDropdown(openDropdown === 'quiz' ? null : 'quiz')}
             className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold text-[#003366] outline-none border-2 border-transparent hover:border-[#D4A017] transition-colors cursor-pointer flex justify-between items-center"
           >
             <span className="truncate mr-2">
@@ -650,12 +646,12 @@ const AdminStats: React.FC<AdminStatsProps> = ({
                     ? 'Nenhum Selecionado' 
                     : `${selectedQuizzes.length} Marcados`}
             </span>
-            <ChevronDown size={16} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openDropdown === 'quiz' ? 'rotate-180' : ''}`} />
           </div>
 
-          {isDropdownOpen && (
+          {openDropdown === 'quiz' && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
+              <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)}></div>
               
               <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-2xl rounded-2xl z-50 overflow-hidden">
                 <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50">
