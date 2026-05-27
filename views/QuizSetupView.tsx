@@ -61,6 +61,10 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
 
   // Verifica se é disciplina UC (bloco unificado)
   const isUC = discipline.category === 'UC';
+  
+  // LUNA ENGINE: Trava de Escopo Restrito para a N2 (Não permite simulados mistos)
+  const isStrictN2 = !isUC && selectedUnit === 'N2';
+  const showThematicMode = !isStrictN2;
 
   // Verifica se há um simulado pendente mal a tela abre
   useEffect(() => {
@@ -199,7 +203,7 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
         </div>
       )}
       
-      {/* MODAL DE AVISO (Simulado Pendente) - Só exibe se não estiver carregando */}
+      {/* MODAL DE AVISO (Simulado Pendente) */}
       {showPrompt && !isFetching && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#003366]/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl max-w-lg w-full animate-in zoom-in duration-300">
@@ -242,10 +246,21 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
             <p className="text-[#D4A017] text-[10px] font-black uppercase tracking-[0.3em]">{discipline.title}</p>
           </div>
 
-          {/* MODO 1: SIMULADOS FECHADOS */}
+          {/* ESTADO VAZIO DE SEGURANÇA PARA A N2 */}
+          {isStrictN2 && uniqueQuizTitles.length === 0 && (
+            <div className="mb-10 text-center py-12 bg-gray-50 rounded-3xl border border-gray-100">
+               <div className="text-3xl mb-3">📭</div>
+               <p className="text-sm font-black uppercase tracking-widest text-[#003366]">Nenhum Banco Oficial Disponível</p>
+               <p className="text-xs text-gray-500 mt-2 font-medium">Os bancos de questões restritos para a N2 ainda não foram sincronizados.</p>
+            </div>
+          )}
+
+          {/* MODO 1: SIMULADOS FECHADOS (BANCOS OFICIAIS) */}
           {uniqueQuizTitles.length > 0 && (
             <div className="mb-10 bg-blue-50/50 p-6 rounded-3xl border border-blue-100">
-              <label className="block text-[10px] font-black uppercase tracking-widest text-blue-800 mb-4 text-center">Simulados Completos da Unidade</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-blue-800 mb-4 text-center">
+                {isStrictN2 ? `Bancos de Questões Oficiais (Unidade ${selectedUnit})` : 'Simulados Completos da Unidade'}
+              </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {uniqueQuizTitles.map(title => {
                   const count = localQuestions.filter(q => {
@@ -269,43 +284,49 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
                   );
                 })}
               </div>
-              <p className="text-center text-[9px] font-bold text-gray-400 mt-4 uppercase tracking-widest">OU CRIE UM SIMULADO MISTO ABAIXO</p>
+              {showThematicMode && (
+                <p className="text-center text-[9px] font-bold text-gray-400 mt-4 uppercase tracking-widest">OU CRIE UM SIMULADO MISTO ABAIXO</p>
+              )}
             </div>
           )}
 
-          {/* MODO 2: EIXOS TEMÁTICOS */}
-          <div className={`mb-12 ${selectedQuizTitles.length > 0 ? 'opacity-30 grayscale pointer-events-none transition-all' : 'transition-all'}`}>
-            <div className="flex justify-between items-center mb-6">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Banco de Questões Misto</label>
-              <div className="flex gap-4">
-                 <button onClick={() => setSelectedThemes(discipline.themes)} className="text-[9px] font-bold text-[#003366] uppercase underline hover:text-[#D4A017] transition-colors">Todos Temas</button>
-                 <button onClick={() => setSelectedThemes([])} className="text-[9px] font-bold text-red-500 uppercase underline hover:text-red-700 transition-colors">Nenhum</button>
+          {/* MODO 2: EIXOS TEMÁTICOS (OCULTO NA N2 PARA FORÇAR PRÁTICA RESTRITA) */}
+          {showThematicMode && (
+            <div className={`mb-12 ${selectedQuizTitles.length > 0 ? 'opacity-30 grayscale pointer-events-none transition-all' : 'transition-all'}`}>
+              <div className="flex justify-between items-center mb-6">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                  Banco de Questões Misto
+                </label>
+                <div className="flex gap-4">
+                   <button onClick={() => setSelectedThemes(discipline.themes)} className="text-[9px] font-bold text-[#003366] uppercase underline hover:text-[#D4A017] transition-colors">Todos Temas</button>
+                   <button onClick={() => setSelectedThemes([])} className="text-[9px] font-bold text-red-500 uppercase underline hover:text-red-700 transition-colors">Nenhum</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {discipline.themes.map(theme => {
+                  const count = localQuestions.filter(q => {
+                    const isCorrectDisc = q.disciplineId === discipline.id;
+                    const qUnit = q.unit || 'N1';
+                    const isCorrectUnit = isUC ? true : qUnit === selectedUnit;
+                    return isCorrectDisc && isCorrectUnit && q.theme === theme;
+                  }).length;
+                  const isSelected = selectedThemes.includes(theme);
+                  return (
+                    <button
+                      key={theme}
+                      onClick={() => toggleTheme(theme)}
+                      className={`p-4 rounded-2xl text-left transition-all border-2 flex justify-between items-start gap-3 group
+                        ${isSelected ? 'border-[#003366] bg-[#003366] text-white shadow-lg' : 'border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200'}
+                      `}
+                    >
+                      <span className="text-xs font-bold uppercase tracking-tight leading-snug">{theme}</span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{count} Q</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {discipline.themes.map(theme => {
-                const count = localQuestions.filter(q => {
-                  const isCorrectDisc = q.disciplineId === discipline.id;
-                  const qUnit = q.unit || 'N1';
-                  const isCorrectUnit = isUC ? true : qUnit === selectedUnit;
-                  return isCorrectDisc && isCorrectUnit && q.theme === theme;
-                }).length;
-                const isSelected = selectedThemes.includes(theme);
-                return (
-                  <button
-                    key={theme}
-                    onClick={() => toggleTheme(theme)}
-                    className={`p-4 rounded-2xl text-left transition-all border-2 flex justify-between items-start gap-3 group
-                      ${isSelected ? 'border-[#003366] bg-[#003366] text-white shadow-lg' : 'border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200'}
-                    `}
-                  >
-                    <span className="text-xs font-bold uppercase tracking-tight leading-snug">{theme}</span>
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{count} Q</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           {/* CONFIGURAÇÕES DE ENTREGA */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
