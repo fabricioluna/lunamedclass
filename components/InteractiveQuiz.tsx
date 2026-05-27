@@ -115,10 +115,15 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
   });
 
   const [answers, setAnswers] = useState<Record<string, number>>(resumeState?.answers || {});
-  const [score, setScore] = useState(resumeState?.score || 0);
   const [draftAnswers, setDraftAnswers] = useState<Record<string, number>>(resumeState?.draftAnswers || {});
   const [eliminatedOptions, setEliminatedOptions] = useState<Record<string, number[]>>(resumeState?.eliminatedOptions || {});
   const [isGridOpen, setIsGridOpen] = useState(false);
+
+  // LUNA ENGINE: Single Source of Truth (Fonte Única de Verdade)
+  // Calculamos a pontuação e progresso cruzando apenas com os IDs do array "questions" atual
+  const score = questions.filter(q => answers[q.id] !== undefined && answers[q.id] === q.answer).length;
+  const answeredCount = questions.filter(q => answers[q.id] !== undefined).length;
+  const unansweredCount = questions.length - answeredCount;
 
   useEffect(() => {
     const stateToSave = { currentIndex, answers, score, draftAnswers, eliminatedOptions };
@@ -172,7 +177,6 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
     setAnswers((prev: Record<string, number>) => ({ ...prev, [questionId]: selectedOpt }));
     
     const isCorrect = selectedOpt === correctIndex;
-    if (isCorrect) setScore((prev: number) => prev + 1);
 
     if (onAnswerQuestion) {
       onAnswerQuestion(questionId, isCorrect, q.theme);
@@ -204,8 +208,6 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
   const isCorrect = isAnswered && userAnswer === q.answer;
   const isLastQuestion = currentIndex === questions.length - 1;
   const progress = ((currentIndex + 1) / Math.max(1, questions.length)) * 100;
-  
-  const unansweredCount = questions.length - Object.keys(answers).length;
 
   return (
     <div className="pb-32 relative">
@@ -369,7 +371,7 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
       <BottomFloatingNav 
         onOpenGrid={() => setIsGridOpen(true)} 
         unansweredCount={unansweredCount} 
-        answeredCount={Object.keys(answers).length} 
+        answeredCount={answeredCount} 
         totalQuestions={questions.length} 
         score={score} 
       />
