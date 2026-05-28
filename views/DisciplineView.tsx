@@ -16,34 +16,27 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
 
   const discipline = disciplines.find(d => d.id === disciplineId);
 
-  // Reseta a unidade selecionada caso o aluno mude de disciplina
   useEffect(() => {
     setSelectedUnit(null);
   }, [disciplineId]);
 
   if (!discipline) return null;
 
-  // IDENTIFICADORES AUTOMÁTICOS
   const isUC = discipline.category === 'UC';
   const isModular = discipline.category === 'HABMED' || discipline.category === 'IESC' || discipline.category === 'UCCG';
-  
-  // Verifica se é a UC V para expandir categorias exclusivas
   const isUCV = disciplineId.toLowerCase() === 'uc5' || disciplineId.toLowerCase() === 'uc-v' || discipline.title.toLowerCase().includes('uc v');
 
-  // VERIFICA QUAIS BOTÕES ESTÃO BLOQUEADOS NO FIREBASE
   const locked = discipline.lockedFeatures || [];
   const isMaterialsLocked = locked.includes('materials');
   const isReferencesLocked = locked.includes('references');
   const isQuizLocked = locked.includes('quiz');
   const isPracticalLocked = locked.includes('lab_osce');
 
-  // HANDLERS
   const handleAction = (featureId: string, action: string) => {
     if (locked.includes(featureId)) {
       alert("Esta funcionalidade está temporariamente bloqueada pela administração.");
       return;
     }
-    // Passa a ação e a unidade selecionada (se houver) para o controlador de rotas
     onSelectOption(action, selectedUnit || undefined);
   };
 
@@ -77,7 +70,6 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          {/* BOTÃO N1 */}
           <button 
             onClick={() => setSelectedUnit('N1')}
             className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-500"
@@ -89,7 +81,6 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
             <p className="text-sm text-gray-500 font-medium">Avaliações teóricas, checklists e materiais referentes ao 1º Bimestre.</p>
           </button>
 
-          {/* BOTÃO N2 */}
           <button 
             onClick={() => setSelectedUnit('N2')}
             className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-700"
@@ -108,6 +99,8 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
   // === DASHBOARD NORMAL DA DISCIPLINA ===
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32 mt-8">
+      {/* BOTÃO REMOVIDO DAQUI */}
+
       <div className="bg-white rounded-[3rem] p-8 md:p-14 shadow-2xl border border-gray-100 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#f4f7f6] rounded-full -mr-20 -mt-20 opacity-50"></div>
         <div className="flex flex-col md:flex-row gap-8 items-center md:items-start relative z-10">
@@ -203,7 +196,6 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
             )}
           </button>
 
-          {/* SUBMENU DE CATEGORIAS EXCLUSIVO PARA UC V */}
           {isUCV && showLabCategories && !isPracticalLocked && (
             <div className="p-4 pt-0 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-4">
               <button 
