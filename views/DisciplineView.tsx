@@ -38,16 +38,6 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
   const isPracticalLocked = locked.includes('lab_osce');
 
   // HANDLERS
-  const handleBack = () => {
-    // Se for modular e já tiver unidade selecionada, voltar para a escolha da unidade
-    if (isModular && selectedUnit) {
-      setSelectedUnit(null);
-    } else {
-      // Caso contrário, volta para a tela inicial/períodos
-      onBack();
-    }
-  };
-
   const handleAction = (featureId: string, action: string) => {
     if (locked.includes(featureId)) {
       alert("Esta funcionalidade está temporariamente bloqueada pela administração.");
@@ -74,16 +64,8 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
   if (isModular && !selectedUnit) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32">
-        <button 
-          onClick={handleBack} 
-          className="group flex items-center text-[#003366] font-bold mb-12 hover:text-[#D4A017] transition-all"
-        >
-          <span className="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
-          Voltar aos Períodos
-        </button>
-
         <div className="text-center mb-12 animate-in zoom-in-95 duration-500">
-          <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center text-5xl shadow-xl border-4 border-[#003366] mb-6">
+          <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center text-5xl shadow-xl border-4 border-[#003366] mb-6 mt-8">
             {discipline.icon}
           </div>
           <h2 className="text-3xl md:text-4xl font-black text-[#003366] tracking-tighter mb-4">
@@ -125,15 +107,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
 
   // === DASHBOARD NORMAL DA DISCIPLINA ===
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32">
-      <button 
-        onClick={handleBack} 
-        className="group flex items-center text-[#003366] font-bold mb-8 hover:text-[#D4A017] transition-all"
-      >
-        <span className="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
-        {isModular ? 'Trocar Unidade' : 'Voltar ao Início'}
-      </button>
-
+    <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32 mt-8">
       <div className="bg-white rounded-[3rem] p-8 md:p-14 shadow-2xl border border-gray-100 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#f4f7f6] rounded-full -mr-20 -mt-20 opacity-50"></div>
         <div className="flex flex-col md:flex-row gap-8 items-center md:items-start relative z-10">
