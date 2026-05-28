@@ -64,8 +64,8 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
   if (isModular && !selectedUnit) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32">
-        <div className="text-center mb-12 animate-in zoom-in-95 duration-500">
-          <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center text-5xl shadow-xl border-4 border-[#003366] mb-6 mt-8">
+        <div className="text-center mb-12 animate-in zoom-in-95 duration-500 mt-8">
+          <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center text-5xl shadow-xl border-4 border-[#003366] mb-6">
             {discipline.icon}
           </div>
           <h2 className="text-3xl md:text-4xl font-black text-[#003366] tracking-tighter mb-4">
@@ -80,7 +80,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
           {/* BOTÃO N1 */}
           <button 
             onClick={() => setSelectedUnit('N1')}
-            className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden text-left flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-500"
+            className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-500"
           >
             <div className="w-16 h-16 bg-blue-50 text-[#003366] rounded-2xl flex items-center justify-center mb-6 group-hover:bg-[#003366] group-hover:text-white transition-colors">
                <Milestone size={32} />
@@ -92,7 +92,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
           {/* BOTÃO N2 */}
           <button 
             onClick={() => setSelectedUnit('N2')}
-            className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden text-left flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-700"
+            className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-[#D4A017] hover:shadow-2xl transition-all group relative overflow-hidden flex flex-col items-center text-center animate-in slide-in-from-bottom-4 duration-700"
           >
             <div className="w-16 h-16 bg-blue-50 text-[#003366] rounded-2xl flex items-center justify-center mb-6 group-hover:bg-[#003366] group-hover:text-white transition-colors">
                <Layers size={32} />
