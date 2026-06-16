@@ -9,9 +9,6 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Verifica se o usuário já escolheu um período para exibir o botão "Trocar Período"
-  const hasPeriodSelected = location.pathname !== '/' && location.pathname !== '/period-selection';
-  
   // O botão de voltar só aparece se não estivermos na tela principal
   const canGoBack = location.pathname !== '/' && location.pathname !== '/period-selection';
 
@@ -68,14 +65,6 @@ const Header: React.FC = () => {
 
           {/* Menu Desktop */}
           <nav className="hidden md:flex items-center gap-4">
-            {hasPeriodSelected && ( 
-              <button 
-                onClick={() => navigateTo('/')} 
-                className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-white/10 text-white px-5 py-2 rounded-lg hover:bg-white hover:text-[#003366] transition-all whitespace-nowrap"
-              >
-                🚪 TROCAR PERÍODO
-              </button>
-            )}
             <button 
               onClick={() => navigateTo('/career-quiz')}
               className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] px-5 py-2 rounded-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all whitespace-nowrap shadow-sm"
@@ -122,14 +111,6 @@ const Header: React.FC = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-[#002244] border-t border-[#D4A017]/20 p-4 animate-in slide-in-from-top duration-300">
           <div className="flex flex-col gap-3">
-            {hasPeriodSelected && (
-              <button 
-                onClick={() => navigateTo('/')}
-                className="w-full text-left py-3 px-4 text-sm font-black bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
-              >
-                🚪 TROCAR DE PERÍODO
-              </button>
-            )}
             <button 
               onClick={() => navigateTo('/career-quiz')}
               className="w-full text-left py-3 px-4 text-sm font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] rounded-lg hover:bg-[#D4A017]/10 transition-all"
