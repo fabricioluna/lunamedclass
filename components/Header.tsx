@@ -27,7 +27,7 @@ const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-4 md:h-28 gap-2">
           
-          {/* Lado Esquerdo: Botão Voltar + Logo e Identidade */}
+          {/* Lado Esquerdo: Botão Voltar + Logo Isolada */}
           <div className="flex items-center gap-3 md:gap-4 flex-shrink min-w-0">
             
             {/* O Botão de Voltar Global */}
@@ -44,6 +44,7 @@ const Header: React.FC = () => {
             <div 
               className="flex items-center cursor-pointer group min-w-0 flex-shrink" 
               onClick={() => navigateTo('/')} 
+              title="Voltar para a Página Inicial"
             >
               <div className="bg-white p-1 md:p-2 rounded-lg md:rounded-xl w-14 h-8 sm:w-24 sm:h-10 md:w-48 md:h-16 flex items-center justify-center overflow-hidden border-2 border-[#D4A017] shadow-lg transition-transform group-hover:scale-105 flex-shrink-0">
                 <img 
@@ -52,14 +53,6 @@ const Header: React.FC = () => {
                   className="w-full h-full object-contain"
                 />
               </div>
-              <div className="ml-2 md:ml-4 flex flex-col justify-center min-w-0">
-                <h1 className="text-[10px] sm:text-xs md:text-base font-black tracking-widest leading-tight text-white uppercase truncate">
-                  LUNA MEDCLASS
-                </h1>
-                <h2 className="text-[7px] sm:text-[9px] md:text-[10px] font-bold text-[#D4A017] uppercase tracking-widest opacity-90 truncate">
-                  Seu Monitor Virtual de Medicina
-                </h2>
-              </div>
             </div>
           </div>
 
@@ -67,7 +60,7 @@ const Header: React.FC = () => {
           <nav className="hidden md:flex items-center gap-4">
             <button 
               onClick={() => navigateTo('/simulators')}
-              className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-white/10 text-white px-5 py-2 rounded-lg hover:bg-white hover:text-[#003366] transition-all whitespace-nowrap"
+              className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] px-5 py-2 rounded-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all whitespace-nowrap shadow-sm"
             >
               🎮 SIMULADORES
             </button>
@@ -119,7 +112,7 @@ const Header: React.FC = () => {
           <div className="flex flex-col gap-3">
             <button 
               onClick={() => navigateTo('/simulators')}
-              className="w-full text-left py-3 px-4 text-sm font-black bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+              className="w-full text-left py-3 px-4 text-sm font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] rounded-lg hover:bg-[#D4A017]/10 transition-all"
             >
               🎮 SIMULADORES PRÁTICOS
             </button>
