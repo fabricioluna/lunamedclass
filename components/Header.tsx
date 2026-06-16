@@ -66,6 +66,12 @@ const Header: React.FC = () => {
           {/* Menu Desktop */}
           <nav className="hidden md:flex items-center gap-4">
             <button 
+              onClick={() => navigateTo('/simulators')}
+              className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-white/10 text-white px-5 py-2 rounded-lg hover:bg-white hover:text-[#003366] transition-all whitespace-nowrap"
+            >
+              🎮 SIMULADORES
+            </button>
+            <button 
               onClick={() => navigateTo('/career-quiz')}
               className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] px-5 py-2 rounded-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all whitespace-nowrap shadow-sm"
             >
@@ -111,6 +117,12 @@ const Header: React.FC = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-[#002244] border-t border-[#D4A017]/20 p-4 animate-in slide-in-from-top duration-300">
           <div className="flex flex-col gap-3">
+            <button 
+              onClick={() => navigateTo('/simulators')}
+              className="w-full text-left py-3 px-4 text-sm font-black bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+            >
+              🎮 SIMULADORES PRÁTICOS
+            </button>
             <button 
               onClick={() => navigateTo('/career-quiz')}
               className="w-full text-left py-3 px-4 text-sm font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] rounded-lg hover:bg-[#D4A017]/10 transition-all"

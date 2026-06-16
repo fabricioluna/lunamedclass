@@ -19,6 +19,7 @@ import ReferencesView from './views/ReferencesView';
 import ShareMaterialView from './views/ShareMaterialView';
 import LabListView from './views/LabListView';
 import LabQuizView from './views/LabQuizView';
+import SimulatorsView from './views/SimulatorsView'; // <-- NOVA IMPORTAÇÃO
 
 import SurveyView from './views/SurveyView';
 import SurveyReportView from './views/SurveyReportView';
@@ -332,6 +333,7 @@ const AppRouter: React.FC = () => {
           <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
           <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
           <Route path="/ai-test" element={<AITestView />} />
+          <Route path="/simulators" element={<SimulatorsView />} /> {/* <-- NOVA ROTA INJETADA AQUI */}
           
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
