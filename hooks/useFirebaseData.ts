@@ -7,7 +7,7 @@ export const useFirebaseData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
 
-  // ESTADOS GLOBAIS ESTRUTURAIS (Leves - Mantidos na memória)
+  // ESTADOS GLOBAIS ESTRUTURAIS (Fallback seguro via constants)
   const [periods, setPeriods] = useState<Period[]>(PERIODS); 
   const [disciplines, setDisciplines] = useState<SimulationInfo[]>(SIMULATIONS);
   
@@ -32,27 +32,48 @@ export const useFirebaseData = () => {
       setIsOnline(snap.val() === true);
     });
 
-    // Carregar apenas as configurações de bloqueio e status das disciplinas
-    onValue(ref(db, 'discipline_config'), (snap) => {
-      const config = snap.val();
-      if (config) {
-        setDisciplines(prev => prev.map(disc => {
-          const dConf = config[disc.id];
-          if (dConf) {
-            return {
-              ...disc,
-              themes: Array.isArray(dConf.themes) ? dConf.themes : disc.themes,
-              references: Array.isArray(dConf.references) ? dConf.references : disc.references,
-              status: dConf.status ? dConf.status : disc.status,
-              lockedFeatures: Array.isArray(dConf.lockedFeatures) ? dConf.lockedFeatures : [] 
-            };
-          }
-          return disc;
-        }));
+    // 1. Ouvinte da coleção centralizada de Períodos
+    const periodsRef = ref(db, 'periods');
+    onValue(periodsRef, (snap) => {
+      const data = snap.val();
+      if (data) {
+        // Converte objeto do Firebase para array iterável mantendo a tipagem estrita
+        const parsedPeriods = Array.isArray(data) ? data : Object.values(data);
+        setPeriods(parsedPeriods as Period[]);
       }
     });
 
-    // Tempo de boot da aplicação agora será quase instantâneo
+    // 2. Ouvinte da coleção centralizada de Disciplinas
+    const disciplinesRef = ref(db, 'disciplines');
+    onValue(disciplinesRef, (snap) => {
+      const data = snap.val();
+      if (data) {
+        const parsedDisciplines = Array.isArray(data) ? data : Object.values(data);
+        setDisciplines(parsedDisciplines as SimulationInfo[]);
+      } else {
+        // 3. Fallback de Segurança: Manter lógica legada até a migração do banco ser concluída
+        onValue(ref(db, 'discipline_config'), (configSnap) => {
+          const config = configSnap.val();
+          if (config) {
+            setDisciplines(prev => prev.map(disc => {
+              const dConf = config[disc.id];
+              if (dConf) {
+                return {
+                  ...disc,
+                  themes: Array.isArray(dConf.themes) ? dConf.themes : disc.themes,
+                  references: Array.isArray(dConf.references) ? dConf.references : disc.references,
+                  status: dConf.status ? dConf.status : disc.status,
+                  lockedFeatures: Array.isArray(dConf.lockedFeatures) ? dConf.lockedFeatures : [] 
+                };
+              }
+              return disc;
+            }));
+          }
+        });
+      }
+    });
+
+    // Tempo de boot da aplicação mantido rápido
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
