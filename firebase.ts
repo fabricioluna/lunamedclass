@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { 
   getDatabase, ref, onValue, push, remove, set, update, off 
 } from "firebase/database";
@@ -6,15 +7,15 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
-/**
- * CONFIGURAÇÃO BLINDADA LUNA MEDCLASS
- * Mantemos os identificadores de rota fixos para evitar que falhas no .env
- * ou no Vercel impeçam a inicialização do sistema.
- */
+// Boa prática: Lendo a chave da variável de ambiente com segurança
+const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+
+if (!apiKey) {
+  console.error("ERRO CRÍTICO: VITE_FIREBASE_API_KEY não está definida no arquivo .env");
+}
+
 const firebaseConfig = {
-  // A única que realmente precisa ser protegida
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "", 
-  
+  apiKey: apiKey || "", 
   authDomain: "monitor-virtual-fms.firebaseapp.com",
   databaseURL: "https://monitor-virtual-fms-default-rtdb.firebaseio.com",
   projectId: "monitor-virtual-fms",
@@ -26,11 +27,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Inicializa Analytics apenas no navegador
 if (typeof window !== "undefined") {
   getAnalytics(app);
 }
 
+export const auth = getAuth(app); 
 export const db = getDatabase(app);
 export { ref, onValue, push, remove, set, update, off };
 
