@@ -4,7 +4,10 @@ import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Bo
 
 // IMPORTAÇÃO DA NOSSA "NUVEM" DE DADOS E FIREBASE
 import { useData } from '../contexts/DataContext.tsx';
-import { db, ref, push, remove, set, onValue } from '../firebase.ts'; // <-- Adicionado onValue
+import { db, ref, push, remove, set, onValue } from '../firebase.ts';
+
+// IMPORTAÇÃO DAS CONSTANTES (Para injeção estrutural - Fase 1)
+import { PERIODS, SIMULATIONS } from '../constants.tsx';
 
 // IMPORTAÇÕES DOS COMPONENTES MODULARIZADOS
 import AdminStats from '../components/admin/AdminStats.tsx';
@@ -100,13 +103,34 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
             remove(ref(db, 'osce')),
             remove(ref(db, 'discipline_config')),
             remove(ref(db, 'labSimulations')),
-            remove(ref(db, 'osceAnalytics'))
+            remove(ref(db, 'osceAnalytics')),
+            remove(ref(db, 'periods')), // Incluído na remoção global
+            remove(ref(db, 'disciplines')) // Incluído na remoção global
           ]);
           alert("✅ Banco de dados completamente resetado.");
         } catch (error) {
           console.error("[AdminView] Erro ao resetar banco:", error);
           alert("❌ Erro ao resetar banco de dados.");
         }
+      }
+    } else if (pass !== null) {
+      alert("❌ Senha incorreta. Ação cancelada.");
+    }
+  };
+
+  // --- NOVA FUNÇÃO: Injeção de Dados (Fase 1.1) ---
+  const handleSeedDatabase = async () => {
+    const pass = prompt("⚠️ MIGRAR ESTRUTURA BASE: Deseja injetar a árvore de Períodos e Disciplinas (incluindo UCs, N1/N2 e Temas) do arquivo constants.tsx para o Firebase?\n\nPara confirmar, digite a senha (fmst8):");
+    if (pass === 'fmst8' && db) {
+      try {
+        await Promise.all([
+          set(ref(db, 'periods'), PERIODS),
+          set(ref(db, 'disciplines'), SIMULATIONS)
+        ]);
+        alert("✅ Estrutura Base (Períodos e Disciplinas) migrada com sucesso para a Nuvem!");
+      } catch (error) {
+        console.error("[AdminView] Erro ao injetar estrutura:", error);
+        alert("❌ Erro durante a injeção da estrutura base.");
       }
     } else if (pass !== null) {
       alert("❌ Senha incorreta. Ação cancelada.");
@@ -283,7 +307,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
              <p className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">Gestão de Dados em Nuvem</p>
            </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+           {/* NOVO BOTÃO DE INJEÇÃO ESTRUTURAL (SEED) */}
+           <button onClick={handleSeedDatabase} className="bg-blue-100 text-blue-800 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-200 transition-all border border-blue-200 shadow-sm">Injetar Estrutura (Seed)</button>
            <button onClick={handleClearAnalytics} className="bg-purple-100 text-purple-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-200 transition-all">Limpar Analytics</button>
            <button onClick={handleClearResults} className="bg-orange-100 text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-200 transition-all">Limpar Resultados</button>
            <button onClick={handleGlobalReset} className="bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg transition-all">Resetar Banco Total</button>
