@@ -7,15 +7,10 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
-// Boa prática: Lendo a chave da variável de ambiente com segurança
-const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
-
-if (!apiKey) {
-  console.error("ERRO CRÍTICO: VITE_FIREBASE_API_KEY não está definida no arquivo .env");
-}
-
+// Configuração direta para isolar o erro do .env
+// Reitero: Expor esta chave no frontend é o padrão documentado e seguro do Google Firebase.
 const firebaseConfig = {
-  apiKey: apiKey || "", 
+  apiKey: "AIzaSyA_1Yjc5ez_9movyA4sGPM8z-9BZ3oeiLU", 
   authDomain: "monitor-virtual-fms.firebaseapp.com",
   databaseURL: "https://monitor-virtual-fms-default-rtdb.firebaseio.com",
   projectId: "monitor-virtual-fms",
