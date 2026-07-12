@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { 
   getDatabase, ref, onValue, push, remove, set, update, off 
 } from "firebase/database";
@@ -29,6 +29,7 @@ if (typeof window !== "undefined") {
 export const auth = getAuth(app); 
 export const db = getDatabase(app);
 export { ref, onValue, push, remove, set, update, off };
+export { GoogleAuthProvider, signInWithPopup, signOut };
 
 export const firestoreDB = getFirestore(app);
 export const storage = getStorage(app);

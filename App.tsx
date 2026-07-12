@@ -19,7 +19,7 @@ import ReferencesView from './views/ReferencesView';
 import ShareMaterialView from './views/ShareMaterialView';
 import LabListView from './views/LabListView';
 import LabQuizView from './views/LabQuizView';
-import SimulatorsView from './views/SimulatorsView'; // <-- NOVA IMPORTAÇÃO
+import SimulatorsView from './views/SimulatorsView';
 
 import SurveyView from './views/SurveyView';
 import SurveyReportView from './views/SurveyReportView';
@@ -31,6 +31,7 @@ import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from '.
 import { PERIODS } from './constants'; 
 import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
+import { AuthProvider } from './contexts/AuthContext'; // <-- NOVA IMPORTAÇÃO
 
 const APP_VERSION = "9.1.1 - Luna Semantic Router (Patched)";
 
@@ -295,7 +296,6 @@ const MaterialsFlow = () => {
   return null;
 };
 
-// === NOVO FLUXO: Referências Bibliográficas (Corrigindo o Erro do TypeScript) ===
 const ReferencesFlow = () => {
   const { disciplineId } = useParams();
   const navigate = useNavigate();
@@ -333,7 +333,7 @@ const AppRouter: React.FC = () => {
           <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
           <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
           <Route path="/ai-test" element={<AITestView />} />
-          <Route path="/simulators" element={<SimulatorsView />} /> {/* <-- NOVA ROTA INJETADA AQUI */}
+          <Route path="/simulators" element={<SimulatorsView />} /> 
           
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -346,9 +346,11 @@ const AppRouter: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <DataProvider>
-        <AppRouter />
-      </DataProvider>
+      <AuthProvider>
+        <DataProvider>
+          <AppRouter />
+        </DataProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };
