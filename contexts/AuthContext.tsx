@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { auth, db, ref, set, onValue, GoogleAuthProvider, signInWithPopup, signOut } from '../firebase';
+import { 
+  auth, db, ref, set, onValue, 
+  GoogleAuthProvider, signInWithPopup, signOut,
+  signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile
+} from '../firebase';
 import { User as FirebaseUser } from 'firebase/auth';
 
-// === TIPOS DE PERFIL DE ACESSO (RBAC) ===
 export type UserRole = 'student' | 'admin' | 'professor';
 
 export interface UserProfile {
@@ -20,6 +23,8 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   isLoadingAuth: boolean;
   loginWithGoogle: () => Promise<void>;
+  loginWithEmail: (email: string, pass: string) => Promise<void>;
+  registerWithEmail: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -35,7 +40,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCurrentUser(user);
       
       if (user && db) {
-        // Sincronizar o Perfil com o Realtime Database
         const userRef = ref(db, `users/${user.uid}`);
         
         onValue(userRef, (snapshot) => {
@@ -43,13 +47,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (data) {
             setUserProfile(data);
           } else {
-            // Primeiro login: Criar o "Prontuário Acadêmico" do aluno
             const newProfile: UserProfile = {
               uid: user.uid,
               displayName: user.displayName,
               email: user.email,
               photoURL: user.photoURL,
-              role: 'student', // Perfil padrão seguro
+              role: 'student', 
               createdAt: new Date().toISOString(),
               lastLogin: new Date().toISOString()
             };
@@ -59,7 +62,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setIsLoadingAuth(false);
         }, { onlyOnce: true });
         
-        // Atualiza a data do último login transacionalmente
         set(ref(db, `users/${user.uid}/lastLogin`), new Date().toISOString());
 
       } else {
@@ -73,25 +75,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("[AuthContext] Erro ao autenticar com o Google:", error);
-      throw error;
+    await signInWithPopup(auth, provider);
+  };
+
+  const loginWithEmail = async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, email, pass);
+  };
+
+  const registerWithEmail = async (name: string, email: string, pass: string) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    if (userCredential.user) {
+      // Atualiza o perfil nativo do Firebase para exibir o nome corretamente na Header
+      await updateProfile(userCredential.user, { displayName: name });
+      // Força a atualização do estado local para refletir o nome de imediato
+      setCurrentUser({ ...userCredential.user, displayName: name } as FirebaseUser);
     }
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("[AuthContext] Erro ao deslogar:", error);
-      throw error;
-    }
+    await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, isLoadingAuth, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ currentUser, userProfile, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail, logout }}>
       {children}
     </AuthContext.Provider>
   );

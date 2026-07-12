@@ -1,5 +1,13 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
+} from "firebase/auth";
 import { 
   getDatabase, ref, onValue, push, remove, set, update, off 
 } from "firebase/database";
@@ -7,8 +15,6 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
-// Configuração direta para isolar o erro do .env
-// Reitero: Expor esta chave no frontend é o padrão documentado e seguro do Google Firebase.
 const firebaseConfig = {
   apiKey: "AIzaSyA_1Yjc5ez_9movyA4sGPM8z-9BZ3oeiLU", 
   authDomain: "monitor-virtual-fms.firebaseapp.com",
@@ -29,7 +35,14 @@ if (typeof window !== "undefined") {
 export const auth = getAuth(app); 
 export const db = getDatabase(app);
 export { ref, onValue, push, remove, set, update, off };
-export { GoogleAuthProvider, signInWithPopup, signOut };
+export { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  updateProfile
+};
 
 export const firestoreDB = getFirestore(app);
 export const storage = getStorage(app);

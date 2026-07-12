@@ -26,14 +26,14 @@ import SurveyReportView from './views/SurveyReportView';
 import AITestView from './views/AITestView';
 import MedicalEventsView from './views/MedicalEventsView';
 
-import { AlertTriangle, RefreshCw, Lock, LogIn } from 'lucide-react';
+import { AlertTriangle, RefreshCw, LogIn, Mail, UserPlus, HeartPulse } from 'lucide-react';
 import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
 import { PERIODS } from './constants'; 
 import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
-const APP_VERSION = "9.2.0 - Luna Security Gateway";
+const APP_VERSION = "9.3.0 - Luna Welcoming Gateway";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -74,36 +74,150 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 // ============================================================================
-// PROTECTED ROUTE (GATEWAY)
+// PROTECTED ROUTE (RECEPÇÃO VIRTUAL / GATEWAY ACOLHEDOR)
 // ============================================================================
 const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentUser, isLoadingAuth, loginWithGoogle } = useAuth();
+  const { currentUser, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
+  
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setIsProcessing(true);
+
+    try {
+      if (isLoginMode) {
+        await loginWithEmail(email, password);
+      } else {
+        if (!name.trim()) throw new Error('O nome é obrigatório para o seu prontuário acadêmico.');
+        await registerWithEmail(name, email, password);
+      }
+    } catch (err: any) {
+      console.error(err);
+      // Tratamento de erros amigável
+      if (err.code === 'auth/invalid-credential') setErrorMsg('Credenciais incorretas. Verifique seu e-mail e senha.');
+      else if (err.code === 'auth/email-already-in-use') setErrorMsg('Este e-mail já está cadastrado. Tente fazer login.');
+      else if (err.code === 'auth/weak-password') setErrorMsg('A senha deve ter pelo menos 6 caracteres.');
+      else setErrorMsg(err.message || 'Ocorreu um erro. Tente novamente.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (isLoadingAuth) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4f7f6] p-4">
         <div className="w-10 h-10 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
-        <h1 className="text-[#003366] font-black uppercase tracking-[0.2em] text-[10px]">Verificando Credenciais...</h1>
+        <h1 className="text-[#003366] font-black uppercase tracking-[0.2em] text-[10px]">Preparando seu ambiente...</h1>
       </div>
     );
   }
 
   if (!currentUser) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center px-4 animate-in fade-in duration-700">
-        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 w-full max-w-md text-center">
-          <div className="w-20 h-20 bg-[#003366] text-[#D4A017] rounded-3xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-xl">
-            <Lock size={32} />
+      <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-cover bg-center relative" 
+           style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80")' }}>
+        
+        {/* Overlay escuro para dar contraste ao card */}
+        <div className="absolute inset-0 bg-[#003366]/80 backdrop-blur-sm z-0"></div>
+
+        <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center z-10 relative overflow-hidden border-4 border-[#D4A017]/20">
+          <div className="w-16 h-16 bg-[#003366] text-[#D4A017] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl transform -rotate-3">
+            <HeartPulse size={32} />
           </div>
-          <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase tracking-tighter">Acesso Restrito</h2>
-          <p className="text-xs text-gray-500 font-bold tracking-widest uppercase mb-8 leading-relaxed">
-            O ecossistema Luna MedClass é exclusivo para estudantes de medicina. Identifique-se para acessar simuladores, laboratórios e métricas.
+          
+          <h2 className="text-2xl md:text-3xl font-black text-[#003366] mb-2 tracking-tighter">
+            Bem-vindo(a) ao<br/><span className="text-[#D4A017]">Luna MedClass</span>
+          </h2>
+          
+          <p className="text-[11px] text-gray-500 font-bold tracking-widest uppercase mb-8 leading-relaxed px-4">
+            Crie seu prontuário acadêmico para acessar simuladores clínicos e gerenciar seu progresso.
           </p>
+
+          {/* Toggle Login/Registro */}
+          <div className="flex bg-gray-100 p-1 rounded-xl mb-6 relative">
+            <button 
+              onClick={() => { setIsLoginMode(true); setErrorMsg(''); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all z-10 ${isLoginMode ? 'text-white bg-[#003366] shadow-md' : 'text-gray-400 hover:text-[#003366]'}`}
+            >
+              Já tenho conta
+            </button>
+            <button 
+              onClick={() => { setIsLoginMode(false); setErrorMsg(''); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all z-10 ${!isLoginMode ? 'text-white bg-[#003366] shadow-md' : 'text-gray-400 hover:text-[#003366]'}`}
+            >
+              Criar Perfil
+            </button>
+          </div>
+
+          {errorMsg && (
+            <div className="bg-red-50 text-red-600 border border-red-200 text-xs font-bold p-3 rounded-lg mb-4 animate-in slide-in-from-top-2">
+              {errorMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+            {!isLoginMode && (
+              <div className="relative">
+                <input 
+                  type="text" 
+                  placeholder="Seu Nome Completo" 
+                  required
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
+                />
+              </div>
+            )}
+            <div className="relative">
+              <input 
+                type="email" 
+                placeholder="E-mail Acadêmico ou Pessoal" 
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
+              />
+            </div>
+            <div className="relative">
+              <input 
+                type="password" 
+                placeholder="Senha Segura" 
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
+              />
+            </div>
+
+            <button 
+              type="submit"
+              disabled={isProcessing}
+              className="w-full flex items-center justify-center gap-2 bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50"
+            >
+              {isProcessing ? 'Processando...' : (isLoginMode ? <><LogIn size={18}/> Acessar Sistema</> : <><UserPlus size={18}/> Iniciar Jornada</>)}
+            </button>
+          </form>
+
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-px bg-gray-200 flex-1"></div>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ou</span>
+            <div className="h-px bg-gray-200 flex-1"></div>
+          </div>
+
           <button 
+            type="button"
             onClick={loginWithGoogle}
-            className="w-full flex items-center justify-center gap-3 bg-[#D4A017] text-[#003366] py-4 px-6 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#003366] hover:text-white transition-all transform hover:scale-[1.02]"
+            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-100 text-gray-600 py-3.5 px-6 rounded-xl font-black uppercase tracking-widest hover:border-[#D4A017] hover:text-[#003366] transition-all"
           >
-            <LogIn size={20} /> Autenticar com Google
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+            Continuar com Google
           </button>
         </div>
       </div>
@@ -135,7 +249,7 @@ const AppLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
-      <div className="print:hidden">
+      <div className="print:hidden sticky top-0 z-50">
         <Header />
       </div>
 
@@ -239,7 +353,6 @@ const QuizFlow = () => {
       discipline={discipline} 
       onBack={() => setStep('setup')} 
       onSaveResult={(score, total, title, type, time, details) => {
-        // Na próxima fase injetaremos o UID real do aluno aqui
         if (db) push(ref(db, 'quizResults'), { score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });
       }} 
     />
@@ -358,19 +471,16 @@ const AppRouter: React.FC = () => {
     <Router>
       <AppLayout>
         <Routes>
-          {/* Rotas Core */}
           <Route path="/" element={<PeriodFlow />} />
           <Route path="/periodo/:periodId" element={<HomeFlow />} />
           <Route path="/disciplina/:disciplineId" element={<DisciplineFlow />} />
           
-          {/* Sub-rotas Curriculares */}
           <Route path="/disciplina/:disciplineId/simulado" element={<QuizFlow />} />
           <Route path="/disciplina/:disciplineId/osce" element={<OsceFlow />} />
           <Route path="/disciplina/:disciplineId/lab" element={<LabFlow />} />
           <Route path="/disciplina/:disciplineId/materiais" element={<MaterialsFlow />} />
           <Route path="/disciplina/:disciplineId/referencias" element={<ReferencesFlow />} />
 
-          {/* Rotas Utilitárias e Públicas */}
           <Route path="/admin" element={<AdminView onBack={() => window.history.back()} />} />
           <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
           <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
@@ -378,7 +488,6 @@ const AppRouter: React.FC = () => {
           <Route path="/ai-test" element={<AITestView />} />
           <Route path="/simulators" element={<SimulatorsView />} /> 
           
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>
