@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -7,13 +7,18 @@ export default async function handler(req: any, res: any) {
 
   try {
     const { prompt, context, mode, phaseRules, isFinalEvaluation } = req.body;
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     
-    // O prompt agora enfatiza que a resposta da IA é a NOVA REALIDADE do cenário
+    // 1. CHECAGEM DE SEGURANÇA DA CHAVE API
+    if (!process.env.GEMINI_API_KEY) {
+      console.error("ERRO FATAL: GEMINI_API_KEY não encontrada no backend da Vercel.");
+      return res.status(500).json({ error: 'Chave de API não configurada no servidor Vercel.', details: 'Missing GEMINI_API_KEY' });
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const targetModel = isFinalEvaluation ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
+    
     const fullPrompt = `CONTEXTO ATUAL: ${context}\n\nCONDUTA DO ALUNO: ${prompt}`;
     
-    let config: any = {};
-
     // =======================================================================
     // CÓRTEX MÉDICO UNIVERSAL - LUNA ENGINE 3.0 (REALISMO ABSOLUTO)
     // =======================================================================
@@ -32,10 +37,10 @@ export default async function handler(req: any, res: any) {
     9. NÃO DÊ O DIAGNÓSTICO. O raciocínio clínico deve ser 100% do aluno.
     `;
 
-    if (mode === 'rpg' || mode === 'clinical' || mode === 'ai') { 
-      let toolsArray: any[] = [];
+    let toolsArray: any[] = [];
+    let systemInstructionText = UNIVERSAL_RULES;
 
-      // Ferramenta de Monitor (Inativa apenas no modo Anamnese 'ai')
+    if (mode === 'rpg' || mode === 'clinical' || mode === 'ai') { 
       if (mode !== 'ai') {
         toolsArray.push({
           name: "update_vitals",
@@ -59,15 +64,7 @@ export default async function handler(req: any, res: any) {
           `- Gatilho Técnico: [${t.triggers.join(', ')}]. Se o aluno atingir isso, chame 'change_phase' com nextPhaseId = "${t.nextPhaseId}".`
         ).join('\n');
 
-        config.systemInstruction = `${UNIVERSAL_RULES}
-        
-        REGRAS DE TRANSIÇÃO TÉCNICA:
-        ${transitionsText}
-        
-        LOGICA DE EXECUÇÃO:
-        - Conduta Social: Resposta apenas narrativa.
-        - Acerto Técnico: Narre o sucesso e chame 'change_phase'.
-        - Erro/Iatrogenia: Narre a consequência e chame 'update_vitals' com dados degradados.`;
+        systemInstructionText = `${UNIVERSAL_RULES}\n\nREGRAS DE TRANSIÇÃO TÉCNICA:\n${transitionsText}\n\nLOGICA DE EXECUÇÃO:\n- Conduta Social: Resposta apenas narrativa.\n- Acerto Técnico: Narre o sucesso e chame 'change_phase'.\n- Erro/Iatrogenia: Narre a consequência e chame 'update_vitals' com dados degradados.`;
         
         toolsArray.push({
           name: "change_phase",
@@ -78,25 +75,31 @@ export default async function handler(req: any, res: any) {
             required: ["nextPhaseId"]
           }
         });
-      } else {
-        config.systemInstruction = UNIVERSAL_RULES;
       }
-
-      config.tools = [{ functionDeclarations: toolsArray }];
     }
 
-    const targetModel = isFinalEvaluation ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
-    const response = await ai.models.generateContent({
-        model: targetModel,
-        contents: fullPrompt,
-        config: config
-    });
+    // 2. CONFIGURAÇÃO DO MODELO COM O SDK ESTÁVEL
+    const modelOptions: any = {
+      model: targetModel,
+      systemInstruction: systemInstructionText,
+    };
 
+    if (toolsArray.length > 0) {
+        modelOptions.tools = [{ functionDeclarations: toolsArray }];
+    }
+
+    const model = genAI.getGenerativeModel(modelOptions);
+
+    // 3. EXECUÇÃO DA IA
+    const result = await model.generateContent(fullPrompt);
+    const response = result.response;
+    
     let functionCallData = null;
     let newPhaseId = null;
     
-    if (response.functionCalls && response.functionCalls.length > 0) {
-      for (const call of response.functionCalls) {
+    const functionCalls = response.functionCalls();
+    if (functionCalls && functionCalls.length > 0) {
+      for (const call of functionCalls) {
         if (call.name === "update_vitals") {
           functionCallData = call.args; 
         } else if (call.name === "change_phase") {
@@ -106,14 +109,15 @@ export default async function handler(req: any, res: any) {
     }
 
     return res.status(200).json({ 
-      text: response.text || "...", 
+      text: response.text() || "...", 
       vitalsUpdate: functionCallData,
       newPhaseId: newPhaseId,
       modelUsed: targetModel 
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro no Servidor:", error);
-    return res.status(500).json({ error: 'Falha na comunicação com a Engine de Simulação.' });
+    // 4. RETORNA O ERRO REAL PARA O FRONTEND (Facilita o debug se falhar)
+    return res.status(500).json({ error: 'Falha na Engine de Simulação.', details: error.message || String(error) });
   }
 }
