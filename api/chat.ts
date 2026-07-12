@@ -85,7 +85,7 @@ export default async function handler(req: any, res: any) {
       config.tools = [{ functionDeclarations: toolsArray }];
     }
 
-    const targetModel = isFinalEvaluation ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+    const targetModel = isFinalEvaluation ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
     const response = await ai.models.generateContent({
         model: targetModel,
         contents: fullPrompt,
