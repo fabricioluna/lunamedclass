@@ -33,7 +33,7 @@ import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
-const APP_VERSION = "9.3.0 - Luna Welcoming Gateway";
+const APP_VERSION = "9.4.0 - Luna Public Utilities Routing";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -100,7 +100,6 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
       }
     } catch (err: any) {
       console.error(err);
-      // Tratamento de erros amigável
       if (err.code === 'auth/invalid-credential') setErrorMsg('Credenciais incorretas. Verifique seu e-mail e senha.');
       else if (err.code === 'auth/email-already-in-use') setErrorMsg('Este e-mail já está cadastrado. Tente fazer login.');
       else if (err.code === 'auth/weak-password') setErrorMsg('A senha deve ter pelo menos 6 caracteres.');
@@ -124,7 +123,6 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-cover bg-center relative" 
            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80")' }}>
         
-        {/* Overlay escuro para dar contraste ao card */}
         <div className="absolute inset-0 bg-[#003366]/80 backdrop-blur-sm z-0"></div>
 
         <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center z-10 relative overflow-hidden border-4 border-[#D4A017]/20">
@@ -140,7 +138,6 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
             Crie seu prontuário acadêmico para acessar simuladores clínicos e gerenciar seu progresso.
           </p>
 
-          {/* Toggle Login/Registro */}
           <div className="flex bg-gray-100 p-1 rounded-xl mb-6 relative">
             <button 
               onClick={() => { setIsLoginMode(true); setErrorMsg(''); }}
@@ -260,10 +257,9 @@ const AppLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
         </span>
       </div>
 
+      {/* Removido o ProtectedRoute global daqui. A renderização agora é livre no layout principal */}
       <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col relative">
-        <ProtectedRoute>
-          {children}
-        </ProtectedRoute>
+        {children}
       </main>
 
       <footer className="print:hidden bg-white border-t py-4 flex flex-col items-center gap-1 mt-auto text-center px-4">
@@ -471,22 +467,24 @@ const AppRouter: React.FC = () => {
     <Router>
       <AppLayout>
         <Routes>
-          <Route path="/" element={<PeriodFlow />} />
-          <Route path="/periodo/:periodId" element={<HomeFlow />} />
-          <Route path="/disciplina/:disciplineId" element={<DisciplineFlow />} />
+          {/* ROTAS PRIVADAS (EXIGEM LOGIN) - Envelopadas com ProtectedRoute */}
+          <Route path="/" element={<ProtectedRoute><PeriodFlow /></ProtectedRoute>} />
+          <Route path="/periodo/:periodId" element={<ProtectedRoute><HomeFlow /></ProtectedRoute>} />
+          <Route path="/disciplina/:disciplineId" element={<ProtectedRoute><DisciplineFlow /></ProtectedRoute>} />
+          <Route path="/disciplina/:disciplineId/simulado" element={<ProtectedRoute><QuizFlow /></ProtectedRoute>} />
+          <Route path="/disciplina/:disciplineId/osce" element={<ProtectedRoute><OsceFlow /></ProtectedRoute>} />
+          <Route path="/disciplina/:disciplineId/lab" element={<ProtectedRoute><LabFlow /></ProtectedRoute>} />
+          <Route path="/disciplina/:disciplineId/materiais" element={<ProtectedRoute><MaterialsFlow /></ProtectedRoute>} />
+          <Route path="/disciplina/:disciplineId/referencias" element={<ProtectedRoute><ReferencesFlow /></ProtectedRoute>} />
           
-          <Route path="/disciplina/:disciplineId/simulado" element={<QuizFlow />} />
-          <Route path="/disciplina/:disciplineId/osce" element={<OsceFlow />} />
-          <Route path="/disciplina/:disciplineId/lab" element={<LabFlow />} />
-          <Route path="/disciplina/:disciplineId/materiais" element={<MaterialsFlow />} />
-          <Route path="/disciplina/:disciplineId/referencias" element={<ReferencesFlow />} />
+          <Route path="/admin" element={<ProtectedRoute><AdminView onBack={() => window.history.back()} /></ProtectedRoute>} />
 
-          <Route path="/admin" element={<AdminView onBack={() => window.history.back()} />} />
+          {/* ROTAS PÚBLICAS (ACESSO LIVRE) - Sem o ProtectedRoute */}
           <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
           <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
           <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
-          <Route path="/ai-test" element={<AITestView />} />
           <Route path="/simulators" element={<SimulatorsView />} /> 
+          <Route path="/ai-test" element={<AITestView />} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
