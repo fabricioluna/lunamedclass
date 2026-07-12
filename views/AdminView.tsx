@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult } from '../types.ts';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit } from 'lucide-react'; 
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert } from 'lucide-react'; 
 
-// IMPORTAÇÃO DA NOSSA "NUVEM" DE DADOS E FIREBASE
+// IMPORTAÇÃO DA NOSSA "NUVEM" DE DADOS E FIREBASE E AUTH
 import { useData } from '../contexts/DataContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
 import { db, ref, push, remove, set, onValue } from '../firebase.ts';
 
 // IMPORTAÇÃO DAS CONSTANTES (Para injeção estrutural - Fase 1)
@@ -25,24 +26,23 @@ interface AdminViewProps {
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
-  // 1. PUXANDO APENAS OS DADOS ESTRUTURAIS (Leves)
-  // Como fizemos a "Sangria Estancada" no Contexto, os dados pesados não vêm mais daqui.
+  // DADOS ESTRUTURAIS
   const { periods, disciplines } = useData();
-
-  const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('fms_admin_auth') === 'true');
-  const [login, setLogin] = useState('');
-  const [password, setPassword] = useState('');
+  
+  // VERIFICAÇÃO DE ROLE (RBAC)
+  const { userProfile, isLoadingAuth } = useAuth();
+  const isAdmin = userProfile?.role === 'admin';
   
   const [activeTab, setActiveTab] = useState<'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access'>('stats');
   
-  // Refatorado para Period
+  // Filtros
   const [statsPeriodFilter, setStatsPeriodFilter] = useState(''); 
   const [statsDiscFilter, setStatsDiscFilter] = useState('');
   const [statsTypeFilter, setStatsTypeFilter] = useState('');
   const [statsQuizTitleFilter, setStatsQuizTitleFilter] = useState('');
 
   // =========================================================================
-  // NOVO: LAZY LOADING (ON-DEMAND FETCHING) APENAS PARA O ADMIN
+  // LAZY LOADING (ON-DEMAND FETCHING) APENAS PARA O ADMIN
   // =========================================================================
   const [adminQuestions, setAdminQuestions] = useState<Question[]>([]);
   const [adminOsceStations, setAdminOsceStations] = useState<OsceStation[]>([]);
@@ -51,9 +51,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [adminOsceAnalytics, setAdminOsceAnalytics] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!isAuthorized || !db) return;
+    // Só consome banda do Firebase se o cara for realmente admin
+    if (!isAdmin || !db) return;
 
-    // Busca os dados diretamente da nuvem APENAS se a senha estiver correta
     const refs = [
       { path: 'questions', setter: (data: any) => setAdminQuestions(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
       { path: 'osce', setter: (data: any) => setAdminOsceStations(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
@@ -68,32 +68,21 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         if (val) {
           r.setter(val);
         } else {
-          r.setter([]); // Garante array vazio se não houver dados
+          r.setter([]); 
         }
       });
     });
 
-    // Limpa os listeners se o admin sair
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [isAuthorized]);
-  // =========================================================================
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (login === 'luna' && password === 'fmst8') {
-      setIsAuthorized(true);
-      sessionStorage.setItem('fms_admin_auth', 'true');
-    } else {
-      alert('Credenciais incorretas!');
-    }
-  };
+  }, [isAdmin]);
 
   // =========================================================================
-  // 2. FUNÇÕES DE BANCO DE DADOS (ASSÍNCRONAS COM TRATAMENTO DE ERRO)
+  // FUNÇÕES DE BANCO DE DADOS 
   // =========================================================================
   
   const handleGlobalReset = async () => {
-    const pass = prompt("⚠️ AÇÃO DESTRUTIVA: Apagar absolutamente TODO o banco de dados?\n\nPara confirmar, digite a senha de administrador (fmst8):");
+    // DUPLO FATOR DE SEGURANÇA: Mesmo sendo Admin, pedimos a master password para reset
+    const pass = prompt("⚠️ AÇÃO DESTRUTIVA: Apagar absolutamente TODO o banco de dados?\n\nPara confirmar, digite a senha master de sistema (fmst8):");
     if (pass === 'fmst8') {
       if (db) {
         try {
@@ -104,8 +93,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
             remove(ref(db, 'discipline_config')),
             remove(ref(db, 'labSimulations')),
             remove(ref(db, 'osceAnalytics')),
-            remove(ref(db, 'periods')), // Incluído na remoção global
-            remove(ref(db, 'disciplines')) // Incluído na remoção global
+            remove(ref(db, 'periods')), 
+            remove(ref(db, 'disciplines')) 
           ]);
           alert("✅ Banco de dados completamente resetado.");
         } catch (error) {
@@ -114,13 +103,12 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         }
       }
     } else if (pass !== null) {
-      alert("❌ Senha incorreta. Ação cancelada.");
+      alert("❌ Senha master incorreta. Ação cancelada.");
     }
   };
 
-  // --- NOVA FUNÇÃO: Injeção de Dados (Fase 1.1) ---
   const handleSeedDatabase = async () => {
-    const pass = prompt("⚠️ MIGRAR ESTRUTURA BASE: Deseja injetar a árvore de Períodos e Disciplinas (incluindo UCs, N1/N2 e Temas) do arquivo constants.tsx para o Firebase?\n\nPara confirmar, digite a senha (fmst8):");
+    const pass = prompt("⚠️ MIGRAR ESTRUTURA BASE: Deseja injetar a árvore de Períodos e Disciplinas para o Firebase?\n\nPara confirmar, digite a senha master (fmst8):");
     if (pass === 'fmst8' && db) {
       try {
         await Promise.all([
@@ -133,7 +121,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         alert("❌ Erro durante a injeção da estrutura base.");
       }
     } else if (pass !== null) {
-      alert("❌ Senha incorreta. Ação cancelada.");
+      alert("❌ Senha master incorreta. Ação cancelada.");
     }
   };
 
@@ -279,23 +267,34 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
   // =========================================================================
 
-  if (!isAuthorized) {
+  if (isLoadingAuth) {
+    return <div className="min-h-[80vh] flex items-center justify-center">Verificando autoridade...</div>;
+  }
+
+  // PROTEÇÃO RBAC DIRETA
+  if (!isAdmin) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center px-4">
-        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 w-full max-w-md text-center">
-          <div className="w-20 h-20 bg-[#003366] text-white rounded-3xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-xl">🔐</div>
-          <h2 className="text-2xl font-black text-[#003366] mb-8 uppercase tracking-tighter">Acesso Restrito</h2>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input type="text" placeholder="Usuário" value={login} onChange={e => setLogin(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] font-bold" />
-            <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] font-bold" />
-            <button type="submit" className="w-full bg-[#003366] text-white py-4 rounded-xl font-bold uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all">Entrar</button>
-            <button type="button" onClick={onBack} className="w-full text-[10px] font-black text-gray-400 mt-4 uppercase tracking-widest">Voltar ao Portal</button>
-          </form>
+      <div className="min-h-[80vh] flex items-center justify-center px-4 animate-in fade-in duration-500">
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-red-100 w-full max-w-md text-center">
+          <div className="w-20 h-20 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-sm border border-red-100">
+            <ShieldAlert size={36} />
+          </div>
+          <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase tracking-tighter">Área Classificada</h2>
+          <p className="text-xs text-gray-500 font-bold tracking-widest uppercase mb-8 leading-relaxed">
+            Seu perfil atual ({userProfile?.role || 'Visitante'}) não possui privilégios de Administrador para acessar a Luna Engine Core.
+          </p>
+          <button 
+            onClick={onBack}
+            className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] transition-all"
+          >
+            Voltar ao Campus
+          </button>
         </div>
       </div>
     );
   }
 
+  // RENDERIZAÇÃO DO ADMIN (Código inalterado abaixo)
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 print:p-0 print:m-0">
       
@@ -304,11 +303,10 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
            <button onClick={onBack} className="bg-gray-100 p-3 rounded-xl hover:bg-gray-200 transition-all text-[#003366]">←</button>
            <div>
              <h2 className="text-3xl font-black text-[#003366] tracking-tighter uppercase">Painel de Controle</h2>
-             <p className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">Gestão de Dados em Nuvem</p>
+             <p className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">Gestão de Dados em Nuvem • Master Admin</p>
            </div>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
-           {/* NOVO BOTÃO DE INJEÇÃO ESTRUTURAL (SEED) */}
            <button onClick={handleSeedDatabase} className="bg-blue-100 text-blue-800 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-200 transition-all border border-blue-200 shadow-sm">Injetar Estrutura (Seed)</button>
            <button onClick={handleClearAnalytics} className="bg-purple-100 text-purple-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-200 transition-all">Limpar Analytics</button>
            <button onClick={handleClearResults} className="bg-orange-100 text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-200 transition-all">Limpar Resultados</button>
@@ -340,7 +338,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         ))}
       </nav>
 
-      {/* RENDERIZAÇÃO DOS COMPONENTES (Injetando o Local State admin*) */}
+      {/* RENDERIZAÇÃO DOS COMPONENTES */}
       {activeTab === 'stats' && (
         <AdminStats 
           quizResults={adminQuizResults}

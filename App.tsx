@@ -26,14 +26,14 @@ import SurveyReportView from './views/SurveyReportView';
 import AITestView from './views/AITestView';
 import MedicalEventsView from './views/MedicalEventsView';
 
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Lock, LogIn } from 'lucide-react';
 import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
 import { PERIODS } from './constants'; 
 import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
-import { AuthProvider } from './contexts/AuthContext'; // <-- NOVA IMPORTAÇÃO
+import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
-const APP_VERSION = "9.1.1 - Luna Semantic Router (Patched)";
+const APP_VERSION = "9.2.0 - Luna Security Gateway";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -74,6 +74,46 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 // ============================================================================
+// PROTECTED ROUTE (GATEWAY)
+// ============================================================================
+const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { currentUser, isLoadingAuth, loginWithGoogle } = useAuth();
+
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4f7f6] p-4">
+        <div className="w-10 h-10 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
+        <h1 className="text-[#003366] font-black uppercase tracking-[0.2em] text-[10px]">Verificando Credenciais...</h1>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4 animate-in fade-in duration-700">
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 w-full max-w-md text-center">
+          <div className="w-20 h-20 bg-[#003366] text-[#D4A017] rounded-3xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-xl">
+            <Lock size={32} />
+          </div>
+          <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase tracking-tighter">Acesso Restrito</h2>
+          <p className="text-xs text-gray-500 font-bold tracking-widest uppercase mb-8 leading-relaxed">
+            O ecossistema Luna MedClass é exclusivo para estudantes de medicina. Identifique-se para acessar simuladores, laboratórios e métricas.
+          </p>
+          <button 
+            onClick={loginWithGoogle}
+            className="w-full flex items-center justify-center gap-3 bg-[#D4A017] text-[#003366] py-4 px-6 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#003366] hover:text-white transition-all transform hover:scale-[1.02]"
+          >
+            <LogIn size={20} /> Autenticar com Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+// ============================================================================
 // WRAPPER DE LAYOUT E PROTEÇÃO DE STATUS
 // ============================================================================
 const AppLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -107,7 +147,9 @@ const AppLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
       </div>
 
       <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col relative">
-        {children}
+        <ProtectedRoute>
+          {children}
+        </ProtectedRoute>
       </main>
 
       <footer className="print:hidden bg-white border-t py-4 flex flex-col items-center gap-1 mt-auto text-center px-4">
@@ -129,7 +171,7 @@ const useAcademicUnit = (): AcademicUnit => {
 };
 
 // ============================================================================
-// FLUXOS DE ROTEAMENTO (Substituem os antigos if/else)
+// FLUXOS DE ROTEAMENTO 
 // ============================================================================
 
 const PeriodFlow = () => {
@@ -197,6 +239,7 @@ const QuizFlow = () => {
       discipline={discipline} 
       onBack={() => setStep('setup')} 
       onSaveResult={(score, total, title, type, time, details) => {
+        // Na próxima fase injetaremos o UID real do aluno aqui
         if (db) push(ref(db, 'quizResults'), { score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });
       }} 
     />
