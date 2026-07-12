@@ -8,10 +8,8 @@ export default async function handler(req: any, res: any) {
   try {
     const { prompt, context, mode, phaseRules, isFinalEvaluation } = req.body;
     
-    // 1. CHECAGEM DE SEGURANÇA DA CHAVE API
     if (!process.env.GEMINI_API_KEY) {
-      console.error("ERRO FATAL: GEMINI_API_KEY não encontrada no backend da Vercel.");
-      return res.status(500).json({ error: 'Chave de API não configurada no servidor Vercel.', details: 'Missing GEMINI_API_KEY' });
+      return res.status(500).json({ error: 'Chave de API não configurada no servidor Vercel.' });
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -19,21 +17,18 @@ export default async function handler(req: any, res: any) {
     
     const fullPrompt = `CONTEXTO ATUAL: ${context}\n\nCONDUTA DO ALUNO: ${prompt}`;
     
-    // =======================================================================
-    // CÓRTEX MÉDICO UNIVERSAL - LUNA ENGINE 3.0 (REALISMO ABSOLUTO)
-    // =======================================================================
     const UNIVERSAL_RULES = `
     VOCÊ É UM MESTRE DE RPG MÉDICO E NARRADOR IMERSIVO, O MELHOR SIMULADOR MÉDICO DO MUNDO.
     
     DIRETRIZES INSTITUCIONAIS E DE NARRATIVA:
-    1. HUMANIDADE: Responda sempre com realismo. Se o aluno interagir socialmente, responda como a equipe ou o paciente. Não seja robótico.
-    2. BIOSSEGURANÇA: Exija permissão para tocar no paciente e lavagem de mãos/EPIs. Se falhar, narre a hesitação da equipe e o risco imediato.
-    3. REAÇÃO IMEDIATA: Toda ação gera uma consequência visual ou sonora. Se for iatrogenia (ex: dar sal), você DEVE piorar os vitais drasticamente e narrar o caos na sala.
-    4. PODER DE VIDA E MORTE: Se a conduta for fatal ou houver demora crítica, você pode levar o paciente a óbito chamando 'update_vitals' com hr: 0, bp: "0/0", sat: 0.
-    5. ESTADO DINÂMICO: Sua resposta passará a ser a "Nova Realidade" da cena. Descreva o que o aluno VÊ, OUVE e SENTE.
-    6. MÁQUINA DE ESTADOS: Use os 'phaseRules' apenas como marcos técnicos. Se o aluno acertar, avance. Se errar, narre a consequência e mantenha-o na fase para correção.
-    7. ENCERRAMENTO: Se o aluno pedir para "finalizar", "encerrar" ou "colher feedback", aceite e chame 'change_phase' com nextPhaseId: "FINISH".
-    8. NUNCA diga "Essa conduta não surtiu efeito". Narre o que acontece: "O monitor apita e o paciente começa a suar frio".
+    1. HUMANIDADE: Responda sempre com realismo.
+    2. BIOSSEGURANÇA: Exija permissão para tocar no paciente e lavagem de mãos/EPIs.
+    3. REAÇÃO IMEDIATA: Toda ação gera uma consequência visual ou sonora. Se for iatrogenia, piore os vitais drasticamente.
+    4. PODER DE VIDA E MORTE: Se a conduta for fatal, você pode levar o paciente a óbito chamando 'update_vitals' com hr: 0.
+    5. ESTADO DINÂMICO: Descreva o que o aluno VÊ, OUVE e SENTE.
+    6. MÁQUINA DE ESTADOS: Use os 'phaseRules' como marcos técnicos. Se acertar, avance. Se errar, narre a consequência.
+    7. ENCERRAMENTO: Se pedir para finalizar, chame 'change_phase' com nextPhaseId: "FINISH".
+    8. NUNCA diga "Essa conduta não surtiu efeito". Narre o que acontece.
     9. NÃO DÊ O DIAGNÓSTICO. O raciocínio clínico deve ser 100% do aluno.
     `;
 
@@ -44,15 +39,15 @@ export default async function handler(req: any, res: any) {
       if (mode !== 'ai') {
         toolsArray.push({
           name: "update_vitals",
-          description: "Altera os sinais vitais no monitor. Use para refletir melhora, piora ou óbito (hr:0).",
+          description: "Altera os sinais vitais no monitor.",
           parameters: {
             type: "OBJECT",
             properties: {
-              hr: { type: "INTEGER", description: "FC" },
-              bp: { type: "STRING", description: "PA" },
-              sat: { type: "INTEGER", description: "SatO2" },
-              rr: { type: "INTEGER", description: "FR" },
-              status: { type: "STRING", description: "Status visual (ex: Estável, Crítico, Óbito)" }
+              hr: { type: "INTEGER" },
+              bp: { type: "STRING" },
+              sat: { type: "INTEGER" },
+              rr: { type: "INTEGER" },
+              status: { type: "STRING" }
             },
             required: ["hr", "bp", "sat", "rr", "status"]
           }
@@ -61,14 +56,14 @@ export default async function handler(req: any, res: any) {
 
       if (phaseRules && phaseRules.transitions) {
         const transitionsText = phaseRules.transitions.map((t: any) => 
-          `- Gatilho Técnico: [${t.triggers.join(', ')}]. Se o aluno atingir isso, chame 'change_phase' com nextPhaseId = "${t.nextPhaseId}".`
+          `- Gatilho: [${t.triggers.join(', ')}]. Se atingir, chame 'change_phase' com nextPhaseId = "${t.nextPhaseId}".`
         ).join('\n');
 
-        systemInstructionText = `${UNIVERSAL_RULES}\n\nREGRAS DE TRANSIÇÃO TÉCNICA:\n${transitionsText}\n\nLOGICA DE EXECUÇÃO:\n- Conduta Social: Resposta apenas narrativa.\n- Acerto Técnico: Narre o sucesso e chame 'change_phase'.\n- Erro/Iatrogenia: Narre a consequência e chame 'update_vitals' com dados degradados.`;
+        systemInstructionText = `${UNIVERSAL_RULES}\n\nREGRAS DE TRANSIÇÃO:\n${transitionsText}`;
         
         toolsArray.push({
           name: "change_phase",
-          description: "Avança para a próxima fase clínica ou encerra a simulação (FINISH).",
+          description: "Avança fase ou encerra (FINISH).",
           parameters: {
             type: "OBJECT",
             properties: { nextPhaseId: { type: "STRING" } },
@@ -78,7 +73,6 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    // 2. CONFIGURAÇÃO DO MODELO COM O SDK ESTÁVEL
     const modelOptions: any = {
       model: targetModel,
       systemInstruction: systemInstructionText,
@@ -89,8 +83,6 @@ export default async function handler(req: any, res: any) {
     }
 
     const model = genAI.getGenerativeModel(modelOptions);
-
-    // 3. EXECUÇÃO DA IA
     const result = await model.generateContent(fullPrompt);
     const response = result.response;
     
@@ -117,7 +109,6 @@ export default async function handler(req: any, res: any) {
 
   } catch (error: any) {
     console.error("Erro no Servidor:", error);
-    // 4. RETORNA O ERRO REAL PARA O FRONTEND (Facilita o debug se falhar)
-    return res.status(500).json({ error: 'Falha na Engine de Simulação.', details: error.message || String(error) });
+    return res.status(500).json({ error: 'Falha na Engine', details: error.message || String(error) });
   }
 }
