@@ -14,8 +14,8 @@ export default async function handler(req: any, res: any) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     
-    // CORREÇÃO CIRÚRGICA: Modelos atualizados com o sufixo -latest para evitar erro 404
-    const targetModel = isFinalEvaluation ? 'gemini-1.5-pro-latest' : 'gemini-1.5-flash-latest';
+    // RESTAURADO PARA O GEMINI 2.5 ORIGINAL DO SEU CÓDIGO
+    const targetModel = isFinalEvaluation ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
     
     const fullPrompt = `CONTEXTO ATUAL: ${context}\n\nCONDUTA DO ALUNO: ${prompt}`;
     

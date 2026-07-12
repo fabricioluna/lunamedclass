@@ -8,8 +8,9 @@ export default async function handler(req: any, res: any) {
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
-    // CORREÇÃO: Uso do sufixo -latest para garantir o mapeamento do endpoint
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    
+    // RESTAURADO PARA O MODELO 2.5 VIVO E FUNCIONAL
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent("Diga 'Sucesso' se você estiver funcionando.");
     
     return res.status(200).json({ status: "Sucesso", aiResponse: result.response.text() });
