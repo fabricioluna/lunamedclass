@@ -109,7 +109,103 @@ export const PERIODS: Period[] = [
   }
 ];
 
+// O Mapeamento Completo de todas as Disciplinas preservando as antigas perfeitamente.
 export const SIMULATIONS: SimulationInfo[] = [
+  // ================= PERÍODO 1 =================
+  {
+    id: 'uci',
+    periodId: 'periodo1',
+    title: 'UCI - Introdução ao Estudo da Medicina',
+    category: 'UC',
+    description: 'Apresentação do ecossistema médico, ética, bioética e bases fundamentais.',
+    meta: '110h • Ciclo Básico',
+    icon: '📘',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucii',
+    periodId: 'periodo1',
+    title: 'UCII - Concepção e Formação do Ser Humano',
+    category: 'UC',
+    description: 'Embriologia, histologia e bases genéticas do desenvolvimento humano.',
+    meta: '110h • Ciclo Básico',
+    icon: '🧬',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'uciii',
+    periodId: 'periodo1',
+    title: 'UCIII - Metabolismo',
+    category: 'UC',
+    description: 'Bioquímica celular, vias metabólicas e bioenergética.',
+    meta: '110h • Ciclo Básico',
+    icon: '⚗️',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'iesc1',
+    periodId: 'periodo1',
+    title: 'IESC1 - Interação em Saúde na Comunidade I',
+    category: 'IESC',
+    description: 'Primeiros contatos com a atenção primária e o SUS.',
+    meta: '80h • Saúde Coletiva',
+    icon: '🏥',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'uccg1',
+    periodId: 'periodo1',
+    title: 'UCCG1 - LIBRAS e Educação Ambiental',
+    category: 'UCCG',
+    description: 'Língua Brasileira de Sinais e sustentabilidade no contexto da saúde.',
+    meta: '80h • Conhecimentos Gerais',
+    icon: '🗣️',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'hm1', // (MANTIDO INTACTO COMO PEDIDO)
+    periodId: 'periodo1',
+    title: 'Habilidades Médicas 1',
+    category: 'HABMED',
+    description: 'Introdução à Prática Médica: Biossegurança, sinais vitais, administração de medicamentos e Suporte Básico de Vida (BLS/AHA).',
+    meta: 'Módulo Exclusivo',
+    icon: '🩺',
+    status: 'active',
+    themes: [
+      'Biossegurança e Higienização das Mãos',
+      'Sinais Vitais, Antropometria e Glicemia Capilar',
+      'Administração de Medicamentos (IM, SC, IV)',
+      'Suporte Básico de Vida (BLS/PCR)',
+      'Abordagem Inicial em Urgências (ABCDE)'
+    ],
+    units: [
+      { id: 'N1', title: 'Unidade 1 - Biossegurança', description: 'EPIs e Higienização das Mãos' },
+      { id: 'N2', title: 'Unidade 2 - Sinais Vitais', description: 'Aferição de Parâmetros Básicos' },
+      { id: 'N3', title: 'Unidade 3 - BLS e Urgência', description: 'Protocolo de RCP e ABCDE' }
+    ],
+    references: [
+      { id: 'ref1', title: 'Normas, rotinas e técnicas de enfermagem (5ª ed.)', author: 'MOTTA AL', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/212535' },
+      { id: 'ref2', title: 'Avaliação nutricional de coletividades (4ª ed.)', author: 'VASCONCELOS FAG', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/43630' },
+      { id: 'ref3', title: 'Avaliação antropométrica em Pediatria: guia prático para profissionais da saúde', author: 'BARROS SP et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/43628' },
+      { id: 'ref4', title: 'Curso básico de controle de infecção hospitalar (E-book)', author: 'BRASIL. Ministério da Saúde', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/58548' },
+      { id: 'ref5', title: 'Metodologia científica (6ª ed.)', author: 'CERVO AL et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/83454' },
+      { id: 'ref6', title: 'Semiologia para enfermagem: conceitos e prática clínica', author: 'JENSEN S', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/209547' },
+      { id: 'ref7', title: 'Suporte básico de vida: primeiro atendimento na emergência para profissionais da saúde', author: 'QUILICI AP et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/209736' },
+      { id: 'ref8', title: 'Vigilância Epidemiológica das infecções hospitalares no estado de São Paulo', author: 'Governo de São Paulo. Coord. de Controle de Doenças.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/58605' }
+    ]
+  },
+
+  // ================= PERÍODO 2 ================= (MANTIDOS INTACTOS)
   {
     id: 'ucv',
     periodId: 'periodo2',
@@ -272,43 +368,493 @@ export const SIMULATIONS: SimulationInfo[] = [
     ],
     references: []
   },
+
+  // ================= PERÍODO 3 =================
   {
-    id: 'hm1',
-    periodId: 'periodo1',
-    title: 'Habilidades Médicas 1',
+    id: 'ucvii',
+    periodId: 'periodo3',
+    title: 'UCVII - Saúde da Mulher, sexualidade e planejamento familiar',
+    category: 'UC',
+    description: 'Fisiologia feminina, métodos contraceptivos e bases da obstetrícia.',
+    meta: '110h • Ciclo Clínico',
+    icon: '♀️',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucviii',
+    periodId: 'periodo3',
+    title: 'UCVIII - Nascimento, crescimento e desenvolvimento',
+    category: 'UC',
+    description: 'Neonatologia, pediatria básica e marcos do desenvolvimento infantil.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🍼',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucix',
+    periodId: 'periodo3',
+    title: 'UCIX - Processo de Envelhecimento',
+    category: 'UC',
+    description: 'Geriatria, fisiologia do envelhecimento e síndromes geriátricas.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🧓',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'iesc3',
+    periodId: 'periodo3',
+    title: 'IESC3 - Interação em Saúde na Comunidade III',
+    category: 'IESC',
+    description: 'Estratégia de Saúde da Família e políticas de saúde populacional.',
+    meta: '80h • Saúde Coletiva',
+    icon: '🏥',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'hm3',
+    periodId: 'periodo3',
+    title: 'HM3 - Habilidades Médicas III',
     category: 'HABMED',
-    description: 'Introdução à Prática Médica: Biossegurança, sinais vitais, administração de medicamentos e Suporte Básico de Vida (BLS/AHA).',
-    meta: 'Módulo Exclusivo',
+    description: 'Aprofundamento em exame físico segmentar e propedêutica clínica.',
+    meta: '120h • Prática Clínica',
     icon: '🩺',
     status: 'active',
-    themes: [
-      'Biossegurança e Higienização das Mãos',
-      'Sinais Vitais, Antropometria e Glicemia Capilar',
-      'Administração de Medicamentos (IM, SC, IV)',
-      'Suporte Básico de Vida (BLS/PCR)',
-      'Abordagem Inicial em Urgências (ABCDE)'
-    ],
-    units: [
-      { id: 'N1', title: 'Unidade 1 - Biossegurança', description: 'EPIs e Higienização das Mãos' },
-      { id: 'N2', title: 'Unidade 2 - Sinais Vitais', description: 'Aferição de Parâmetros Básicos' },
-      { id: 'N3', title: 'Unidade 3 - BLS e Urgência', description: 'Protocolo de RCP e ABCDE' }
-    ],
-    references: [
-      { id: 'ref1', title: 'Normas, rotinas e técnicas de enfermagem (5ª ed.)', author: 'MOTTA AL', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/212535' },
-      { id: 'ref2', title: 'Avaliação nutricional de coletividades (4ª ed.)', author: 'VASCONCELOS FAG', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/43630' },
-      { id: 'ref3', title: 'Avaliação antropométrica em Pediatria: guia prático para profissionais da saúde', author: 'BARROS SP et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/43628' },
-      { id: 'ref4', title: 'Curso básico de controle de infecção hospitalar (E-book)', author: 'BRASIL. Ministério da Saúde', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/58548' },
-      { id: 'ref5', title: 'Metodologia científica (6ª ed.)', author: 'CERVO AL et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/83454' },
-      { id: 'ref6', title: 'Semiologia para enfermagem: conceitos e prática clínica', author: 'JENSEN S', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/209547' },
-      { id: 'ref7', title: 'Suporte básico de vida: primeiro atendimento na emergência para profissionais da saúde', author: 'QUILICI AP et al.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/209736' },
-      { id: 'ref8', title: 'Vigilância Epidemiológica das infecções hospitalares no estado de São Paulo', author: 'Governo de São Paulo. Coord. de Controle de Doenças.', type: 'link', url: 'http://biblioteca.medicinadosertao.com.br/biblioteca/acervo/detalhe/58605' }
-    ]
+    themes: [],
+    references: []
+  },
+  {
+    id: 'uccg3',
+    periodId: 'periodo3',
+    title: 'UCCG3 - Ética, Cidadania e Empreendedorismo',
+    category: 'UCCG',
+    description: 'Código de Ética Médica e gestão básica de carreira.',
+    meta: '80h • Conhecimentos Gerais',
+    icon: '💼',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+
+  // ================= PERÍODO 4 =================
+  {
+    id: 'ucx',
+    periodId: 'periodo4',
+    title: 'UCX - Fadiga, perda de peso e anemia',
+    category: 'UC',
+    description: 'Diagnóstico diferencial de síndromes consumptivas e hematológicas básicas.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🩸',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxi',
+    periodId: 'periodo4',
+    title: 'UCXI - Proliferação celular',
+    category: 'UC',
+    description: 'Bases da oncologia, patologia tumoral e marcadores.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🔬',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxii',
+    periodId: 'periodo4',
+    title: 'UCXII - Dor e cuidados paliativos',
+    category: 'UC',
+    description: 'Fisiopatologia da dor, analgesia e abordagem paliativa.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🕊️',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'iesc4',
+    periodId: 'periodo4',
+    title: 'IESC4 - Interação em Saúde na Comunidade IV',
+    category: 'IESC',
+    description: 'Análise de dados epidemiológicos e vigilância.',
+    meta: '80h • Saúde Coletiva',
+    icon: '📊',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'hm4',
+    periodId: 'periodo4',
+    title: 'HM4 - Habilidades Médicas IV',
+    category: 'HABMED',
+    description: 'Simulação de cenários clínicos complexos.',
+    meta: '120h • Prática Clínica',
+    icon: '🩺',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+
+  // ================= PERÍODO 5 =================
+  {
+    id: 'ucxiii',
+    periodId: 'periodo5',
+    title: 'UCXIII - Dor abdominal, diarreia, vômitos e icterícia',
+    category: 'UC',
+    description: 'Gastroenterologia clínica e síndromes abdominais.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🤢',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxiv',
+    periodId: 'periodo5',
+    title: 'UCXIV - Desordens nutricionais e metabólicas',
+    category: 'UC',
+    description: 'Endocrinologia, diabetes e distúrbios da tireoide.',
+    meta: '110h • Ciclo Clínico',
+    icon: '⚖️',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxv',
+    periodId: 'periodo5',
+    title: 'UCXV - Febre, inflamação e infecção',
+    category: 'UC',
+    description: 'Doenças infectocontagiosas e infectologia clínica.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🌡️',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'iesc5',
+    periodId: 'periodo5',
+    title: 'IESC5 - Interação em Saúde na Comunidade V',
+    category: 'IESC',
+    description: 'Saúde ambiental e endemias.',
+    meta: '80h • Saúde Coletiva',
+    icon: '🌍',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'hm5',
+    periodId: 'periodo5',
+    title: 'HM5 - Habilidades Médicas V',
+    category: 'HABMED',
+    description: 'Práticas avançadas em enfermaria.',
+    meta: '120h • Prática Clínica',
+    icon: '🩺',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+
+  // ================= PERÍODO 6 =================
+  {
+    id: 'ucxvi',
+    periodId: 'periodo6',
+    title: 'UCXVI - Distúrbios hematológicos',
+    category: 'UC',
+    description: 'Hematologia clínica e onco-hematologia.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🩸',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxvii',
+    periodId: 'periodo6',
+    title: 'UCXVII - Dispneia, dor torácica e edema',
+    category: 'UC',
+    description: 'Cardiologia e Pneumologia Clínica.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🫁',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxviii',
+    periodId: 'periodo6',
+    title: 'UCXVIII - Desordens geniturinárias',
+    category: 'UC',
+    description: 'Nefrologia e Urologia Básica.',
+    meta: '110h • Ciclo Clínico',
+    icon: '💧',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'iesc6',
+    periodId: 'periodo6',
+    title: 'IESC6 - Interação em Saúde na Comunidade VI',
+    category: 'IESC',
+    description: 'Planejamento e gestão em saúde.',
+    meta: '80h • Saúde Coletiva',
+    icon: '📊',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'hm6',
+    periodId: 'periodo6',
+    title: 'HM6 - Habilidades Médicas VI',
+    category: 'HABMED',
+    description: 'Simulações de alta fidelidade e cenários agudos.',
+    meta: '120h • Prática Clínica',
+    icon: '🩺',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+
+  // ================= PERÍODO 7 =================
+  {
+    id: 'ucxix',
+    periodId: 'periodo7',
+    title: 'UCXIX - Locomoção e Preensão',
+    category: 'UC',
+    description: 'Ortopedia, traumatologia e reumatologia.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🦴',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxx',
+    periodId: 'periodo7',
+    title: 'UCXX - Distúrbios Sensoriais, Motores e da Consciência',
+    category: 'UC',
+    description: 'Neurologia clínica e neurocirurgia básica.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🧠',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxxi',
+    periodId: 'periodo7',
+    title: 'UCXXI - Manifestações externas das doenças e iatrogenias',
+    category: 'UC',
+    description: 'Dermatologia e segurança do paciente.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🩹',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'iesc7',
+    periodId: 'periodo7',
+    title: 'IESC7 - Interação em Saúde na Comunidade VII',
+    category: 'IESC',
+    description: 'Medicina do trabalho e saúde ocupacional.',
+    meta: '80h • Saúde Coletiva',
+    icon: '💼',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'hm7',
+    periodId: 'periodo7',
+    title: 'HM7 - Habilidades Médicas VII',
+    category: 'HABMED',
+    description: 'Técnica operatória e clínica cirúrgica.',
+    meta: '120h • Prática Clínica',
+    icon: '🔪',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+
+  // ================= PERÍODO 8 =================
+  {
+    id: 'ucxxii',
+    periodId: 'periodo8',
+    title: 'UCXXII - Problemas mentais e do comportamento',
+    category: 'UC',
+    description: 'Psiquiatria clínica e urgências psiquiátricas.',
+    meta: '110h • Ciclo Clínico',
+    icon: '🎭',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxxiii',
+    periodId: 'periodo8',
+    title: 'UCXXIII - Urgência e Emergência Materno-Infantil',
+    category: 'UC',
+    description: 'Emergências pediátricas e obstétricas.',
+    meta: '110h • Urgência',
+    icon: '🚨',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'ucxxiv',
+    periodId: 'periodo8',
+    title: 'UCXXIV - Emergências de Adulto e Idoso',
+    category: 'UC',
+    description: 'Manejo do trauma, ACLS, ATLS e emergências clínicas.',
+    meta: '110h • Urgência',
+    icon: '🚑',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'iesc8',
+    periodId: 'periodo8',
+    title: 'IESC8 - Interação em Saúde na Comunidade VIII',
+    category: 'IESC',
+    description: 'Gestão de desastres e epidemias.',
+    meta: '80h • Saúde Coletiva',
+    icon: '🌪️',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'hm8',
+    periodId: 'periodo8',
+    title: 'HM8 - Habilidades Médicas VIII',
+    category: 'HABMED',
+    description: 'Simulações de emergência e preparação para o internato.',
+    meta: '200h • Prática Clínica',
+    icon: '🩺',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+
+  // ================= INTERNATO (PERÍODOS 9 A 12) =================
+  {
+    id: 'int_clinica',
+    periodId: 'periodo9',
+    title: 'Clínica Médica e Urgência',
+    category: 'HABMED',
+    description: 'Rodízio de Internato em Clínica Médica (Enfermaria e Pronto-Socorro).',
+    meta: '291h • Internato',
+    icon: '🏥',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'int_pediatria',
+    periodId: 'periodo9',
+    title: 'Pediatria e Urgência',
+    category: 'HABMED',
+    description: 'Rodízio de Internato em Pediatria Clínica e Emergência Pediátrica.',
+    meta: '291h • Internato',
+    icon: '🧸',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'int_cirurgia',
+    periodId: 'periodo10',
+    title: 'Cirurgia Geral e Urgência',
+    category: 'HABMED',
+    description: 'Rodízio de Internato em Centro Cirúrgico e Trauma.',
+    meta: '291h • Internato',
+    icon: '🔪',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'int_go',
+    periodId: 'periodo10',
+    title: 'Ginecologia e Obstetrícia',
+    category: 'HABMED',
+    description: 'Rodízio de Internato em Maternidade e Centro Obstétrico.',
+    meta: '291h • Internato',
+    icon: '🤰',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'int_mfc',
+    periodId: 'periodo11',
+    title: 'Medicina de Família e Saúde Coletiva',
+    category: 'IESC',
+    description: 'Rodízio de Internato em Atenção Primária à Saúde (UBS).',
+    meta: '308h • Internato',
+    icon: '🏡',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'int_psiquiatria',
+    periodId: 'periodo11',
+    title: 'Saúde Mental e Psiquiatria',
+    category: 'HABMED',
+    description: 'Rodízio de Internato em CAPS e Emergências Psiquiátricas.',
+    meta: '144h • Internato',
+    icon: '🧠',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'int_uti',
+    periodId: 'periodo12',
+    title: 'Urgência, Emergência e UTI',
+    category: 'HABMED',
+    description: 'Rodízio final em Unidade de Terapia Intensiva e Sala Vermelha.',
+    meta: 'Estágio Rotativo • Internato',
+    icon: '❤️‍🔥',
+    status: 'active',
+    themes: [],
+    references: []
+  },
+  {
+    id: 'int_eletivo',
+    periodId: 'periodo12',
+    title: 'Estágio Eletivo',
+    category: 'UCCG',
+    description: 'Rodízio opcional na especialidade de escolha do interno.',
+    meta: '198h • Internato',
+    icon: '⭐',
+    status: 'active',
+    themes: [],
+    references: []
   }
 ];
 
 export const INITIAL_QUESTIONS: Question[] = [];
 
-// === NOVO MÓDULO: CONGRESSOS MÉDICOS 2026 (Ordem Cronológica Estrita) ===
+// === MÓDULO: CONGRESSOS MÉDICOS 2026 ===
 export const MEDICAL_EVENTS_2026: MedicalEvent[] = [
   {
     id: 'evt-dermato-1',

@@ -33,7 +33,7 @@ import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
-const APP_VERSION = "9.6.0 - Luna Branding Gateway";
+const APP_VERSION = "9.7.0 - Luna Curricular Matrix Fixed";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -121,7 +121,7 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
     );
   }
 
-  // INTERCEPTADOR: Se logou com Google (ou está sem período) e é estudante, pedir o período.
+  // INTERCEPTADOR: Se logou com Google e é estudante sem período, pedir o período.
   if (currentUser && userProfile && !userProfile.periodId && userProfile.role === 'student') {
     return (
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-[#f4f7f6]">
@@ -163,7 +163,7 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
     );
   }
 
-  // GATEWAY DE LOGIN PADRÃO (Atualizado com Branding e Texto Solicitados)
+  // GATEWAY DE LOGIN PADRÃO
   if (!currentUser) {
     return (
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-cover bg-center relative" 
@@ -171,7 +171,6 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
         <div className="absolute inset-0 bg-[#003366]/80 backdrop-blur-sm z-0"></div>
         <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center z-10 relative overflow-hidden border-4 border-[#D4A017]/20">
           
-          {/* Logo Centralizada (Substituindo o texto de Boas Vindas e ícone de Coração) */}
           <div className="w-48 md:w-56 mx-auto mb-6 flex justify-center mt-2">
             <img 
               src="/logo.png" 
@@ -180,7 +179,6 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
             />
           </div>
           
-          {/* Nova Frase de Impacto */}
           <p className="text-[12px] md:text-sm text-[#003366] font-black tracking-widest uppercase mb-8 leading-relaxed px-2">
             Seu monitor virtual no estudo da medicina!
           </p>
@@ -347,24 +345,22 @@ const useAcademicUnit = (): AcademicUnit => {
 
 const PeriodFlow = () => {
   const navigate = useNavigate();
-  const { disciplines, periods } = useData();
+  const { periods } = useData();
   const { userProfile } = useAuth();
 
-  // Lógica de Desbloqueio: Ocultar disciplinas de períodos futuros
   let visiblePeriods = periods;
   if (userProfile?.role === 'student' && userProfile.periodId) {
     const studentLevel = parseInt(userProfile.periodId.replace(/\D/g, '')) || 1;
     visiblePeriods = periods.filter(p => {
       const pLevel = parseInt(p.id.replace(/\D/g, '')) || 99;
-      // Libera apenas o período do aluno e todos os períodos ANTERIORES para revisão
       return pLevel <= studentLevel; 
     });
   }
 
   const handleSelectPeriod = (periodId: string) => {
-    const periodDiscs = disciplines.filter(d => d.periodId === periodId);
-    if (periodDiscs.length === 1) navigate(`/disciplina/${periodDiscs[0].id}`);
-    else navigate(`/periodo/${periodId}`);
+    // ATALHO REMOVIDO: Agora sempre navega para a HomeView do período, 
+    // mesmo se houver apenas 1 disciplina cadastrada.
+    navigate(`/periodo/${periodId}`);
   };
 
   return <PeriodSelectionView periods={visiblePeriods} onSelectPeriod={handleSelectPeriod} />;
@@ -535,14 +531,13 @@ const ReferencesFlow = () => {
 };
 
 // ============================================================================
-// APP ROUTER (O Coração da Aplicação)
+// APP ROUTER 
 // ============================================================================
 const AppRouter: React.FC = () => {
   return (
     <Router>
       <AppLayout>
         <Routes>
-          {/* ROTAS PRIVADAS (EXIGEM LOGIN E PERÍODO CADASTRADO) */}
           <Route path="/" element={<ProtectedRoute><PeriodFlow /></ProtectedRoute>} />
           <Route path="/periodo/:periodId" element={<ProtectedRoute><HomeFlow /></ProtectedRoute>} />
           <Route path="/disciplina/:disciplineId" element={<ProtectedRoute><DisciplineFlow /></ProtectedRoute>} />
@@ -554,7 +549,6 @@ const AppRouter: React.FC = () => {
           
           <Route path="/admin" element={<ProtectedRoute><AdminView onBack={() => window.history.back()} /></ProtectedRoute>} />
 
-          {/* ROTAS PÚBLICAS (ACESSO LIVRE) */}
           <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
           <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
           <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
