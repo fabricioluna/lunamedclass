@@ -26,14 +26,14 @@ import SurveyReportView from './views/SurveyReportView';
 import AITestView from './views/AITestView';
 import MedicalEventsView from './views/MedicalEventsView';
 
-import { AlertTriangle, RefreshCw, LogIn, Mail, UserPlus, HeartPulse } from 'lucide-react';
+import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap } from 'lucide-react';
 import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
 import { PERIODS } from './constants'; 
 import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
-const APP_VERSION = "9.4.0 - Luna Public Utilities Routing";
+const APP_VERSION = "9.6.0 - Luna Branding Gateway";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -77,12 +77,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 // PROTECTED ROUTE (RECEPÇÃO VIRTUAL / GATEWAY ACOLHEDOR)
 // ============================================================================
 const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentUser, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
+  const { currentUser, userProfile, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail, updateUserPeriod } = useAuth();
+  const { periods } = useData();
   
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -96,7 +98,8 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
         await loginWithEmail(email, password);
       } else {
         if (!name.trim()) throw new Error('O nome é obrigatório para o seu prontuário acadêmico.');
-        await registerWithEmail(name, email, password);
+        if (!selectedPeriod) throw new Error('A seleção de período é obrigatória para a liberação de disciplinas.');
+        await registerWithEmail(name, email, password, selectedPeriod);
       }
     } catch (err: any) {
       console.error(err);
@@ -118,24 +121,68 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
     );
   }
 
+  // INTERCEPTADOR: Se logou com Google (ou está sem período) e é estudante, pedir o período.
+  if (currentUser && userProfile && !userProfile.periodId && userProfile.role === 'student') {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-[#f4f7f6]">
+        <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center border-4 border-[#003366]/10">
+          <div className="w-16 h-16 bg-[#D4A017] text-[#003366] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <GraduationCap size={32} />
+          </div>
+          <h2 className="text-2xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Quase Lá!</h2>
+          <p className="text-xs text-gray-500 font-bold mb-8 uppercase tracking-widest leading-relaxed px-4">
+            Para liberarmos suas disciplinas e simuladores clínicos, informe o seu semestre atual.
+          </p>
+          <div className="relative mb-6 text-left">
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="w-full pl-4 pr-4 py-4 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#003366] transition-all font-bold text-[#003366] appearance-none"
+            >
+              <option value="" disabled>Selecione seu Período Atual...</option>
+              {periods.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <button 
+            onClick={async () => {
+              if (selectedPeriod) {
+                setIsProcessing(true);
+                await updateUserPeriod(selectedPeriod);
+                setIsProcessing(false);
+              }
+            }}
+            disabled={!selectedPeriod || isProcessing}
+            className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50"
+          >
+            {isProcessing ? 'Gravando...' : 'Concluir Prontuário'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // GATEWAY DE LOGIN PADRÃO (Atualizado com Branding e Texto Solicitados)
   if (!currentUser) {
     return (
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-cover bg-center relative" 
            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80")' }}>
-        
         <div className="absolute inset-0 bg-[#003366]/80 backdrop-blur-sm z-0"></div>
-
         <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center z-10 relative overflow-hidden border-4 border-[#D4A017]/20">
-          <div className="w-16 h-16 bg-[#003366] text-[#D4A017] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl transform -rotate-3">
-            <HeartPulse size={32} />
+          
+          {/* Logo Centralizada (Substituindo o texto de Boas Vindas e ícone de Coração) */}
+          <div className="w-48 md:w-56 mx-auto mb-6 flex justify-center mt-2">
+            <img 
+              src="/logo.png" 
+              alt="Logo Luna MedClass" 
+              className="w-full h-auto object-contain"
+            />
           </div>
           
-          <h2 className="text-2xl md:text-3xl font-black text-[#003366] mb-2 tracking-tighter">
-            Bem-vindo(a) ao<br/><span className="text-[#D4A017]">Luna MedClass</span>
-          </h2>
-          
-          <p className="text-[11px] text-gray-500 font-bold tracking-widest uppercase mb-8 leading-relaxed px-4">
-            Crie seu prontuário acadêmico para acessar simuladores clínicos e gerenciar seu progresso.
+          {/* Nova Frase de Impacto */}
+          <p className="text-[12px] md:text-sm text-[#003366] font-black tracking-widest uppercase mb-8 leading-relaxed px-2">
+            Seu monitor virtual no estudo da medicina!
           </p>
 
           <div className="flex bg-gray-100 p-1 rounded-xl mb-6 relative">
@@ -159,18 +206,33 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6 text-left">
             {!isLoginMode && (
-              <div className="relative">
-                <input 
-                  type="text" 
-                  placeholder="Seu Nome Completo" 
-                  required
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
-                />
-              </div>
+              <>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="Seu Nome Completo" 
+                    required
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
+                  />
+                </div>
+                <div className="relative">
+                  <select
+                    required
+                    value={selectedPeriod}
+                    onChange={(e) => setSelectedPeriod(e.target.value)}
+                    className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-400 appearance-none"
+                  >
+                    <option value="" disabled>Selecione seu Período Atual</option>
+                    {periods.map(p => (
+                      <option key={p.id} value={p.id} className="text-gray-700">{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
             )}
             <div className="relative">
               <input 
@@ -196,7 +258,7 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
             <button 
               type="submit"
               disabled={isProcessing}
-              className="w-full flex items-center justify-center gap-2 bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50 mt-2"
             >
               {isProcessing ? 'Processando...' : (isLoginMode ? <><LogIn size={18}/> Acessar Sistema</> : <><UserPlus size={18}/> Iniciar Jornada</>)}
             </button>
@@ -257,7 +319,6 @@ const AppLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
         </span>
       </div>
 
-      {/* Removido o ProtectedRoute global daqui. A renderização agora é livre no layout principal */}
       <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col relative">
         {children}
       </main>
@@ -281,18 +342,32 @@ const useAcademicUnit = (): AcademicUnit => {
 };
 
 // ============================================================================
-// FLUXOS DE ROTEAMENTO 
+// FLUXOS DE ROTEAMENTO (MOTOR DE PROGRESSÃO CURRICULAR)
 // ============================================================================
 
 const PeriodFlow = () => {
   const navigate = useNavigate();
-  const { disciplines } = useData();
+  const { disciplines, periods } = useData();
+  const { userProfile } = useAuth();
+
+  // Lógica de Desbloqueio: Ocultar disciplinas de períodos futuros
+  let visiblePeriods = periods;
+  if (userProfile?.role === 'student' && userProfile.periodId) {
+    const studentLevel = parseInt(userProfile.periodId.replace(/\D/g, '')) || 1;
+    visiblePeriods = periods.filter(p => {
+      const pLevel = parseInt(p.id.replace(/\D/g, '')) || 99;
+      // Libera apenas o período do aluno e todos os períodos ANTERIORES para revisão
+      return pLevel <= studentLevel; 
+    });
+  }
+
   const handleSelectPeriod = (periodId: string) => {
     const periodDiscs = disciplines.filter(d => d.periodId === periodId);
     if (periodDiscs.length === 1) navigate(`/disciplina/${periodDiscs[0].id}`);
     else navigate(`/periodo/${periodId}`);
   };
-  return <PeriodSelectionView periods={PERIODS} onSelectPeriod={handleSelectPeriod} />;
+
+  return <PeriodSelectionView periods={visiblePeriods} onSelectPeriod={handleSelectPeriod} />;
 };
 
 const HomeFlow = () => {
@@ -467,7 +542,7 @@ const AppRouter: React.FC = () => {
     <Router>
       <AppLayout>
         <Routes>
-          {/* ROTAS PRIVADAS (EXIGEM LOGIN) - Envelopadas com ProtectedRoute */}
+          {/* ROTAS PRIVADAS (EXIGEM LOGIN E PERÍODO CADASTRADO) */}
           <Route path="/" element={<ProtectedRoute><PeriodFlow /></ProtectedRoute>} />
           <Route path="/periodo/:periodId" element={<ProtectedRoute><HomeFlow /></ProtectedRoute>} />
           <Route path="/disciplina/:disciplineId" element={<ProtectedRoute><DisciplineFlow /></ProtectedRoute>} />
@@ -479,7 +554,7 @@ const AppRouter: React.FC = () => {
           
           <Route path="/admin" element={<ProtectedRoute><AdminView onBack={() => window.history.back()} /></ProtectedRoute>} />
 
-          {/* ROTAS PÚBLICAS (ACESSO LIVRE) - Sem o ProtectedRoute */}
+          {/* ROTAS PÚBLICAS (ACESSO LIVRE) */}
           <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
           <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
           <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
