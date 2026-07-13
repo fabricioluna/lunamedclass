@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { 
   auth, db, ref, set, onValue, 
   GoogleAuthProvider, signInWithPopup, signOut,
-  signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile
+  signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile,
+  sendPasswordResetEmail
 } from '../firebase';
 import { User as FirebaseUser } from 'firebase/auth';
 
@@ -14,7 +15,7 @@ export interface UserProfile {
   email: string | null;
   photoURL: string | null;
   role: UserRole;
-  periodId?: string; // NOVO: Classificação curricular do aluno
+  periodId?: string; 
   createdAt: string;
   lastLogin: string;
 }
@@ -26,6 +27,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (name: string, email: string, pass: string, periodId: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   updateUserPeriod: (periodId: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -49,7 +51,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (data) {
             setUserProfile(data);
           } else {
-            // Conta Google no primeiro acesso: Cria sem periodId
             const newProfile: UserProfile = {
               uid: user.uid,
               displayName: user.displayName,
@@ -90,7 +91,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (userCredential.user) {
       await updateProfile(userCredential.user, { displayName: name });
       
-      // Conta criada nativamente já com o período fixado
       const newProfile: UserProfile = {
         uid: userCredential.user.uid,
         displayName: name,
@@ -108,7 +108,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Função para salvar o período caso o aluno venha do Google Auth
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const updateUserPeriod = async (periodId: string) => {
     if (currentUser && db) {
       await set(ref(db, `users/${currentUser.uid}/periodId`), periodId);
@@ -121,7 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail, updateUserPeriod, logout }}>
+    <AuthContext.Provider value={{ currentUser, userProfile, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, updateUserPeriod, logout }}>
       {children}
     </AuthContext.Provider>
   );

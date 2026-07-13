@@ -6,7 +6,8 @@ import {
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { 
   getDatabase, ref, onValue, push, remove, set, update, off 
@@ -41,7 +42,8 @@ export {
   signOut, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 };
 
 export const firestoreDB = getFirestore(app);

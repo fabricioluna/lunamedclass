@@ -26,14 +26,14 @@ import SurveyReportView from './views/SurveyReportView';
 import AITestView from './views/AITestView';
 import MedicalEventsView from './views/MedicalEventsView';
 
-import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap } from 'lucide-react';
+import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap, KeyRound } from 'lucide-react';
 import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
 import { PERIODS } from './constants'; 
 import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
-const APP_VERSION = "9.7.0 - Luna Curricular Matrix Fixed";
+const APP_VERSION = "9.8.0 - Luna Strict Curricular Isolation";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -77,28 +77,40 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 // PROTECTED ROUTE (RECEPÇÃO VIRTUAL / GATEWAY ACOLHEDOR)
 // ============================================================================
 const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentUser, userProfile, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail, updateUserPeriod } = useAuth();
+  const { currentUser, userProfile, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, updateUserPeriod } = useAuth();
   const { periods } = useData();
   
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [isResetMode, setIsResetMode] = useState(false);
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('');
+  
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
     setIsProcessing(true);
 
     try {
-      if (isLoginMode) {
+      if (isResetMode) {
+        if (!email.trim()) throw new Error('Informe seu e-mail para recuperar a senha.');
+        await resetPassword(email);
+        setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+        setIsResetMode(false);
+      } else if (isLoginMode) {
         await loginWithEmail(email, password);
       } else {
         if (!name.trim()) throw new Error('O nome é obrigatório para o seu prontuário acadêmico.');
         if (!selectedPeriod) throw new Error('A seleção de período é obrigatória para a liberação de disciplinas.');
+        if (password !== confirmPassword) throw new Error('As senhas digitadas não coincidem.');
         await registerWithEmail(name, email, password, selectedPeriod);
       }
     } catch (err: any) {
@@ -110,6 +122,15 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const switchMode = (mode: 'login' | 'register') => {
+    setIsLoginMode(mode === 'login');
+    setIsResetMode(false);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setPassword('');
+    setConfirmPassword('');
   };
 
   if (isLoadingAuth) {
@@ -163,7 +184,7 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
     );
   }
 
-  // GATEWAY DE LOGIN PADRÃO
+  // GATEWAY DE LOGIN / REGISTRO / RECUPERAÇÃO DE SENHA
   if (!currentUser) {
     return (
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-cover bg-center relative" 
@@ -172,110 +193,177 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
         <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center z-10 relative overflow-hidden border-4 border-[#D4A017]/20">
           
           <div className="w-48 md:w-56 mx-auto mb-6 flex justify-center mt-2">
-            <img 
-              src="/logo.png" 
-              alt="Logo Luna MedClass" 
-              className="w-full h-auto object-contain"
-            />
+            <img src="/logo.png" alt="Logo Luna MedClass" className="w-full h-auto object-contain" />
           </div>
           
           <p className="text-[12px] md:text-sm text-[#003366] font-black tracking-widest uppercase mb-8 leading-relaxed px-2">
             Seu monitor virtual no estudo da medicina!
           </p>
 
-          <div className="flex bg-gray-100 p-1 rounded-xl mb-6 relative">
-            <button 
-              onClick={() => { setIsLoginMode(true); setErrorMsg(''); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all z-10 ${isLoginMode ? 'text-white bg-[#003366] shadow-md' : 'text-gray-400 hover:text-[#003366]'}`}
-            >
-              Já tenho conta
-            </button>
-            <button 
-              onClick={() => { setIsLoginMode(false); setErrorMsg(''); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all z-10 ${!isLoginMode ? 'text-white bg-[#003366] shadow-md' : 'text-gray-400 hover:text-[#003366]'}`}
-            >
-              Criar Perfil
-            </button>
-          </div>
+          {!isResetMode && (
+            <div className="flex bg-gray-100 p-1 rounded-xl mb-6 relative">
+              <button 
+                onClick={() => switchMode('login')}
+                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all z-10 ${isLoginMode ? 'text-white bg-[#003366] shadow-md' : 'text-gray-400 hover:text-[#003366]'}`}
+              >
+                Já tenho conta
+              </button>
+              <button 
+                onClick={() => switchMode('register')}
+                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all z-10 ${!isLoginMode ? 'text-white bg-[#003366] shadow-md' : 'text-gray-400 hover:text-[#003366]'}`}
+              >
+                Criar Perfil
+              </button>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="bg-red-50 text-red-600 border border-red-200 text-xs font-bold p-3 rounded-lg mb-4 animate-in slide-in-from-top-2">
               {errorMsg}
             </div>
           )}
+          {successMsg && (
+            <div className="bg-green-50 text-green-700 border border-green-200 text-xs font-bold p-3 rounded-lg mb-4 animate-in slide-in-from-top-2">
+              {successMsg}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4 mb-6 text-left">
-            {!isLoginMode && (
+            {isResetMode ? (
               <>
                 <div className="relative">
                   <input 
-                    type="text" 
-                    placeholder="Seu Nome Completo" 
+                    type="email" 
+                    placeholder="Digite seu e-mail cadastrado" 
                     required
-                    value={name}
-                    onChange={e => setName(e.target.value)}
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={isProcessing}
+                  className="w-full flex items-center justify-center gap-2 bg-[#D4A017] text-[#003366] py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#003366] hover:text-white transition-all disabled:opacity-50 mt-2"
+                >
+                  <KeyRound size={18} /> {isProcessing ? 'Enviando...' : 'Recuperar Senha'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setIsResetMode(false)}
+                  className="w-full text-center text-xs font-bold text-gray-400 hover:text-[#003366] transition-all uppercase tracking-widest mt-4"
+                >
+                  Cancelar e voltar ao Login
+                </button>
+              </>
+            ) : (
+              <>
+                {!isLoginMode && (
+                  <>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        placeholder="Seu Nome Completo" 
+                        required
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
+                      />
+                    </div>
+                    <div className="relative">
+                      <select
+                        required
+                        value={selectedPeriod}
+                        onChange={(e) => setSelectedPeriod(e.target.value)}
+                        className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-400 appearance-none"
+                      >
+                        <option value="" disabled>Selecione seu Período Atual</option>
+                        {periods.map(p => (
+                          <option key={p.id} value={p.id} className="text-gray-700">{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+                <div className="relative">
+                  <input 
+                    type="email" 
+                    placeholder="E-mail Acadêmico ou Pessoal" 
+                    required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
                     className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
                   />
                 </div>
                 <div className="relative">
-                  <select
+                  <input 
+                    type="password" 
+                    placeholder="Senha Segura" 
                     required
-                    value={selectedPeriod}
-                    onChange={(e) => setSelectedPeriod(e.target.value)}
-                    className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-400 appearance-none"
-                  >
-                    <option value="" disabled>Selecione seu Período Atual</option>
-                    {periods.map(p => (
-                      <option key={p.id} value={p.id} className="text-gray-700">{p.name}</option>
-                    ))}
-                  </select>
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
+                  />
                 </div>
+                
+                {/* VALIDAÇÃO DUPLA DE SENHA NO REGISTRO */}
+                {!isLoginMode && (
+                  <div className="relative animate-in fade-in slide-in-from-top-2">
+                    <input 
+                      type="password" 
+                      placeholder="Confirme sua Senha" 
+                      required
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      className={`w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 transition-all font-bold text-gray-700 ${confirmPassword && password !== confirmPassword ? 'border-red-400 focus:border-red-500 focus:bg-red-50' : 'border-transparent focus:border-[#D4A017] focus:bg-white'}`} 
+                    />
+                    {confirmPassword && password !== confirmPassword && (
+                      <p className="text-[9px] text-red-500 font-bold mt-1 uppercase tracking-widest text-right">As senhas não coincidem</p>
+                    )}
+                  </div>
+                )}
+
+                <button 
+                  type="submit"
+                  disabled={isProcessing}
+                  className="w-full flex items-center justify-center gap-2 bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50 mt-2"
+                >
+                  {isProcessing ? 'Processando...' : (isLoginMode ? <><LogIn size={18}/> Acessar Sistema</> : <><UserPlus size={18}/> Iniciar Jornada</>)}
+                </button>
+
+                {isLoginMode && (
+                  <div className="text-right mt-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsResetMode(true)}
+                      className="text-[10px] text-gray-400 hover:text-[#D4A017] font-bold uppercase tracking-widest transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+                )}
               </>
             )}
-            <div className="relative">
-              <input 
-                type="email" 
-                placeholder="E-mail Acadêmico ou Pessoal" 
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
-              />
-            </div>
-            <div className="relative">
-              <input 
-                type="password" 
-                placeholder="Senha Segura" 
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full pl-4 pr-4 py-3.5 bg-gray-50 rounded-xl outline-none border-2 border-transparent focus:border-[#D4A017] focus:bg-white transition-all font-bold text-gray-700" 
-              />
-            </div>
-
-            <button 
-              type="submit"
-              disabled={isProcessing}
-              className="w-full flex items-center justify-center gap-2 bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50 mt-2"
-            >
-              {isProcessing ? 'Processando...' : (isLoginMode ? <><LogIn size={18}/> Acessar Sistema</> : <><UserPlus size={18}/> Iniciar Jornada</>)}
-            </button>
           </form>
 
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-px bg-gray-200 flex-1"></div>
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ou</span>
-            <div className="h-px bg-gray-200 flex-1"></div>
-          </div>
+          {!isResetMode && (
+            <>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-px bg-gray-200 flex-1"></div>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ou</span>
+                <div className="h-px bg-gray-200 flex-1"></div>
+              </div>
 
-          <button 
-            type="button"
-            onClick={loginWithGoogle}
-            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-100 text-gray-600 py-3.5 px-6 rounded-xl font-black uppercase tracking-widest hover:border-[#D4A017] hover:text-[#003366] transition-all"
-          >
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
-            Continuar com Google
-          </button>
+              <button 
+                type="button"
+                onClick={loginWithGoogle}
+                className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-100 text-gray-600 py-3.5 px-6 rounded-xl font-black uppercase tracking-widest hover:border-[#D4A017] hover:text-[#003366] transition-all"
+              >
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+                Continuar com Google
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -340,39 +428,44 @@ const useAcademicUnit = (): AcademicUnit => {
 };
 
 // ============================================================================
-// FLUXOS DE ROTEAMENTO (MOTOR DE PROGRESSÃO CURRICULAR)
+// FLUXOS DE ROTEAMENTO (MOTOR DE PROGRESSÃO CURRICULAR E ISOLAMENTO ESTrito)
 // ============================================================================
 
 const PeriodFlow = () => {
   const navigate = useNavigate();
   const { periods } = useData();
-  const { userProfile } = useAuth();
+  const { userProfile, isLoadingAuth } = useAuth();
 
-  let visiblePeriods = periods;
-  if (userProfile?.role === 'student' && userProfile.periodId) {
-    const studentLevel = parseInt(userProfile.periodId.replace(/\D/g, '')) || 1;
-    visiblePeriods = periods.filter(p => {
-      const pLevel = parseInt(p.id.replace(/\D/g, '')) || 99;
-      return pLevel <= studentLevel; 
-    });
+  // Previne glitch de renderização enquanto o perfil não é carregado
+  if (isLoadingAuth || !userProfile) return null;
+
+  // TRAVA CIRÚRGICA 1: Estudantes pulam a tela de seleção de período e vão direto pro semestre deles.
+  if (userProfile.role === 'student' && userProfile.periodId) {
+    return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
   }
 
+  // Apenas Admins e Professores verão a tela de escolha de período.
   const handleSelectPeriod = (periodId: string) => {
-    // ATALHO REMOVIDO: Agora sempre navega para a HomeView do período, 
-    // mesmo se houver apenas 1 disciplina cadastrada.
     navigate(`/periodo/${periodId}`);
   };
 
-  return <PeriodSelectionView periods={visiblePeriods} onSelectPeriod={handleSelectPeriod} />;
+  return <PeriodSelectionView periods={periods} onSelectPeriod={handleSelectPeriod} />;
 };
 
 const HomeFlow = () => {
   const { periodId } = useParams();
   const navigate = useNavigate();
   const { disciplines } = useData();
-  const period = PERIODS.find(p => p.id === periodId);
+  const { userProfile } = useAuth();
   
+  const period = PERIODS.find(p => p.id === periodId);
   if (!period) return <Navigate to="/" replace />;
+  
+  // TRAVA CIRÚRGICA 2: Se um estudante tentar forçar a URL de um período que não é o dele, será chutado de volta.
+  if (userProfile?.role === 'student' && userProfile.periodId && userProfile.periodId !== periodId) {
+    return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
+  }
+
   const periodDiscs = disciplines.filter(d => d.periodId === periodId);
   return <HomeView period={period} disciplines={periodDiscs} onSelectDiscipline={(id) => navigate(`/disciplina/${id}`)} />;
 };
@@ -381,6 +474,15 @@ const DisciplineFlow = () => {
   const { disciplineId } = useParams();
   const navigate = useNavigate();
   const { disciplines } = useData();
+  const { userProfile } = useAuth();
+  
+  const discipline = disciplines.find(d => d.id === disciplineId);
+  if (!discipline) return <Navigate to="/" replace />;
+
+  // TRAVA CIRÚRGICA 3: Impede o acesso direto a disciplinas de outros períodos pela URL
+  if (userProfile?.role === 'student' && userProfile.periodId && discipline.periodId !== userProfile.periodId) {
+    return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
+  }
   
   const handleSelectOption = (type: string, unit?: AcademicUnit) => {
     const base = `/disciplina/${disciplineId}`;
