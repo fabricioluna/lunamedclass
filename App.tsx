@@ -21,6 +21,7 @@ import LabListView from './views/LabListView';
 import LabQuizView from './views/LabQuizView';
 import SimulatorsView from './views/SimulatorsView';
 
+// INJEÇÃO DA NOSSA TELA DE PESQUISA E RELATÓRIO
 import SurveyView from './views/SurveyView';
 import SurveyReportView from './views/SurveyReportView';
 import AITestView from './views/AITestView';
@@ -651,6 +652,21 @@ const AppRouter: React.FC = () => {
           
           <Route path="/admin" element={<ProtectedRoute><AdminView onBack={() => window.history.back()} /></ProtectedRoute>} />
 
+          {/* ROTAS DE PESQUISA (NÃO EXIGEM LOGIN PARA SEREM ANÔNIMAS E ACESSÍVEIS) */}
+          <Route path="/survey" element={
+            <SurveyView 
+              onBack={() => window.location.href = '/'} 
+              onSaveResult={(data: any) => {
+                if (db) push(ref(db, 'surveys'), data);
+              }} 
+            />
+          } />
+          
+          <Route path="/survey-report" element={
+            <SurveyReportView onBack={() => window.location.href = '/'} />
+          } />
+
+          {/* FERRAMENTAS PÚBLICAS */}
           <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
           <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
           <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />

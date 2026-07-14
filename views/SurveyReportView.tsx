@@ -20,7 +20,12 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
         if (snapshot.exists()) {
           const rawData = snapshot.val();
           const parsedData = Object.values(rawData) as SurveyResponse[];
-          setData(parsedData.filter(d => d.unit === 'Turma 9 - HM1'));
+          
+          // BLINDAGEM: Garante que só puxa dados da Turma 9 E que a propriedade 'answers' exista
+          const safeData = parsedData.filter(d => 
+            d && d.unit === 'Turma 9 - HM1' && d.answers
+          );
+          setData(safeData);
         }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
@@ -49,34 +54,38 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
       <div className="flex-grow flex flex-col items-center justify-center p-6 bg-[#f4f7f6] text-center">
         <BarChart3 className="w-16 h-16 text-gray-300 mb-4" />
         <h2 className="text-xl font-black text-gray-500 mb-2">Nenhum dado coletado</h2>
-        <p className="text-gray-400 text-sm mb-6">Nenhum aluno da Turma 9 respondeu à pesquisa ainda.</p>
+        <p className="text-gray-400 text-sm mb-6">Nenhum aluno da Turma 9 respondeu à pesquisa ou os dados são incompatíveis.</p>
         <button onClick={onBack} className="bg-[#003366] text-white px-6 py-2 rounded-xl font-bold hover:bg-[#002244]">Voltar</button>
       </div>
     );
   }
 
-  // === MOTOR ESTATÍSTICO ===
+  // === MOTOR ESTATÍSTICO SEGURO ===
   const total = data.length;
 
   const usageCounts = data.reduce((acc, curr) => {
-    acc[curr.answers.usagePattern] = (acc[curr.answers.usagePattern] || 0) + 1;
+    // Validação extra caso usagePattern seja indefinido
+    const pattern = curr.answers?.usagePattern || 'Não informado';
+    acc[pattern] = (acc[pattern] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
+  // Cálculos matemáticos com fallback de zero caso alguma variável falte no Firebase
   const avgLikert = {
-    timeSaved: (data.reduce((sum, d) => sum + d.answers.q2_timeSaved, 0) / total).toFixed(1),
-    interface: (data.reduce((sum, d) => sum + d.answers.q3_interface, 0) / total).toFixed(1),
-    simulators: (data.reduce((sum, d) => sum + d.answers.q4_simulators, 0) / total).toFixed(1),
-    finalImpact: (data.reduce((sum, d) => sum + d.answers.q5_finalImpact, 0) / total).toFixed(1),
+    timeSaved: (data.reduce((sum, d) => sum + (d.answers?.q2_timeSaved || 0), 0) / total).toFixed(1),
+    interface: (data.reduce((sum, d) => sum + (d.answers?.q3_interface || 0), 0) / total).toFixed(1),
+    simulators: (data.reduce((sum, d) => sum + (d.answers?.q4_simulators || 0), 0) / total).toFixed(1),
+    finalImpact: (data.reduce((sum, d) => sum + (d.answers?.q5_finalImpact || 0), 0) / total).toFixed(1),
   };
 
-  const npsData = data.filter(d => d.answers.q8_nps !== undefined && d.answers.q8_nps !== -1);
+  const npsData = data.filter(d => d.answers?.q8_nps !== undefined && d.answers?.q8_nps !== -1);
   const totalNps = npsData.length;
   let promoters = 0, passives = 0, detractors = 0;
   
   npsData.forEach(d => {
-    if (d.answers.q8_nps >= 9) promoters++;
-    else if (d.answers.q8_nps >= 7) passives++;
+    const score = d.answers.q8_nps;
+    if (score >= 9) promoters++;
+    else if (score >= 7) passives++;
     else detractors++;
   });
 
@@ -90,9 +99,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
   return (
     <div className="w-full h-full bg-[#f4f7f6] print:bg-white">
       
-      {/* ========================================================================= */}
-      {/* 1. VISÃO WEB (DASHBOARD INTERATIVO) - SOME NA HORA DE IMPRIMIR            */}
-      {/* ========================================================================= */}
+      {/* 1. VISÃO WEB */}
       <div className="print:hidden flex flex-col pb-20 animate-in fade-in duration-500">
         <div className="bg-white p-4 flex items-center justify-between border-b sticky top-0 z-20 shadow-sm">
           <div className="flex items-center">
@@ -115,7 +122,6 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
         </div>
 
         <div className="p-4 md:p-8 max-w-5xl mx-auto w-full space-y-6">
-          {/* KPI GLOBAL WEB */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
               <Users className="text-[#003366] mb-2" size={28} />
@@ -137,7 +143,6 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* LIKERT WEB */}
             <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm">
               <div className="flex items-center gap-2 mb-6">
                 <TrendingUp className="text-[#D4A017]" size={20} />
@@ -166,7 +171,6 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
               </div>
             </div>
 
-            {/* PADRÃO DE USO WEB */}
             <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm">
               <div className="flex items-center gap-2 mb-6">
                 <PieChart className="text-[#D4A017]" size={20} />
@@ -191,7 +195,6 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
             </div>
           </div>
 
-          {/* QUALITATIVO WEB */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <MessageSquare className="text-[#D4A017]" size={20} />
@@ -201,7 +204,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
               <div>
                 <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4 border-b pb-2">O que mais ajudou</h4>
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                  {data.filter(d => d.answers.q6_bestFeature).map((d, i) => (
+                  {data.filter(d => d.answers?.q6_bestFeature).map((d, i) => (
                     <div key={i} className="p-4 bg-blue-50/50 rounded-2xl text-sm text-gray-700 italic border border-blue-100/50">"{d.answers.q6_bestFeature}"</div>
                   ))}
                 </div>
@@ -209,7 +212,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
               <div>
                 <h4 className="text-xs font-black uppercase tracking-widest text-[#D4A017] mb-4 border-b pb-2">Expectativas N2</h4>
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                  {data.filter(d => d.answers.q7_nextUnit).map((d, i) => (
+                  {data.filter(d => d.answers?.q7_nextUnit).map((d, i) => (
                     <div key={i} className="p-4 bg-yellow-50/50 rounded-2xl text-sm text-gray-700 italic border border-yellow-100/50">"{d.answers.q7_nextUnit}"</div>
                   ))}
                 </div>
@@ -219,12 +222,8 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2. VISÃO PDF (DOCUMENTO OFICIAL) - SÓ APARECE NA HORA DE IMPRIMIR         */}
-      {/* ========================================================================= */}
+      {/* 2. VISÃO PDF */}
       <div className="hidden print:block bg-white text-black w-full max-w-4xl mx-auto py-8">
-        
-        {/* CABEÇALHO ACADÊMICO OFICIAL */}
         <div className="flex items-center justify-between border-b-4 border-[#003366] pb-6 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center text-white" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
@@ -243,7 +242,6 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* MÉTRICAS PRINCIPAIS (NPS) */}
         <div className="mb-10 p-6 border-2 border-gray-200 rounded-2xl bg-gray-50 break-inside-avoid" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
           <h2 className="text-lg font-black text-[#003366] uppercase tracking-widest border-b border-gray-300 pb-2 mb-4">1. Indicador de Aceitação Global</h2>
           <div className="flex justify-between items-center">
@@ -258,7 +256,6 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* LIKERT - TABELA ACADÊMICA */}
         <div className="mb-10 break-inside-avoid">
           <h2 className="text-lg font-black text-[#003366] uppercase tracking-widest border-b-2 border-gray-200 pb-2 mb-4">2. Avaliação de Variáveis Latentes (Escala Likert 1-5)</h2>
           <table className="w-full text-left border-collapse">
@@ -289,7 +286,6 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
           </table>
         </div>
 
-        {/* PADRÃO DE USO - LISTA */}
         <div className="mb-10 break-inside-avoid">
           <h2 className="text-lg font-black text-[#003366] uppercase tracking-widest border-b-2 border-gray-200 pb-2 mb-4">3. Frequência de Engajamento</h2>
           <div className="space-y-2">
@@ -305,13 +301,12 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* ANÁLISE DE DISCURSO (CITAÇÕES) - Removida a quebra de página forçada */}
         <div className="mt-10">
           <h2 className="text-lg font-black text-[#003366] uppercase tracking-widest border-b-2 border-gray-200 pb-2 mb-6">4. Análise Qualitativa de Discurso (Amostragem)</h2>
           
           <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-4">4.1. Funcionalidades de Maior Impacto na Prova</h3>
           <div className="space-y-4 mb-8">
-            {data.filter(d => d.answers.q6_bestFeature).map((d, i) => (
+            {data.filter(d => d.answers?.q6_bestFeature).map((d, i) => (
               <div key={`pos-${i}`} className="pl-4 border-l-4 border-[#003366] text-sm text-gray-800 italic break-inside-avoid" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                 "{d.answers.q6_bestFeature}"
               </div>
@@ -320,7 +315,7 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
 
           <h3 className="text-sm font-black text-[#D4A017] uppercase tracking-widest mb-4" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>4.2. Demandas e Expectativas para a N2</h3>
           <div className="space-y-4">
-            {data.filter(d => d.answers.q7_nextUnit).map((d, i) => (
+            {data.filter(d => d.answers?.q7_nextUnit).map((d, i) => (
               <div key={`neg-${i}`} className="pl-4 border-l-4 border-[#D4A017] text-sm text-gray-800 italic break-inside-avoid" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                 "{d.answers.q7_nextUnit}"
               </div>
@@ -328,7 +323,6 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
           </div>
         </div>
         
-        {/* RODAPÉ DA IMPRESSÃO */}
         <div className="mt-12 pt-4 border-t border-gray-300 text-center text-xs text-gray-400 break-inside-avoid">
           Gerado automaticamente por Luna MedClass Data Engine.
         </div>
