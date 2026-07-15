@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SimulationInfo, Summary, AcademicUnit } from '../types';
-import { Lock, Stethoscope, BookOpen, FolderOpen, PenTool, Activity, Microscope, Pill, ClipboardList, ChevronDown, ChevronUp, Milestone, Layers } from 'lucide-react';
+import { Lock, Stethoscope, BookOpen, FolderOpen, PenTool, Activity, Microscope, Pill, ClipboardList, ChevronDown, ChevronUp, Milestone, Layers, FileSignature } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
 
 interface DisciplineViewProps {
   disciplineId: string;
@@ -13,6 +14,15 @@ interface DisciplineViewProps {
 const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplines, summaries, onBack, onSelectOption }) => {
   const [showLabCategories, setShowLabCategories] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<AcademicUnit | null>(null);
+
+  // PUXANDO AS FEATURE FLAGS DO BANCO EM TEMPO REAL
+  const { featureFlags } = useData();
+
+  // Função utilitária para checar se uma flag específica está ligada
+  const isFeatureEnabled = (flagName: string) => {
+    const flag = featureFlags.find(f => f.name === flagName);
+    return flag ? flag.isEnabled : false; 
+  };
 
   const discipline = disciplines.find(d => d.id === disciplineId);
 
@@ -53,7 +63,6 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
     }
   };
 
-  // === INTERCEPTAÇÃO: TELA DE SELEÇÃO DE UNIDADE (N1 / N2) ===
   if (isModular && !selectedUnit) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32">
@@ -96,10 +105,18 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
     );
   }
 
-  // === DASHBOARD NORMAL DA DISCIPLINA ===
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-32 mt-8">
-      {/* BOTÃO REMOVIDO DAQUI */}
+
+      {/* AQUI ESTÁ A MÁGICA: O botão de pesquisa só aparece se a flag existir e estiver "Ativa" no Firebase */}
+      {isFeatureEnabled('pesquisa_liberada') && (
+        <button 
+          onClick={() => window.location.href = '/survey'}
+          className="w-full bg-[#D4A017] text-[#003366] p-4 rounded-2xl font-black uppercase tracking-widest mb-8 flex items-center justify-center gap-3 shadow-lg hover:bg-yellow-500 transition-all animate-pulse"
+        >
+          <FileSignature size={20} /> Responder Pesquisa Institucional
+        </button>
+      )}
 
       <div className="bg-white rounded-[3rem] p-8 md:p-14 shadow-2xl border border-gray-100 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#f4f7f6] rounded-full -mr-20 -mt-20 opacity-50"></div>

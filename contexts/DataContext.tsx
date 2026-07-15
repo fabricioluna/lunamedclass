@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useFirebaseData } from '../hooks/useFirebaseData.ts';
-import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Period } from '../types.ts';
+import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Period, FeatureFlag } from '../types.ts';
 
 // 1. Definimos o formato da nossa "Nuvem de Dados"
 interface DataContextType {
@@ -13,7 +13,8 @@ interface DataContextType {
   osceStations: OsceStation[];
   quizResults: QuizResult[];
   labSimulations: LabSimulation[];
-  osceAnalytics: any[]; // <--- ADICIONADO: Essencial para seus relatórios de pesquisa
+  osceAnalytics: any[]; 
+  featureFlags: FeatureFlag[]; // <--- ADICIONADO: O interruptor mestre
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);

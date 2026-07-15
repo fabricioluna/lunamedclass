@@ -268,3 +268,11 @@ export interface MedicalEvent {
   submissionPeriod: string;
   link: string;
 }
+
+// === MÓDULO: FEATURE FLAGS (LUNA ENGINE) ===
+export interface FeatureFlag {
+  firebaseId?: string;
+  name: string;
+  description: string;
+  isEnabled: boolean;
+}

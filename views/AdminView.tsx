@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult } from '../types.ts';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle } from 'lucide-react'; 
+import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag } from '../types';
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight } from 'lucide-react'; 
 
-import { useData } from '../contexts/DataContext.tsx';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { db, ref, push, remove, set, update, onValue } from '../firebase.ts';
-import { PERIODS, SIMULATIONS } from '../constants.tsx';
+import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
+import { db, ref, push, remove, set, update, onValue } from '../firebase';
+import { PERIODS, SIMULATIONS } from '../constants';
 
-import AdminStats from '../components/admin/AdminStats.tsx';
-import AdminMaterials from '../components/admin/AdminMaterials.tsx';
-import AdminQuestions from '../components/admin/AdminQuestions.tsx';
-import AdminLab from '../components/admin/AdminLab.tsx';
-import AdminOsce from '../components/admin/AdminOsce.tsx';
-import AdminThemes from '../components/admin/AdminThemes.tsx';
-import AdminReferences from '../components/admin/AdminReferences.tsx';
-import AdminDisciplines from '../components/admin/AdminDisciplines.tsx'; 
-import AdminAnalytics from '../components/admin/AdminAnalytics.tsx';
+import AdminStats from '../components/admin/AdminStats';
+import AdminMaterials from '../components/admin/AdminMaterials';
+import AdminQuestions from '../components/admin/AdminQuestions';
+import AdminLab from '../components/admin/AdminLab';
+import AdminOsce from '../components/admin/AdminOsce';
+import AdminThemes from '../components/admin/AdminThemes';
+import AdminReferences from '../components/admin/AdminReferences';
+import AdminDisciplines from '../components/admin/AdminDisciplines'; 
+import AdminAnalytics from '../components/admin/AdminAnalytics';
 
 interface PeriodRequest {
   firebaseId?: string;
@@ -37,7 +37,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const { userProfile, isLoadingAuth } = useAuth();
   const isAdmin = userProfile?.role === 'admin';
   
-  const [activeTab, setActiveTab] = useState<'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access'>('requests');
+  const [activeTab, setActiveTab] = useState<'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags'>('requests');
   
   const [statsPeriodFilter, setStatsPeriodFilter] = useState(''); 
   const [statsDiscFilter, setStatsDiscFilter] = useState('');
@@ -50,6 +50,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [adminQuizResults, setAdminQuizResults] = useState<QuizResult[]>([]);
   const [adminOsceAnalytics, setAdminOsceAnalytics] = useState<any[]>([]);
   const [adminRequests, setAdminRequests] = useState<PeriodRequest[]>([]);
+  const [adminFeatureFlags, setAdminFeatureFlags] = useState<FeatureFlag[]>([]);
 
   useEffect(() => {
     if (!isAdmin || !db) return;
@@ -60,7 +61,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       { path: 'labSimulations', setter: (data: any) => setAdminLabSimulations(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
       { path: 'quizResults', setter: (data: any) => setAdminQuizResults(Object.keys(data).map(k => ({ ...data[k], id: k }))) },
       { path: 'osceAnalytics', setter: (data: any) => setAdminOsceAnalytics(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
-      { path: 'periodRequests', setter: (data: any) => setAdminRequests(Object.keys(data).map(k => ({ ...data[k], firebaseId: k })).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())) }
+      { path: 'periodRequests', setter: (data: any) => setAdminRequests(Object.keys(data).map(k => ({ ...data[k], firebaseId: k })).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())) },
+      { path: 'feature_flags', setter: (data: any) => setAdminFeatureFlags(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) }
     ];
 
     const unsubscribes = refs.map(r => {
@@ -107,7 +109,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           remove(ref(db, 'questions')), remove(ref(db, 'summaries')), remove(ref(db, 'osce')),
           remove(ref(db, 'discipline_config')), remove(ref(db, 'labSimulations')),
           remove(ref(db, 'osceAnalytics')), remove(ref(db, 'periods')), remove(ref(db, 'disciplines')),
-          remove(ref(db, 'periodRequests'))
+          remove(ref(db, 'periodRequests')), remove(ref(db, 'feature_flags'))
         ]);
         alert("✅ Banco de dados completamente resetado.");
       } catch (error) {
@@ -256,6 +258,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       <nav className="flex flex-wrap gap-2 mb-12 print:hidden">
         {[
           { id: 'requests', label: `Solicitações ${pendingRequests.length > 0 ? `(${pendingRequests.length})` : ''}`, icon: <UserCheck size={16}/> },
+          { id: 'flags', label: 'Feature Flags', icon: <ToggleRight size={16}/> },
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
           { id: 'analytics', label: 'Research Analytics', icon: <BrainCircuit size={16}/> },
           { id: 'access', label: 'Acessos', icon: <Lock size={16}/> }, 
@@ -281,6 +284,74 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
       {/* RENDERIZAÇÃO DOS COMPONENTES */}
       
+      {activeTab === 'flags' && (
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 animate-in fade-in">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 border-b border-gray-100 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-[#003366]/10 text-[#003366] rounded-xl">
+                <ToggleRight size={24} />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Feature Flags Globais</h2>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Gestão de Lançamentos e Módulos em Tempo Real</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                const name = prompt("Identificador Único da Feature (ex: release_survey_n2):");
+                if (!name) return;
+                const desc = prompt("Descrição amigável (ex: Libera o módulo de pesquisa para a turma):");
+                if (db) {
+                  set(ref(db, `feature_flags/${name}`), { name, description: desc || '', isEnabled: false });
+                }
+              }} 
+              className="bg-[#003366] text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#D4A017] transition-all shadow-md"
+            >
+              + Criar Nova Flag
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {adminFeatureFlags.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 font-bold uppercase tracking-widest text-xs border-2 border-dashed border-gray-100 rounded-2xl">
+                Nenhuma Feature Flag configurada no momento.
+              </div>
+            ) : (
+              adminFeatureFlags.map(flag => (
+                <div key={flag.firebaseId} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-md transition-all gap-4">
+                  <div>
+                    <h3 className="font-black text-[#003366] font-mono text-sm">{flag.name}</h3>
+                    <p className="text-xs text-gray-500 font-medium mt-1">{flag.description}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${flag.isEnabled ? 'text-green-500' : 'text-gray-400'}`}>
+                      {flag.isEnabled ? 'Módulo Online' : 'Módulo Oculto'}
+                    </span>
+                    <button 
+                      onClick={() => db && update(ref(db, `feature_flags/${flag.firebaseId}`), { isEnabled: !flag.isEnabled })}
+                      className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none shadow-inner ${flag.isEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                    >
+                      <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition-transform ${flag.isEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm(`Tem certeza que deseja DELETAR permanentemente a flag ${flag.name}?`) && db && flag.firebaseId) {
+                          remove(ref(db, `feature_flags/${flag.firebaseId}`));
+                        }
+                      }}
+                      className="text-red-400 hover:text-red-600 transition-colors ml-2"
+                      title="Deletar Flag"
+                    >
+                      <XCircle size={20} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'requests' && (
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 animate-in fade-in">
           <div className="flex items-center gap-3 mb-6">
