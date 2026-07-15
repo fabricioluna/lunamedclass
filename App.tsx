@@ -1,32 +1,6 @@
-import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect, Component, ErrorInfo, ReactNode, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
-import PeriodSelectionView from './views/PeriodSelectionView'; 
-import HomeView from './views/HomeView';
-import DisciplineView from './views/DisciplineView';
-import QuizSetupView from './views/QuizSetupView';
-import QuizView from './views/QuizView';
-import AdminView from './views/AdminView';
-import SummariesListView from './views/SummariesListView';
-import OsceView from './views/OsceView';
-import DynamicOsceView from './views/DynamicOsceView'; 
-import OsceSetupView from './views/OsceSetupView';
-import OsceAIView from './views/OsceAIView';
-import OsceModeSelectionView from './views/OsceModeSelectionView'; 
-import CalculatorsView from './views/CalculatorsView';
-import CareerQuiz from './components/CareerQuiz';
-import ReferencesView from './views/ReferencesView';
-import ShareMaterialView from './views/ShareMaterialView';
-import LabListView from './views/LabListView';
-import LabQuizView from './views/LabQuizView';
-import SimulatorsView from './views/SimulatorsView';
-
-// INJEÇÃO DA NOSSA TELA DE PESQUISA E RELATÓRIO
-import SurveyView from './views/SurveyView';
-import SurveyReportView from './views/SurveyReportView';
-import AITestView from './views/AITestView';
-import MedicalEventsView from './views/MedicalEventsView';
-
 import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap, KeyRound } from 'lucide-react';
 import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
 import { PERIODS } from './constants'; 
@@ -34,7 +8,34 @@ import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
-const APP_VERSION = "9.8.0 - Luna Strict Curricular Isolation";
+// ============================================================================
+// CODE SPLITTING (LAZY LOADING) - PADRÃO BIG TECH
+// ============================================================================
+const PeriodSelectionView = lazy(() => import('./views/PeriodSelectionView'));
+const HomeView = lazy(() => import('./views/HomeView'));
+const DisciplineView = lazy(() => import('./views/DisciplineView'));
+const QuizSetupView = lazy(() => import('./views/QuizSetupView'));
+const QuizView = lazy(() => import('./views/QuizView'));
+const AdminView = lazy(() => import('./views/AdminView'));
+const SummariesListView = lazy(() => import('./views/SummariesListView'));
+const OsceView = lazy(() => import('./views/OsceView'));
+const DynamicOsceView = lazy(() => import('./views/DynamicOsceView'));
+const OsceSetupView = lazy(() => import('./views/OsceSetupView'));
+const OsceAIView = lazy(() => import('./views/OsceAIView'));
+const OsceModeSelectionView = lazy(() => import('./views/OsceModeSelectionView'));
+const CalculatorsView = lazy(() => import('./views/CalculatorsView'));
+const CareerQuiz = lazy(() => import('./components/CareerQuiz'));
+const ReferencesView = lazy(() => import('./views/ReferencesView'));
+const ShareMaterialView = lazy(() => import('./views/ShareMaterialView'));
+const LabListView = lazy(() => import('./views/LabListView'));
+const LabQuizView = lazy(() => import('./views/LabQuizView'));
+const SimulatorsView = lazy(() => import('./views/SimulatorsView'));
+const SurveyView = lazy(() => import('./views/SurveyView'));
+const SurveyReportView = lazy(() => import('./views/SurveyReportView'));
+const AITestView = lazy(() => import('./views/AITestView'));
+const MedicalEventsView = lazy(() => import('./views/MedicalEventsView'));
+
+const APP_VERSION = "9.9.0 - Luna Code Split Architecture";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -143,7 +144,6 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
     );
   }
 
-  // INTERCEPTADOR: Se logou com Google e é estudante sem período, pedir o período.
   if (currentUser && userProfile && !userProfile.periodId && userProfile.role === 'student') {
     return (
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-[#f4f7f6]">
@@ -185,7 +185,6 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
     );
   }
 
-  // GATEWAY DE LOGIN / REGISTRO / RECUPERAÇÃO DE SENHA
   if (!currentUser) {
     return (
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-700 bg-cover bg-center relative" 
@@ -307,7 +306,6 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
                   />
                 </div>
                 
-                {/* VALIDAÇÃO DUPLA DE SENHA NO REGISTRO */}
                 {!isLoginMode && (
                   <div className="relative animate-in fade-in slide-in-from-top-2">
                     <input 
@@ -437,15 +435,12 @@ const PeriodFlow = () => {
   const { periods } = useData();
   const { userProfile, isLoadingAuth } = useAuth();
 
-  // Previne glitch de renderização enquanto o perfil não é carregado
   if (isLoadingAuth || !userProfile) return null;
 
-  // TRAVA CIRÚRGICA 1: Estudantes pulam a tela de seleção de período e vão direto pro semestre deles.
   if (userProfile.role === 'student' && userProfile.periodId) {
     return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
   }
 
-  // Apenas Admins e Professores verão a tela de escolha de período.
   const handleSelectPeriod = (periodId: string) => {
     navigate(`/periodo/${periodId}`);
   };
@@ -462,7 +457,6 @@ const HomeFlow = () => {
   const period = PERIODS.find(p => p.id === periodId);
   if (!period) return <Navigate to="/" replace />;
   
-  // TRAVA CIRÚRGICA 2: Se um estudante tentar forçar a URL de um período que não é o dele, será chutado de volta.
   if (userProfile?.role === 'student' && userProfile.periodId && userProfile.periodId !== periodId) {
     return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
   }
@@ -480,7 +474,6 @@ const DisciplineFlow = () => {
   const discipline = disciplines.find(d => d.id === disciplineId);
   if (!discipline) return <Navigate to="/" replace />;
 
-  // TRAVA CIRÚRGICA 3: Impede o acesso direto a disciplinas de outros períodos pela URL
   if (userProfile?.role === 'student' && userProfile.periodId && discipline.periodId !== userProfile.periodId) {
     return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
   }
@@ -634,47 +627,57 @@ const ReferencesFlow = () => {
 };
 
 // ============================================================================
-// APP ROUTER 
+// LOADER DE SUSPENSE REUTILIZÁVEL (UI LIMPA)
+// ============================================================================
+const SuspenseLoader = () => (
+  <div className="flex-grow flex flex-col items-center justify-center p-6 bg-[#f4f7f6]">
+    <div className="w-12 h-12 border-4 border-[#003366]/20 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
+    <h2 className="text-[#003366] font-black uppercase tracking-widest text-xs">A Carregar Módulo...</h2>
+  </div>
+);
+
+// ============================================================================
+// APP ROUTER COM LAZY LOADING APLICADO
 // ============================================================================
 const AppRouter: React.FC = () => {
   return (
     <Router>
       <AppLayout>
-        <Routes>
-          <Route path="/" element={<ProtectedRoute><PeriodFlow /></ProtectedRoute>} />
-          <Route path="/periodo/:periodId" element={<ProtectedRoute><HomeFlow /></ProtectedRoute>} />
-          <Route path="/disciplina/:disciplineId" element={<ProtectedRoute><DisciplineFlow /></ProtectedRoute>} />
-          <Route path="/disciplina/:disciplineId/simulado" element={<ProtectedRoute><QuizFlow /></ProtectedRoute>} />
-          <Route path="/disciplina/:disciplineId/osce" element={<ProtectedRoute><OsceFlow /></ProtectedRoute>} />
-          <Route path="/disciplina/:disciplineId/lab" element={<ProtectedRoute><LabFlow /></ProtectedRoute>} />
-          <Route path="/disciplina/:disciplineId/materiais" element={<ProtectedRoute><MaterialsFlow /></ProtectedRoute>} />
-          <Route path="/disciplina/:disciplineId/referencias" element={<ProtectedRoute><ReferencesFlow /></ProtectedRoute>} />
-          
-          <Route path="/admin" element={<ProtectedRoute><AdminView onBack={() => window.history.back()} /></ProtectedRoute>} />
+        <Suspense fallback={<SuspenseLoader />}>
+          <Routes>
+            <Route path="/" element={<ProtectedRoute><PeriodFlow /></ProtectedRoute>} />
+            <Route path="/periodo/:periodId" element={<ProtectedRoute><HomeFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId" element={<ProtectedRoute><DisciplineFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/simulado" element={<ProtectedRoute><QuizFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/osce" element={<ProtectedRoute><OsceFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/lab" element={<ProtectedRoute><LabFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/materiais" element={<ProtectedRoute><MaterialsFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/referencias" element={<ProtectedRoute><ReferencesFlow /></ProtectedRoute>} />
+            
+            <Route path="/admin" element={<ProtectedRoute><AdminView onBack={() => window.history.back()} /></ProtectedRoute>} />
 
-          {/* ROTAS DE PESQUISA (NÃO EXIGEM LOGIN PARA SEREM ANÔNIMAS E ACESSÍVEIS) */}
-          <Route path="/survey" element={
-            <SurveyView 
-              onBack={() => window.location.href = '/'} 
-              onSaveResult={(data: any) => {
-                if (db) push(ref(db, 'surveys'), data);
-              }} 
-            />
-          } />
-          
-          <Route path="/survey-report" element={
-            <SurveyReportView onBack={() => window.location.href = '/'} />
-          } />
+            <Route path="/survey" element={
+              <SurveyView 
+                onBack={() => window.location.href = '/'} 
+                onSaveResult={(data: any) => {
+                  if (db) push(ref(db, 'surveys'), data);
+                }} 
+              />
+            } />
+            
+            <Route path="/survey-report" element={
+              <SurveyReportView onBack={() => window.location.href = '/'} />
+            } />
 
-          {/* FERRAMENTAS PÚBLICAS */}
-          <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
-          <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
-          <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
-          <Route path="/simulators" element={<SimulatorsView />} /> 
-          <Route path="/ai-test" element={<AITestView />} />
-          
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
+            <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
+            <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
+            <Route path="/simulators" element={<SimulatorsView />} /> 
+            <Route path="/ai-test" element={<AITestView />} />
+            
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </AppLayout>
     </Router>
   );
