@@ -1,6 +1,6 @@
 /**
  * LUNA ENGINE - AI SERVICE 
- * Versão: 4.0 (Blindada - Resiliência e Fallback)
+ * Versão: 5.0 (Arquitetura Big Tech - Streaming de Tokens e Partial JSON Parsing)
  */
 
 export interface SosOption {
@@ -29,12 +29,9 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = 2, ti
       return await response.json();
     } catch (error: any) {
       clearTimeout(timeoutId);
-      
-      // Se for a última tentativa, repassa o erro para acionar o Fallback da UI
       if (i === retries) throw error;
-      
       console.warn(`[Luna Engine] Instabilidade detectada. Tentativa ${i + 1} falhou. Retentando em 1.5s...`);
-      await new Promise(res => setTimeout(res, 1500)); // Aguarda 1.5s antes de tentar novamente
+      await new Promise(res => setTimeout(res, 1500)); 
     }
   }
 };
@@ -48,7 +45,7 @@ export const getAIResponse = async (prompt: string, context: string = "", isFina
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, context, isFinalEvaluation }),
-    }, 2, 20000); // Tenta 3 vezes no total, com 20s de limite cada
+    }, 2, 20000);
 
     return data.response || data.text || "Sem resposta da engine."; 
   } catch (error) {
@@ -58,7 +55,7 @@ export const getAIResponse = async (prompt: string, context: string = "", isFina
 };
 
 // ============================================================================
-// REQUISIÇÕES AVANÇADAS (RPG Dinâmico com Mudança de Sinais Vitais)
+// REQUISIÇÕES AVANÇADAS (JSON) SEM STREAMING (Fallback Herdado)
 // ============================================================================
 export const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: any) => {
   try {
@@ -66,17 +63,71 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, context, mode: 'rpg', phaseRules }),
-    }, 2, 25000); // 25s de limite, pois o RPG processa Sinais Vitais JSON
-    
+    }, 2, 25000); 
     return data; 
   } catch (error) {
     console.warn("[Luna Engine] Fallback Imersivo ativado no RPG:", error);
     return { 
-      // Resposta imersiva que impede o app de quebrar
       text: "⚠️ [BIP DO MONITOR] Doutor(a), perdemos temporariamente o sinal com a central de monitorização. O paciente segue sob nossos cuidados locais. Por favor, repita sua última conduta para validarmos no sistema.", 
       vitalsUpdate: null, 
       newPhaseId: null 
     };
+  }
+};
+
+// ============================================================================
+// LUNA ENGINE 5.0 - STREAMING DE TOKENS COM EXTRAÇÃO DE JSON PARCIAL
+// ============================================================================
+export const fetchAdvancedAIWithStream = async (
+  prompt: string, 
+  context: string, 
+  phaseRules: any, 
+  onToken: (partialText: string) => void
+) => {
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, context, mode: 'rpg', phaseRules }),
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    // Se o backend não suportar streaming (ReadableStream indisponível), faz o fallback elegante
+    if (!response.body) {
+      const data = await response.json();
+      onToken(data.text || "");
+      return data;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let rawJson = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      // Concatena os pacotes de rede (chunks)
+      rawJson += decoder.decode(value, { stream: true });
+      
+      // MOTOR DE EXTRAÇÃO DINÂMICA: Lê o campo "text" mesmo que o JSON não tenha terminado de chegar
+      // Expressão Regular: Encontra "text":" e captura tudo até o fim do buffer atual ignorando aspas escapadas
+      const textMatch = rawJson.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)/);
+      if (textMatch && textMatch[1]) {
+         const partial = textMatch[1]
+           .replace(/\\n/g, '\n')
+           .replace(/\\"/g, '"')
+           .replace(/\\\\/g, '\\');
+         onToken(partial);
+      }
+    }
+
+    // No final do stream, faz o parse seguro para extrair Sinais Vitais e Transições
+    return JSON.parse(rawJson);
+  } catch (error) {
+    console.error("[Luna Stream Engine] Falha no Stream. Acionando Fallback:", error);
+    return await fetchAdvancedAI(prompt, context, phaseRules);
   }
 };
 
@@ -131,7 +182,7 @@ export const generateFinalFeedback = async (history: { role: string, text: strin
 };
 
 // ============================================================================
-// EXTRATOR DE AÇÕES (Para comparar o texto livre com os botões)
+// EXTRATOR DE AÇÕES
 // ============================================================================
 export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
   if (!availableTransitions.length) return [];
@@ -195,7 +246,6 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
         }).sort(() => Math.random() - 0.5);
 
     } catch (error) {
-        // Fallback de Segurança se a IA falhar: Devolve a conduta correta como única opção salvadora
         return [{ 
             id: 'emergency-fallback', 
             text: `[Conduta Padrão] ${correctTrigger}`, 

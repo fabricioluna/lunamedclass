@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OsceStation, ClinicalState, DynamicOsceStation } from '../types';
-import { getAIResponse, fetchAdvancedAI } from '../services/aiService'; 
+import { getAIResponse, fetchAdvancedAIWithStream } from '../services/aiService'; 
 import { LogOut, Send, Activity } from 'lucide-react'; 
 
 interface OsceAIViewProps {
@@ -32,14 +32,16 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
   const [currentBg, setCurrentBg] = useState<string | undefined>(undefined);
   const [timer, setTimer] = useState(0);
   const [input, setInput] = useState('');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   
+  // Estados para o Streaming de Tokens
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  
   const [visibleVitals, setVisibleVitals] = useState({
-    hr: false,
-    bp: false,
-    sat: false,
-    rr: false
+    hr: false, bp: false, sat: false, rr: false
   });
 
   const [feedback, setFeedback] = useState('');
@@ -81,14 +83,17 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, feedback, isLoading]);
+  }, [messages, feedback, isLoading, streamingText]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading || isFinished) return;
     const userMsg = input.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    
     setIsLoading(true);
+    setIsStreaming(true);
+    setStreamingText('');
 
     const msgLower = userMsg.toLowerCase();
     if (!/(n[aã]o|deslig|tirar|remover)/i.test(msgLower)) {
@@ -120,12 +125,11 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
         narrative: currentPhase.narrative
       };
 
-      // LUNA ENGINE: Foco puro em Anamnese e Atendimento (Sem Fisiologia Dinâmica)
       context = isAiMode 
         ? `Você é o PACIENTE desta simulação. Persona: "${currentPhase.narrative}".
            1. Responda em 1ª pessoa, de forma natural e com linguagem leiga.
            2. O objetivo desta consulta é TREINO DE ANAMNESE E CONDUTA INICIAL.
-           3. Se o médico prescrever medicamentos ou tratamentos, reaja apenas verbalmente (ex: "Obrigado doutor", ou "Tem certeza? Eu tenho alergia a isso").
+           3. Se o médico prescrever medicamentos ou tratamentos, reaja apenas verbalmente.
            Histórico: ${chatHistory}`
         : `Você é o NARRADOR (Mestre). CENÁRIO: "${dynamicStation.scenario}". 
            FASE ATUAL: "${currentPhase.narrative}".
@@ -134,25 +138,40 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
 
     const prompt = `Médico (Aluno): ${userMsg}\n${isAiMode ? 'Paciente' : 'Narrador'}:`;
     
-    const aiData = await fetchAdvancedAI(prompt, context, phaseRules);
-    let cleanResponse = aiData.text.replace(/^(Narrador|Paciente):\s*/i, '').trim();
-    
-    if (aiData.vitalsUpdate) {
-      setVitals(aiData.vitalsUpdate);
-    }
+    try {
+      // INJEÇÃO DA CHAMADA DE STREAMING 
+      const aiData = await fetchAdvancedAIWithStream(prompt, context, phaseRules, (partialText) => {
+        // Limpa as tags indesejadas geradas pela IA no início do texto enquanto processa
+        const displaySafeText = partialText.replace(/^(Narrador|Paciente):\s*/i, '');
+        setStreamingText(displaySafeText);
+      });
 
-    if (aiData.newPhaseId && dynamicStation.phases?.[aiData.newPhaseId]) {
-      const nextPhase = dynamicStation.phases[aiData.newPhaseId];
-      setCurrentPhaseId(aiData.newPhaseId);
+      // O pacote JSON terminou de chegar. Encerramos o visual de streaming e processamos a resposta.
+      setIsStreaming(false);
       
-      if (nextPhase.vitals) {
-        setVitals(nextPhase.vitals);
+      let cleanResponse = aiData.text.replace(/^(Narrador|Paciente):\s*/i, '').trim();
+      
+      if (aiData.vitalsUpdate) {
+        setVitals(aiData.vitalsUpdate);
       }
-      if (nextPhase.backgroundUrl) setCurrentBg(nextPhase.backgroundUrl);
-    } 
 
-    setMessages(prev => [...prev, { role: 'patient', text: cleanResponse }]);
-    setIsLoading(false);
+      if (aiData.newPhaseId && dynamicStation.phases?.[aiData.newPhaseId]) {
+        const nextPhase = dynamicStation.phases[aiData.newPhaseId];
+        setCurrentPhaseId(aiData.newPhaseId);
+        if (nextPhase.vitals) setVitals(nextPhase.vitals);
+        if (nextPhase.backgroundUrl) setCurrentBg(nextPhase.backgroundUrl);
+      } 
+
+      setMessages(prev => [...prev, { role: 'patient', text: cleanResponse }]);
+      setStreamingText('');
+
+    } catch (error) {
+       console.error("Falha no Stream do Frontend", error);
+       setMessages(prev => [...prev, { role: 'system', text: '⚠️ [FALHA DE COMUNICAÇÃO] Ocorreu um erro no servidor. Tente novamente.' }]);
+    } finally {
+      setIsLoading(false);
+      setIsStreaming(false);
+    }
   };
 
   const handleFinish = async () => {
@@ -254,20 +273,35 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
         </div>
       )}
 
-      <div className="flex-grow overflow-y-auto space-y-5 p-4 md:p-6 bg-white/60 backdrop-blur-lg rounded-[1.5rem] shadow-inner mb-4 border border-white/50 flex flex-col relative z-10">
+      <div className="flex-grow overflow-y-auto space-y-5 p-4 md:p-6 bg-white/60 backdrop-blur-lg rounded-[1.5rem] shadow-inner mb-4 border border-white/50 flex flex-col relative z-10 custom-scrollbar">
         {!isFinished ? (
-            messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : msg.role === 'system' ? 'justify-center' : 'justify-start'} relative z-10`}>
-                    <div className={`whitespace-pre-wrap leading-relaxed ${
-                        msg.role === 'user' ? 'p-4 max-w-[85%] md:max-w-[70%] rounded-2xl bg-[#003366] text-white shadow-lg' :
-                        msg.role === 'system' ? 'p-5 md:p-8 w-full rounded-[1.5rem] bg-yellow-100 text-yellow-900 border-2 border-yellow-300 shadow-md' :
-                        'p-4 max-w-[85%] md:max-w-[70%] rounded-2xl bg-white text-[#003366] border border-gray-200 shadow-lg'
-                    }`}>
-                        {msg.role === 'patient' && <span className="text-[10px] font-black text-[#D4A017] uppercase block mb-1">{isAiMode ? 'PACIENTE' : 'NARRADOR'}</span>}
-                        {msg.text}
-                    </div>
-                </div>
-            ))
+            <>
+              {messages.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : msg.role === 'system' ? 'justify-center' : 'justify-start'} relative z-10`}>
+                      <div className={`whitespace-pre-wrap leading-relaxed ${
+                          msg.role === 'user' ? 'p-4 max-w-[85%] md:max-w-[70%] rounded-2xl bg-[#003366] text-white shadow-lg' :
+                          msg.role === 'system' ? 'p-5 md:p-8 w-full rounded-[1.5rem] bg-yellow-100 text-yellow-900 border-2 border-yellow-300 shadow-md' :
+                          'p-4 max-w-[85%] md:max-w-[70%] rounded-2xl bg-white text-[#003366] border border-gray-200 shadow-lg'
+                      }`}>
+                          {msg.role === 'patient' && <span className="text-[10px] font-black text-[#D4A017] uppercase block mb-1">{isAiMode ? 'PACIENTE' : 'NARRADOR'}</span>}
+                          {msg.text}
+                      </div>
+                  </div>
+              ))}
+              
+              {/* ======================================================= */}
+              {/* COMPONENTE VISUAL DO STREAMING EM TEMPO REAL            */}
+              {/* ======================================================= */}
+              {isStreaming && (
+                 <div className="flex justify-start relative z-10 animate-in slide-in-from-bottom-2">
+                     <div className="p-4 max-w-[85%] md:max-w-[70%] rounded-2xl bg-white text-[#003366] border border-gray-200 shadow-lg whitespace-pre-wrap leading-relaxed">
+                         <span className="text-[10px] font-black text-[#D4A017] uppercase block mb-1">{isAiMode ? 'PACIENTE' : 'NARRADOR'}</span>
+                         {streamingText}
+                         <span className="inline-block w-1.5 h-4 ml-1 bg-[#003366] animate-pulse align-middle"></span>
+                     </div>
+                 </div>
+              )}
+            </>
         ) : feedback ? (
             <div className="animate-in fade-in zoom-in duration-700 relative z-10">
                 <div className="bg-white p-6 md:p-10 rounded-[1.5rem] shadow-xl border border-gray-200 text-gray-800">
@@ -295,7 +329,7 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
             </div>
         )}
         
-        {isLoading && !isFinished && <div className="text-[#D4A017] font-black animate-pulse p-4">Digitando...</div>}
+        {isLoading && !isStreaming && !isFinished && <div className="text-[#D4A017] text-xs uppercase tracking-widest font-black animate-pulse p-4">Iniciando Simulação...</div>}
         <div ref={chatEndRef} />
       </div>
 
@@ -303,10 +337,30 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
         {!isFinished ? (
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
-              <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder={isAiMode ? "Pergunte ao paciente..." : "Sua conduta..."} className="flex-grow p-4 bg-white rounded-2xl border-2 border-transparent focus:border-[#D4A017] outline-none font-medium text-[#003366]" disabled={isLoading} />
-              <button onClick={handleSend} disabled={isLoading || !input.trim()} className="bg-[#D4A017] text-[#003366] font-black px-8 rounded-2xl shadow-lg active:scale-95 transition-all"><Send size={18} /></button>
+              <input 
+                type="text" 
+                value={input} 
+                onChange={e => setInput(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && handleSend()} 
+                placeholder={isAiMode ? "Pergunte ao paciente..." : "Sua conduta..."} 
+                className="flex-grow p-4 bg-white rounded-2xl border-2 border-transparent focus:border-[#D4A017] outline-none font-medium text-[#003366] disabled:opacity-50" 
+                disabled={isLoading} 
+              />
+              <button 
+                onClick={handleSend} 
+                disabled={isLoading || !input.trim()} 
+                className="bg-[#D4A017] text-[#003366] font-black px-8 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
+              >
+                <Send size={18} />
+              </button>
             </div>
-            <button onClick={handleFinish} disabled={isLoading || messages.length < 2} className="w-full bg-red-50 text-red-600 border-2 border-red-100 py-3 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-red-600 hover:text-white transition-all">🛑 Encerrar Atendimento</button>
+            <button 
+              onClick={handleFinish} 
+              disabled={isLoading || messages.length < 2} 
+              className="w-full bg-red-50 text-red-600 border-2 border-red-100 py-3 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-red-600 hover:text-white transition-all disabled:opacity-50"
+            >
+              🛑 Encerrar Atendimento
+            </button>
           </div>
         ) : (
           <div className="flex justify-center py-2">
