@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag } from '../types';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight } from 'lucide-react'; 
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap } from 'lucide-react'; 
 
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -101,6 +101,30 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   // =========================================================================
   // DEMAIS FUNÇÕES DE BANCO DE DADOS 
   // =========================================================================
+  
+  // AUTO-SETUP DE FEATURE FLAGS (BIG TECH PATTERN)
+  const handleSeedFlags = async () => {
+    const pass = prompt("Deseja injetar as Flags Padrão da plataforma? Digite a senha master (fmst8):");
+    if (pass === 'fmst8' && db) {
+      const defaultFlags = {
+        pesquisa_institucional: { name: 'pesquisa_institucional', description: 'Libera o botão de pesquisa de satisfação (NPS) no portal do aluno.', isEnabled: false },
+        osce_ia_paciente: { name: 'osce_ia_paciente', description: 'Ativa o motor de Inteligência Artificial para o Paciente Virtual.', isEnabled: true },
+        osce_rpg_dinamico: { name: 'osce_rpg_dinamico', description: 'Ativa a Luna Engine 2.0 para cenários de RPG interativo.', isEnabled: true },
+        lab_virtual_microscopia: { name: 'lab_virtual_microscopia', description: 'Libera o laboratório de identificação visual (Histologia/Anatomia).', isEnabled: true },
+        modo_semana_provas: { name: 'modo_semana_provas', description: 'Trava conteúdos práticos e foca a plataforma apenas em quizzes teóricos.', isEnabled: false },
+        central_materiais: { name: 'central_materiais', description: 'Ativa a visualização da nuvem de resumos e scripts.', isEnabled: true }
+      };
+
+      try {
+        // Usa "update" em vez de "set" para não apagar as que você já criou manualmente
+        await update(ref(db, 'feature_flags'), defaultFlags);
+        alert("✅ Auto-Setup concluído! Flags estratégicas injetadas na nuvem.");
+      } catch (error) {
+        console.error("Erro ao injetar flags:", error);
+      }
+    }
+  };
+
   const handleGlobalReset = async () => {
     const pass = prompt("⚠️ AÇÃO DESTRUTIVA: Apagar absolutamente TODO o banco de dados?\n\nPara confirmar, digite a senha master de sistema (fmst8):");
     if (pass === 'fmst8' && db) {
@@ -296,25 +320,34 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Gestão de Lançamentos e Módulos em Tempo Real</p>
               </div>
             </div>
-            <button 
-              onClick={() => {
-                const name = prompt("Identificador Único da Feature (ex: release_survey_n2):");
-                if (!name) return;
-                const desc = prompt("Descrição amigável (ex: Libera o módulo de pesquisa para a turma):");
-                if (db) {
-                  set(ref(db, `feature_flags/${name}`), { name, description: desc || '', isEnabled: false });
-                }
-              }} 
-              className="bg-[#003366] text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#D4A017] transition-all shadow-md"
-            >
-              + Criar Nova Flag
-            </button>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={handleSeedFlags}
+                className="flex items-center gap-2 bg-blue-50 text-blue-700 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all border border-blue-200"
+              >
+                <Zap size={14} /> Auto-Setup 
+              </button>
+              <button 
+                onClick={() => {
+                  const name = prompt("Identificador Único da Feature (ex: release_survey_n2):");
+                  if (!name) return;
+                  const desc = prompt("Descrição amigável (ex: Libera o módulo de pesquisa para a turma):");
+                  if (db) {
+                    set(ref(db, `feature_flags/${name}`), { name, description: desc || '', isEnabled: false });
+                  }
+                }} 
+                className="bg-[#003366] text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#D4A017] transition-all shadow-md"
+              >
+                + Criar Manual
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
             {adminFeatureFlags.length === 0 ? (
               <div className="text-center py-12 text-gray-400 font-bold uppercase tracking-widest text-xs border-2 border-dashed border-gray-100 rounded-2xl">
-                Nenhuma Feature Flag configurada no momento.
+                Nenhuma Feature Flag configurada. Clique em "Auto-Setup" para injetar as flags padrão.
               </div>
             ) : (
               adminFeatureFlags.map(flag => (
