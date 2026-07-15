@@ -1,12 +1,6 @@
 import React, { useState, useEffect, Component, ErrorInfo, ReactNode, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
-import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap, KeyRound } from 'lucide-react';
-import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
-import { PERIODS } from './constants'; 
-import { db, ref, push } from './firebase';
-import { DataProvider, useData } from './contexts/DataContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
 // ============================================================================
 // CODE SPLITTING (LAZY LOADING) - PADRÃO BIG TECH
@@ -34,6 +28,13 @@ const SurveyView = lazy(() => import('./views/SurveyView'));
 const SurveyReportView = lazy(() => import('./views/SurveyReportView'));
 const AITestView = lazy(() => import('./views/AITestView'));
 const MedicalEventsView = lazy(() => import('./views/MedicalEventsView'));
+
+import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap, KeyRound } from 'lucide-react';
+import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
+import { PERIODS } from './constants'; 
+import { db, ref, push } from './firebase';
+import { DataProvider, useData } from './contexts/DataContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
 const APP_VERSION = "9.9.0 - Luna Code Split Architecture";
 
@@ -117,7 +118,7 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
       }
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/invalid-credential') setErrorMsg('Credenciais incorretas. Verifique seu e-mail e senha.');
+      if (err.code === 'auth/invalid-credential') setErrorMsg('Credenciais incorretas. Verifique usuário e senha.');
       else if (err.code === 'auth/email-already-in-use') setErrorMsg('Este e-mail já está cadastrado. Tente fazer login.');
       else if (err.code === 'auth/weak-password') setErrorMsg('A senha deve ter pelo menos 6 caracteres.');
       else setErrorMsg(err.message || 'Ocorreu um erro. Tente novamente.');
@@ -287,8 +288,8 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
                 )}
                 <div className="relative">
                   <input 
-                    type="email" 
-                    placeholder="E-mail Acadêmico ou Pessoal" 
+                    type="text" 
+                    placeholder="Usuário (E-mail)" 
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -298,7 +299,7 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
                 <div className="relative">
                   <input 
                     type="password" 
-                    placeholder="Senha Segura" 
+                    placeholder="Senha" 
                     required
                     value={password}
                     onChange={e => setPassword(e.target.value)}
