@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DynamicOsceStation, SimulationPhase, ClinicalState } from '../types';
 import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle, CheckCircle2 } from 'lucide-react';
-import { fetchAdvancedAI, generateRpgOptions, generateFinalFeedback } from '../services/aiService';
+import { fetchAdvancedAIWithStream, generateRpgOptions, generateFinalFeedback } from '../services/aiService';
 
 // ============================================================================
-// LUNA ENGINE: Sintetizador de Áudio Clínico (Mantido Intacto)
+// LUNA ENGINE: Sintetizador de Áudio Clínico
 // ============================================================================
 const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: boolean) => {
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -56,8 +56,7 @@ const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: b
 };
 
 // ============================================================================
-// MICRO-COMPONENTES DE UI (CLEAN CODE)
-// Estes componentes cuidam APENAS do visual, deixando as lógicas para o Maestro.
+// MICRO-COMPONENTES DE UI
 // ============================================================================
 
 const SimulationHeader = ({ title, onManualEnd, onBack }: any) => (
@@ -126,7 +125,7 @@ const CompactHistory = ({ history }: { history: any[] }) => (
   </div>
 );
 
-const ChatBoard = ({ narrative, history, isProcessing, chatRef }: any) => (
+const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingText, chatRef }: any) => (
   <>
     <div className="bg-[#003366] text-white p-3 md:p-4 rounded-[1.25rem] md:rounded-3xl shadow-xl shrink-0 border-l-[4px] md:border-l-[6px] border-[#D4A017] min-h-[60px] md:min-h-[100px] max-h-[15vh] md:max-h-[25vh] flex flex-col overflow-hidden relative">
       <div className="flex items-center gap-1.5 md:gap-2 mb-1 shrink-0 opacity-70">
@@ -151,16 +150,28 @@ const ChatBoard = ({ narrative, history, isProcessing, chatRef }: any) => (
               <div className={`max-w-[85%] md:max-w-[80%] p-2.5 px-4 md:p-3 md:px-5 rounded-xl md:rounded-2xl text-xs md:text-sm shadow-sm border ${
                 msg.role === 'user' ? 'bg-[#003366] text-white border-blue-800 rounded-tr-none' : 'bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium'
               }`}>
-                {msg.role === 'narrator' && <span className="block text-[7px] md:text-[8px] font-black text-blue-500 uppercase mb-0.5 tracking-widest">Equipe / Paciente</span>}
+                {msg.role === 'narrator' && <span className="block text-[7px] md:text-[8px] font-black text-[#D4A017] uppercase mb-0.5 tracking-widest">Equipe / Narrador</span>}
                 {msg.text}
               </div>
             </div>
           ))
         )}
-        {isProcessing && (
+        
+        {/* STREAMING UI: Exibe as palavras chegando do Narrador em tempo real */}
+        {isStreaming && (
+           <div className="flex justify-start animate-in slide-in-from-bottom-2">
+             <div className="max-w-[85%] md:max-w-[80%] p-2.5 px-4 md:p-3 md:px-5 rounded-xl md:rounded-2xl text-xs md:text-sm shadow-sm border bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium whitespace-pre-wrap">
+               <span className="block text-[7px] md:text-[8px] font-black text-[#D4A017] uppercase mb-0.5 tracking-widest">Equipe / Narrador</span>
+               {streamingText}
+               <span className="inline-block w-1.5 h-3 ml-1 bg-gray-400 animate-pulse align-middle"></span>
+             </div>
+           </div>
+        )}
+
+        {isProcessing && !isStreaming && (
           <div className="flex justify-start items-center gap-2 animate-pulse">
             <div className="bg-gray-200 h-8 md:h-10 w-20 md:w-24 rounded-full md:rounded-3xl"></div>
-            <span className="text-[8px] md:text-[10px] font-black text-gray-300 uppercase"> Analisando...</span>
+            <span className="text-[8px] md:text-[10px] font-black text-gray-300 uppercase"> Analisando Cena...</span>
           </div>
         )}
       </div>
@@ -220,8 +231,7 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => (
 );
 
 // ============================================================================
-// O ORQUESTRADOR PRINCIPAL (MAESTRO)
-// Este componente agora é extremamente limpo. Ele só lida com ESTADO e REGRAS.
+// O ORQUESTRADOR PRINCIPAL (MAESTRO) COM STREAMING
 // ============================================================================
 interface DynamicOsceViewProps {
   station: DynamicOsceStation;
@@ -243,6 +253,10 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const [sosOptions, setSosOptions] = useState<any[] | null>(null);
   const [finalFeedback, setFinalFeedback] = useState<any | null>(null);
 
+  // Estados de Streaming
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+
   const currentPhase = station.phases[currentPhaseId];
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -262,7 +276,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
     if (vitals.hr === 0 && isMonitorConnected && !isFinished) handleFinishSim('death');
-  }, [history, isProcessing, vitals.hr, isFinished]);
+  }, [history, isProcessing, isStreaming, streamingText, vitals.hr, isFinished]);
 
   const handleFinishSim = async (reason: 'success' | 'death' | 'manual') => {
     setEndReason(reason);
@@ -287,9 +301,22 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
 
     if (/(monitor|ox[ií]metr|sinais vitais|ssvv|press[aã]o|eletro|ecg|cabos|satura[çc][aã]o|frequ[êe]ncia)/i.test(text)) setIsMonitorConnected(true);
 
+    setIsStreaming(true);
+    setStreamingText('');
+
     try {
-      const res = await fetchAdvancedAI(text, `Cena: ${dynamicNarrative}`, { transitions: currentPhase.transitions });
+      // Usando a nova função com Streaming injetada anteriormente no aiService
+      const res = await fetchAdvancedAIWithStream(
+        text, 
+        `Você é o Mestre de RPG (Narrador). Cena Atual: ${dynamicNarrative}`, 
+        { transitions: currentPhase.transitions },
+        (partialText) => {
+          setStreamingText(partialText.replace(/^(Narrador|Paciente):\s*/i, ''));
+        }
+      );
       
+      setIsStreaming(false);
+
       if (res.newPhaseId === "FINISH") {
         handleFinishSim('success');
         return;
@@ -306,13 +333,16 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
 
       if (res.vitalsUpdate) setVitals(res.vitalsUpdate);
       if (res.text) {
-        setDynamicNarrative(res.text);
-        setHistory(prev => [...prev, { role: 'narrator', text: res.text }]);
+        let cleanText = res.text.replace(/^(Narrador|Paciente):\s*/i, '').trim();
+        setDynamicNarrative(cleanText);
+        setHistory(prev => [...prev, { role: 'narrator', text: cleanText }]);
       }
     } catch (err) {
-      setHistory(prev => [...prev, { role: 'narrator', text: "A equipe aguarda ordens." }]);
+      setIsStreaming(false);
+      setHistory(prev => [...prev, { role: 'narrator', text: "A equipe aguarda ordens precisas." }]);
     } finally {
       setIsProcessing(false);
+      setStreamingText('');
     }
   };
 
@@ -331,7 +361,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) handleFinishSim('manual');
   };
 
-  // RENDERIZAÇÃO FINAL ORQUESTRADA (Note como ficou limpo!)
   if (isFinished) return <FeedbackScreen endReason={endReason} feedback={finalFeedback} onFinish={() => { if(onSaveResult && finalFeedback) onSaveResult(finalFeedback.nota, 10, 0, { history, feedback: finalFeedback }); onBack(); }} />;
 
   return (
@@ -345,7 +374,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         </aside>
 
         <section className="flex-grow flex flex-col h-full overflow-hidden min-h-0 relative">
-          <ChatBoard narrative={dynamicNarrative} history={history} isProcessing={isProcessing} chatRef={chatContainerRef} />
+          <ChatBoard narrative={dynamicNarrative} history={history} isProcessing={isProcessing} isStreaming={isStreaming} streamingText={streamingText} chatRef={chatContainerRef} />
           
           <div className="p-2 md:p-4 bg-white border-t border-gray-100 shrink-0 absolute bottom-0 left-0 right-0 z-10 rounded-b-[1.5rem] md:rounded-b-[2.5rem]">
             {sosOptions ? (
@@ -365,12 +394,12 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
               </div>
             ) : (
               <div className="flex gap-1.5 md:gap-3 items-center max-w-5xl mx-auto px-1 md:px-2">
-                <div className="flex-grow flex bg-gray-100/50 rounded-xl md:rounded-2xl border-2 border-transparent focus-within:border-blue-600 focus-within:bg-white shadow-inner p-1 md:p-1.5 transition-all group">
+                <div className="flex-grow flex bg-gray-100/50 rounded-xl md:rounded-2xl border-2 border-transparent focus-within:border-[#003366] focus-within:bg-white shadow-inner p-1 md:p-1.5 transition-all group">
                     <input 
                       type="text" value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && processAction(inputText)}
-                      placeholder="Conduta clínica..." className="flex-grow bg-transparent px-3 py-2 md:px-5 md:py-2.5 outline-none font-medium text-[#003366] text-xs md:text-base placeholder:text-gray-400 min-w-0" disabled={isProcessing}
+                      placeholder="Descreva sua conduta..." className="flex-grow bg-transparent px-3 py-2 md:px-5 md:py-2.5 outline-none font-medium text-[#003366] text-xs md:text-base placeholder:text-gray-400 min-w-0" disabled={isProcessing}
                     />
-                    <button onClick={() => processAction(inputText)} disabled={isProcessing || !inputText.trim()} className="bg-[#003366] text-white p-2.5 md:p-3.5 rounded-lg md:rounded-xl active:scale-95 hover:bg-blue-700 transition-all shadow-xl disabled:opacity-10 shrink-0">
+                    <button onClick={() => processAction(inputText)} disabled={isProcessing || !inputText.trim()} className="bg-[#003366] text-white p-2.5 md:p-3.5 rounded-lg md:rounded-xl active:scale-95 hover:bg-[#D4A017] transition-all shadow-xl disabled:opacity-10 shrink-0">
                       <Send size={16} className="md:w-5 md:h-5" />
                     </button>
                 </div>
