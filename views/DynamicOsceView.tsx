@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DynamicOsceStation, SimulationPhase, ClinicalState } from '../types';
-import { Activity, ShieldCheck, ChevronRight, RotateCcw, Award, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle } from 'lucide-react';
+import { Activity, ShieldCheck, ChevronRight, RotateCcw, Award, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle, Printer } from 'lucide-react';
 import { fetchAdvancedAIWithStream, generateRpgOptions, generateFinalFeedback } from '../services/aiService';
 
 // ============================================================================
@@ -192,68 +192,99 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
   </>
 );
 
-const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => (
-  <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-4 md:p-6 text-center overflow-y-auto">
-    <div className="max-w-2xl w-full bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500 my-auto mt-16 md:mt-auto">
-      {endReason === 'death' ? <XCircle size={60} className="text-red-500 mb-4 md:mb-6 mx-auto animate-pulse md:w-20 md:h-20" /> : <Award size={60} className="text-[#003366] mb-4 md:mb-6 mx-auto animate-bounce md:w-20 md:h-20" />}
-      <h2 className="text-xl md:text-3xl font-black text-[#003366] uppercase mb-2 md:mb-4 tracking-tighter">
-        {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
-      </h2>
-      
-      {!feedback ? (
-        <div className="py-8 md:py-10 flex flex-col items-center">
-          <div className="w-8 h-8 md:w-10 md:h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-3 md:mb-4"></div>
-          <p className="text-gray-400 font-bold text-[9px] md:text-[10px] uppercase tracking-widest">Luna está avaliando seu desempenho...</p>
-        </div>
-      ) : (
-        <div className="text-left space-y-4 md:space-y-6 animate-in fade-in duration-700 mt-4">
-          
-          {feedback.passosEsperados && feedback.passosEsperados.length > 0 && (
-            <div className="bg-gray-100/50 p-4 md:p-5 rounded-xl md:rounded-2xl border border-gray-200">
-              <h4 className="text-[9px] md:text-[10px] font-black text-gray-600 uppercase mb-1.5 md:mb-2">📋 Sequência de Passos Esperada</h4>
-              <ul className="text-[10px] md:text-[11px] text-gray-700 space-y-1">
-                {feedback.passosEsperados.map((passo: string, i: number) => (
-                  <li key={i}><strong className="text-gray-900">{i + 1}.</strong> {passo}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => {
+  const handlePrint = () => window.print();
 
-          <div className="bg-blue-50/50 p-4 md:p-5 rounded-xl md:rounded-2xl border border-blue-100">
-            <h4 className="text-[9px] md:text-[10px] font-black text-[#003366] uppercase mb-1.5 md:mb-2">🤝 Postura e Comunicação</h4>
-            <p className="text-gray-600 text-xs md:text-sm italic">"{feedback.postura}"</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            <div className="bg-green-50 p-3 md:p-4 rounded-xl md:rounded-2xl">
-              <h4 className="text-[9px] md:text-[10px] font-black text-green-600 uppercase mb-1.5 md:mb-2">🎯 Acertos</h4>
-              <ul className="text-[10px] md:text-[11px] text-green-700 space-y-1">
-                {feedback.acertos?.map((a:string, i:number) => <li key={i}>• {a}</li>)}
-              </ul>
-            </div>
-            <div className="bg-red-50 p-3 md:p-4 rounded-xl md:rounded-2xl">
-              <h4 className="text-[9px] md:text-[10px] font-black text-red-600 uppercase mb-1.5 md:mb-2">⚠️ Omissões</h4>
-              <ul className="text-[10px] md:text-[11px] text-red-700 space-y-1">
-                {feedback.omissoes?.map((o:string, i:number) => <li key={i}>• {o}</li>)}
-              </ul>
-            </div>
-          </div>
-          <div className="bg-[#003366] p-4 md:p-6 rounded-2xl md:rounded-3xl flex justify-between items-center shadow-xl mt-4">
-            <div>
-              <span className="text-blue-300 text-[9px] md:text-[10px] font-black uppercase">Nota Final</span>
-              <div className="text-3xl md:text-4xl font-black text-white">{Number(feedback.nota).toFixed(1)}</div>
-            </div>
-            <button 
-              onClick={onFinish} 
-              className="bg-[#D4A017] text-white px-6 py-3 md:px-10 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs hover:scale-105 transition-all shadow-lg"
-            >
-              Finalizar
-            </button>
-          </div>
+  return (
+    <div className="min-h-screen w-full flex flex-col items-center bg-gray-50 p-4 md:p-8 overflow-y-auto print:bg-white print:p-0">
+      <div className="max-w-3xl w-full bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500 mt-4 md:mt-8 mb-12 print:shadow-none print:border-none print:m-0 print:p-0">
+        
+        <div className="text-center print:hidden">
+          {endReason === 'death' ? <XCircle size={60} className="text-red-500 mb-4 md:mb-6 mx-auto animate-pulse md:w-20 md:h-20" /> : <Award size={60} className="text-[#003366] mb-4 md:mb-6 mx-auto animate-bounce md:w-20 md:h-20" />}
+          <h2 className="text-xl md:text-3xl font-black text-[#003366] uppercase mb-2 md:mb-4 tracking-tighter">
+            {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
+          </h2>
         </div>
-      )}
+
+        {/* Print Header only visible in PDF */}
+        <div className="hidden print:block mb-8 border-b-2 border-gray-100 pb-4 text-center">
+           <h1 className="text-3xl font-black text-[#003366] uppercase tracking-tighter">Relatório Clínico - OSCE</h1>
+           <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">Documento acadêmico gerado pela Luna Engine 2.0</p>
+        </div>
+        
+        {!feedback ? (
+          <div className="py-8 md:py-10 flex flex-col items-center print:hidden">
+            <div className="w-8 h-8 md:w-10 md:h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-3 md:mb-4"></div>
+            <p className="text-gray-400 font-bold text-[9px] md:text-[10px] uppercase tracking-widest">Luna está avaliando seu desempenho...</p>
+          </div>
+        ) : (
+          <div className="text-left space-y-4 md:space-y-6 animate-in fade-in duration-700 mt-4">
+            
+            {feedback.passosEsperados && feedback.passosEsperados.length > 0 && (
+              <div className="bg-gray-50 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-gray-200 print:border-gray-300 print:break-inside-avoid">
+                <h4 className="text-[10px] md:text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3 md:mb-4">📋 Sequência de Passos Esperada</h4>
+                <div className="space-y-2">
+                  {feedback.passosEsperados.map((passo: string, i: number) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <span className="text-gray-400 font-black text-xs md:text-sm mt-0.5">{i + 1}.</span>
+                      <p className="text-gray-700 font-medium text-xs md:text-sm leading-relaxed">{passo}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-blue-50/50 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-blue-100 print:border-blue-200 print:bg-transparent print:break-inside-avoid">
+              <h4 className="text-[10px] md:text-[11px] font-black text-[#003366] uppercase tracking-widest mb-2 md:mb-3">🤝 Postura e Comunicação</h4>
+              <p className="text-gray-600 text-sm md:text-base italic leading-relaxed">"{feedback.postura}"</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 print:block print:space-y-6">
+              <div className="bg-green-50 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-green-100 print:border-green-200 print:bg-transparent print:break-inside-avoid">
+                <h4 className="text-[10px] md:text-[11px] font-black text-green-600 uppercase tracking-widest mb-3">🎯 Acertos</h4>
+                <ul className="text-xs md:text-sm text-green-800 space-y-2">
+                  {feedback.acertos?.map((a:string, i:number) => <li key={i} className="flex gap-2"><span className="text-green-500">•</span> <span className="flex-1">{a}</span></li>)}
+                </ul>
+              </div>
+              <div className="bg-red-50 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-red-100 print:border-red-200 print:bg-transparent print:break-inside-avoid">
+                <h4 className="text-[10px] md:text-[11px] font-black text-red-600 uppercase tracking-widest mb-3">⚠️ Omissões</h4>
+                <ul className="text-xs md:text-sm text-red-800 space-y-2">
+                  {feedback.omissoes?.map((o:string, i:number) => <li key={i} className="flex gap-2"><span className="text-red-500">•</span> <span className="flex-1">{o}</span></li>)}
+                </ul>
+              </div>
+            </div>
+
+            <div className="bg-[#003366] p-5 md:p-8 rounded-2xl md:rounded-3xl flex flex-col sm:flex-row justify-between items-center shadow-xl mt-6 print:hidden gap-5">
+              <div className="text-center sm:text-left">
+                <span className="text-blue-300 text-[10px] md:text-[11px] font-black uppercase tracking-widest block mb-1">Nota Final</span>
+                <div className="text-4xl md:text-5xl font-black text-white">{Number(feedback.nota).toFixed(1)}</div>
+              </div>
+              <div className="flex gap-3 w-full sm:w-auto">
+                <button 
+                  onClick={handlePrint} 
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/10 text-white px-5 py-3 md:px-6 md:py-4 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-white/20 transition-all border border-white/20"
+                >
+                  <Printer size={16} /> Salvar PDF
+                </button>
+                <button 
+                  onClick={onFinish} 
+                  className="flex-1 sm:flex-none bg-[#D4A017] text-[#003366] px-6 py-3 md:px-10 md:py-4 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-xs hover:scale-105 transition-all shadow-lg"
+                >
+                  Finalizar
+                </button>
+              </div>
+            </div>
+
+            {/* Print Note Only */}
+            <div className="hidden print:block mt-8 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-t pt-4">
+              Nota Final: {Number(feedback.nota).toFixed(1)}/10
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ============================================================================
 // O ORQUESTRADOR PRINCIPAL (MAESTRO) COM STREAMING
