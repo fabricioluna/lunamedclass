@@ -26,15 +26,15 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
 
   if (!discipline) return null;
 
-  // Utilitário interno resiliente para avaliação de disjuntores lógicos
+  // Utilitário interno resiliente para avaliação de disjuntores lógicos (Fail-safe)
   const checkFlag = (flagName: string, defaultState: boolean): boolean => {
     const flag = featureFlags?.find(f => f.name === flagName);
     return flag ? flag.isEnabled : defaultState;
   };
 
   // Mapeamento semântico das Feature Flags sincronizadas com a Nuvem
-  const isModoProvasActive = featureFlags?.find(f => f.name === 'modo_semana_provas')?.isEnabled || false;
-  const isPesquisaActive = featureFlags?.find(f => f.name === 'pesquisa_institucional')?.isEnabled || false;
+  const isModoProvasActive = checkFlag('modo_semana_provas', false);
+  const isPesquisaActive = checkFlag('pesquisa_institucional', false);
   const isMateriaisActive = checkFlag('central_materiais', true);
   const isLabActive = checkFlag('lab_virtual_microscopia', true);
   const isSimuladoTeoricoActive = checkFlag('modulo_simulado_teorico', true);
