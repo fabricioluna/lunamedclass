@@ -151,7 +151,7 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
       </div>
     </div>
 
-    <div className="flex-grow flex-1 min-h-0 bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative mt-2 md:mt-3">
+    <div className="flex-grow flex-1 min-h-0 bg-white rounded-t-[1.5rem] md:rounded-t-[2.5rem] border-x border-t border-gray-200 shadow-inner flex flex-col overflow-hidden relative mt-2 md:mt-3">
       <div ref={chatRef} className="flex-grow overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6 bg-gray-50/20 custom-scrollbar">
         {history.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-10">
@@ -287,7 +287,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         const container = chatContainerRef.current;
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
-    // Correção: Segurança para não disparar múltiplas vezes o óbito
     if (vitals.hr === 0 && isMonitorConnected && !isFinished && !isProcessing) {
       handleFinishSim('death');
     }
@@ -322,9 +321,8 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     setIsStreaming(true);
     setStreamingText('');
 
-    // Inteligência de Prompt para o Narrador: Exigindo interatividade e proibindo reticências isoladas.
-    const systemPrompt = `Você é o paciente e o preceptor. Cena: ${dynamicNarrative}
-    REGRA ABSOLUTA: Seja hiper-realista. NUNCA responda apenas com "...". Descreva sempre uma reação física, uma fala do paciente ou uma mudança sutil nos achados vitais baseada na ação do aluno.`;
+    const systemPrompt = `Você é o paciente e o ambiente clínico. Cena Atual: ${dynamicNarrative}
+    REGRA ABSOLUTA DE INTERATIVIDADE: Aja de forma imersiva e realista. Nunca responda apenas com reticências ("..."). Sempre descreva detalhadamente a reação física do paciente, sua fala (se houver), ou as mudanças sutis percebidas no exame físico em resposta à conduta da equipe médica.`;
 
     try {
       const res = await fetchAdvancedAIWithStream(
@@ -338,7 +336,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       
       setIsStreaming(false);
 
-      // CORREÇÃO CRÍTICA: Escuta dupla para encerramento (JSON explícito ou identificação textual)
       if (res?.newPhaseId === "FINISH" || /simula[çc][aã]o encerrada|óbito confirmado/i.test(res?.text || "")) {
         handleFinishSim(vitals.hr === 0 ? 'death' : 'success');
         return;
@@ -374,10 +371,8 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const handleRequestHelp = async () => {
     initAudio(); 
     setIsProcessing(true);
-    // Penalidade direta e imersiva
     setScores(prev => ({ ...prev, tecnica: prev.tecnica - 1.0 }));
     
-    // CORREÇÃO DO BLOQUEIO SOS: Adição do Try/Catch/Finally
     try {
       const options = await generateRpgOptions(currentPhase.transitions || [], dynamicNarrative || currentPhase.narrative);
       if (options && options.length > 0) {
@@ -402,7 +397,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) handleFinishSim('manual');
   };
 
-  // Gamificação: Cálculo de Progresso Seguro
   const totalPhases = Object.keys(station.phases).length;
   const maxExpectedScore = Math.max(1, totalPhases - 1);
   let progressPercent = (scores.tecnica / maxExpectedScore) * 100;
@@ -425,7 +419,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         <section className="flex-grow flex flex-col h-full overflow-hidden min-h-0 relative">
           <ChatBoard narrative={dynamicNarrative} history={history} isProcessing={isProcessing} isStreaming={isStreaming} streamingText={streamingText} chatRef={chatContainerRef} />
           
-          <div className="p-2 md:p-4 bg-white border-t border-gray-100 shrink-0 mt-auto rounded-b-[1.5rem] md:rounded-b-[2.5rem] shadow-inner">
+          <div className="p-2 md:p-4 bg-white border-x border-b border-t border-gray-200 shrink-0 mt-auto rounded-b-[1.5rem] md:rounded-b-[2.5rem] shadow-inner">
             {sosOptions ? (
               <div className="animate-in slide-in-from-bottom-2 space-y-2 md:space-y-4">
                 <div className="flex justify-between items-center mb-1">

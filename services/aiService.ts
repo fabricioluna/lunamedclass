@@ -217,7 +217,7 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
     Cenário: "${narrative}". 
     Ação correta que ele DEVE tomar agora: "${correctTrigger}".
     
-    Crie 3 condutas INCORRETAS plausíveis (distratores clínicos) para este momento.
+    Crie 3 condutas INCORRETAS plausíveis (distratores clínicos) para este momento. Devem ser condutas verbais ou ações clínicas diretas.
     Retorne APENAS um array JSON estrito: ["${correctTrigger}", "distrator1", "distrator2", "distrator3"]. Nenhuma outra palavra.`;
 
     try {
@@ -243,7 +243,7 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
     } catch (error) {
         return [{ 
             id: 'emergency-fallback', 
-            text: `(Conduta Sugerida) ${correctTrigger}`, 
+            text: `[Conduta Padrão] ${correctTrigger}`, 
             isCorrect: true, 
             transitionRef: validTransitions[0] 
         }];
