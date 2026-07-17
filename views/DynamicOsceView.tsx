@@ -66,9 +66,8 @@ const SimulationHeader = ({ title, progress, onManualEnd, onBack }: any) => (
         <Zap size={16} className="text-blue-600 fill-blue-600 shrink-0"/>
         <h2 className="text-[10px] md:text-[12px] font-black text-[#003366] uppercase tracking-wider truncate">{title}</h2>
       </div>
+      
       <div className="flex gap-2 md:gap-4 items-center shrink-0">
-        
-        {/* BARRA DE PROGRESSO - GAMIFICAÇÃO */}
         <div className="hidden md:flex items-center gap-2 mr-4 border-r border-gray-200 pr-4">
           <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Conclusão</span>
           <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -83,8 +82,6 @@ const SimulationHeader = ({ title, progress, onManualEnd, onBack }: any) => (
         <RotateCcw size={16} className="md:w-4 md:h-4 text-gray-300 cursor-pointer hover:text-red-500" onClick={onBack}/>
       </div>
     </div>
-    
-    {/* Barra de Progresso Mobile */}
     <div className="md:hidden w-full h-1 bg-gray-100 absolute bottom-0 left-0">
        <div className="h-full bg-green-500 transition-all duration-700 ease-out" style={{ width: `${progress}%` }}></div>
     </div>
@@ -154,8 +151,7 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
       </div>
     </div>
 
-    {/* OTIMIZAÇÃO DE LAYOUT: Bordas arredondadas no topo, base plana para não sobrepor o input */}
-    <div className="flex-grow flex-1 min-h-0 bg-white rounded-t-[1.5rem] md:rounded-t-[2.5rem] border-x border-t border-gray-200 shadow-inner flex flex-col overflow-hidden relative mt-2 md:mt-3">
+    <div className="flex-grow flex-1 min-h-0 bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative mt-2 md:mt-3">
       <div ref={chatRef} className="flex-grow overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6 bg-gray-50/20 custom-scrollbar">
         {history.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-10">
@@ -175,7 +171,6 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
           ))
         )}
         
-        {/* STREAMING UI */}
         {isStreaming && (
            <div className="flex justify-start animate-in slide-in-from-bottom-2">
              <div className="max-w-[85%] md:max-w-[80%] p-2.5 px-4 md:p-3 md:px-5 rounded-xl md:rounded-2xl text-xs md:text-sm shadow-sm border bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium whitespace-pre-wrap">
@@ -292,10 +287,14 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         const container = chatContainerRef.current;
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
-    if (vitals.hr === 0 && isMonitorConnected && !isFinished) handleFinishSim('death');
+    // Correção: Segurança para não disparar múltiplas vezes o óbito
+    if (vitals.hr === 0 && isMonitorConnected && !isFinished && !isProcessing) {
+      handleFinishSim('death');
+    }
   }, [history, isProcessing, isStreaming, streamingText, vitals.hr, isFinished]);
 
   const handleFinishSim = async (reason: 'success' | 'death' | 'manual') => {
+    if (isFinished) return;
     setEndReason(reason);
     setIsFinished(true);
     setIsProcessing(true);
@@ -312,7 +311,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
 
   const processAction = async (text: string, isFromSOS: boolean = false) => {
     initAudio();
-    if (!text.trim() || isProcessing || !currentPhase) return;
+    if (!text.trim() || isProcessing || !currentPhase || isFinished) return;
     
     setIsProcessing(true);
     setHistory(prev => [...prev, { role: 'user', text: isFromSOS ? `[AJUDA DO PRECEPTOR] A equipe conduta: ${text}` : text }]);
@@ -323,9 +322,9 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     setIsStreaming(true);
     setStreamingText('');
 
-    // MOTOR DE IMERSÃO: Instruções estritas para forçar o realismo clínico e impedir respostas vazias
-    const systemPrompt = `Você é o paciente e o ambiente clínico. Cena Atual: ${dynamicNarrative}
-    REGRA ABSOLUTA DE INTERATIVIDADE: Aja de forma imersiva e realista. Nunca responda apenas com reticências ("..."). Sempre descreva detalhadamente a reação física do paciente, sua fala (se houver), ou as mudanças sutis percebidas no exame físico em resposta à conduta da equipe médica.`;
+    // Inteligência de Prompt para o Narrador: Exigindo interatividade e proibindo reticências isoladas.
+    const systemPrompt = `Você é o paciente e o preceptor. Cena: ${dynamicNarrative}
+    REGRA ABSOLUTA: Seja hiper-realista. NUNCA responda apenas com "...". Descreva sempre uma reação física, uma fala do paciente ou uma mudança sutil nos achados vitais baseada na ação do aluno.`;
 
     try {
       const res = await fetchAdvancedAIWithStream(
@@ -339,8 +338,9 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       
       setIsStreaming(false);
 
-      if (res?.newPhaseId === "FINISH") {
-        handleFinishSim('success');
+      // CORREÇÃO CRÍTICA: Escuta dupla para encerramento (JSON explícito ou identificação textual)
+      if (res?.newPhaseId === "FINISH" || /simula[çc][aã]o encerrada|óbito confirmado/i.test(res?.text || "")) {
+        handleFinishSim(vitals.hr === 0 ? 'death' : 'success');
         return;
       }
 
@@ -354,16 +354,17 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       }
 
       if (res?.vitalsUpdate) setVitals(res.vitalsUpdate);
-      if (res?.text) {
+      
+      if (res?.text && res.text.trim() !== "..." && res.text.trim() !== "") {
         let cleanText = res.text.replace(/^(Narrador|Paciente):\s*/i, '').trim();
         setDynamicNarrative(cleanText);
         setHistory(prev => [...prev, { role: 'narrator', text: cleanText }]);
       } else {
-        setHistory(prev => [...prev, { role: 'narrator', text: "A conduta não surtiu alteração clínica evidente. Prossiga." }]);
+        setHistory(prev => [...prev, { role: 'narrator', text: "O paciente observa atentamente a sua conduta. Os achados clínicos permanecem inalterados." }]);
       }
     } catch (err) {
       setIsStreaming(false);
-      setHistory(prev => [...prev, { role: 'narrator', text: "A equipe aguarda ordens claras." }]);
+      setHistory(prev => [...prev, { role: 'narrator', text: "A equipe aguarda ordens clínicas claras para prosseguir." }]);
     } finally {
       setIsProcessing(false);
       setStreamingText('');
@@ -373,12 +374,20 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const handleRequestHelp = async () => {
     initAudio(); 
     setIsProcessing(true);
+    // Penalidade direta e imersiva
     setScores(prev => ({ ...prev, tecnica: prev.tecnica - 1.0 }));
+    
+    // CORREÇÃO DO BLOQUEIO SOS: Adição do Try/Catch/Finally
     try {
       const options = await generateRpgOptions(currentPhase.transitions || [], dynamicNarrative || currentPhase.narrative);
-      setSosOptions(options); 
+      if (options && options.length > 0) {
+         setSosOptions(options); 
+      } else {
+         setHistory(prev => [...prev, { role: 'narrator', text: "⚠️ [SISTEMA] O preceptor está indisponível no momento. Você deve prosseguir com o seu raciocínio clínico." }]);
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Erro no SOS:", error);
+      setHistory(prev => [...prev, { role: 'narrator', text: "⚠️ [SISTEMA] O preceptor está indisponível no momento. Você deve prosseguir com o seu raciocínio clínico." }]);
     } finally {
       setIsProcessing(false);
     }
@@ -416,8 +425,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         <section className="flex-grow flex flex-col h-full overflow-hidden min-h-0 relative">
           <ChatBoard narrative={dynamicNarrative} history={history} isProcessing={isProcessing} isStreaming={isStreaming} streamingText={streamingText} chatRef={chatContainerRef} />
           
-          {/* OTIMIZAÇÃO DE LAYOUT: O container de Input não flutua mais (sem absolute bottom-0). Ele é o bloco final do Flex, não encavalando com o texto. */}
-          <div className="p-2 md:p-4 bg-white border-x border-b border-t border-gray-200 shrink-0 z-10 rounded-b-[1.5rem] md:rounded-b-[2.5rem] shadow-sm">
+          <div className="p-2 md:p-4 bg-white border-t border-gray-100 shrink-0 mt-auto rounded-b-[1.5rem] md:rounded-b-[2.5rem] shadow-inner">
             {sosOptions ? (
               <div className="animate-in slide-in-from-bottom-2 space-y-2 md:space-y-4">
                 <div className="flex justify-between items-center mb-1">

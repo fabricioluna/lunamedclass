@@ -1,6 +1,6 @@
 /**
  * LUNA ENGINE - AI SERVICE 
- * Versão: 5.0 (Arquitetura Big Tech - Streaming de Tokens e Partial JSON Parsing)
+ * Versão: 5.1 (Arquitetura Big Tech - Streaming de Tokens e Partial JSON Parsing)
  */
 
 export interface SosOption {
@@ -47,7 +47,7 @@ export const getAIResponse = async (prompt: string, context: string = "", isFina
       body: JSON.stringify({ prompt, context, isFinalEvaluation }),
     }, 2, 20000);
 
-    return data.response || data.text || "Sem resposta da engine."; 
+    return data?.response || data?.text || "Sem resposta da engine."; 
   } catch (error) {
     console.error("[Luna Engine] Erro Crítico de Conexão:", error);
     return "⚠️ [SISTEMA] Doutor(a), a conexão com o prontuário eletrônico está instável. Por favor, reavalie os dados e tente enviar novamente em alguns segundos.";
@@ -76,7 +76,7 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
 };
 
 // ============================================================================
-// LUNA ENGINE 5.0 - STREAMING DE TOKENS COM EXTRAÇÃO DE JSON PARCIAL
+// LUNA ENGINE 5.1 - STREAMING DE TOKENS COM EXTRAÇÃO DE JSON PARCIAL
 // ============================================================================
 export const fetchAdvancedAIWithStream = async (
   prompt: string, 
@@ -93,7 +93,6 @@ export const fetchAdvancedAIWithStream = async (
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
-    // Se o backend não suportar streaming (ReadableStream indisponível), faz o fallback elegante
     if (!response.body) {
       const data = await response.json();
       onToken(data.text || "");
@@ -108,11 +107,8 @@ export const fetchAdvancedAIWithStream = async (
       const { done, value } = await reader.read();
       if (done) break;
       
-      // Concatena os pacotes de rede (chunks)
       rawJson += decoder.decode(value, { stream: true });
       
-      // MOTOR DE EXTRAÇÃO DINÂMICA: Lê o campo "text" mesmo que o JSON não tenha terminado de chegar
-      // Expressão Regular: Encontra "text":" e captura tudo até o fim do buffer atual ignorando aspas escapadas
       const textMatch = rawJson.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)/);
       if (textMatch && textMatch[1]) {
          const partial = textMatch[1]
@@ -123,7 +119,6 @@ export const fetchAdvancedAIWithStream = async (
       }
     }
 
-    // No final do stream, faz o parse seguro para extrair Sinais Vitais e Transições
     return JSON.parse(rawJson);
   } catch (error) {
     console.error("[Luna Stream Engine] Falha no Stream. Acionando Fallback:", error);
@@ -218,18 +213,18 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
     
     const correctTrigger = validTransitions[0].triggers[0];
     
-    const prompt = `Você é um preceptor médico criando um desafio imersivo.
+    const prompt = `Você é um preceptor médico orientando um residente em dúvida.
     Cenário: "${narrative}". 
-    Conduta correta esperada: "${correctTrigger}".
+    Ação correta que ele DEVE tomar agora: "${correctTrigger}".
     
-    Crie 3 condutas INCORRETAS que seriam plausíveis, porém erradas ou secundárias para este exato momento. Devem ser condutas verbais ou ações clínicas diretas.
-    Retorne APENAS um array JSON de strings, incluindo a conduta correta: ["${correctTrigger}", "errada1", "errada2", "errada3"]`;
+    Crie 3 condutas INCORRETAS plausíveis (distratores clínicos) para este momento.
+    Retorne APENAS um array JSON estrito: ["${correctTrigger}", "distrator1", "distrator2", "distrator3"]. Nenhuma outra palavra.`;
 
     try {
         const res = await getAIResponse(prompt, "Gerador de Desafio SOS");
         const stringArray = extractJson(res);
         
-        if (!Array.isArray(stringArray)) throw new Error("Invalid SOS format");
+        if (!Array.isArray(stringArray) || stringArray.length < 2) throw new Error("Invalid SOS format");
 
         if (!stringArray.some(s => s.toLowerCase().includes(correctTrigger.toLowerCase()))) {
             stringArray[0] = correctTrigger;
@@ -248,7 +243,7 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
     } catch (error) {
         return [{ 
             id: 'emergency-fallback', 
-            text: `[Conduta Padrão] ${correctTrigger}`, 
+            text: `(Conduta Sugerida) ${correctTrigger}`, 
             isCorrect: true, 
             transitionRef: validTransitions[0] 
         }];
