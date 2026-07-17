@@ -59,17 +59,34 @@ const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: b
 // MICRO-COMPONENTES DE UI
 // ============================================================================
 
-const SimulationHeader = ({ title, onManualEnd, onBack }: any) => (
-  <header className="h-[50px] md:h-[56px] bg-white border-b border-gray-200 flex justify-between items-center px-4 md:px-6 shrink-0 z-50 shadow-sm">
-    <div className="flex items-center gap-2 overflow-hidden mr-2">
-      <Zap size={16} className="text-blue-600 fill-blue-600 shrink-0"/>
-      <h2 className="text-[10px] md:text-[12px] font-black text-[#003366] uppercase tracking-wider truncate">{title}</h2>
+const SimulationHeader = ({ title, progress, onManualEnd, onBack }: any) => (
+  <header className="h-[60px] md:h-[70px] bg-white border-b border-gray-200 flex flex-col justify-center px-4 md:px-6 shrink-0 z-50 shadow-sm relative">
+    <div className="flex justify-between items-center w-full">
+      <div className="flex items-center gap-2 overflow-hidden mr-2">
+        <Zap size={16} className="text-blue-600 fill-blue-600 shrink-0"/>
+        <h2 className="text-[10px] md:text-[12px] font-black text-[#003366] uppercase tracking-wider truncate">{title}</h2>
+      </div>
+      <div className="flex gap-2 md:gap-4 items-center shrink-0">
+        
+        {/* BARRA DE PROGRESSO - GAMIFICAÇÃO */}
+        <div className="hidden md:flex items-center gap-2 mr-4 border-r border-gray-200 pr-4">
+          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Conclusão</span>
+          <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-green-500 transition-all duration-700 ease-out" style={{ width: `${progress}%` }}></div>
+          </div>
+          <span className="text-[10px] font-black text-green-600">{progress.toFixed(0)}%</span>
+        </div>
+
+        <button onClick={onManualEnd} className="bg-red-50 text-red-600 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 md:gap-2">
+          <XCircle size={12} className="md:w-3.5 md:h-3.5"/> <span className="hidden sm:inline">Finalizar Atendimento</span><span className="sm:hidden">Finalizar</span>
+        </button>
+        <RotateCcw size={16} className="md:w-4 md:h-4 text-gray-300 cursor-pointer hover:text-red-500" onClick={onBack}/>
+      </div>
     </div>
-    <div className="flex gap-2 md:gap-4 items-center shrink-0">
-      <button onClick={onManualEnd} className="bg-red-50 text-red-600 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 md:gap-2">
-        <XCircle size={12} className="md:w-3.5 md:h-3.5"/> <span className="hidden sm:inline">Finalizar Atendimento</span><span className="sm:hidden">Finalizar</span>
-      </button>
-      <RotateCcw size={16} className="md:w-4 md:h-4 text-gray-300 cursor-pointer hover:text-red-500" onClick={onBack}/>
+    
+    {/* Barra de Progresso Mobile */}
+    <div className="md:hidden w-full h-1 bg-gray-100 absolute bottom-0 left-0">
+       <div className="h-full bg-green-500 transition-all duration-700 ease-out" style={{ width: `${progress}%` }}></div>
     </div>
   </header>
 );
@@ -137,7 +154,8 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
       </div>
     </div>
 
-    <div className="flex-grow flex-1 min-h-0 bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-200 shadow-inner flex flex-col overflow-hidden relative mt-2 md:mt-3">
+    {/* OTIMIZAÇÃO DE LAYOUT: Bordas arredondadas no topo, base plana para não sobrepor o input */}
+    <div className="flex-grow flex-1 min-h-0 bg-white rounded-t-[1.5rem] md:rounded-t-[2.5rem] border-x border-t border-gray-200 shadow-inner flex flex-col overflow-hidden relative mt-2 md:mt-3">
       <div ref={chatRef} className="flex-grow overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6 bg-gray-50/20 custom-scrollbar">
         {history.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-10">
@@ -305,10 +323,14 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     setIsStreaming(true);
     setStreamingText('');
 
+    // MOTOR DE IMERSÃO: Instruções estritas para forçar o realismo clínico e impedir respostas vazias
+    const systemPrompt = `Você é o paciente e o ambiente clínico. Cena Atual: ${dynamicNarrative}
+    REGRA ABSOLUTA DE INTERATIVIDADE: Aja de forma imersiva e realista. Nunca responda apenas com reticências ("..."). Sempre descreva detalhadamente a reação física do paciente, sua fala (se houver), ou as mudanças sutis percebidas no exame físico em resposta à conduta da equipe médica.`;
+
     try {
       const res = await fetchAdvancedAIWithStream(
         text, 
-        `Mestre de RPG. Cena Atual: ${dynamicNarrative}`, 
+        systemPrompt, 
         { transitions: currentPhase.transitions },
         (partialText) => {
           setStreamingText(partialText.replace(/^(Narrador|Paciente):\s*/i, ''));
@@ -324,7 +346,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
 
       if (res?.newPhaseId && res.newPhaseId !== currentPhaseId) {
           playSuccess();
-          // Penalidade aplicada se avançar via SOS
           setScores(prev => ({ ...prev, tecnica: prev.tecnica + (isFromSOS ? 0.2 : 1.0) }));
           setCurrentPhaseId(res.newPhaseId);
       } else if (res?.vitalsUpdate && (res.vitalsUpdate.hr > 125 || res.vitalsUpdate.sat < 90)) {
@@ -352,7 +373,6 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const handleRequestHelp = async () => {
     initAudio(); 
     setIsProcessing(true);
-    // Penalidade direta por acionar o SOS
     setScores(prev => ({ ...prev, tecnica: prev.tecnica - 1.0 }));
     try {
       const options = await generateRpgOptions(currentPhase.transitions || [], dynamicNarrative || currentPhase.narrative);
@@ -373,11 +393,19 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) handleFinishSim('manual');
   };
 
+  // Gamificação: Cálculo de Progresso Seguro
+  const totalPhases = Object.keys(station.phases).length;
+  const maxExpectedScore = Math.max(1, totalPhases - 1);
+  let progressPercent = (scores.tecnica / maxExpectedScore) * 100;
+  if (progressPercent > 100) progressPercent = 100;
+  if (progressPercent < 0) progressPercent = 0;
+  if (isFinished && endReason === 'success') progressPercent = 100;
+
   if (isFinished) return <FeedbackScreen endReason={endReason} feedback={finalFeedback} onFinish={() => { if(onSaveResult && finalFeedback) onSaveResult(finalFeedback.nota, 10, 0, { history, feedback: finalFeedback }); onBack(); }} />;
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-100 select-none">
-      <SimulationHeader title={station.title} onManualEnd={handleManualEnd} onBack={onBack} />
+      <SimulationHeader title={station.title} progress={progressPercent} onManualEnd={handleManualEnd} onBack={onBack} />
       
       <main className="flex-grow flex flex-col lg:flex-row p-2 md:p-3 gap-2 md:gap-3 overflow-hidden min-h-0">
         <aside className="w-full lg:w-[340px] flex flex-col gap-2 md:gap-3 shrink-0 h-auto lg:h-full lg:overflow-hidden">
@@ -388,7 +416,8 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
         <section className="flex-grow flex flex-col h-full overflow-hidden min-h-0 relative">
           <ChatBoard narrative={dynamicNarrative} history={history} isProcessing={isProcessing} isStreaming={isStreaming} streamingText={streamingText} chatRef={chatContainerRef} />
           
-          <div className="p-2 md:p-4 bg-white border-t border-gray-100 shrink-0 absolute bottom-0 left-0 right-0 z-10 rounded-b-[1.5rem] md:rounded-b-[2.5rem]">
+          {/* OTIMIZAÇÃO DE LAYOUT: O container de Input não flutua mais (sem absolute bottom-0). Ele é o bloco final do Flex, não encavalando com o texto. */}
+          <div className="p-2 md:p-4 bg-white border-x border-b border-t border-gray-200 shrink-0 z-10 rounded-b-[1.5rem] md:rounded-b-[2.5rem] shadow-sm">
             {sosOptions ? (
               <div className="animate-in slide-in-from-bottom-2 space-y-2 md:space-y-4">
                 <div className="flex justify-between items-center mb-1">

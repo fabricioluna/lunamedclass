@@ -218,12 +218,12 @@ export const generateRpgOptions = async (validTransitions: any[], narrative: str
     
     const correctTrigger = validTransitions[0].triggers[0];
     
-    const prompt = `Você é um preceptor médico criando um desafio.
+    const prompt = `Você é um preceptor médico criando um desafio imersivo.
     Cenário: "${narrative}". 
-    Conduta correta: "${correctTrigger}".
+    Conduta correta esperada: "${correctTrigger}".
     
-    Crie 3 condutas INCORRETAS que seriam plausíveis mas erradas/secundárias para este momento.
-    Retorne APENAS um array JSON de strings, incluindo a correta: ["${correctTrigger}", "errada1", "errada2", "errada3"]`;
+    Crie 3 condutas INCORRETAS que seriam plausíveis, porém erradas ou secundárias para este exato momento. Devem ser condutas verbais ou ações clínicas diretas.
+    Retorne APENAS um array JSON de strings, incluindo a conduta correta: ["${correctTrigger}", "errada1", "errada2", "errada3"]`;
 
     try {
         const res = await getAIResponse(prompt, "Gerador de Desafio SOS");
