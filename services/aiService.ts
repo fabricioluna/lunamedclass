@@ -1,6 +1,6 @@
 /**
  * LUNA ENGINE - AI SERVICE 
- * Versão: 5.1 (Arquitetura Big Tech - Streaming de Tokens e Partial JSON Parsing)
+ * Versão: 5.2 (Arquitetura Big Tech - Streaming de Tokens e Partial JSON Parsing)
  */
 
 export interface SosOption {
@@ -76,7 +76,7 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
 };
 
 // ============================================================================
-// LUNA ENGINE 5.1 - STREAMING DE TOKENS COM EXTRAÇÃO DE JSON PARCIAL
+// LUNA ENGINE 5.2 - STREAMING DE TOKENS COM EXTRAÇÃO DE JSON PARCIAL
 // ============================================================================
 export const fetchAdvancedAIWithStream = async (
   prompt: string, 
@@ -161,6 +161,7 @@ export const generateFinalFeedback = async (history: { role: string, text: strin
   REGRAS DE RESPOSTA:
   Retorne APENAS um objeto JSON (sem markdown) no seguinte formato:
   {
+    "passosEsperados": ["Passo 1: Lavar as mãos/EPIs", "Passo 2: Exame Físico Focado...", "Passo 3: ..."],
     "postura": "Análise da comunicação e biossegurança",
     "acertos": ["Lista de condutas corretas"],
     "omissoes": ["Lista de erros ou faltas"],
@@ -170,9 +171,9 @@ export const generateFinalFeedback = async (history: { role: string, text: strin
   try {
     const res = await getAIResponse(prompt, "Avaliador de Debriefing");
     const feedback = extractJson(res);
-    return feedback || { postura: "Avaliação indisponível devido a instabilidade.", acertos: [], omissoes: [], nota: 5.0 };
+    return feedback || { passosEsperados: ["Não foi possível avaliar a sequência de passos."], postura: "Avaliação indisponível devido a instabilidade.", acertos: [], omissoes: [], nota: 5.0 };
   } catch (err) {
-    return { postura: "Erro na conexão com o preceptor virtual.", acertos: [], omissoes: [], nota: 0.0 };
+    return { passosEsperados: ["Erro de conexão."], postura: "Erro na conexão com o preceptor virtual.", acertos: [], omissoes: [], nota: 0.0 };
   }
 };
 

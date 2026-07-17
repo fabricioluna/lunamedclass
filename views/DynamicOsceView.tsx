@@ -194,7 +194,7 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
 
 const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => (
   <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-4 md:p-6 text-center overflow-y-auto">
-    <div className="max-w-2xl w-full bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500 my-auto">
+    <div className="max-w-2xl w-full bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500 my-auto mt-16 md:mt-auto">
       {endReason === 'death' ? <XCircle size={60} className="text-red-500 mb-4 md:mb-6 mx-auto animate-pulse md:w-20 md:h-20" /> : <Award size={60} className="text-[#003366] mb-4 md:mb-6 mx-auto animate-bounce md:w-20 md:h-20" />}
       <h2 className="text-xl md:text-3xl font-black text-[#003366] uppercase mb-2 md:mb-4 tracking-tighter">
         {endReason === 'death' ? "ÓBITO CONFIRMADO" : "SIMULAÇÃO ENCERRADA"}
@@ -207,6 +207,18 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => (
         </div>
       ) : (
         <div className="text-left space-y-4 md:space-y-6 animate-in fade-in duration-700 mt-4">
+          
+          {feedback.passosEsperados && feedback.passosEsperados.length > 0 && (
+            <div className="bg-gray-100/50 p-4 md:p-5 rounded-xl md:rounded-2xl border border-gray-200">
+              <h4 className="text-[9px] md:text-[10px] font-black text-gray-600 uppercase mb-1.5 md:mb-2">📋 Sequência de Passos Esperada</h4>
+              <ul className="text-[10px] md:text-[11px] text-gray-700 space-y-1">
+                {feedback.passosEsperados.map((passo: string, i: number) => (
+                  <li key={i}><strong className="text-gray-900">{i + 1}.</strong> {passo}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="bg-blue-50/50 p-4 md:p-5 rounded-xl md:rounded-2xl border border-blue-100">
             <h4 className="text-[9px] md:text-[10px] font-black text-[#003366] uppercase mb-1.5 md:mb-2">🤝 Postura e Comunicação</h4>
             <p className="text-gray-600 text-xs md:text-sm italic">"{feedback.postura}"</p>
@@ -302,7 +314,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       setFinalFeedback(feedback);
     } catch (err) {
       console.error("Erro ao gerar feedback final:", err);
-      setFinalFeedback({ postura: "Erro no servidor. Pontuação parcial salva.", acertos: [], omissoes: [], nota: Math.max(0, scores.tecnica) });
+      setFinalFeedback({ passosEsperados: ["Ocorreu uma falha no carregamento dos passos."], postura: "Erro no servidor. Pontuação parcial salva.", acertos: [], omissoes: [], nota: Math.max(0, scores.tecnica) });
     } finally {
       setIsProcessing(false);
     }
