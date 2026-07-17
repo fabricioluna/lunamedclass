@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { db, ref, get } from '../firebase';
+import { db, ref, onValue } from '../firebase';
 import { QuizResult } from '../types';
 import { Target, BrainCircuit, Activity, ChevronLeft, Zap, Star, ShieldCheck } from 'lucide-react';
 
@@ -14,28 +14,33 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchMyResults = async () => {
-      if (!db || !currentUser) {
-        setIsLoading(false);
-        return;
+    let isMounted = true;
+    
+    if (!db || !currentUser) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Refatorado para usar onValue (já exportado no seu firebase.ts) em vez de get()
+    const resultsRef = ref(db, 'quizResults');
+    const unsubscribe = onValue(resultsRef, (snapshot) => {
+      if (!isMounted) return;
+      
+      if (snapshot.exists()) {
+        const allData = snapshot.val();
+        const allResults: QuizResult[] = Object.keys(allData).map(k => ({ ...allData[k], id: k }));
+        
+        // Filtro de segurança: Garante que apenas resultados válidos sejam processados
+        const validResults = allResults.filter(r => r && typeof r.score === 'number' && typeof r.total === 'number'); 
+        setResults(validResults.reverse()); 
       }
-      try {
-        const snapshot = await get(ref(db, 'quizResults'));
-        if (snapshot.exists()) {
-          const allData = snapshot.val();
-          const allResults: QuizResult[] = Object.keys(allData).map(k => ({ ...allData[k], id: k }));
-          
-          // Filtro de segurança: Garante que apenas resultados válidos sejam processados
-          const validResults = allResults.filter(r => r && typeof r.score === 'number' && typeof r.total === 'number'); 
-          setResults(validResults.reverse()); 
-        }
-      } catch (error) {
-        console.error("Erro ao buscar desempenho:", error);
-      } finally {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
     };
-    fetchMyResults();
   }, [currentUser]);
 
   if (isLoading) {
@@ -59,9 +64,10 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
   const totalXP = results.reduce((acc, curr) => acc + (curr.score * 50), 0);
   const userLevel = Math.floor(totalXP / 1000) + 1;
 
-  // Extração segura do nome de exibição
-  const displayName = userProfile?.name || currentUser?.email || 'Aluno';
-  const initial = displayName.charAt(0).toUpperCase();
+  // Extração segura do nome de exibição ignorando erros de tipagem estrita do UserProfile
+  const profileSafe = userProfile as any;
+  const displayName = profileSafe?.name || profileSafe?.displayName || currentUser?.email || 'Aluno';
+  const initial = typeof displayName === 'string' && displayName.length > 0 ? displayName.charAt(0).toUpperCase() : 'A';
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-500 pb-32">
@@ -86,7 +92,7 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
           </div>
           <div>
             <h2 className="text-2xl font-black">{displayName}</h2>
-            <p className="text-blue-200 text-xs uppercase tracking-widest mt-1">Nível {userLevel} • {userProfile?.periodId ? `Período ${userProfile.periodId}` : 'Luna MedClass'}</p>
+            <p className="text-blue-200 text-xs uppercase tracking-widest mt-1">Nível {userLevel} • {profileSafe?.periodId ? `Período ${profileSafe.periodId}` : 'Luna MedClass'}</p>
           </div>
         </div>
 

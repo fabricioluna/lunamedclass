@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DynamicOsceStation, SimulationPhase, ClinicalState } from '../types';
-import { Activity, MessageSquare, ShieldCheck, AlertTriangle, ChevronRight, RotateCcw, Award, Timer, BarChart3, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle, CheckCircle2 } from 'lucide-react';
+import { Activity, ShieldCheck, ChevronRight, RotateCcw, Award, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle } from 'lucide-react';
 import { fetchAdvancedAIWithStream, generateRpgOptions, generateFinalFeedback } from '../services/aiService';
 
 // ============================================================================
@@ -157,7 +157,7 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
           ))
         )}
         
-        {/* STREAMING UI: Exibe as palavras chegando do Narrador em tempo real */}
+        {/* STREAMING UI */}
         {isStreaming && (
            <div className="flex justify-start animate-in slide-in-from-bottom-2">
              <div className="max-w-[85%] md:max-w-[80%] p-2.5 px-4 md:p-3 md:px-5 rounded-xl md:rounded-2xl text-xs md:text-sm shadow-sm border bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium whitespace-pre-wrap">
@@ -202,13 +202,13 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => (
             <div className="bg-green-50 p-3 md:p-4 rounded-xl md:rounded-2xl">
               <h4 className="text-[9px] md:text-[10px] font-black text-green-600 uppercase mb-1.5 md:mb-2">🎯 Acertos</h4>
               <ul className="text-[10px] md:text-[11px] text-green-700 space-y-1">
-                {feedback.acertos.map((a:string, i:number) => <li key={i}>• {a}</li>)}
+                {feedback.acertos?.map((a:string, i:number) => <li key={i}>• {a}</li>)}
               </ul>
             </div>
             <div className="bg-red-50 p-3 md:p-4 rounded-xl md:rounded-2xl">
               <h4 className="text-[9px] md:text-[10px] font-black text-red-600 uppercase mb-1.5 md:mb-2">⚠️ Omissões</h4>
               <ul className="text-[10px] md:text-[11px] text-red-700 space-y-1">
-                {feedback.omissoes.map((o:string, i:number) => <li key={i}>• {o}</li>)}
+                {feedback.omissoes?.map((o:string, i:number) => <li key={i}>• {o}</li>)}
               </ul>
             </div>
           </div>
@@ -252,8 +252,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const [isProcessing, setIsProcessing] = useState(false);
   const [sosOptions, setSosOptions] = useState<any[] | null>(null);
   const [finalFeedback, setFinalFeedback] = useState<any | null>(null);
-
-  // Estados de Streaming
+  
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
 
@@ -287,16 +286,18 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       setFinalFeedback(feedback);
     } catch (err) {
       console.error("Erro ao gerar feedback final:", err);
+      setFinalFeedback({ postura: "Erro no servidor. Pontuação parcial salva.", acertos: [], omissoes: [], nota: Math.max(0, scores.tecnica) });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const processAction = async (text: string) => {
+  const processAction = async (text: string, isFromSOS: boolean = false) => {
     initAudio();
     if (!text.trim() || isProcessing || !currentPhase) return;
+    
     setIsProcessing(true);
-    setHistory(prev => [...prev, { role: 'user', text }]);
+    setHistory(prev => [...prev, { role: 'user', text: isFromSOS ? `[AJUDA DO PRECEPTOR] A equipe conduta: ${text}` : text }]);
     setInputText('');
 
     if (/(monitor|ox[ií]metr|sinais vitais|ssvv|press[aã]o|eletro|ecg|cabos|satura[çc][aã]o|frequ[êe]ncia)/i.test(text)) setIsMonitorConnected(true);
@@ -305,10 +306,9 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     setStreamingText('');
 
     try {
-      // Usando a nova função com Streaming injetada anteriormente no aiService
       const res = await fetchAdvancedAIWithStream(
         text, 
-        `Você é o Mestre de RPG (Narrador). Cena Atual: ${dynamicNarrative}`, 
+        `Mestre de RPG. Cena Atual: ${dynamicNarrative}`, 
         { transitions: currentPhase.transitions },
         (partialText) => {
           setStreamingText(partialText.replace(/^(Narrador|Paciente):\s*/i, ''));
@@ -317,29 +317,32 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
       
       setIsStreaming(false);
 
-      if (res.newPhaseId === "FINISH") {
+      if (res?.newPhaseId === "FINISH") {
         handleFinishSim('success');
         return;
       }
 
-      if (res.newPhaseId && res.newPhaseId !== currentPhaseId) {
+      if (res?.newPhaseId && res.newPhaseId !== currentPhaseId) {
           playSuccess();
-          setScores(prev => ({ ...prev, tecnica: prev.tecnica + 1.0 }));
+          // Penalidade aplicada se avançar via SOS
+          setScores(prev => ({ ...prev, tecnica: prev.tecnica + (isFromSOS ? 0.2 : 1.0) }));
           setCurrentPhaseId(res.newPhaseId);
-      } else if (res.vitalsUpdate && (res.vitalsUpdate.hr > 125 || res.vitalsUpdate.sat < 90)) {
+      } else if (res?.vitalsUpdate && (res.vitalsUpdate.hr > 125 || res.vitalsUpdate.sat < 90)) {
           playError();
           setScores(prev => ({ ...prev, tecnica: prev.tecnica - 0.5 }));
       }
 
-      if (res.vitalsUpdate) setVitals(res.vitalsUpdate);
-      if (res.text) {
+      if (res?.vitalsUpdate) setVitals(res.vitalsUpdate);
+      if (res?.text) {
         let cleanText = res.text.replace(/^(Narrador|Paciente):\s*/i, '').trim();
         setDynamicNarrative(cleanText);
         setHistory(prev => [...prev, { role: 'narrator', text: cleanText }]);
+      } else {
+        setHistory(prev => [...prev, { role: 'narrator', text: "A conduta não surtiu alteração clínica evidente. Prossiga." }]);
       }
     } catch (err) {
       setIsStreaming(false);
-      setHistory(prev => [...prev, { role: 'narrator', text: "A equipe aguarda ordens precisas." }]);
+      setHistory(prev => [...prev, { role: 'narrator', text: "A equipe aguarda ordens claras." }]);
     } finally {
       setIsProcessing(false);
       setStreamingText('');
@@ -347,14 +350,23 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   };
 
   const handleRequestHelp = async () => {
-    initAudio(); setIsProcessing(true);
-    const options = await generateRpgOptions(currentPhase.transitions || [], dynamicNarrative || currentPhase.narrative);
-    setSosOptions(options); setIsProcessing(false);
+    initAudio(); 
+    setIsProcessing(true);
+    // Penalidade direta por acionar o SOS
+    setScores(prev => ({ ...prev, tecnica: prev.tecnica - 1.0 }));
+    try {
+      const options = await generateRpgOptions(currentPhase.transitions || [], dynamicNarrative || currentPhase.narrative);
+      setSosOptions(options); 
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSosChoice = async (option: any) => {
     setSosOptions(null);
-    await processAction(option.text); 
+    await processAction(option.text, true); 
   };
 
   const handleManualEnd = () => {
@@ -380,11 +392,11 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
             {sosOptions ? (
               <div className="animate-in slide-in-from-bottom-2 space-y-2 md:space-y-4">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase flex items-center gap-1.5 md:gap-2"><HelpCircle size={12} className="md:w-3.5 md:h-3.5"/> SOS MÉDICO</span>
-                  <button onClick={() => setSosOptions(null)} className="text-[9px] md:text-[10px] font-black text-gray-400 hover:text-red-500 uppercase">Voltar</button>
+                  <span className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase flex items-center gap-1.5 md:gap-2"><HelpCircle size={12} className="md:w-3.5 md:h-3.5"/> SOS MÉDICO (Ajuda Solicitada)</span>
+                  <button onClick={() => setSosOptions(null)} className="text-[9px] md:text-[10px] font-black text-gray-400 hover:text-red-500 uppercase">Fechar</button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 max-h-[30vh] overflow-y-auto custom-scrollbar">
-                  {sosOptions.map(opt => (
+                  {sosOptions.map((opt: any) => (
                     <button key={opt.id} onClick={() => handleSosChoice(opt)} className="bg-white border-2 border-orange-100 p-3 md:p-4 rounded-xl md:rounded-3xl text-left text-[11px] md:text-xs font-bold hover:border-orange-500 hover:bg-orange-50/50 transition-all flex justify-between items-center group shadow-sm">
                         <span className="leading-snug pr-2 md:pr-4 truncate block">{opt.text}</span>
                         <ChevronRight className="text-orange-200 group-hover:text-orange-500 shrink-0" size={16}/>
