@@ -21,7 +21,6 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
       return;
     }
 
-    // Refatorado para usar onValue (já exportado no seu firebase.ts) em vez de get()
     const resultsRef = ref(db, 'quizResults');
     const unsubscribe = onValue(resultsRef, (snapshot) => {
       if (!isMounted) return;
@@ -30,7 +29,8 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
         const allData = snapshot.val();
         const allResults: QuizResult[] = Object.keys(allData).map(k => ({ ...allData[k], id: k }));
         
-        // Filtro de segurança: Garante que apenas resultados válidos sejam processados
+        // Filtro de Segurança
+        // Nota: Garante que apenas resultados válidos sejam processados. Em versões futuras do App.tsx, a propriedade userId deverá ser salva diretamente no quizResults.
         const validResults = allResults.filter(r => r && typeof r.score === 'number' && typeof r.total === 'number'); 
         setResults(validResults.reverse()); 
       }
@@ -61,10 +61,10 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
     ? (results.reduce((acc, curr) => acc + (curr.score / curr.total) * 10, 0) / totalSimulations).toFixed(1) 
     : '0.0';
 
-  const totalXP = results.reduce((acc, curr) => acc + (curr.score * 50), 0);
+  const totalXP = results.reduce((acc, curr) => acc + ((curr.score || 0) * 50), 0);
   const userLevel = Math.floor(totalXP / 1000) + 1;
 
-  // Extração segura do nome de exibição ignorando erros de tipagem estrita do UserProfile
+  // Extração segura do nome de exibição (Type Casting necessário pois .name não existe estritamente em Firebase UserProfile)
   const profileSafe = userProfile as any;
   const displayName = profileSafe?.name || profileSafe?.displayName || currentUser?.email || 'Aluno';
   const initial = typeof displayName === 'string' && displayName.length > 0 ? displayName.charAt(0).toUpperCase() : 'A';
@@ -82,7 +82,6 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Header Gamificado */}
       <div className="bg-gradient-to-br from-[#003366] to-[#001f3f] p-8 md:p-10 rounded-[2.5rem] shadow-2xl text-white mb-8 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="absolute -right-10 -top-10 opacity-10"><BrainCircuit size={200} /></div>
         
@@ -108,7 +107,6 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Cartões de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center hover:shadow-md transition-shadow">
           <div className="w-12 h-12 bg-blue-50 text-[#003366] rounded-2xl flex items-center justify-center mb-4"><Target size={24}/></div>
@@ -127,7 +125,6 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Histórico Recente */}
       <h3 className="text-sm font-black text-[#003366] uppercase tracking-widest mb-6 border-b border-gray-200 pb-2">Histórico Recente</h3>
       
       {results.length === 0 ? (

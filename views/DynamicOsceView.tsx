@@ -59,7 +59,7 @@ const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: b
 // MICRO-COMPONENTES DE UI
 // ============================================================================
 
-const SimulationHeader = ({ title, progress, onManualEnd, onBack }: any) => (
+const SimulationHeader = ({ title, onManualEnd, onBack }: any) => (
   <header className="h-[60px] md:h-[70px] bg-white border-b border-gray-200 flex flex-col justify-center px-4 md:px-6 shrink-0 z-50 shadow-sm relative">
     <div className="flex justify-between items-center w-full">
       <div className="flex items-center gap-2 overflow-hidden mr-2">
@@ -68,22 +68,11 @@ const SimulationHeader = ({ title, progress, onManualEnd, onBack }: any) => (
       </div>
       
       <div className="flex gap-2 md:gap-4 items-center shrink-0">
-        <div className="hidden md:flex items-center gap-2 mr-4 border-r border-gray-200 pr-4">
-          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Conclusão</span>
-          <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-green-500 transition-all duration-700 ease-out" style={{ width: `${progress}%` }}></div>
-          </div>
-          <span className="text-[10px] font-black text-green-600">{progress.toFixed(0)}%</span>
-        </div>
-
         <button onClick={onManualEnd} className="bg-red-50 text-red-600 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 md:gap-2">
           <XCircle size={12} className="md:w-3.5 md:h-3.5"/> <span className="hidden sm:inline">Finalizar Atendimento</span><span className="sm:hidden">Finalizar</span>
         </button>
         <RotateCcw size={16} className="md:w-4 md:h-4 text-gray-300 cursor-pointer hover:text-red-500" onClick={onBack}/>
       </div>
-    </div>
-    <div className="md:hidden w-full h-1 bg-gray-100 absolute bottom-0 left-0">
-       <div className="h-full bg-green-500 transition-all duration-700 ease-out" style={{ width: `${progress}%` }}></div>
     </div>
   </header>
 );
@@ -196,7 +185,6 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => {
   const handlePrint = () => window.print();
 
   return (
-    // CORREÇÃO DO LAYOUT: min-h-screen com padding Y e justify-start evita o corte no topo.
     <div className="min-h-screen w-full bg-gray-50 overflow-y-auto flex flex-col items-center justify-start py-10 px-4 md:px-8 print:bg-white print:py-0 print:px-0">
       <div className="max-w-3xl w-full bg-white p-8 md:p-14 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 h-fit animate-in zoom-in-95 duration-500 print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full">
         
@@ -442,18 +430,11 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     if(window.confirm("Deseja encerrar o atendimento para colher o feedback final?")) handleFinishSim('manual');
   };
 
-  const totalPhases = Object.keys(station.phases).length;
-  const maxExpectedScore = Math.max(1, totalPhases - 1);
-  let progressPercent = (scores.tecnica / maxExpectedScore) * 100;
-  if (progressPercent > 100) progressPercent = 100;
-  if (progressPercent < 0) progressPercent = 0;
-  if (isFinished && endReason === 'success') progressPercent = 100;
-
   if (isFinished) return <FeedbackScreen endReason={endReason} feedback={finalFeedback} onFinish={() => { if(onSaveResult && finalFeedback) onSaveResult(finalFeedback.nota, 10, 0, { history, feedback: finalFeedback }); onBack(); }} />;
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-100 select-none">
-      <SimulationHeader title={station.title} progress={progressPercent} onManualEnd={handleManualEnd} onBack={onBack} />
+      <SimulationHeader title={station.title} onManualEnd={handleManualEnd} onBack={onBack} />
       
       <main className="flex-grow flex flex-col lg:flex-row p-2 md:p-3 gap-2 md:gap-3 overflow-hidden min-h-0">
         <aside className="w-full lg:w-[340px] flex flex-col gap-2 md:gap-3 shrink-0 h-auto lg:h-full lg:overflow-hidden">
