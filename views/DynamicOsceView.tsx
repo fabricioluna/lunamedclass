@@ -196,8 +196,9 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => {
   const handlePrint = () => window.print();
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center bg-gray-50 p-4 md:p-8 overflow-y-auto print:bg-white print:p-0">
-      <div className="max-w-3xl w-full bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-500 mt-4 md:mt-8 mb-12 print:shadow-none print:border-none print:m-0 print:p-0">
+    // CORREÇÃO DO LAYOUT: min-h-screen com padding Y e justify-start evita o corte no topo.
+    <div className="min-h-screen w-full bg-gray-50 overflow-y-auto flex flex-col items-center justify-start py-10 px-4 md:px-8 print:bg-white print:py-0 print:px-0">
+      <div className="max-w-3xl w-full bg-white p-8 md:p-14 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 h-fit animate-in zoom-in-95 duration-500 print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full">
         
         <div className="text-center print:hidden">
           {endReason === 'death' ? <XCircle size={60} className="text-red-500 mb-4 md:mb-6 mx-auto animate-pulse md:w-20 md:h-20" /> : <Award size={60} className="text-[#003366] mb-4 md:mb-6 mx-auto animate-bounce md:w-20 md:h-20" />}
@@ -206,7 +207,7 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => {
           </h2>
         </div>
 
-        {/* Print Header only visible in PDF */}
+        {/* CABEÇALHO DE IMPRESSÃO (Só aparece no PDF gerado) */}
         <div className="hidden print:block mb-8 border-b-2 border-gray-100 pb-4 text-center">
            <h1 className="text-3xl font-black text-[#003366] uppercase tracking-tighter">Relatório Clínico - OSCE</h1>
            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">Documento acadêmico gerado pela Luna Engine 2.0</p>
@@ -254,6 +255,7 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => {
               </div>
             </div>
 
+            {/* BOTÕES NATIVOS DA INTERFACE WEB (Escondidos no PDF) */}
             <div className="bg-[#003366] p-5 md:p-8 rounded-2xl md:rounded-3xl flex flex-col sm:flex-row justify-between items-center shadow-xl mt-6 print:hidden gap-5">
               <div className="text-center sm:text-left">
                 <span className="text-blue-300 text-[10px] md:text-[11px] font-black uppercase tracking-widest block mb-1">Nota Final</span>
@@ -275,9 +277,9 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => {
               </div>
             </div>
 
-            {/* Print Note Only */}
+            {/* ASSINATURA E NOTA NO PDF (Aparece Apenas na Impressão) */}
             <div className="hidden print:block mt-8 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-t pt-4">
-              Nota Final: {Number(feedback.nota).toFixed(1)}/10
+              Nota Final do Residente: {Number(feedback.nota).toFixed(1)}/10
             </div>
           </div>
         )}
