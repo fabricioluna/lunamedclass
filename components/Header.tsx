@@ -96,6 +96,17 @@ const Header: React.FC = () => {
 
             {/* Menu Desktop */}
             <nav className="hidden lg:flex items-center flex-wrap justify-end gap-2 xl:gap-3 flex-grow">
+              
+              {/* BOTÃO GAMIFICADO DO ESTUDANTE INJETADO AQUI */}
+              {currentUser && (
+                <button 
+                  onClick={() => navigateTo('/dashboard')}
+                  className="flex items-center text-[9px] xl:text-[10px] uppercase tracking-widest font-black bg-[#D4A017] border-2 border-[#D4A017] text-[#003366] px-3 xl:px-5 py-2 rounded-lg hover:bg-transparent hover:text-[#D4A017] transition-all whitespace-nowrap shadow-md"
+                >
+                  📈 MEU DESEMPENHO
+                </button>
+              )}
+
               <button 
                 onClick={() => navigateTo('/simulators')}
                 className="flex items-center text-[9px] xl:text-[10px] uppercase tracking-widest font-black bg-transparent border-2 border-[#D4A017] text-[#D4A017] px-3 xl:px-5 py-2 rounded-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all whitespace-nowrap"
@@ -222,6 +233,16 @@ const Header: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* BOTÃO MOBILE INJETADO */}
+              {currentUser && (
+                <button 
+                  onClick={() => navigateTo('/dashboard')}
+                  className="w-full text-left py-3 px-4 text-sm font-black bg-[#D4A017] border-2 border-[#D4A017] text-[#003366] rounded-lg hover:bg-transparent hover:text-[#D4A017] transition-all shadow-md"
+                >
+                  📈 MEU DESEMPENHO
+                </button>
               )}
 
               <button 
