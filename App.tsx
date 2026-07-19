@@ -28,6 +28,7 @@ const SurveyView = lazy(() => import('./views/SurveyView'));
 const SurveyReportView = lazy(() => import('./views/SurveyReportView'));
 const AITestView = lazy(() => import('./views/AITestView'));
 const MedicalEventsView = lazy(() => import('./views/MedicalEventsView'));
+const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 
 import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap, KeyRound } from 'lucide-react';
 import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
@@ -656,7 +657,7 @@ const AppRouter: React.FC = () => {
             <Route path="/disciplina/:disciplineId/referencias" element={<ProtectedRoute><ReferencesFlow /></ProtectedRoute>} />
             
             <Route path="/admin" element={<ProtectedRoute><AdminView onBack={() => window.history.back()} /></ProtectedRoute>} />
-
+            <Route path="/dashboard" element={<ProtectedRoute><StudentDashboardView onBack={() => window.history.back()} /></ProtectedRoute>} />
             <Route path="/survey" element={
               <SurveyView 
                 onBack={() => window.location.href = '/'} 
