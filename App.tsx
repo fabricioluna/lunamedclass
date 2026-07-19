@@ -37,7 +37,7 @@ import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
-const APP_VERSION = "9.9.0 - Luna Code Split Architecture";
+const APP_VERSION = "9.9.5 - Luna Code Split & Strict Telemetry";
 
 // ============================================================================
 // ERROR BOUNDARY
@@ -502,6 +502,7 @@ const QuizFlow = () => {
   const unit = useAcademicUnit();
   const navigate = useNavigate();
   const { disciplines } = useData();
+  const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
   
   const [step, setStep] = useState<'setup' | 'quiz'>('setup');
@@ -518,7 +519,8 @@ const QuizFlow = () => {
       discipline={discipline} 
       onBack={() => setStep('setup')} 
       onSaveResult={(score, total, title, type, time, details) => {
-        if (db) push(ref(db, 'quizResults'), { score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });
+        // ASSINATURA DO ALUNO INJETADA NO PAYLOAD
+        if (db) push(ref(db, 'quizResults'), { userId: currentUser?.uid, userEmail: currentUser?.email, score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });
       }} 
     />
   );
@@ -529,6 +531,7 @@ const OsceFlow = () => {
   const unit = useAcademicUnit();
   const navigate = useNavigate();
   const { disciplines } = useData();
+  const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
   
   const [step, setStep] = useState<'mode' | 'setup' | 'quiz' | 'ai-setup' | 'ai-quiz'>('mode');
@@ -549,14 +552,14 @@ const OsceFlow = () => {
      if (station.mode === 'rpg') {
        return <DynamicOsceView station={station} onBack={() => setStep('setup')} onSaveResult={(score, total, time, analytics) => {
            if (db) {
-              push(ref(db, 'quizResults'), { score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-rpg' });
-              push(ref(db, 'osceAnalytics'), { ...analytics, unit, date: new Date().toLocaleString(), studentId: 'anon_student' });
+              push(ref(db, 'quizResults'), { userId: currentUser?.uid, userEmail: currentUser?.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-rpg' });
+              push(ref(db, 'osceAnalytics'), { ...analytics, unit, date: new Date().toLocaleString(), studentId: currentUser?.uid });
            }
        }} />;
      }
      return <OsceView station={station} onBack={() => setStep('setup')} onSaveResult={(score, total, time, analytics) => {
          if (db) {
-            push(ref(db, 'quizResults'), { score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-estatico' });
+            push(ref(db, 'quizResults'), { userId: currentUser?.uid, userEmail: currentUser?.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-estatico' });
             push(ref(db, 'osceAnalytics'), { ...analytics, unit, date: new Date().toLocaleString() });
          }
      }} />;
@@ -577,6 +580,7 @@ const LabFlow = () => {
   const cat = new URLSearchParams(search).get('cat');
   const navigate = useNavigate();
   const { disciplines } = useData();
+  const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
   
   const [step, setStep] = useState<'list' | 'quiz'>('list');
@@ -589,7 +593,7 @@ const LabFlow = () => {
   }
   if (step === 'quiz' && sim) {
      return <LabQuizView simulation={sim} onBack={() => setStep('list')} onSaveResult={(score, total, time, details) => {
-         if (db) push(ref(db, 'quizResults'), { score, total, date: new Date().toLocaleString(), discipline: sim.disciplineId, unit, quizTitle: sim.title, type: 'laboratorio', timeSpent: time || 0, details: details || [] });
+         if (db) push(ref(db, 'quizResults'), { userId: currentUser?.uid, userEmail: currentUser?.email, score, total, date: new Date().toLocaleString(), discipline: sim.disciplineId, unit, quizTitle: sim.title, type: 'laboratorio', timeSpent: time || 0, details: details || [] });
      }} />;
   }
   return null;
@@ -657,7 +661,10 @@ const AppRouter: React.FC = () => {
             <Route path="/disciplina/:disciplineId/referencias" element={<ProtectedRoute><ReferencesFlow /></ProtectedRoute>} />
             
             <Route path="/admin" element={<ProtectedRoute><AdminView onBack={() => window.history.back()} /></ProtectedRoute>} />
+            
+            {/* ROTA DO DASHBOARD DO ALUNO */}
             <Route path="/dashboard" element={<ProtectedRoute><StudentDashboardView onBack={() => window.history.back()} /></ProtectedRoute>} />
+
             <Route path="/survey" element={
               <SurveyView 
                 onBack={() => window.location.href = '/'} 
