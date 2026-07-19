@@ -172,6 +172,8 @@ export interface Summary {
 
 export interface QuizResult {
   id?: string;
+  userId?: string; 
+  userEmail?: string | null; 
   score: number;
   total: number;
   date: string;
