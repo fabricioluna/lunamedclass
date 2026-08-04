@@ -26,7 +26,6 @@ const LabQuizView = lazy(() => import('./views/LabQuizView'));
 const SimulatorsView = lazy(() => import('./views/SimulatorsView'));
 const SurveyView = lazy(() => import('./views/SurveyView'));
 const SurveyReportView = lazy(() => import('./views/SurveyReportView'));
-const AITestView = lazy(() => import('./views/AITestView'));
 const MedicalEventsView = lazy(() => import('./views/MedicalEventsView'));
 const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 
@@ -681,9 +680,8 @@ const AppRouter: React.FC = () => {
             <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
             <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
             <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
-            <Route path="/simulators" element={<SimulatorsView />} /> 
-            <Route path="/ai-test" element={<AITestView />} />
-            
+            <Route path="/simulators" element={<SimulatorsView />} />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

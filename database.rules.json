@@ -1,0 +1,75 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2')",
+        ".write": "auth != null && (auth.uid === $uid || auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2')"
+      }
+    },
+
+    "periods": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'"
+    },
+    "disciplines": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'"
+    },
+    "discipline_config": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'"
+    },
+    "feature_flags": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'"
+    },
+    "questions": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'"
+    },
+    "osce": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'"
+    },
+    "labSimulations": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'"
+    },
+
+    "quizResults": {
+      ".indexOn": ["userId"],
+      ".read": "auth != null && (auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2' || (query.orderByChild === 'userId' && query.equalTo === auth.uid))",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'",
+      "$id": {
+        ".write": "auth != null && !data.exists() && newData.child('userId').val() === auth.uid"
+      }
+    },
+
+    "osceAnalytics": {
+      ".read": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'",
+      "$id": {
+        ".write": "auth != null && !data.exists()"
+      }
+    },
+
+    "periodRequests": {
+      ".read": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'",
+      "$id": {
+        ".write": "auth != null && !data.exists() && newData.child('userId').val() === auth.uid && newData.child('status').val() === 'pending'"
+      }
+    },
+
+    "surveys": {
+      ".read": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'",
+      ".write": "auth != null && auth.uid === 'BFrlESQGtYZaYnxwTCdlXIidqfO2'",
+      "$id": {
+        ".write": "!data.exists()"
+      }
+    }
+  }
+}

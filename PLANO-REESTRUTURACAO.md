@@ -1,0 +1,312 @@
+# Plano de Reestruturação — Luna MedClass
+
+> **Documento de continuidade.** Registra auditoria, decisões e progresso da reestruturação
+> iniciada em **2026-08-04**. Escrito para ser retomado do zero, sem contexto prévio de conversa.
+
+---
+
+## 📌 Como usar este documento
+
+**Se você é o Claude retomando após um `/clear`:**
+
+1. Leia este arquivo inteiro antes de agir — ele substitui o histórico da conversa.
+2. Vá em **Status Atual** e identifique a etapa corrente.
+3. As **Decisões Firmadas** já foram acordadas com o usuário. Não relitigue; se precisarem mudar, pergunte.
+4. Marque `[x]` conforme concluir, e **atualize a seção Status Atual** antes do próximo `/clear`.
+5. Regra de ouro do projeto: **nenhuma funcionalidade nova antes da Etapa 6.**
+
+**Perfil do usuário:** Fabrício Luna, médico/educador. Constrói com apoio de IA, não é dev
+profissional. Prefira explicações concretas (caminho de clique, o que colar onde) a jargão.
+Sempre separe "o que só ele pode fazer" (consoles Firebase/Google Cloud/Vercel — não temos
+acesso) de "o que o Claude faz" (código).
+
+---
+
+## 🎯 Contexto do Projeto
+
+Portal acadêmico de medicina: simulados, estações OSCE, laboratório virtual, calculadoras,
+quiz vocacional. Em uso por **turma piloto** (uso leve).
+
+| Item | Valor |
+|---|---|
+| Stack | React 19 + Vite 6 + TypeScript 5.8 + Tailwind 3 + Firebase RTDB + Gemini |
+| Deploy | Vercel · 1 serverless function: `api/chat.ts` |
+| Tamanho | ~13.600 linhas TS/TSX em 54 arquivos |
+| Projeto Firebase | `monitor-virtual-fms` |
+| RTDB | `https://monitor-virtual-fms-default-rtdb.firebaseio.com` |
+| **UID admin** | `BFrlESQGtYZaYnxwTCdlXIidqfO2` |
+
+---
+
+## 🚦 Status Atual
+
+**Etapa 0 (Emergência) — ✅ CONCLUÍDA em 2026-08-04**
+
+Verificado em produção (`lunamedclass.vercel.app`) e no banco:
+- `curl` anônimo no RTDB → `Permission denied` (vazamento fechado)
+- `POST /api/chat` → resposta válida da IA com `modelUsed: gemini-2.5-flash` (chave nova ativa)
+- Chave antiga revogada no Google Cloud; `VITE_GEMINI_API_KEY` não existe mais em lugar nenhum
+- `/api/test` e `/ai-test` removidos; vulnerabilidades npm: 18 (2 críticas) → 2
+
+🟡 Dois itens de baixa prioridade ficaram em aberto e **não bloqueiam a Etapa 1**:
+- **0.8** — perfil admin no RTDB com só 2 de 7 campos (consistência de dado, painel funciona normalmente)
+- **0.9** — backfill `userEmail→userId` para resultados anteriores a 19/07/2026 (script pronto em `scripts/backfill-userid.mjs`, não rodado ainda)
+
+**➡️ Próxima ação:** ainda não commitado no git (ver nota abaixo). Depois, iniciar **Etapa 1**.
+
+> **Nota de continuidade:** as mudanças de código da Etapa 0 foram feitas mas o usuário não pediu
+> commit ainda. Se ao retomar `git status` mostrar working tree limpo, o commit já foi feito por
+> fora desta sessão — confirme antes de assumir que falta comitar.
+
+---
+
+## 🔒 Decisões Firmadas
+
+| # | Decisão | Motivo |
+|---|---|---|
+| D1 | Ordem das etapas é por **risco**, não por conveniência | Acordado explicitamente com o usuário |
+| D2 | **Nenhuma funcionalidade nova antes da Etapa 6** | Pedido explícito do usuário |
+| D3 | Consolidar tudo no **Firestore**; RTDB é aposentado na Etapa 3 | Permite query filtrada por usuário no servidor — resolve o vazamento na raiz |
+| D4 | Admin identificado por **UID escrito direto nas regras** (interino) | Custom Claims exigem Admin SDK; fica para a Etapa 3. Nó `/admins` foi descartado por atrito de UI no console |
+| D5 | Campo `role` em `users/` é **decorativo** (só UI) | Regras do RTDB cascateiam: não dá para proteger um campo dentro de nó que o próprio dono escreve |
+| D6 | `/survey` continua pública (write-only); `/survey-report` vira admin | Link aberto para a turma |
+| D7 | Gabarito visível a aluno logado é **limitação aceita** | Quiz client-side sempre expõe resposta no DevTools; corrigir exige correção server-side (Etapa 6) |
+| D8 | Fechar vazamento tem precedência sobre quebrar feature | LGPD > dashboard fora do ar numa turma piloto |
+
+---
+
+## 🚨 ETAPA 0 — Emergência
+
+- [x] **0.1** Identificar UID admin → `BFrlESQGtYZaYnxwTCdlXIidqfO2`
+- [x] **0.2** ~~Criar nó `/admins`~~ — **descartado** (ver D4)
+- [x] **0.3** Publicar regras restritivas no RTDB *(feito 2026-08-04)*
+- [x] **0.4** Corrigir `StudentDashboardView` — query filtrada no servidor *(precisa de deploy)*
+- [ ] **0.5** Revogar e reemitir chave Gemini — **código feito, falta a ação no Google Cloud**
+- [x] **0.6** Higiene: `npm audit fix`, `dist/` limpo, `.gitignore` e `.env.example`
+- [x] **0.7** Versionar `database.rules.json` + `database.rules.README.md`
+- [ ] **0.8** Corrigir perfil admin incompleto no banco *(baixo impacto)*
+- [ ] **0.9** Rodar backfill `userEmail` → `userId` *(script pronto em `scripts/`)*
+
+### O que foi feito no código (2026-08-04)
+
+| Arquivo | Mudança |
+|---|---|
+| `views/StudentDashboardView.tsx` | query `orderByChild('userId').equalTo(uid)` + callback de erro |
+| `views/AITestView.tsx` | **removido** — expunha a chave Gemini em rota pública |
+| `api/test.ts` | **removido** — endpoint público sem auth que gastava cota Gemini a cada acesso |
+| `App.tsx` | removidos a rota `/ai-test` e o lazy import |
+| `.env` | `VITE_GEMINI_API_KEY` removida; `GEMINI_API_KEY` zerada aguardando a chave nova |
+| `.env.example` | criado — documenta a regra "nunca prefixe segredo com `VITE_`" |
+| `.gitignore` | `dist`, `scripts/serviceAccount.json`, exceção para `.env.example` |
+| `database.rules.json` + `.README.md` | regras versionadas e documentadas |
+| `scripts/backfill-userid.mjs` | backfill com dry-run |
+| `package.json` | `@google/genai` removido (dependência não usada; puxava as vulnerabilidades) |
+
+**Vulnerabilidades npm: 18 (2 críticas) → 2 (high).** As 2 restantes são do `react-router-dom`
+e exigem major bump com breaking change → adiadas para a Etapa 1, quando houver CI e testes.
+
+**Build após as mudanças:** typecheck ✅ · build ✅ (1m14s) · `grep AIzaSy dist/` devolve só a
+chave pública do Firebase.
+
+### 0.4 — Dashboard *(Claude faz)*
+
+`views/StudentDashboardView.tsx:24` baixa a coleção inteira `quizResults`. As novas regras só
+liberam leitura com query filtrada — logo, hoje recebe `permission_denied`.
+
+```diff
++ import { query, orderByChild, equalTo } from 'firebase/database';
+- const resultsRef = ref(db, 'quizResults');
+- const unsubscribe = onValue(resultsRef, (snapshot) => {
++ const q = query(ref(db, 'quizResults'), orderByChild('userId'), equalTo(currentUser.uid));
++ const unsubscribe = onValue(q, (snapshot) => {
+```
+
+⚠️ Resultados antigos gravados sem `userId` somem do dashboard. Verificar volume; se relevante,
+escrever script de backfill (`userEmail` → `userId`).
+
+### 0.5 — Chave Gemini *(usuário faz)*
+
+A chave `AIzaSyCMWkGr…` está em texto claro no bundle público. **Revogar, não apenas trocar** —
+a antiga continua válida enquanto não for revogada.
+
+1. [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials) → projeto `monitor-virtual-fms`
+2. Apagar a chave `AIzaSyCMWkGr…` (a IA do site para de funcionar — esperado)
+3. Criar chave nova → Editar → Restringir a **Generative Language API**
+4. Vercel → Settings → Environment Variables:
+   - **apagar** `VITE_GEMINI_API_KEY` (é ela que vaza)
+   - atualizar `GEMINI_API_KEY` com a chave nova
+
+*(Claude, em paralelo:)*
+- [ ] `rm views/AITestView.tsx`
+- [ ] remover rota `/ai-test` (`App.tsx:685`) e lazy import (`App.tsx:29`)
+- [ ] remover `VITE_GEMINI_API_KEY` de `.env` e `.env.local`
+
+### 0.6 — Higiene *(Claude faz)*
+```bash
+npm audit fix          # 18 vulnerabilidades, 2 críticas
+rm -rf dist            # bundle contém a chave antiga
+echo "dist/" >> .gitignore
+```
+
+### 0.8 — Perfil admin quebrado *(baixo impacto)*
+
+O nó `users/BFrlESQGtYZaYnxwTCdlXIidqfO2` tem **só** `role` e `lastLogin`. Alunos têm 7 campos.
+É a race condition do item **2.1** materializada em produção — e a evidência de que aquele bug
+é real, não teórico.
+
+Impacto prático é baixo: o painel só checa `role`, e o `Header` lê nome/foto do Firebase Auth,
+não deste nó. É consistência de dado, não funcionalidade quebrada.
+
+Corrigir pelo Firebase Console → Realtime Database → `users/BFrlESQ…` → adicionar os campos:
+```
+uid:         "BFrlESQGtYZaYnxwTCdlXIidqfO2"
+email:       "fabricioluna@gmail.com"
+displayName: "Fabrício Luna"
+createdAt:   "2026-07-19T15:14:22.561Z"
+```
+A prevenção definitiva é o item **2.1**; sem ele, o problema pode reincidir.
+
+### 0.9 — Backfill `userEmail` → `userId`
+
+`userId` só entrou no payload dos resultados em **19/07/2026** (commit `7fc974f`). Resultados
+anteriores têm só `userEmail` e, com as novas regras, ficaram invisíveis no dashboard do aluno.
+
+`scripts/backfill-userid.mjs` resolve. Roda em dry-run por padrão e relata o volume antes de
+escrever — **rode a simulação primeiro**: se forem poucos resultados antigos, talvez nem valha
+aplicar. Instruções no cabeçalho do script (precisa de service account do Firebase).
+
+### ✅ Aceite da Etapa 0
+- [x] `curl "https://monitor-virtual-fms-default-rtdb.firebaseio.com/.json?shallow=true"` → `Permission denied`
+- [ ] `grep -r "AIzaSy" dist/` → só a chave do Firebase (essa é pública por design)
+- [ ] Login, dashboard e painel admin funcionando
+- [ ] Aluno logado não lê `quizResults` de outro aluno
+
+---
+
+## 🛡️ ETAPA 1 — Rede de proteção *(~2 dias)*
+
+Nenhuma lógica muda. Só ferramental. **1.2 e 1.3 vão quebrar o build de propósito** — é o
+objetivo; a Etapa 2 conserta. Se precisar publicar algo urgente no meio, `strict: false` por um commit.
+
+- [ ] **1.1** `tailwind.config.js`: `content` hoje é `"./**/*.{js,ts,jsx,tsx}"` e varre `node_modules` → build de **3m37s**. Trocar por lista explícita de pastas. *Aceite: build < 20s*
+- [ ] **1.2** `tsconfig.json`: adicionar `include` explícito + `"strict": true`
+- [ ] **1.3** `package.json`: `"typecheck": "tsc --noEmit"` e `"build": "npm run typecheck && vite build"` *(hoje o build não checa tipos)*
+- [ ] **1.4** ESLint + Prettier + `eslint-plugin-react-hooks`
+- [ ] **1.5** GitHub Actions: typecheck + lint + build em push/PR *(não existe `.github/`)*
+- [ ] **1.6** Vitest + Testing Library + 2 testes de fumaça
+
+---
+
+## 🐛 ETAPA 2 — Correção de erros *(~3 dias)*
+
+Um commit isolado por item, com teste quando cabível.
+
+**Bugs de comportamento**
+- [ ] **2.1** Race no cadastro — `contexts/AuthContext.tsx:49-69`. O `set(lastLogin)` da linha 69 corre em paralelo com a leitura `onlyOnce` do perfil; se gravar primeiro, o listener vê nó "existente" e nunca cria o perfil completo. **Confirmado em produção** (ver 0.8). Serializar: ler → criar se ausente → só então gravar `lastLogin`.
+- [ ] **2.2** Fluxo "Compartilhar Material" nunca funcionou — `App.tsx:618` grava em `summaries` do **RTDB**, mas `views/SummariesListView.tsx:9` lê do **Firestore**. Confirmado: não existe nó `summaries` no RTDB. Apontar ambos para o Firestore.
+- [ ] **2.3** `{...user} as FirebaseUser` — `AuthContext.tsx:106` descarta métodos do protótipo (`getIdToken`). Usar `auth.currentUser`.
+- [ ] **2.4** Perfil congelado — `AuthContext.tsx:67` usa `{ onlyOnce: true }`; aprovação de período só aparece após recarregar. Trocar por listener vivo **com cleanup**.
+- [ ] **2.5** 4 listeners `onValue` vazados — `hooks/useFirebaseData.ts:31-84`; o cleanup só limpa o `setTimeout`.
+- [ ] **2.6** `isLoading` fictício — `hooks/useFirebaseData.ts:87` usa `setTimeout(500)` fixo, sem relação com os dados.
+
+**Erros de tipo** (13, revelados por 1.2)
+- [ ] **2.7** `api/chat.ts:98` e `views/OsceAIView.tsx:123` — inferência `null`, tipar explicitamente
+- [ ] **2.8** `components/admin/AdminLab.tsx` — 11 erros, todos de um `useState([])` inferido como `never[]`
+
+**Limpeza**
+- [ ] **2.9** `rm medicalEventsData.ts` — código morto, duplica `MEDICAL_EVENTS_2026` de `constants.tsx`
+- [ ] **2.10** 22 imports/variáveis órfãos → listar com `npx tsc --noEmit --noUnusedLocals`
+
+**Aceite:** build verde com `strict: true` · zero warnings de lint · cadastro testado ponta a ponta
+
+---
+
+## 🏗️ ETAPA 3 — Camada de dados *(~1 semana)*
+
+Maior ganho estrutural. **Ponto de não-retorno: faz backup antes** (Firebase Console → RTDB → Exportar JSON).
+
+- [ ] **3.1** Modelar Firestore:
+  ```
+  users/{uid}                                perfil
+  quizResults/{id}                           índice (userId, createdAt)
+  questions/{id}  osceStations/{id}  labSimulations/{id}
+  materials/{id}                             já está no Firestore
+  periodRequests/{id}  surveys/{id}  osceAnalytics/{id}
+  config/{periods|disciplines|featureFlags}  docs únicos: 1 leitura em vez de N
+  ```
+- [ ] **3.2** Custom Claims para admin (Cloud Function `setAdminClaim`); regras passam a usar `request.auth.token.admin`; UID hardcoded (D4) é aposentado
+- [ ] **3.3** Camada `services/` por domínio: `authService`, `questionsService`, `resultsService`, `osceService`, `labService`, `materialsService`, `adminService`
+  > **Regra inegociável:** ao fim desta etapa, `grep -r "from '.*firebase'" views/ components/` deve retornar **vazio**
+- [ ] **3.4** Queries filtradas no servidor — elimina "baixa tudo e filtra no cliente" em `QuizSetupView:31`, `OsceSetupView:36`, `LabListView:41`, `AdminStats`
+- [ ] **3.5** Hooks por domínio (`useQuestions`, `useMyResults`, `useOsceStations`). **Deletar** `contexts/DataContext` + `hooks/useFirebaseData` — hoje o contexto mente: promete `Question[]` e devolve `[]` fixo (`useFirebaseData.ts:17-22`)
+- [ ] **3.6** Eliminar a senha `fmst8` — hardcoded em 6 arquivos (`AdminView`, `AdminLab`, `AdminMaterials`, `AdminOsce`, `AdminQuestions`), protegendo até "apagar banco inteiro". Autoridade passa a ser só a Security Rule; `prompt()` vira, no máximo, confirmação de UX
+- [ ] **3.7** Script de migração RTDB → Firestore, idempotente, com dry-run
+
+**Aceite:** teste no emulador provando que aluno A não lê dado de aluno B · nenhum import de `firebase` fora de `services/` · `fmst8` não existe mais no repo
+
+---
+
+## 🧱 ETAPA 4 — Reestruturação da aplicação *(~1 semana)*
+
+- [ ] **4.1** `App.tsx` de 706 → ~60 linhas. `LoginView`/`PeriodOnboarding` → `features/auth/`; `AppLayout`/`ErrorBoundary` → `components/layout/`; rotas → `routes/AppRoutes.tsx`
+- [ ] **4.2** Zero escrita de banco no JSX — callbacks inline em `App.tsx:523,555,596,618` viram chamadas de service
+- [ ] **4.3** Os 7 "Flow" viram rotas reais (`/disciplina/:id/simulado/executar`) — hoje usam `useState<'setup'|'quiz'>` e o botão *voltar* do navegador não entende
+- [ ] **4.4** Quebrar `constants.tsx` (1.144 linhas) → `data/periods.ts`, `data/disciplines.ts`, `data/medicalEvents.ts`, `theme.ts`. **Separar seed de fallback de runtime** (hoje o mesmo arquivo faz os dois)
+- [ ] **4.5** Estrutura `features/{auth,quiz,osce,lab,materials,admin}`
+- [ ] **4.6** Bundle: `jspdf`/`html2canvas` em import dinâmico. Hoje: principal **1.03 MB**, `AdminView` **563 KB**. Alvo: principal < 400 KB
+
+---
+
+## 🔒 ETAPA 5 — Prevenção contínua *(~3 dias)*
+
+- [ ] **5.1** Testes das Security Rules no emulador, rodando no CI — *a autorização vira testável, que é onde o projeto mais falhou*
+- [ ] **5.2** Testes de regra de negócio: médias, filtro N1/N2, pontuação OSCE
+- [ ] **5.3** Sentry no lugar dos 40 `console.error`
+- [ ] **5.4** Rate limiting em `/api/chat` — hoje qualquer um drena a cota Gemini
+- [ ] **5.5** `CLAUDE.md` com os padrões: "nenhum componente importa firebase", "toda rota nova nasce protegida", "todo dado de aluno é lido por query filtrada"
+- [ ] **5.6** Dependabot + `npm audit` no CI
+
+---
+
+## 🚀 ETAPA 6 — Evolução
+
+Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras claras.
+
+---
+
+## 📋 Referência rápida
+
+**Achados da auditoria de 2026-08-04**
+
+| Métrica | Valor |
+|---|---|
+| Erros com `strict: true` | 13 |
+| Imports/variáveis órfãos | 22 |
+| Usos de `any` | 80 |
+| `console.*` | 40 |
+| Vulnerabilidades npm | 18 (2 críticas) |
+| Tempo de build | 3m37s |
+| Bundle principal | 1.03 MB (260 KB gzip) |
+| Testes / CI / Lint | nenhum |
+
+**Rotas sem proteção de login** (`App.tsx`): `/survey`, `/survey-report`, `/calculators`,
+`/career-quiz`, `/medical-events`, `/simulators`, `/ai-test` *(esta última será removida)*.
+Revisar quais devem continuar públicas na Etapa 4.
+
+**Comandos de verificação**
+```bash
+npx tsc --noEmit --strict            # erros de tipo
+npx tsc --noEmit --noUnusedLocals    # código morto
+npm run build                        # build de produção
+npm audit                            # vulnerabilidades
+
+# vazamento fechado? (deve retornar "Permission denied")
+curl -s "https://monitor-virtual-fms-default-rtdb.firebaseio.com/.json?shallow=true"
+
+# nenhum segredo no bundle? (só a chave do Firebase é aceitável)
+grep -ro "AIzaSy[A-Za-z0-9_-]\{33\}" dist/ | sort -u
+```
+
+---
+
+*Auditoria e plano: 2026-08-04. Manter a seção **Status Atual** atualizada antes de cada `/clear`.*

@@ -1,5 +1,19 @@
 node_modules
 .vercel
+
+# Build — nunca versionar: o bundle carrega as variáveis de ambiente embutidas
+dist
+*.local
+
+# Segredos
 .env
 .env*
 .env*.local
+!.env.example
+
+# Editores / SO
+.DS_Store
+*.log
+
+# Chave de servico do Firebase (segredo — nunca versionar)
+scripts/serviceAccount.json
