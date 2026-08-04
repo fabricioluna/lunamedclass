@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../types.ts'; 
-import { 
-  Trash2, Loader2, Search, Plus, FileCheck, X, User, 
-  CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck, 
-  Download, Milestone, Layers 
-} from 'lucide-react'; 
+import {
+  Loader2, Search, Plus, FileCheck, X, User,
+  CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck,
+  Download, Milestone, Layers
+} from 'lucide-react';
 import { firestoreDB as db, storage } from '../firebase.ts';
 import { collection, addDoc, query, where, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';

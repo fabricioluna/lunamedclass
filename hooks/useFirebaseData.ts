@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db, ref, onValue } from '../firebase.ts';
-import { INITIAL_QUESTIONS, SIMULATIONS, PERIODS } from '../constants.tsx';
+import { SIMULATIONS, PERIODS } from '../constants.tsx';
 import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Period, FeatureFlag } from '../types.ts';
 
 export const useFirebaseData = () => {

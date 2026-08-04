@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationInfo, Summary, AcademicUnit } from '../types';
+import { SimulationInfo, AcademicUnit } from '../types';
 import { Lock, Stethoscope, BookOpen, FolderOpen, PenTool, Activity, Microscope, Pill, ClipboardList, ChevronDown, ChevronUp, Milestone, Layers, FileSignature, ShieldAlert } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 
 interface DisciplineViewProps {
   disciplineId: string;
   disciplines: SimulationInfo[];
-  summaries: Summary[];
-  onBack: () => void;
-  onSelectOption: (type: string, unit?: AcademicUnit) => void; 
+  onSelectOption: (type: string, unit?: AcademicUnit) => void;
 }
 
-const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplines, summaries, onBack, onSelectOption }) => {
+const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplines, onSelectOption }) => {
   const [showLabCategories, setShowLabCategories] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<AcademicUnit | null>(null);
 

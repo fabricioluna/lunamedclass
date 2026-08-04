@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { SimulationInfo } from '../../types';
 import { Lock, Unlock, ShieldAlert, Layers } from 'lucide-react';
 import { PERIODS } from '../../constants';

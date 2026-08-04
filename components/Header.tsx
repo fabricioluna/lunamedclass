@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, LogIn, LogOut, ArrowUpCircle, X, CheckCircle } from 'lucide-react';
+import { ArrowLeft, LogOut, ArrowUpCircle, X, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useData } from '../contexts/DataContext';
 import { db, ref, push } from '../firebase';

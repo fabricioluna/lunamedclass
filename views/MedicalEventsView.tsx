@@ -4,11 +4,7 @@ import { MedicalEvent } from '../types';
 // IMPORTANDO DA NOSSA FONTE DE VERDADE CORRETA
 import { MEDICAL_EVENTS_2026 } from '../constants'; 
 
-interface MedicalEventsViewProps {
-  onBack: () => void;
-}
-
-const MedicalEventsView: React.FC<MedicalEventsViewProps> = ({ onBack }) => {
+const MedicalEventsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredEvents = MEDICAL_EVENTS_2026.filter((event: MedicalEvent) => 

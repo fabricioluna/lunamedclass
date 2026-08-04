@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { QuizResult, Question, LabSimulation, SimulationInfo, FirebaseTimestamp } from '../../types';
-import { BarChart3, TrendingUp, Layers, AlertTriangle, FileDown, Trash2, CalendarDays, ChevronDown, CheckSquare } from 'lucide-react';
+import { TrendingUp, Layers, AlertTriangle, FileDown, Trash2, CalendarDays, ChevronDown, CheckSquare } from 'lucide-react';
 import { PERIODS } from '../../constants'; 
 
 // IMPORTAÇÕES DO FIREBASE PARA DELETAR RESULTADOS ESPECÍFICOS
@@ -15,14 +15,6 @@ interface AdminStatsProps {
   questions: Question[];
   labSimulations: LabSimulation[];
   disciplines: SimulationInfo[];
-  statsPeriodFilter: string; 
-  statsDiscFilter: string;
-  statsTypeFilter: string;
-  statsQuizTitleFilter: string;
-  setStatsPeriodFilter: (val: string) => void; 
-  setStatsDiscFilter: (val: string) => void;
-  setStatsTypeFilter: (val: string) => void;
-  setStatsQuizTitleFilter: (val: string) => void;
 }
 
 interface PdfImage {
@@ -49,24 +41,17 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   questions,
   labSimulations,
   disciplines,
-  statsPeriodFilter,
-  statsDiscFilter,
-  statsTypeFilter,
-  setStatsPeriodFilter,
-  setStatsDiscFilter,
-  setStatsTypeFilter,
 }) => {
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  
+
   const [filterPeriods, setFilterPeriods] = useState<string[]>([]);
   const [filterDiscs, setFilterDiscs] = useState<string[]>([]);
   const [filterUnits, setFilterUnits] = useState<string[]>([]);
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
 
   const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false); 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const [pdfLogo, setPdfLogo] = useState<PdfImage | null>(null);

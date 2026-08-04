@@ -10,7 +10,6 @@ interface DisciplineCardProps {
 const DisciplineCard: React.FC<DisciplineCardProps> = ({ info, onSelect }) => {
   const isAvailable = info.status === 'active';
   const isComingSoon = info.status === 'coming-soon';
-  const isLocked = info.status === 'locked';
 
   return (
     <div 

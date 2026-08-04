@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db, ref, onValue } from '../firebase';
 import { query, orderByChild, equalTo } from 'firebase/database';
 import { QuizResult } from '../types';
-import { Target, BrainCircuit, Activity, ChevronLeft, Zap, Star, ShieldCheck, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
+import { BrainCircuit, ChevronLeft, Zap, Star, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
 
 interface StudentDashboardProps {
   onBack: () => void;
@@ -73,9 +73,7 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
 
   // Cálculos de gamificação e precisão diagnóstica
   const totalSimulations = results.length;
-  const osceResults = results.filter(r => r.type && String(r.type).includes('osce'));
-  const theoryResults = results.filter(r => r.type === 'teorico');
-  
+
   let totalCorrect = 0;
   let totalQuestions = 0;
   results.forEach(r => {

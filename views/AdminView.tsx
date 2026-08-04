@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Summary, Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag } from '../types';
+import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag } from '../types';
 import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap } from 'lucide-react'; 
 
 import { useData } from '../contexts/DataContext';
@@ -39,11 +39,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   
   const [activeTab, setActiveTab] = useState<'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags'>('requests');
   
-  const [statsPeriodFilter, setStatsPeriodFilter] = useState(''); 
-  const [statsDiscFilter, setStatsDiscFilter] = useState('');
-  const [statsTypeFilter, setStatsTypeFilter] = useState('');
-  const [statsQuizTitleFilter, setStatsQuizTitleFilter] = useState('');
-
   const [adminQuestions, setAdminQuestions] = useState<Question[]>([]);
   const [adminOsceStations, setAdminOsceStations] = useState<OsceStation[]>([]);
   const [adminLabSimulations, setAdminLabSimulations] = useState<LabSimulation[]>([]);
@@ -451,14 +446,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           questions={adminQuestions}
           labSimulations={adminLabSimulations}
           disciplines={disciplines}
-          statsPeriodFilter={statsPeriodFilter}
-          statsDiscFilter={statsDiscFilter}
-          statsTypeFilter={statsTypeFilter}
-          statsQuizTitleFilter={statsQuizTitleFilter}
-          setStatsPeriodFilter={setStatsPeriodFilter}
-          setStatsDiscFilter={setStatsDiscFilter}
-          setStatsTypeFilter={setStatsTypeFilter}
-          setStatsQuizTitleFilter={setStatsQuizTitleFilter}
         />
       )}
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit } from '../../types';
 import { Trash2, Microscope, Loader2 } from 'lucide-react';
-import { firestoreDB, storage } from '../../firebase';
+import { storage } from '../../firebase';
 import { deleteObject, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { parseResilientCSV } from '../../utils/csvHelper';
 

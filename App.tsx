@@ -29,7 +29,7 @@ const MedicalEventsView = lazy(() => import('./views/MedicalEventsView'));
 const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 
 import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap, KeyRound } from 'lucide-react';
-import { ViewState, Question, OsceStation, LabSimulation, AcademicUnit } from './types';
+import { Question, OsceStation, LabSimulation, AcademicUnit } from './types';
 import { PERIODS } from './constants'; 
 import { db, ref, push } from './firebase';
 import { DataProvider, useData } from './contexts/DataContext';
@@ -492,7 +492,7 @@ const DisciplineFlow = () => {
     }
   };
 
-  return <DisciplineView disciplineId={disciplineId!} disciplines={disciplines} summaries={[]} onBack={() => navigate(-1)} onSelectOption={handleSelectOption as any} />;
+  return <DisciplineView disciplineId={disciplineId!} disciplines={disciplines} onSelectOption={handleSelectOption as any} />;
 };
 
 const QuizFlow = () => {
@@ -576,7 +576,6 @@ const LabFlow = () => {
   const unit = useAcademicUnit();
   const { search } = useLocation();
   const cat = new URLSearchParams(search).get('cat');
-  const navigate = useNavigate();
   const { disciplines } = useData();
   const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
@@ -668,7 +667,7 @@ const AppRouter: React.FC = () => {
 
             <Route path="/calculators" element={<CalculatorsView onBack={() => window.history.back()} />} />
             <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
-            <Route path="/medical-events" element={<MedicalEventsView onBack={() => window.history.back()} />} />
+            <Route path="/medical-events" element={<MedicalEventsView />} />
             <Route path="/simulators" element={<SimulatorsView />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
