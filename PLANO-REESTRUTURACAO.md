@@ -61,7 +61,9 @@ remoção de rota/função neste projeto.
 - **0.8** — perfil admin no RTDB com só 2 de 7 campos (consistência de dado, painel funciona normalmente)
 - **0.9** — backfill `userEmail→userId` para resultados anteriores a 19/07/2026 (script pronto em `scripts/backfill-userid.mjs`, não rodado ainda)
 
-**Etapa 1 (Rede de proteção) — ✅ CONCLUÍDA em 2026-08-04, ainda não commitada.**
+**Etapa 1 (Rede de proteção) — ✅ CONCLUÍDA, commitada e enviada em 2026-08-04.**
+
+Commit `215d02d`, push para `origin/main`.
 
 - `tailwind.config.js`: `content` deixou de varrer `node_modules` → build 3m37s → **17s**
 - `tsconfig.json`: `strict: true` + `include` explícito → **0 erros** (o número de 13 na tabela de
@@ -91,8 +93,35 @@ condicional em `views/OsceView.tsx:217` — o `useEffect` do timer vem depois de
 antecipado (linha 209) quando `station.mode !== 'clinical'`, violando a regra de hooks. Ver
 item **2.11** abaixo.
 
-**➡️ Próxima ação: revisar e commitar a Etapa 1, depois iniciar a Etapa 2** (correção de erros —
-usar `npm run lint` e `npm run typecheck` como ponto de partida).
+**Etapa 2 (Correção de erros) — itens de bug fechados em 2026-08-04; item de limpeza de `any`
+ainda em aberto, ver nota abaixo.**
+
+- [x] 2.1, 2.3, 2.4 — race no cadastro, perda de protótipo do FirebaseUser, perfil congelado
+  (commit `6b773a4`)
+- [x] 2.2 — fluxo morto "Compartilhar Material" removido, não redirecionado (commit `b002a14`)
+- [x] 2.5, 2.6 — listeners vazados fechados, `isLoading` ligado à chegada real dos dados
+  (commit `f4807a8`)
+- [x] 2.11 — hook condicional em `OsceView.tsx`, achado em 1.4 (commit `e2946b4`)
+- [x] 2.7, 2.8 — checados, não reproduziram no código atual (nada a commitar)
+- [x] 2.9 — `medicalEventsData.ts` removido (commit `acbc332`)
+- [x] 2.10 — 28 imports/variáveis/parâmetros órfãos removidos (commit `3ac6444`)
+
+🟡 **Aceite da Etapa 2 ainda não fechado.** `npm run lint` hoje: **89 erros, 17 warnings** — a
+imensa maioria (79) é `@typescript-eslint/no-explicit-any`, que não estava na lista original de
+itens do plano (essa é uma regra do ESLint configurado na Etapa 1; os "13 erros de tipo" do
+`tsc --strict` citados no plano são coisa diferente e não reproduziram — ver 2.7/2.8). Resolver
+os 79 `any` é bem maior que os itens já fechados: exige tipar formatos de dados do Firebase,
+respostas da API Gemini etc., espalhados por dezenas de arquivos. **Decisão pendente do
+usuário:** tratar isso agora dentro da Etapa 2, abrir como item novo (2.12) para depois, ou
+relaxar a regra `no-explicit-any` para `warn` e seguir.
+
+Também pendente: teste de cadastro ponta a ponta em produção (não fiz login/cadastro real no
+Firebase de produção durante a sessão — precisa ação do usuário ou aprovação explícita para
+criar conta de teste).
+
+**➡️ Próxima ação: decidir o destino dos 79 `any` (ver acima) antes de fechar a Etapa 2; depois
+seguir para a Etapa 3** (camada de dados — Firestore, ponto de não-retorno, fazer backup do RTDB
+antes).
 
 ---
 
@@ -238,21 +267,25 @@ objetivo; a Etapa 2 conserta. Se precisar publicar algo urgente no meio, `strict
 Um commit isolado por item, com teste quando cabível.
 
 **Bugs de comportamento**
-- [ ] **2.1** Race no cadastro — `contexts/AuthContext.tsx:49-69`. O `set(lastLogin)` da linha 69 corre em paralelo com a leitura `onlyOnce` do perfil; se gravar primeiro, o listener vê nó "existente" e nunca cria o perfil completo. **Confirmado em produção** (ver 0.8). Serializar: ler → criar se ausente → só então gravar `lastLogin`.
-- [ ] **2.2** Fluxo "Compartilhar Material" nunca funcionou — `App.tsx:618` grava em `summaries` do **RTDB**, mas `views/SummariesListView.tsx:9` lê do **Firestore**. Confirmado: não existe nó `summaries` no RTDB. Apontar ambos para o Firestore.
-- [ ] **2.3** `{...user} as FirebaseUser` — `AuthContext.tsx:106` descarta métodos do protótipo (`getIdToken`). Usar `auth.currentUser`.
-- [ ] **2.4** Perfil congelado — `AuthContext.tsx:67` usa `{ onlyOnce: true }`; aprovação de período só aparece após recarregar. Trocar por listener vivo **com cleanup**.
-- [ ] **2.5** 4 listeners `onValue` vazados — `hooks/useFirebaseData.ts:31-84`; o cleanup só limpa o `setTimeout`.
-- [ ] **2.6** `isLoading` fictício — `hooks/useFirebaseData.ts:87` usa `setTimeout(500)` fixo, sem relação com os dados.
-- [ ] **2.11** Hook condicional — `views/OsceView.tsx:217`. O `useEffect` do timer vem depois de um `return` antecipado (linha 209, quando `station.mode !== 'clinical'`), violando a regra de hooks (`react-hooks/rules-of-hooks`, achado em 1.4). Mover o `useEffect` para antes do `return` condicional.
+- [x] **2.1** Race no cadastro — `contexts/AuthContext.tsx:49-69`. O `set(lastLogin)` da linha 69 corre em paralelo com a leitura `onlyOnce` do perfil; se gravar primeiro, o listener vê nó "existente" e nunca cria o perfil completo. **Confirmado em produção** (ver 0.8). Serializar: ler → criar se ausente → só então gravar `lastLogin`. *(commit `6b773a4`, junto com 2.3 e 2.4)*
+- [x] **2.2** Fluxo "Compartilhar Material" nunca funcionou. Investigando: não era só desalinhamento RTDB/Firestore — `SummariesListView` já lê/grava `materials` no Firestore sozinha via formulário inline; o passo `ShareMaterialView`/RTDB `summaries` era **inalcançável** (a prop `onShareClick` que levaria a ele nunca era chamada). Removido o caminho morto em vez de redirecioná-lo. *(commit `b002a14`)*
+- [x] **2.3** `{...user} as FirebaseUser` — `AuthContext.tsx:106` descarta métodos do protótipo (`getIdToken`). Usar `auth.currentUser`. *(commit `6b773a4`)*
+- [x] **2.4** Perfil congelado — `AuthContext.tsx:67` usa `{ onlyOnce: true }`; aprovação de período só aparecia após recarregar. Trocado por listener vivo **com cleanup**; `lastLogin` só grava uma vez por sessão para não realimentar o próprio listener. *(commit `6b773a4`)*
+- [x] **2.5** 4 listeners `onValue` vazados — `hooks/useFirebaseData.ts:31-84`; o cleanup só limpava o `setTimeout`. Cada `onValue` agora guarda seu unsubscribe. *(commit `f4807a8`, junto com 2.6)*
+- [x] **2.6** `isLoading` fictício — `hooks/useFirebaseData.ts:87` usava `setTimeout(500)` fixo. Agora só cai depois que `periods` e `disciplines` entregam o primeiro snapshot. *(commit `f4807a8`)*
+- [x] **2.11** Hook condicional — `views/OsceView.tsx:217`. O `useEffect` do timer vinha depois de um `return` antecipado (linha 209), violando `react-hooks/rules-of-hooks` (achado em 1.4). Movido para antes do `return` condicional. *(commit `e2946b4`)*
 
-**Erros de tipo** (13, revelados por 1.2)
-- [ ] **2.7** `api/chat.ts:98` e `views/OsceAIView.tsx:123` — inferência `null`, tipar explicitamente
-- [ ] **2.8** `components/admin/AdminLab.tsx` — 11 erros, todos de um `useState([])` inferido como `never[]`
+**Erros de tipo** (13, revelados por 1.2 — **não reproduziram**)
+- [x] **2.7** `api/chat.ts:98` e `views/OsceAIView.tsx:123` — checado: `tsc --noEmit` não acusa erro nesses pontos hoje (padrão `let x = null` vira "evolving any" no TS moderno, não erro de tipo). Nada a corrigir.
+- [x] **2.8** `components/admin/AdminLab.tsx` — checado: não existe mais nenhum `useState([])`; os 7 `useState` do arquivo já têm tipo primitivo/explícito. Nada a corrigir. *(Ver nota em Status Atual: os 13 erros da auditoria original não reproduzem no código atual)*
 
 **Limpeza**
-- [ ] **2.9** `rm medicalEventsData.ts` — código morto, duplica `MEDICAL_EVENTS_2026` de `constants.tsx`
-- [ ] **2.10** 22 imports/variáveis órfãos → listar com `npx tsc --noEmit --noUnusedLocals`
+- [x] **2.9** `rm medicalEventsData.ts` — código morto, duplica `MEDICAL_EVENTS_2026` de `constants.tsx`. *(commit `acbc332`)*
+- [x] **2.10** 28 imports/variáveis/parâmetros órfãos (o número cresceu de ~22 para 28 desde a
+  auditoria original, provavelmente pelas mudanças de 0.4 e 2.2) → `npx tsc --noEmit
+  --noUnusedLocals --noUnusedParameters` agora volta limpo. Duas cadeias de prop morta
+  (AdminStats↔AdminView, DisciplineView/MedicalEventsView↔App.tsx) removidas de ponta a ponta.
+  *(commit `3ac6444`)*
 
 **Aceite:** build verde com `strict: true` · zero warnings de lint · cadastro testado ponta a ponta
 
