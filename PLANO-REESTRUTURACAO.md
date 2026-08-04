@@ -93,8 +93,8 @@ condicional em `views/OsceView.tsx:217` — o `useEffect` do timer vem depois de
 antecipado (linha 209) quando `station.mode !== 'clinical'`, violando a regra de hooks. Ver
 item **2.11** abaixo.
 
-**Etapa 2 (Correção de erros) — itens de bug fechados em 2026-08-04; item de limpeza de `any`
-ainda em aberto, ver nota abaixo.**
+**Etapa 2 (Correção de erros) — ✅ CONCLUÍDA em 2026-08-04**, incluindo o item de limpeza de
+`any` (2.12), ver nota abaixo.
 
 - [x] 2.1, 2.3, 2.4 — race no cadastro, perda de protótipo do FirebaseUser, perfil congelado
   (commit `6b773a4`)
@@ -135,13 +135,44 @@ resolver nada. Também não faz sentido tipar 79 pontos agora, no fim de uma ses
 um incidente em produção — é exatamente o tipo de mudança grande e espalhada que pede atenção
 fresca, não continuação por inércia.
 
-- [ ] **2.12** *(novo)* Tipar os 79 usos de `no-explicit-any` restantes — Firebase snapshots,
-  respostas da API Gemini, payloads de formulário admin. CI fica vermelho até lá (comportamento
-  esperado, como 1.2/1.3 deixaram o build vermelho até a Etapa 2).
+- [x] **2.12** Tipados os 79 usos de `no-explicit-any` — Firebase snapshots, respostas da API
+  Gemini, payloads de formulário admin. `npx eslint .` confirma **zero** ocorrências de
+  `@typescript-eslint/no-explicit-any` *(concluído em 2026-08-04, commits `dd62b01`, `71cc905`,
+  `66136a0`, `ee51ea0` — um por bloco temático, ver detalhamento abaixo)*.
 
-**➡️ Próxima ação: iniciar o item 2.12.** Inventário completo tirado com `npx eslint . --format
-json` em 2026-08-04 (rodar `npx eslint .` de novo antes de começar — o número pode ter mudado se
-algo mais mexeu no código nesse meio-tempo):
+  🟡 **Restam 26 problemas de lint pré-existentes (9 erros, 17 warnings)** — `prefer-const`,
+  `no-empty`, `no-unused-vars`, `no-useless-assignment`, `react-hooks/exhaustive-deps`,
+  `react-refresh/only-export-components`. Confirmado via `git stash` que já existiam antes desta
+  sessão (baseline: 89 erros/17 warnings; a diferença de ~80 erros é exatamente o volume de
+  `no-explicit-any`, configurado como `error`). **Não bloqueiam a Etapa 3** — são dívida de lint
+  fora do escopo do 2.12, não comportamento incorreto. Considerar um item novo se incomodarem o CI.
+
+**Detalhamento do 2.12 (4 blocos, 1 commit cada, `tsc`+`build`+`vitest` verde após cada um):**
+  1. **IA/Gemini** (`api/chat.ts`, `aiService.ts`, `OsceAIView`, `DynamicOsceView`, `OsceView`,
+     `QuizView`, + `InteractiveQuiz.tsx` preemptivo) — 35 `any` + 3. Novos tipos compartilhados em
+     `types.ts`: `PhaseRules`, `AIChatResponse`. Em `api/chat.ts`, o `modelOptions` é passado à SDK
+     do Gemini via `as unknown as ModelParams` — a SDK declara `SchemaType` em minúsculo
+     (`"object"`), mas o formato maiúsculo (`"OBJECT"`) é o que já roda em produção desde a Etapa 0
+     (`modelUsed: gemini-2.5-flash` confirmado); o cast preserva esse comportamento sem esconder o
+     motivo atrás de um `any` solto.
+  2. **Admin** (`AdminView.tsx` + 7 componentes de `components/admin/`) — 29 `any`.
+  3. **Camada de dados** (`useFirebaseData.ts`, `DataContext.tsx`) — 3 `any` → `AnalyticsResult[]`.
+     Mudança só de tipo, sem tocar lógica — **não precisou reteste como visitante deslogado**
+     (ver `incidente-isloading-anonimo-2026-08` na memória: aquele incidente veio de lógica de
+     `isLoading`, não de anotação de tipo).
+  4. **UI diversa** (`App.tsx`, `CareerQuiz`, `CalculatorsView`, `SummariesListView`,
+     `StudentDashboardView`) — 9 `any`. Dois casts em `App.tsx` eram redundantes (tipos já batiam)
+     e foram só removidos.
+
+Regra observada em todo o item: nenhuma mudança de comportamento, só tipos — quando um `any`
+escondia uma inconsistência real (ex: `err.message` em `catch` sem narrowing), o fix usa
+`error instanceof Error` em vez de mudar o que a mensagem de erro mostra. Nenhum bug novo
+encontrado (diferente do que aconteceu com 2.11 na Etapa 1).
+
+**➡️ Próxima ação: iniciar a Etapa 3** (camada de dados — Firestore, ponto de não-retorno, fazer
+backup do RTDB antes). Commits do 2.12 estão locais, **não enviados ao remoto** (`git push`
+pendente, decisão do usuário). Inventário original do 2.12, tirado com `npx eslint . --format
+json` em 2026-08-04, preservado abaixo como referência histórica:
 
 ```
 13 views/DynamicOsceView.tsx     [11,16,62,80,117,131,151,184,285,299,300,424,456]
@@ -362,8 +393,8 @@ Um commit isolado por item, com teste quando cabível.
   (AdminStats↔AdminView, DisciplineView/MedicalEventsView↔App.tsx) removidas de ponta a ponta.
   *(commit `3ac6444`)*
 
-**Aceite:** build verde com `strict: true` ✅ · zero warnings de lint 🟡 *(pendente — 79 `any`,
-virou item 2.12)* · cadastro testado ponta a ponta ✅ *(Playwright em produção, ver Status Atual)*
+**Aceite:** build verde com `strict: true` ✅ · zero `no-explicit-any` ✅ *(item 2.12, concluído
+2026-08-04)* · cadastro testado ponta a ponta ✅ *(Playwright em produção, ver Status Atual)*
 
 ---
 
