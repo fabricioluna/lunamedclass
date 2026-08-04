@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db, ref, onValue } from '../firebase.ts';
 import { SIMULATIONS, PERIODS } from '../constants.tsx';
-import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Period, FeatureFlag } from '../types.ts';
+import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Period, FeatureFlag, AnalyticsResult } from '../types.ts';
 
 export const useFirebaseData = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -19,7 +19,7 @@ export const useFirebaseData = () => {
   const osceStations: OsceStation[] = [];
   const quizResults: QuizResult[] = [];
   const labSimulations: LabSimulation[] = []; 
-  const osceAnalytics: any[] = []; 
+  const osceAnalytics: AnalyticsResult[] = [];
 
   useEffect(() => {
     if (!db) {
