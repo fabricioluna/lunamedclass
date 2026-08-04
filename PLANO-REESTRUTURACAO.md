@@ -120,22 +120,27 @@ de seguir. **Lição:** depois de qualquer mudança em `useFirebaseData`/`DataCo
 carga como visitante deslogado, não só como usuário autenticado — é fácil esquecer que a tela de
 login roda sem `auth`.
 
-🟡 **Aceite da Etapa 2 ainda não fechado.** `npm run lint` hoje: **89 erros, 17 warnings** — a
-imensa maioria (79) é `@typescript-eslint/no-explicit-any`, que não estava na lista original de
-itens do plano (essa é uma regra do ESLint configurado na Etapa 1; os "13 erros de tipo" do
-`tsc --strict` citados no plano são coisa diferente e não reproduziram — ver 2.7/2.8). Resolver
-os 79 `any` é bem maior que os itens já fechados: exige tipar formatos de dados do Firebase,
-respostas da API Gemini etc., espalhados por dezenas de arquivos. **Decisão pendente do
-usuário:** tratar isso agora dentro da Etapa 2, abrir como item novo (2.12) para depois, ou
-relaxar a regra `no-explicit-any` para `warn` e seguir.
+✅ **Cadastro testado ponta a ponta em produção**, com Playwright contra
+`lunamedclass.vercel.app` (conta `qa.claude.etapa2.*@example.com`, senha só nesta sessão — pode
+apagar em Firebase Console → Authentication → buscar pelo e-mail, e o nó correspondente em
+`users/{uid}` no RTDB): cadastro → perfil completo com nome cheio (não truncado como no bug 0.8)
+→ logout implícito → login de novo → `/dashboard` carregando com XP 0, sem erros de console. Foi
+justamente esse teste que expôs o incidente do `isLoading` documentado acima.
 
-Também pendente: teste de cadastro ponta a ponta em produção (não fiz login/cadastro real no
-Firebase de produção durante a sessão — precisa ação do usuário ou aprovação explícita para
-criar conta de teste).
+🟢 **Decisão sobre os 79 `any`: adiado como item novo, não é bug — ver 2.12 abaixo.** Não estava
+na lista original da Etapa 2 (é uma regra do ESLint que eu mesmo configurei na Etapa 1; os "13
+erros de tipo" do `tsc --strict` citados no plano são outra coisa e não reproduziram — ver
+2.7/2.8). Relaxar a regra pra `warn` só pra deixar o CI verde hoje seria maquiar o sinal sem
+resolver nada. Também não faz sentido tipar 79 pontos agora, no fim de uma sessão já longa e após
+um incidente em produção — é exatamente o tipo de mudança grande e espalhada que pede atenção
+fresca, não continuação por inércia.
 
-**➡️ Próxima ação: decidir o destino dos 79 `any` (ver acima) antes de fechar a Etapa 2; depois
-seguir para a Etapa 3** (camada de dados — Firestore, ponto de não-retorno, fazer backup do RTDB
-antes).
+- [ ] **2.12** *(novo)* Tipar os 79 usos de `no-explicit-any` restantes — Firebase snapshots,
+  respostas da API Gemini, payloads de formulário admin. CI fica vermelho até lá (comportamento
+  esperado, como 1.2/1.3 deixaram o build vermelho até a Etapa 2).
+
+**➡️ Próxima ação: sessão dedicada para 2.12, ou seguir direto para a Etapa 3** (camada de
+dados — Firestore, ponto de não-retorno, fazer backup do RTDB antes).
 
 ---
 
@@ -301,7 +306,8 @@ Um commit isolado por item, com teste quando cabível.
   (AdminStats↔AdminView, DisciplineView/MedicalEventsView↔App.tsx) removidas de ponta a ponta.
   *(commit `3ac6444`)*
 
-**Aceite:** build verde com `strict: true` · zero warnings de lint · cadastro testado ponta a ponta
+**Aceite:** build verde com `strict: true` ✅ · zero warnings de lint 🟡 *(pendente — 79 `any`,
+virou item 2.12)* · cadastro testado ponta a ponta ✅ *(Playwright em produção, ver Status Atual)*
 
 ---
 
