@@ -67,7 +67,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
           return;
         }
         
-        const newStations: OsceStation[] = parsedData.map((item: any, idx: number) => {
+        const newStations: OsceStation[] = parsedData.map((item: Record<string, unknown>, idx: number) => {
           // BASE COMUM A TODOS
           const base = {
             id: `osce_${Date.now()}_${idx}`,
@@ -84,7 +84,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
           
           // MODO 1: PACIENTE VIRTUAL (IA)
           if (importMode === 'ai') {
-            const s = item as any;
+            const s = item;
             return { 
               ...base, 
               mode: 'ai',
@@ -99,7 +99,7 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
           
           // MODO 2: RPG DINÂMICO (LUNA ENGINE)
           if (importMode === 'rpg') {
-            const s = item as any;
+            const s = item;
             return {
               ...base,
               mode: 'rpg',
@@ -123,8 +123,9 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
         });
         
         setOscePreview(newStations);
-      } catch (err: any) { 
-        alert('Erro ao ler JSON: ' + err.message); 
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        alert('Erro ao ler JSON: ' + message);
       }
     };
     reader.readAsText(osceFile);

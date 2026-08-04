@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { SimulationInfo, Period } from '../../types';
+import { SimulationInfo, Period, AnalyticsResult } from '../../types';
 import { 
   Download, TrendingUp, Award, Target,
   Activity, Brain, Clock, BarChart4, ChevronUp, ChevronDown, Printer
 } from 'lucide-react';
 
 interface AdminAnalyticsProps {
-  analyticsData: any[];
+  analyticsData: AnalyticsResult[];
   disciplines: SimulationInfo[];
   periods: Period[]; 
 }
@@ -56,7 +56,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
     const successRate = (successCount / total) * 100;
     const fatalErrorRate = (filtered.filter(d => d.isFatalError).length / total) * 100;
 
-    const calcMetrics = (arr: any[]) => {
+    const calcMetrics = (arr: AnalyticsResult[]) => {
       const count = arr.length;
       if (count === 0) return { count: 0, avg: 0, time: 0, success: 0, fatal: 0 };
       const avg = arr.reduce((a, c) => a + (c.grade || 0), 0) / count;
@@ -115,7 +115,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ analyticsData, discipli
     const rows = analyticsData.map(d => {
       let logData = '';
       if (d.mode === 'ai') logData = "Transcrição Completa (Ver Banco)";
-      else if (d.fullDecisionPath) logData = d.fullDecisionPath.map((p: any) => p.choice).join(" > ");
+      else if (d.fullDecisionPath) logData = d.fullDecisionPath.map((p) => p.choice).join(" > ");
       else if (d.userSequence) logData = d.userSequence.join(" | ");
 
       return [

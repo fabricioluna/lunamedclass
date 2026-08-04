@@ -47,7 +47,7 @@ const AdminReferences: React.FC<AdminReferencesProps> = ({ disciplines, onUpdate
           </select>
           <input type="text" placeholder="Título do Material" value={refTitle} onChange={e => setRefTitle(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
           <input type="text" placeholder="Autor (opcional)" value={refAuthor} onChange={e => setRefAuthor(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
-          <select value={refType} onChange={e => setRefType(e.target.value as any)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm">
+          <select value={refType} onChange={e => setRefType(e.target.value as 'book' | 'article' | 'link' | 'video')} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm">
             <option value="book">Livro</option>
             <option value="article">Artigo/PDF</option>
             <option value="link">Link Externo</option>

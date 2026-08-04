@@ -130,7 +130,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         if (selectedQuizzes.length !== availableStatTitles.length) return false;
       }
 
-      const timeInMillis = normalizeTimestamp(qr.createdAt, (qr as any).date);
+      const timeInMillis = normalizeTimestamp(qr.createdAt, qr.date);
 
       if (timeInMillis) {
         if (startDate) {
@@ -163,7 +163,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       totalQuestionsAnswered += qTotal;
       totalCorrectAnswers += (qr.score || 0);
 
-      const sessId = (qr.details?.[0] as any)?.sessionId;
+      const sessId = qr.details?.[0]?.sessionId;
       if (sessId) {
         sessionTracker.add(sessId);
       } else if (qTotal > 1) {
@@ -174,8 +174,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         if (timeInMillis) {
           const d = new Date(timeInMillis);
           timeStr = `${d.getDate()}_${d.getMonth()}_${d.getFullYear()}`;
-        } else if ((qr as any).date) {
-          timeStr = String((qr as any).date).split(/[\s,T]+/)[0];
+        } else if (qr.date) {
+          timeStr = String(qr.date).split(/[\s,T]+/)[0];
         }
         sessionTracker.add(`legacy_${qr.quizTitle || 'Misto'}_${timeStr}`);
       }
@@ -320,8 +320,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
           : `${selectedQuizzes.length} simulados combinados`;
 
     let textStartX = pageWidth / 2;
-    let titleAlign = 'center';
-    let headerHeight = 30; 
+    let titleAlign: 'center' | 'left' = 'center';
+    let headerHeight = 30;
 
     if (pdfLogo) {
       const targetWidth = 28; 
@@ -342,7 +342,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
        textY = 10 + ((28 / pdfLogo.ratio) / 2) + 3; 
     }
     
-    doc.text("Relatório Executivo de Learning Analytics", textStartX, textY, { align: titleAlign as any });
+    doc.text("Relatório Executivo de Learning Analytics", textStartX, textY, { align: titleAlign });
 
     doc.setDrawColor(200, 200, 200);
     doc.line(14, headerHeight, 196, headerHeight); 
@@ -423,7 +423,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({
         }
       });
       
-      currentY = (doc as any).lastAutoTable?.finalY || (currentY + 20);
+      // jspdf-autotable anexa "lastAutoTable" ao documento em tempo de execução, mas não
+      // declara essa propriedade nos tipos da API funcional (autoTable(doc, options)).
+      currentY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || (currentY + 20);
       currentY += 10;
     }
 
@@ -461,7 +463,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       });
     }
 
-    const pageCount = (doc as any).internal.getNumberOfPages();
+    const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       

@@ -154,8 +154,9 @@ const AdminLab: React.FC<AdminLabProps> = ({
       const csvInput = document.getElementById('labCsvInput') as HTMLInputElement;
       if(csvInput) csvInput.value = '';
 
-    } catch (err: any) { 
-      alert('Erro Crítico no Upload: ' + err.message); 
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert('Erro Crítico no Upload: ' + message);
     } finally {
       setIsLabUploading(false);
       setLabUploadProgress('');

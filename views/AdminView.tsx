@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag } from '../types';
+import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag, AnalyticsResult } from '../types';
 import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap } from 'lucide-react'; 
 
 import { useData } from '../contexts/DataContext';
@@ -28,43 +28,45 @@ interface PeriodRequest {
   timestamp: string;
 }
 
+type AdminTab = 'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags';
+
 interface AdminViewProps {
-  onBack: () => void; 
+  onBack: () => void;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const { periods, disciplines } = useData();
   const { userProfile, isLoadingAuth } = useAuth();
   const isAdmin = userProfile?.role === 'admin';
-  
-  const [activeTab, setActiveTab] = useState<'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags'>('requests');
-  
+
+  const [activeTab, setActiveTab] = useState<AdminTab>('requests');
+
   const [adminQuestions, setAdminQuestions] = useState<Question[]>([]);
   const [adminOsceStations, setAdminOsceStations] = useState<OsceStation[]>([]);
   const [adminLabSimulations, setAdminLabSimulations] = useState<LabSimulation[]>([]);
   const [adminQuizResults, setAdminQuizResults] = useState<QuizResult[]>([]);
-  const [adminOsceAnalytics, setAdminOsceAnalytics] = useState<any[]>([]);
+  const [adminOsceAnalytics, setAdminOsceAnalytics] = useState<AnalyticsResult[]>([]);
   const [adminRequests, setAdminRequests] = useState<PeriodRequest[]>([]);
   const [adminFeatureFlags, setAdminFeatureFlags] = useState<FeatureFlag[]>([]);
 
   useEffect(() => {
     if (!isAdmin || !db) return;
 
-    const refs = [
-      { path: 'questions', setter: (data: any) => setAdminQuestions(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
-      { path: 'osce', setter: (data: any) => setAdminOsceStations(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
-      { path: 'labSimulations', setter: (data: any) => setAdminLabSimulations(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
-      { path: 'quizResults', setter: (data: any) => setAdminQuizResults(Object.keys(data).map(k => ({ ...data[k], id: k }))) },
-      { path: 'osceAnalytics', setter: (data: any) => setAdminOsceAnalytics(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) },
-      { path: 'periodRequests', setter: (data: any) => setAdminRequests(Object.keys(data).map(k => ({ ...data[k], firebaseId: k })).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())) },
-      { path: 'feature_flags', setter: (data: any) => setAdminFeatureFlags(Object.keys(data).map(k => ({ ...data[k], firebaseId: k }))) }
+    const refs: { path: string; setter: (data: Record<string, unknown>) => void }[] = [
+      { path: 'questions', setter: (data) => setAdminQuestions(Object.keys(data).map(k => ({ ...(data[k] as Question), firebaseId: k }))) },
+      { path: 'osce', setter: (data) => setAdminOsceStations(Object.keys(data).map(k => ({ ...(data[k] as OsceStation), firebaseId: k }))) },
+      { path: 'labSimulations', setter: (data) => setAdminLabSimulations(Object.keys(data).map(k => ({ ...(data[k] as LabSimulation), firebaseId: k }))) },
+      { path: 'quizResults', setter: (data) => setAdminQuizResults(Object.keys(data).map(k => ({ ...(data[k] as QuizResult), id: k }))) },
+      { path: 'osceAnalytics', setter: (data) => setAdminOsceAnalytics(Object.keys(data).map(k => ({ ...(data[k] as AnalyticsResult), firebaseId: k }))) },
+      { path: 'periodRequests', setter: (data) => setAdminRequests(Object.keys(data).map(k => ({ ...(data[k] as PeriodRequest), firebaseId: k })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())) },
+      { path: 'feature_flags', setter: (data) => setAdminFeatureFlags(Object.keys(data).map(k => ({ ...(data[k] as FeatureFlag), firebaseId: k }))) }
     ];
 
     const unsubscribes = refs.map(r => {
       return onValue(ref(db, r.path), snap => {
         const val = snap.val();
         if (val) r.setter(val);
-        else r.setter([]); 
+        else r.setter({});
       });
     });
 
@@ -275,22 +277,22 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       </div>
 
       <nav className="flex flex-wrap gap-2 mb-12 print:hidden">
-        {[
+        {([
           { id: 'requests', label: `Solicitações ${pendingRequests.length > 0 ? `(${pendingRequests.length})` : ''}`, icon: <UserCheck size={16}/> },
           { id: 'flags', label: 'Feature Flags', icon: <ToggleRight size={16}/> },
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
           { id: 'analytics', label: 'Research Analytics', icon: <BrainCircuit size={16}/> },
-          { id: 'access', label: 'Acessos', icon: <Lock size={16}/> }, 
+          { id: 'access', label: 'Acessos', icon: <Lock size={16}/> },
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
           { id: 'questions', label: 'Questões', icon: <FileText size={16}/> },
           { id: 'osce', label: 'OSCE', icon: <Stethoscope size={16}/> },
           { id: 'lab', label: 'Lab Virtual', icon: <Microscope size={16}/> },
           { id: 'references', label: 'Referências', icon: <BookOpen size={16}/> },
           { id: 'materials', label: 'Materiais', icon: <ClipboardList size={16}/> },
-        ].map(tab => (
-          <button 
+        ] as { id: AdminTab; label: string; icon: React.ReactElement }[]).map(tab => (
+          <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id as any); }} 
+            onClick={() => { setActiveTab(tab.id); }}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all
               ${activeTab === tab.id ? 'bg-[#003366] text-white shadow-xl scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:border-gray-300'}
               ${tab.id === 'requests' && pendingRequests.length > 0 && activeTab !== 'requests' ? 'border-[#D4A017] text-[#D4A017]' : ''}

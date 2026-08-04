@@ -146,8 +146,9 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
         const fileInput = document.getElementById('csvFileInput') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
 
-      } catch (err: any) { 
-        alert('❌ Erro de integridade no arquivo CSV: ' + err.message); 
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        alert('❌ Erro de integridade no arquivo CSV: ' + message);
       }
     };
     reader.readAsText(qFile); // CSVs geralmente são UTF-8, garantimos a leitura de texto plano

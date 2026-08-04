@@ -219,7 +219,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
             </select>
           )}
           
-          <select value={matType} onChange={e => setMatType(e.target.value as any)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
+          <select value={matType} onChange={e => setMatType(e.target.value as 'summary' | 'script' | 'other')} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading}>
             <option value="summary">Resumo Teórico</option>
             <option value="script">Roteiro de Prática</option>
             <option value="other">Outro / Material Extra</option>
