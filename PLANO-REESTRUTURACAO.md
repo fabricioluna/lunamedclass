@@ -139,8 +139,64 @@ fresca, não continuação por inércia.
   respostas da API Gemini, payloads de formulário admin. CI fica vermelho até lá (comportamento
   esperado, como 1.2/1.3 deixaram o build vermelho até a Etapa 2).
 
-**➡️ Próxima ação: sessão dedicada para 2.12, ou seguir direto para a Etapa 3** (camada de
-dados — Firestore, ponto de não-retorno, fazer backup do RTDB antes).
+**➡️ Próxima ação: iniciar o item 2.12.** Inventário completo tirado com `npx eslint . --format
+json` em 2026-08-04 (rodar `npx eslint .` de novo antes de começar — o número pode ter mudado se
+algo mais mexeu no código nesse meio-tempo):
+
+```
+13 views/DynamicOsceView.tsx     [11,16,62,80,117,131,151,184,285,299,300,424,456]
+11 views/AdminView.tsx           [46,54,55,56,57,58,59,59,59,60,293]
+ 7 api/chat.ts                   [3,3,37,60,78,100,112]
+ 7 components/admin/AdminStats.tsx [133,166,177,178,345,426,464]
+ 6 services/aiService.ts         [10,30,60,84,183,212]
+ 4 components/admin/AdminOsce.tsx [70,87,102,126]
+ 4 views/QuizView.tsx            [28,81,119,170]
+ 3 App.tsx                       [118,495,658]
+ 3 components/InteractiveQuiz.tsx [10,35,68]
+ 3 components/admin/AdminAnalytics.tsx [9,59,118]
+ 3 views/OsceView.tsx            [10,65,109]
+ 2 views/CalculatorsView.tsx     [176,178]
+ 2 views/OsceAIView.tsx          [9,67]
+ 2 views/SummariesListView.tsx   [48,198]
+ 1 components/CareerQuiz.tsx     [33]
+ 1 components/admin/AdminLab.tsx [157]
+ 1 components/admin/AdminMaterials.tsx [222]
+ 1 components/admin/AdminQuestions.tsx [149]
+ 1 components/admin/AdminReferences.tsx [50]
+ 1 contexts/DataContext.tsx      [16]
+ 1 hooks/useFirebaseData.ts      [22]
+ 1 types.ts                      [204]
+ 1 views/StudentDashboardView.tsx [108]
+TOTAL: 79, 23 arquivos
+```
+
+**Estratégia sugerida — 4 blocos temáticos, um ou mais commits por bloco (não um commit gigante):**
+
+1. **IA/Gemini** (`api/chat.ts`, `services/aiService.ts`, `views/OsceAIView.tsx`,
+   `views/DynamicOsceView.tsx`, `views/OsceView.tsx`, `views/QuizView.tsx` — 35 ocorrências, o
+   maior bloco). Tipar a forma da resposta da API Gemini (`functionCalls()[].args`,
+   `response.text()`) e o estado de fases dinâmicas do OSCE. É o bloco de maior risco real —
+   esses `any` escondem contratos de dados que já causaram bug antes (ver 2.7/2.8: o padrão
+   `let x = null` que vira "evolving any").
+2. **Admin** (`views/AdminView.tsx`, `components/admin/*` — 29 ocorrências). Provavelmente
+   `useState<any>` em formulários e parsing de CSV/import. Menor risco (só usado pelo admin
+   único, não pelos alunos).
+3. **Camada de dados** (`hooks/useFirebaseData.ts`, `contexts/DataContext.tsx`, `types.ts` — 3
+   ocorrências, mas estrutural: `osceAnalytics: any[]`). Vale checar se não é redundante com a
+   Etapa 3 (Firestore) antes de investir tempo tipando algo que a Etapa 3 vai substituir.
+4. **UI diversa** (`App.tsx`, `CareerQuiz.tsx`, `InteractiveQuiz.tsx`, `CalculatorsView.tsx`,
+   `SummariesListView.tsx`, `StudentDashboardView.tsx` — 12 ocorrências). Mais simples, bom
+   aquecimento.
+
+Regras de sempre: nenhuma mudança de comportamento, só tipos — se tipar revelar um bug real
+(como o `react-hooks/rules-of-hooks` de 2.11), abrir item novo em vez de misturar no mesmo
+commit. Rodar `npx tsc --noEmit && npm run lint && npm run build && npx vitest run` depois de
+cada bloco. **Lição do incidente do `isLoading`:** qualquer coisa que toque
+`hooks/useFirebaseData.ts` ou `contexts/DataContext.tsx` precisa ser testada como visitante
+deslogado, não só autenticado (ver `incidente-isloading-anonimo-2026-08` na memória).
+
+Depois do 2.12, seguir para a **Etapa 3** (camada de dados — Firestore, ponto de não-retorno,
+fazer backup do RTDB antes).
 
 ---
 
