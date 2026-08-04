@@ -106,6 +106,20 @@ ainda em aberto, ver nota abaixo.**
 - [x] 2.9 — `medicalEventsData.ts` removido (commit `acbc332`)
 - [x] 2.10 — 28 imports/variáveis/parâmetros órfãos removidos (commit `3ac6444`)
 
+🔴 **Incidente em produção causado pelo fix 2.5/2.6, corrigido no mesmo dia (commit
+`6db9642`).** O fix original fazia `isLoading` esperar `periods` e `disciplines` responderem
+antes de liberar o app — mas as Security Rules exigem `auth != null` para ler os dois, e um
+visitante deslogado nunca recebe esse snapshot. Resultado: **a própria tela de login parou de
+carregar em produção** (todo mundo, não só um caso de borda). Detectado durante o teste de
+cadastro ponta a ponta desta sessão (Playwright headless contra o bundle publicado, comparado por
+hash com o build local). Corrigido com callback de erro no `onValue` que também libera o
+`isLoading`, caindo no fallback via `constants` já usado como estado inicial — mantém a correção
+original (isLoading não é mais um timer cego) sem travar quando a leitura é negada por design.
+Verificado local (Playwright) e em produção (bundle novo no ar, tela de login renderizando) antes
+de seguir. **Lição:** depois de qualquer mudança em `useFirebaseData`/`DataContext`, testar a
+carga como visitante deslogado, não só como usuário autenticado — é fácil esquecer que a tela de
+login roda sem `auth`.
+
 🟡 **Aceite da Etapa 2 ainda não fechado.** `npm run lint` hoje: **89 erros, 17 warnings** — a
 imensa maioria (79) é `@typescript-eslint/no-explicit-any`, que não estava na lista original de
 itens do plano (essa é uma regra do ESLint configurado na Etapa 1; os "13 erros de tipo" do
