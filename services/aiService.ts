@@ -3,11 +3,21 @@
  * Versão: 5.2 (Arquitetura Big Tech - Streaming de Tokens e Partial JSON Parsing)
  */
 
+import { AIChatResponse, PhaseRules, PhaseTransition } from '../types';
+
 export interface SosOption {
   id: string;
   text: string;
   isCorrect: boolean;
-  transitionRef: any | null;
+  transitionRef: PhaseTransition | null;
+}
+
+export interface FinalFeedback {
+  passosEsperados: string[];
+  postura: string;
+  acertos: string[];
+  omissoes: string[];
+  nota: number;
 }
 
 // ============================================================================
@@ -27,7 +37,7 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = 2, ti
       }
 
       return await response.json();
-    } catch (error: any) {
+    } catch (error) {
       clearTimeout(timeoutId);
       if (i === retries) throw error;
       console.warn(`[Luna Engine] Instabilidade detectada. Tentativa ${i + 1} falhou. Retentando em 1.5s...`);
@@ -57,7 +67,7 @@ export const getAIResponse = async (prompt: string, context: string = "", isFina
 // ============================================================================
 // REQUISIÇÕES AVANÇADAS (JSON) SEM STREAMING (Fallback Herdado)
 // ============================================================================
-export const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: any) => {
+export const fetchAdvancedAI = async (prompt: string, context: string, phaseRules?: PhaseRules | null) => {
   try {
     const data = await fetchWithRetry('/api/chat', {
       method: 'POST',
@@ -79,11 +89,11 @@ export const fetchAdvancedAI = async (prompt: string, context: string, phaseRule
 // LUNA ENGINE 5.2 - STREAMING DE TOKENS COM EXTRAÇÃO DE JSON PARCIAL
 // ============================================================================
 export const fetchAdvancedAIWithStream = async (
-  prompt: string, 
-  context: string, 
-  phaseRules: any, 
+  prompt: string,
+  context: string,
+  phaseRules: PhaseRules | null,
   onToken: (partialText: string) => void
-) => {
+): Promise<AIChatResponse> => {
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
@@ -149,7 +159,7 @@ const extractJson = (text: string) => {
 // ============================================================================
 // AVALIADOR DE FEEDBACK
 // ============================================================================
-export const generateFinalFeedback = async (history: { role: string, text: string }[], stationTitle: string) => {
+export const generateFinalFeedback = async (history: { role: string, text: string }[], stationTitle: string): Promise<FinalFeedback> => {
   const chatHistory = history.map(h => `${h.role === 'user' ? 'Aluno' : 'Sistema'}: ${h.text}`).join('\n');
   
   const prompt = `Você é o Preceptor Sênior da Luna MedClass.
@@ -180,7 +190,7 @@ export const generateFinalFeedback = async (history: { role: string, text: strin
 // ============================================================================
 // EXTRATOR DE AÇÕES
 // ============================================================================
-export const evaluateRpgAction = async (userAction: string, availableTransitions: any[], narrative: string) => {
+export const evaluateRpgAction = async (userAction: string, availableTransitions: PhaseTransition[], narrative: string) => {
   if (!availableTransitions.length) return [];
   
   const prompt = `Juiz clínico de elite. 
@@ -209,7 +219,7 @@ export const evaluateRpgAction = async (userAction: string, availableTransitions
 // ============================================================================
 // GERADOR DE BOTÕES SOS
 // ============================================================================
-export const generateRpgOptions = async (validTransitions: any[], narrative: string): Promise<SosOption[]> => {
+export const generateRpgOptions = async (validTransitions: PhaseTransition[], narrative: string): Promise<SosOption[]> => {
     if (!validTransitions.length) return [];
     
     const correctTrigger = validTransitions[0].triggers[0];

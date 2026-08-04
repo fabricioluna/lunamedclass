@@ -4,10 +4,21 @@ import {
   ClipboardList, Timer, CheckCircle2, AlertCircle, ChevronRight, RotateCcw, Map, Trophy, History, FlaskConical
 } from 'lucide-react';
 
+interface StaticOsceAnalytics {
+  stationId: string;
+  mode: 'static-cloud';
+  timeSpent: number;
+  userSequence: string[];
+  correctSequence: string[];
+  totalErrors: number;
+  efficiency: string;
+  grade: number;
+}
+
 interface OsceViewProps {
   station: OsceStation;
   onBack: () => void;
-  onSaveResult?: (score: number, total: number, timeSpent: number, analytics: any) => void;
+  onSaveResult?: (score: number, total: number, timeSpent: number, analytics: StaticOsceAnalytics) => void;
 }
 
 // ============================================================================
@@ -62,7 +73,14 @@ const TimerDisplay = ({ timer, formatTime }: { timer: number, formatTime: (s: nu
   </div>
 );
 
-const InteractionArea = ({ selectedActions, safeActionCloud, isUC, onToggleAction }: any) => (
+interface InteractionAreaProps {
+  selectedActions: number[];
+  safeActionCloud: string[];
+  isUC: boolean;
+  onToggleAction: (index: number) => void;
+}
+
+const InteractionArea = ({ selectedActions, safeActionCloud, isUC, onToggleAction }: InteractionAreaProps) => (
   <div className="space-y-8">
     <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-dashed border-blue-100">
       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4 flex items-center gap-2">
@@ -106,7 +124,17 @@ const InteractionArea = ({ selectedActions, safeActionCloud, isUC, onToggleActio
   </div>
 );
 
-const ResultsDashboard = ({ score, timer, selectedActions, safeActionCloud, safeOrderIndices, checklist, formatTime }: any) => (
+interface ResultsDashboardProps {
+  score: number;
+  timer: number;
+  selectedActions: number[];
+  safeActionCloud: string[];
+  safeOrderIndices: number[];
+  checklist?: string[];
+  formatTime: (s: number) => string;
+}
+
+const ResultsDashboard = ({ score, timer, selectedActions, safeActionCloud, safeOrderIndices, checklist, formatTime }: ResultsDashboardProps) => (
   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
     {/* BOX DE NOTA */}
     <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-b-8 border-[#D4A017] relative overflow-hidden">
@@ -257,7 +285,7 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
     
     setScore(finalRounded);
 
-    const analytics = {
+    const analytics: StaticOsceAnalytics = {
       stationId: station.id,
       mode: 'static-cloud',
       timeSpent: timer,

@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DynamicOsceStation, ClinicalState } from '../types';
 import { Activity, ShieldCheck, ChevronRight, RotateCcw, Award, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle, Printer } from 'lucide-react';
-import { fetchAdvancedAIWithStream, generateRpgOptions, generateFinalFeedback } from '../services/aiService';
+import { fetchAdvancedAIWithStream, generateRpgOptions, generateFinalFeedback, SosOption, FinalFeedback } from '../services/aiService';
+
+type SimHistoryEntry = { role: 'user' | 'narrator'; text: string };
 
 // ============================================================================
 // LUNA ENGINE: Sintetizador de Áudio Clínico
 // ============================================================================
 const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: boolean) => {
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const timerRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isMuted, setIsMuted] = useState(false);
 
   const initAudio = useCallback(() => {
     if (!audioCtxRef.current) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) audioCtxRef.current = new AudioCtx();
     }
     if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
@@ -59,7 +61,7 @@ const useClinicalAudio = (hr: number, isMonitorConnected: boolean, isCritical: b
 // MICRO-COMPONENTES DE UI
 // ============================================================================
 
-const SimulationHeader = ({ title, onManualEnd, onBack }: any) => (
+const SimulationHeader = ({ title, onManualEnd, onBack }: { title: string; onManualEnd: () => void; onBack: () => void }) => (
   <header className="h-[60px] md:h-[70px] bg-white border-b border-gray-200 flex flex-col justify-center px-4 md:px-6 shrink-0 z-50 shadow-sm relative">
     <div className="flex justify-between items-center w-full">
       <div className="flex items-center gap-2 overflow-hidden mr-2">
@@ -77,7 +79,16 @@ const SimulationHeader = ({ title, onManualEnd, onBack }: any) => (
   </header>
 );
 
-const VitalsMonitor = ({ vitals, isConnected, isCritical, isMuted, onToggleMute, onInitAudio }: any) => (
+interface VitalsMonitorProps {
+  vitals: ClinicalState;
+  isConnected: boolean;
+  isCritical: boolean;
+  isMuted: boolean;
+  onToggleMute: () => void;
+  onInitAudio: () => void;
+}
+
+const VitalsMonitor = ({ vitals, isConnected, isCritical, isMuted, onToggleMute, onInitAudio }: VitalsMonitorProps) => (
   <div className={`bg-[#0a0f18] p-3 md:p-6 rounded-[1.25rem] md:rounded-3xl border-2 md:border-4 transition-all duration-500 shrink-0 ${isCritical ? 'border-red-600 shadow-[0_0_20px_rgba(220,0,0,0.4)] animate-pulse' : 'border-gray-800 shadow-lg'}`}>
     <div className="flex justify-between items-center mb-2 md:mb-4 border-b border-white/5 pb-1.5 md:pb-2">
       <div className="flex items-center gap-1.5 md:gap-2">
@@ -114,7 +125,7 @@ const VitalsMonitor = ({ vitals, isConnected, isCritical, isMuted, onToggleMute,
   </div>
 );
 
-const CompactHistory = ({ history }: { history: any[] }) => (
+const CompactHistory = ({ history }: { history: SimHistoryEntry[] }) => (
   <div className="bg-white p-3 md:p-4 rounded-[1.25rem] md:rounded-3xl border border-gray-200 flex-grow max-h-[70px] lg:max-h-none overflow-hidden flex flex-col shadow-sm">
     <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-3 border-b pb-1 md:pb-2 shrink-0">
       <History size={12} className="text-gray-400 md:w-3.5 md:h-3.5"/>
@@ -128,7 +139,16 @@ const CompactHistory = ({ history }: { history: any[] }) => (
   </div>
 );
 
-const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingText, chatRef }: any) => (
+interface ChatBoardProps {
+  narrative: string | null;
+  history: SimHistoryEntry[];
+  isProcessing: boolean;
+  isStreaming: boolean;
+  streamingText: string;
+  chatRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingText, chatRef }: ChatBoardProps) => (
   <>
     <div className="bg-[#003366] text-white p-3 md:p-4 rounded-[1.25rem] md:rounded-3xl shadow-xl shrink-0 border-l-[4px] md:border-l-[6px] border-[#D4A017] min-h-[60px] md:min-h-[100px] max-h-[15vh] md:max-h-[25vh] flex flex-col overflow-hidden relative">
       <div className="flex items-center gap-1.5 md:gap-2 mb-1 shrink-0 opacity-70">
@@ -148,7 +168,7 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
             <p className="font-black uppercase text-[9px] md:text-[11px] tracking-[0.3em] md:tracking-[0.4em]">Protocolo Luna Engine</p>
           </div>
         ) : (
-          history.map((msg: any, i: number) => (
+          history.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
               <div className={`max-w-[85%] md:max-w-[80%] p-2.5 px-4 md:p-3 md:px-5 rounded-xl md:rounded-2xl text-xs md:text-sm shadow-sm border ${
                 msg.role === 'user' ? 'bg-[#003366] text-white border-blue-800 rounded-tr-none' : 'bg-white border-gray-100 text-gray-800 rounded-tl-none font-medium'
@@ -181,7 +201,13 @@ const ChatBoard = ({ narrative, history, isProcessing, isStreaming, streamingTex
   </>
 );
 
-const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => {
+interface FeedbackScreenProps {
+  endReason: 'success' | 'death' | 'manual';
+  feedback: FinalFeedback | null;
+  onFinish: () => void;
+}
+
+const FeedbackScreen = ({ endReason, feedback, onFinish }: FeedbackScreenProps) => {
   const handlePrint = () => window.print();
 
   return (
@@ -279,10 +305,15 @@ const FeedbackScreen = ({ endReason, feedback, onFinish }: any) => {
 // ============================================================================
 // O ORQUESTRADOR PRINCIPAL (MAESTRO) COM STREAMING
 // ============================================================================
+interface DynamicOsceAnalytics {
+  history: SimHistoryEntry[];
+  feedback: FinalFeedback;
+}
+
 interface DynamicOsceViewProps {
   station: DynamicOsceStation;
   onBack: () => void;
-  onSaveResult?: (score: number, total: number, timeSpent: number, analytics: any) => void; 
+  onSaveResult?: (score: number, total: number, timeSpent: number, analytics: DynamicOsceAnalytics) => void;
 }
 
 const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSaveResult }) => {
@@ -296,8 +327,8 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
   const [endReason, setEndReason] = useState<'success' | 'death' | 'manual'>('success');
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [sosOptions, setSosOptions] = useState<any[] | null>(null);
-  const [finalFeedback, setFinalFeedback] = useState<any | null>(null);
+  const [sosOptions, setSosOptions] = useState<SosOption[] | null>(null);
+  const [finalFeedback, setFinalFeedback] = useState<FinalFeedback | null>(null);
   
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -421,7 +452,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
     }
   };
 
-  const handleSosChoice = async (option: any) => {
+  const handleSosChoice = async (option: SosOption) => {
     setSosOptions(null);
     await processAction(option.text, true); 
   };
@@ -453,7 +484,7 @@ const DynamicOsceView: React.FC<DynamicOsceViewProps> = ({ station, onBack, onSa
                   <button onClick={() => setSosOptions(null)} className="text-[9px] md:text-[10px] font-black text-gray-400 hover:text-red-500 uppercase">Fechar</button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 max-h-[30vh] overflow-y-auto custom-scrollbar">
-                  {sosOptions.map((opt: any) => (
+                  {sosOptions.map((opt) => (
                     <button key={opt.id} onClick={() => handleSosChoice(opt)} className="bg-white border-2 border-orange-100 p-3 md:p-4 rounded-xl md:rounded-3xl text-left text-[11px] md:text-xs font-bold hover:border-orange-500 hover:bg-orange-50/50 transition-all flex justify-between items-center group shadow-sm">
                         <span className="leading-snug pr-2 md:pr-4 truncate block">{opt.text}</span>
                         <ChevronRight className="text-orange-200 group-hover:text-orange-500 shrink-0" size={16}/>

@@ -2,12 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Question } from '../types';
 import { ArrowLeft, ArrowRight, Scissors, SkipForward, LayoutGrid, X } from 'lucide-react';
 
+export interface QuizProgressState {
+  currentIndex: number;
+  answers: Record<string, number>;
+  score?: number;
+  draftAnswers: Record<string, number>;
+  eliminatedOptions: Record<string, number[]>;
+  quizSignature?: string;
+}
+
 interface InteractiveQuizProps {
   questions: Question[];
   onFinish: (score: number, answers: Record<string, number>) => void;
   onAnswerQuestion?: (questionId: string, isCorrect: boolean, theme: string) => void;
   storageKey: string;
-  resumeState?: any;
+  resumeState?: QuizProgressState | null;
 }
 
 // ============================================================================
@@ -32,7 +41,15 @@ const TopProgressBar = ({ progress, currentIndex, totalQuestions }: { progress: 
   </div>
 );
 
-const BottomFloatingNav = ({ onOpenGrid, unansweredCount, answeredCount, totalQuestions, score }: any) => (
+interface BottomFloatingNavProps {
+  onOpenGrid: () => void;
+  unansweredCount: number;
+  answeredCount: number;
+  totalQuestions: number;
+  score: number;
+}
+
+const BottomFloatingNav = ({ onOpenGrid, unansweredCount, answeredCount, totalQuestions, score }: BottomFloatingNavProps) => (
   <div className="fixed bottom-6 left-0 right-0 z-50 px-4 pointer-events-none">
     <div className="max-w-md mx-auto bg-[#003366] text-white p-3 rounded-3xl shadow-xl flex items-center justify-between border-2 border-[#D4A017] pointer-events-auto">
       <div className="flex items-center gap-3">
@@ -65,7 +82,15 @@ const BottomFloatingNav = ({ onOpenGrid, unansweredCount, answeredCount, totalQu
   </div>
 );
 
-const NavigationGridDrawer = ({ onClose, questions, answers, currentIndex, onJump }: any) => (
+interface NavigationGridDrawerProps {
+  onClose: () => void;
+  questions: Question[];
+  answers: Record<string, number>;
+  currentIndex: number;
+  onJump: (index: number) => void;
+}
+
+const NavigationGridDrawer = ({ onClose, questions, answers, currentIndex, onJump }: NavigationGridDrawerProps) => (
   <div className="fixed inset-0 z-[60] flex flex-col justify-end pointer-events-auto">
     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
     <div className="bg-white rounded-t-[2rem] p-6 pb-24 shadow-2xl relative z-10 animate-in slide-in-from-bottom-8 duration-300 max-h-[80vh] overflow-y-auto">

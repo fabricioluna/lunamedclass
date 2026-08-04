@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import InteractiveQuiz from '../components/InteractiveQuiz';
+import InteractiveQuiz, { QuizProgressState } from '../components/InteractiveQuiz';
 import { Question, SimulationInfo, QuizDetail } from '../types';
 
 // ============================================================================
@@ -25,7 +25,14 @@ const ScoreDashboard = ({ finalScore, total }: { finalScore: number, total: numb
   </div>
 );
 
-const StudyAdvicePanel = ({ advice }: { advice: any }) => {
+interface PerformanceAdvice {
+  strong: string;
+  weak: string;
+  isPerfect: boolean;
+  recommendation: string;
+}
+
+const StudyAdvicePanel = ({ advice }: { advice: PerformanceAdvice | null }) => {
   if (!advice) return null;
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -78,7 +85,14 @@ const ThemeStatsList = ({ stats }: { stats: {theme: string, correct: number, tot
   </div>
 );
 
-const QuizActionButtons = ({ onBack, onRetakeAll, onRetakeWrong, wrongCount }: any) => (
+interface QuizActionButtonsProps {
+  onBack: () => void;
+  onRetakeAll: () => void;
+  onRetakeWrong: () => void;
+  wrongCount: number;
+}
+
+const QuizActionButtons = ({ onBack, onRetakeAll, onRetakeWrong, wrongCount }: QuizActionButtonsProps) => (
   <div className="flex flex-col sm:flex-row gap-4 mt-8">
     <button onClick={onBack} className="flex-1 bg-white border-2 border-gray-100 text-gray-400 py-5 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest hover:border-[#003366] hover:text-[#003366] transition-all">
       Voltar ao Menu
@@ -116,7 +130,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
   const [themeStats, setThemeStats] = useState<{theme: string, correct: number, total: number}[]>([]);
   
   // FIX BUG-UI-004: Validação de Cache Rígida.
-  const [savedState, setSavedState] = useState<any>(() => {
+  const [savedState, setSavedState] = useState<QuizProgressState | null>(() => {
     const saved = localStorage.getItem(storageKey);
     if (!saved) return null;
     try {
@@ -167,7 +181,7 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
       quizName, 
       'teorico', 
       timeSpentSecs, 
-      [{ questionId, isCorrect, theme, sessionId } as any] 
+      [{ questionId, isCorrect, theme, sessionId } as QuizDetail]
     );
   };
 

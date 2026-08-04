@@ -3,10 +3,19 @@ import { OsceStation, ClinicalState, DynamicOsceStation } from '../types';
 import { getAIResponse, fetchAdvancedAIWithStream } from '../services/aiService'; 
 import { LogOut, Send, Activity } from 'lucide-react'; 
 
+interface OsceAIAnalytics {
+  stationId: string;
+  mode: 'rpg' | 'ai';
+  timeSpent: number;
+  grade: number;
+  theme: string;
+  disciplineId: string;
+}
+
 interface OsceAIViewProps {
   station: OsceStation;
   onBack: () => void;
-  onSaveResult?: (score: number, total: number, timeSpent: number, analytics: any) => void;
+  onSaveResult?: (score: number, total: number, timeSpent: number, analytics: OsceAIAnalytics) => void;
 }
 
 const formatFeedback = (text: string) => {
@@ -64,7 +73,7 @@ const OsceAIView: React.FC<OsceAIViewProps> = ({ station, onBack, onSaveResult }
   );
 
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (!isFinished) {
       interval = setInterval(() => setTimer(t => t + 1), 1000);
     }

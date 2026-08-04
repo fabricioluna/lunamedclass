@@ -1,27 +1,55 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, type ModelParams } from '@google/generative-ai';
+import { ClinicalState, PhaseRules } from '../types';
 
-export default async function handler(req: any, res: any) {
+interface ChatRequestBody {
+  prompt: string;
+  context: string;
+  mode?: 'rpg' | 'clinical' | 'ai';
+  phaseRules?: PhaseRules | null;
+  isFinalEvaluation?: boolean;
+}
+
+interface ChatRequest {
+  method?: string;
+  body: ChatRequestBody;
+}
+
+interface ChatResponse {
+  status: (code: number) => { json: (body: unknown) => void };
+}
+
+interface GeminiFunctionDeclaration {
+  name: string;
+  description: string;
+  parameters: {
+    type: 'OBJECT';
+    properties: Record<string, { type: 'STRING' | 'INTEGER' }>;
+    required: string[];
+  };
+}
+
+export default async function handler(req: ChatRequest, res: ChatResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
   try {
     const { prompt, context, mode, phaseRules, isFinalEvaluation } = req.body;
-    
+
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: 'Chave de API não configurada no servidor Vercel.' });
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    
+
     // RESTAURADO PARA O GEMINI 2.5 ORIGINAL DO SEU CÓDIGO
     const targetModel = isFinalEvaluation ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
-    
+
     const fullPrompt = `CONTEXTO ATUAL: ${context}\n\nCONDUTA DO ALUNO: ${prompt}`;
-    
+
     const UNIVERSAL_RULES = `
     VOCÊ É UM MESTRE DE RPG MÉDICO E NARRADOR IMERSIVO, O MELHOR SIMULADOR MÉDICO DO MUNDO.
-    
+
     DIRETRIZES INSTITUCIONAIS E DE NARRATIVA:
     1. HUMANIDADE: Responda sempre com realismo.
     2. BIOSSEGURANÇA: Exija permissão para tocar no paciente e lavagem de mãos/EPIs.
@@ -34,10 +62,10 @@ export default async function handler(req: any, res: any) {
     9. NÃO DÊ O DIAGNÓSTICO. O raciocínio clínico deve ser 100% do aluno.
     `;
 
-    let toolsArray: any[] = [];
+    const toolsArray: GeminiFunctionDeclaration[] = [];
     let systemInstructionText = UNIVERSAL_RULES;
 
-    if (mode === 'rpg' || mode === 'clinical' || mode === 'ai') { 
+    if (mode === 'rpg' || mode === 'clinical' || mode === 'ai') {
       if (mode !== 'ai') {
         toolsArray.push({
           name: "update_vitals",
@@ -57,12 +85,12 @@ export default async function handler(req: any, res: any) {
       }
 
       if (phaseRules && phaseRules.transitions) {
-        const transitionsText = phaseRules.transitions.map((t: any) => 
+        const transitionsText = phaseRules.transitions.map(t =>
           `- Gatilho: [${t.triggers.join(', ')}]. Se atingir, chame 'change_phase' com nextPhaseId = "${t.nextPhaseId}".`
         ).join('\n');
 
         systemInstructionText = `${UNIVERSAL_RULES}\n\nREGRAS DE TRANSIÇÃO:\n${transitionsText}`;
-        
+
         toolsArray.push({
           name: "change_phase",
           description: "Avança fase ou encerra (FINISH).",
@@ -75,7 +103,11 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    const modelOptions: any = {
+    const modelOptions: {
+      model: string;
+      systemInstruction: string;
+      tools?: { functionDeclarations: GeminiFunctionDeclaration[] }[];
+    } = {
       model: targetModel,
       systemInstruction: systemInstructionText,
     };
@@ -84,33 +116,38 @@ export default async function handler(req: any, res: any) {
         modelOptions.tools = [{ functionDeclarations: toolsArray }];
     }
 
-    const model = genAI.getGenerativeModel(modelOptions);
+    // A SDK tipa o schema de parâmetros com valores minúsculos (SchemaType), mas a API do
+    // Gemini espera "OBJECT"/"STRING"/"INTEGER" maiúsculos — é o formato já testado em
+    // produção (ver Etapa 0, modelUsed: gemini-2.5-flash). O cast preserva esse
+    // comportamento sem recorrer a `any`.
+    const model = genAI.getGenerativeModel(modelOptions as unknown as ModelParams);
     const result = await model.generateContent(fullPrompt);
     const response = result.response;
-    
-    let functionCallData = null;
-    let newPhaseId = null;
-    
+
+    let functionCallData: ClinicalState | null = null;
+    let newPhaseId: string | null = null;
+
     const functionCalls = response.functionCalls();
     if (functionCalls && functionCalls.length > 0) {
       for (const call of functionCalls) {
         if (call.name === "update_vitals") {
-          functionCallData = call.args; 
+          functionCallData = call.args as unknown as ClinicalState;
         } else if (call.name === "change_phase") {
-          newPhaseId = (call.args as any).nextPhaseId; 
+          newPhaseId = (call.args as { nextPhaseId: string }).nextPhaseId;
         }
       }
     }
 
-    return res.status(200).json({ 
-      text: response.text() || "...", 
+    return res.status(200).json({
+      text: response.text() || "...",
       vitalsUpdate: functionCallData,
       newPhaseId: newPhaseId,
-      modelUsed: targetModel 
+      modelUsed: targetModel
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro no Servidor:", error);
-    return res.status(500).json({ error: 'Falha na Engine', details: error.message || String(error) });
+    const message = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Falha na Engine', details: message });
   }
 }

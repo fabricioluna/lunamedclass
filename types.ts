@@ -30,6 +30,7 @@ export interface QuizDetail {
   questionId: string;
   isCorrect: boolean;
   theme: string;
+  sessionId?: string;
 }
 
 export interface Question {
@@ -68,12 +69,25 @@ export interface PhaseTransition {
 
 export interface SimulationPhase {
   phaseId: string;
-  narrative: string;              
-  vitals: ClinicalState;          
-  backgroundUrl?: string;         
-  timeLimitSeconds?: number;      
-  timeoutPhaseId?: string;        
-  transitions: PhaseTransition[]; 
+  narrative: string;
+  vitals: ClinicalState;
+  backgroundUrl?: string;
+  timeLimitSeconds?: number;
+  timeoutPhaseId?: string;
+  transitions: PhaseTransition[];
+}
+
+// === LUNA ENGINE: CONTRATO DA IA (GEMINI) ENTRE FRONTEND E api/chat.ts ===
+export interface PhaseRules {
+  transitions: PhaseTransition[];
+  narrative?: string;
+}
+
+export interface AIChatResponse {
+  text: string;
+  vitalsUpdate: ClinicalState | null;
+  newPhaseId: string | null;
+  modelUsed?: string;
 }
 
 // === INTERFACE 1: OSCE ESTÁTICO (Clássico - HM1) ===
@@ -201,7 +215,7 @@ export interface AnalyticsResult {
   isFatalError?: boolean;
   date?: string;
   completedAt?: FirebaseTimestamp;
-  fullDecisionPath?: Array<{ choice: string; [key: string]: any }>;
+  fullDecisionPath?: Array<{ choice: string; [key: string]: unknown }>;
   userSequence?: string[];
   createdAt?: FirebaseTimestamp;
 }
