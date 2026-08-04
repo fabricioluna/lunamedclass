@@ -205,6 +205,14 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
   const [score, setScore] = useState(0);
   const [timer, setTimer] = useState(0);
 
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (!isFinished) {
+      interval = setInterval(() => setTimer(t => t + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isFinished]);
+
   if (station.mode !== 'clinical') {
     return <ModeMismatchWarning onBack={onBack} requiredMode={station.mode === 'rpg' ? 'Luna Engine (RPG)' : 'Paciente Virtual (IA)'} />;
   }
@@ -213,14 +221,6 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
   const isUC = staticStation.disciplineId.toLowerCase().startsWith('uc');
   const safeActionCloud = staticStation.actionCloud || [];
   const safeOrderIndices = staticStation.correctOrderIndices || [];
-
-  useEffect(() => {
-    let interval: any;
-    if (!isFinished) {
-      interval = setInterval(() => setTimer(t => t + 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isFinished]);
 
   const toggleAction = (index: number) => {
     if (isFinished) return;
