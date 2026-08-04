@@ -40,23 +40,59 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
-**Etapa 0 (Emergência) — ✅ CONCLUÍDA em 2026-08-04**
+**Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
-Verificado em produção (`lunamedclass.vercel.app`) e no banco:
+Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.
+Verificado em produção (`lunamedclass.vercel.app`) pelo **conteúdo** da resposta, não só o
+status HTTP — `vercel.json` tem um catch-all para `/index.html`, então uma rota removida
+retorna **200 com o HTML da SPA**, não 404. Não confiar em status code sozinho para validar
+remoção de rota/função neste projeto.
+
 - `curl` anônimo no RTDB → `Permission denied` (vazamento fechado)
-- `POST /api/chat` → resposta válida da IA com `modelUsed: gemini-2.5-flash` (chave nova ativa)
+- `POST /api/chat` → resposta válida da IA, `modelUsed: gemini-2.5-flash` (chave nova ativa)
 - Chave antiga revogada no Google Cloud; `VITE_GEMINI_API_KEY` não existe mais em lugar nenhum
-- `/api/test` e `/ai-test` removidos; vulnerabilidades npm: 18 (2 críticas) → 2
+- `/api/test` → devolve o HTML da SPA (função removida, não existe mais endpoint público
+  drenando a cota Gemini)
+- `/ai-test` → cai no app normal (rota removida)
+- Vulnerabilidades npm: 18 (2 críticas) → 2 (as 2 restantes exigem major bump do
+  `react-router-dom`, adiado para a Etapa 1)
 
 🟡 Dois itens de baixa prioridade ficaram em aberto e **não bloqueiam a Etapa 1**:
 - **0.8** — perfil admin no RTDB com só 2 de 7 campos (consistência de dado, painel funciona normalmente)
 - **0.9** — backfill `userEmail→userId` para resultados anteriores a 19/07/2026 (script pronto em `scripts/backfill-userid.mjs`, não rodado ainda)
 
-**➡️ Próxima ação:** ainda não commitado no git (ver nota abaixo). Depois, iniciar **Etapa 1**.
+**Etapa 1 (Rede de proteção) — ✅ CONCLUÍDA em 2026-08-04, ainda não commitada.**
 
-> **Nota de continuidade:** as mudanças de código da Etapa 0 foram feitas mas o usuário não pediu
-> commit ainda. Se ao retomar `git status` mostrar working tree limpo, o commit já foi feito por
-> fora desta sessão — confirme antes de assumir que falta comitar.
+- `tailwind.config.js`: `content` deixou de varrer `node_modules` → build 3m37s → **17s**
+- `tsconfig.json`: `strict: true` + `include` explícito → **0 erros** (o número de 13 na tabela de
+  auditoria abaixo é da leitura pré-Etapa 0; algo no meio do caminho já corrigiu ou o comando ad
+  hoc da auditoria não usava o mesmo `tsconfig`. Re-auditar em 2.7/2.8 se reaparecer)
+- `package.json`: `typecheck` roda antes do `build`; scripts novos `lint`, `test`, `format`,
+  `format:check`
+- ESLint 9 (flat config, `eslint.config.js`) + Prettier (`.prettierrc.json`) +
+  `eslint-plugin-react-hooks` — só as regras clássicas (`rules-of-hooks` erro,
+  `exhaustive-deps` warn); as regras novas de React Compiler (`purity`,
+  `set-state-in-effect`, `immutability`) do plugin v7 foram **deixadas de fora** de propósito,
+  fora do escopo auditado
+  - `npm run lint` hoje: **92 erros, 47 warnings** — batem com os 80 `any` e ~22 órfãos já
+    conhecidos da auditoria (vira trabalho da Etapa 2, itens 2.7/2.8/2.10)
+  - Prettier configurado mas **não aplicado** ao repo inteiro ainda (66 arquivos sem
+    formatação padronizada) — rodar `npm run format` é decisão separada, para não poluir os
+    commits isolados da Etapa 2 com diff de formatação
+- `.github/workflows/ci.yml`: typecheck + lint + test + build em push/PR para `main`.
+  **CI vai ficar vermelho** até a Etapa 2 (lint com 92 erros) — é o comportamento esperado, igual
+  ao build local
+- Vitest + Testing Library: `vite.config.ts` ganhou bloco `test` (jsdom), `vitest.setup.ts`
+  carrega `@testing-library/jest-dom`. 2 testes de fumaça, 4 casos, todos passando:
+  `utils/csvHelper.test.ts` (função pura) e `components/DisciplineCard.test.tsx` (render + clique)
+
+🆕 **Achado novo durante 1.4** (fora do escopo desta etapa, registrado para a Etapa 2): hook
+condicional em `views/OsceView.tsx:217` — o `useEffect` do timer vem depois de um `return`
+antecipado (linha 209) quando `station.mode !== 'clinical'`, violando a regra de hooks. Ver
+item **2.11** abaixo.
+
+**➡️ Próxima ação: revisar e commitar a Etapa 1, depois iniciar a Etapa 2** (correção de erros —
+usar `npm run lint` e `npm run typecheck` como ponto de partida).
 
 ---
 
@@ -188,12 +224,12 @@ aplicar. Instruções no cabeçalho do script (precisa de service account do Fir
 Nenhuma lógica muda. Só ferramental. **1.2 e 1.3 vão quebrar o build de propósito** — é o
 objetivo; a Etapa 2 conserta. Se precisar publicar algo urgente no meio, `strict: false` por um commit.
 
-- [ ] **1.1** `tailwind.config.js`: `content` hoje é `"./**/*.{js,ts,jsx,tsx}"` e varre `node_modules` → build de **3m37s**. Trocar por lista explícita de pastas. *Aceite: build < 20s*
-- [ ] **1.2** `tsconfig.json`: adicionar `include` explícito + `"strict": true`
-- [ ] **1.3** `package.json`: `"typecheck": "tsc --noEmit"` e `"build": "npm run typecheck && vite build"` *(hoje o build não checa tipos)*
-- [ ] **1.4** ESLint + Prettier + `eslint-plugin-react-hooks`
-- [ ] **1.5** GitHub Actions: typecheck + lint + build em push/PR *(não existe `.github/`)*
-- [ ] **1.6** Vitest + Testing Library + 2 testes de fumaça
+- [x] **1.1** `tailwind.config.js`: `content` hoje é `"./**/*.{js,ts,jsx,tsx}"` e varre `node_modules` → build de **3m37s**. Trocar por lista explícita de pastas. *Aceite: build < 20s* → **17s**
+- [x] **1.2** `tsconfig.json`: adicionar `include` explícito + `"strict": true`
+- [x] **1.3** `package.json`: `"typecheck": "tsc --noEmit"` e `"build": "npm run typecheck && vite build"` *(hoje o build não checa tipos)*
+- [x] **1.4** ESLint + Prettier + `eslint-plugin-react-hooks`
+- [x] **1.5** GitHub Actions: typecheck + lint + build em push/PR *(não existe `.github/`)*
+- [x] **1.6** Vitest + Testing Library + 2 testes de fumaça
 
 ---
 
@@ -208,6 +244,7 @@ Um commit isolado por item, com teste quando cabível.
 - [ ] **2.4** Perfil congelado — `AuthContext.tsx:67` usa `{ onlyOnce: true }`; aprovação de período só aparece após recarregar. Trocar por listener vivo **com cleanup**.
 - [ ] **2.5** 4 listeners `onValue` vazados — `hooks/useFirebaseData.ts:31-84`; o cleanup só limpa o `setTimeout`.
 - [ ] **2.6** `isLoading` fictício — `hooks/useFirebaseData.ts:87` usa `setTimeout(500)` fixo, sem relação com os dados.
+- [ ] **2.11** Hook condicional — `views/OsceView.tsx:217`. O `useEffect` do timer vem depois de um `return` antecipado (linha 209, quando `station.mode !== 'clinical'`), violando a regra de hooks (`react-hooks/rules-of-hooks`, achado em 1.4). Mover o `useEffect` para antes do `return` condicional.
 
 **Erros de tipo** (13, revelados por 1.2)
 - [ ] **2.7** `api/chat.ts:98` e `views/OsceAIView.tsx:123` — inferência `null`, tipar explicitamente
