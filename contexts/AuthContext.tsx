@@ -40,13 +40,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    let unsubscribeProfile: (() => void) | null = null;
+
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      unsubscribeProfile?.();
+      unsubscribeProfile = null;
+
       setCurrentUser(user);
-      
+
       if (user && db) {
         const userRef = ref(db, `users/${user.uid}`);
-        
-        onValue(userRef, (snapshot) => {
+        let hasStampedLoginThisSession = false;
+
+        unsubscribeProfile = onValue(userRef, (snapshot) => {
           const data = snapshot.val();
           if (data) {
             setUserProfile(data);
@@ -56,7 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               displayName: user.displayName,
               email: user.email,
               photoURL: user.photoURL,
-              role: 'student', 
+              role: 'student',
               createdAt: new Date().toISOString(),
               lastLogin: new Date().toISOString()
             };
@@ -64,17 +70,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUserProfile(newProfile);
           }
           setIsLoadingAuth(false);
-        }, { onlyOnce: true });
-        
-        set(ref(db, `users/${user.uid}/lastLogin`), new Date().toISOString());
 
+          // Grava lastLogin só depois de confirmar (ou criar) o perfil, e só uma vez por
+          // sessão — senão a própria escrita realimenta este listener ao vivo.
+          if (!hasStampedLoginThisSession) {
+            hasStampedLoginThisSession = true;
+            set(ref(db, `users/${user.uid}/lastLogin`), new Date().toISOString());
+          }
+        });
       } else {
         setUserProfile(null);
         setIsLoadingAuth(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeProfile?.();
+      unsubscribeAuth();
+    };
   }, []);
 
   const loginWithGoogle = async () => {
@@ -103,7 +116,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       
       await set(ref(db, `users/${userCredential.user.uid}`), newProfile);
-      setCurrentUser({ ...userCredential.user, displayName: name } as FirebaseUser);
+      // updateProfile já atualizou auth.currentUser no lugar; usar o objeto real em vez de
+      // espalhar userCredential.user, que descartaria os métodos do protótipo (getIdToken etc.)
+      setCurrentUser(auth.currentUser);
       setUserProfile(newProfile);
     }
   };
