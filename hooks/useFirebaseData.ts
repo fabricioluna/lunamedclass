@@ -45,6 +45,10 @@ export const useFirebaseData = () => {
     }));
 
     // 1. Ouvinte da coleção de Períodos
+    // As Security Rules exigem auth != null para ler 'periods' — para um visitante ainda
+    // deslogado (ex: a própria tela de login) a leitura vem negada. O callback de erro marca
+    // "carregado" mesmo assim, para não travar o app inteiro esperando um dado que nunca virá;
+    // o fallback via constants (linha 11) cobre esse caso.
     const periodsRef = ref(db, 'periods');
     unsubscribers.push(onValue(periodsRef, (snap) => {
       const data = snap.val();
@@ -54,9 +58,12 @@ export const useFirebaseData = () => {
       }
       periodsLoaded = true;
       maybeFinishLoading();
+    }, () => {
+      periodsLoaded = true;
+      maybeFinishLoading();
     }));
 
-    // 2. Ouvinte da coleção de Disciplinas
+    // 2. Ouvinte da coleção de Disciplinas (mesma ressalva de permissão do item 1 acima)
     const disciplinesRef = ref(db, 'disciplines');
     unsubscribers.push(onValue(disciplinesRef, (snap) => {
       const data = snap.val();
@@ -84,6 +91,9 @@ export const useFirebaseData = () => {
           }
         }));
       }
+      disciplinesLoaded = true;
+      maybeFinishLoading();
+    }, () => {
       disciplinesLoaded = true;
       maybeFinishLoading();
     }));
