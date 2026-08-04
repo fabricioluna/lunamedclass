@@ -20,7 +20,6 @@ const OsceModeSelectionView = lazy(() => import('./views/OsceModeSelectionView')
 const CalculatorsView = lazy(() => import('./views/CalculatorsView'));
 const CareerQuiz = lazy(() => import('./components/CareerQuiz'));
 const ReferencesView = lazy(() => import('./views/ReferencesView'));
-const ShareMaterialView = lazy(() => import('./views/ShareMaterialView'));
 const LabListView = lazy(() => import('./views/LabListView'));
 const LabQuizView = lazy(() => import('./views/LabQuizView'));
 const SimulatorsView = lazy(() => import('./views/SimulatorsView'));
@@ -605,19 +604,9 @@ const MaterialsFlow = () => {
   const { disciplines } = useData();
   const discipline = disciplines.find(d => d.id === disciplineId);
 
-  const [step, setStep] = useState<'list' | 'share'>('list');
-
   if (!discipline) return <Navigate to="/" replace />;
 
-  if (step === 'list') {
-     return <SummariesListView disciplineId={discipline.id} disciplines={disciplines} selectedUnit={unit} onBack={() => navigate(-1)} onShareClick={() => setStep('share')} />;
-  }
-  if (step === 'share') {
-     return <ShareMaterialView discipline={discipline} onBack={() => setStep('list')} onShare={(s) => {
-         if (db) push(ref(db, 'summaries'), { ...s, unit });
-     }} />;
-  }
-  return null;
+  return <SummariesListView disciplineId={discipline.id} disciplines={disciplines} selectedUnit={unit} onBack={() => navigate(-1)} />;
 };
 
 const ReferencesFlow = () => {

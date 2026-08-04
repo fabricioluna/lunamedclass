@@ -15,7 +15,6 @@ interface SummariesListViewProps {
   disciplines: SimulationInfo[];
   selectedUnit: AcademicUnit; // Resolvendo o erro apontado no App.tsx
   onBack: () => void;
-  onShareClick?: () => void;
 }
 
 // === HELPER DE TIPAGEM ESTRITA ===
