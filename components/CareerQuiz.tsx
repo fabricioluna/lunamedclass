@@ -30,7 +30,16 @@ interface Question {
   options: AnswerOption[];
 }
 
-const specialtyDetails: Record<string, any> = {
+interface SpecialtyDetail {
+  icon: React.ReactNode;
+  desc: string;
+  profile: string;
+  advice: string;
+  book: string;
+  subjects: string[];
+}
+
+const specialtyDetails: Record<string, SpecialtyDetail> = {
   'Clínica Médica': { 
     icon: <Stethoscope size={48} />, desc: "O Detetive do Corpo Humano", 
     profile: "Você possui uma mente investigativa, movida pela curiosidade e pelo desejo de entender o paciente como um todo sistêmico. Seu cérebro busca padrões complexos, conectando sintomas aparentemente difusos para formar um diagnóstico preciso. Valoriza a escuta ativa, o raciocínio intelectual minucioso e o desafio de desvendar enigmas fisiológicos.", 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, UserProfile } from '../contexts/AuthContext';
 import { db, ref, onValue } from '../firebase';
 import { query, orderByChild, equalTo } from 'firebase/database';
 import { QuizResult } from '../types';
@@ -105,7 +105,8 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
   const bestTopics = topicStats.slice(0, 3);
   const weakTopics = topicStats.slice().reverse().filter(t => t.pct < 70).slice(0, 3);
 
-  const profileSafe = userProfile as any;
+  // Alguns perfis legados foram gravados com "name" em vez de "displayName".
+  const profileSafe = userProfile as (UserProfile & { name?: string }) | null;
   const displayName = profileSafe?.name || profileSafe?.displayName || currentUser?.email || 'Aluno';
   const initial = typeof displayName === 'string' && displayName.length > 0 ? displayName.charAt(0).toUpperCase() : 'A';
 

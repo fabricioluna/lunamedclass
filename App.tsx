@@ -115,12 +115,13 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
         if (password !== confirmPassword) throw new Error('As senhas digitadas não coincidem.');
         await registerWithEmail(name, email, password, selectedPeriod);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      if (err.code === 'auth/invalid-credential') setErrorMsg('Credenciais incorretas. Verifique usuário e senha.');
-      else if (err.code === 'auth/email-already-in-use') setErrorMsg('Este e-mail já está cadastrado. Tente fazer login.');
-      else if (err.code === 'auth/weak-password') setErrorMsg('A senha deve ter pelo menos 6 caracteres.');
-      else setErrorMsg(err.message || 'Ocorreu um erro. Tente novamente.');
+      const authErr = err as { code?: string; message?: string };
+      if (authErr.code === 'auth/invalid-credential') setErrorMsg('Credenciais incorretas. Verifique usuário e senha.');
+      else if (authErr.code === 'auth/email-already-in-use') setErrorMsg('Este e-mail já está cadastrado. Tente fazer login.');
+      else if (authErr.code === 'auth/weak-password') setErrorMsg('A senha deve ter pelo menos 6 caracteres.');
+      else setErrorMsg(authErr.message || 'Ocorreu um erro. Tente novamente.');
     } finally {
       setIsProcessing(false);
     }
@@ -492,7 +493,7 @@ const DisciplineFlow = () => {
     }
   };
 
-  return <DisciplineView disciplineId={disciplineId!} disciplines={disciplines} onSelectOption={handleSelectOption as any} />;
+  return <DisciplineView disciplineId={disciplineId!} disciplines={disciplines} onSelectOption={handleSelectOption} />;
 };
 
 const QuizFlow = () => {
@@ -655,9 +656,9 @@ const AppRouter: React.FC = () => {
             <Route path="/survey" element={
               <SurveyView 
                 onBack={() => window.location.href = '/'} 
-                onSaveResult={(data: any) => {
+                onSaveResult={(data) => {
                   if (db) push(ref(db, 'surveys'), data);
-                }} 
+                }}
               />
             } />
             

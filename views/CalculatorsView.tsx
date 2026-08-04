@@ -173,9 +173,9 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value.replace(',', '.'))) setter(value);
   };
 
-  const handleModuleInputChange = (setter: any, field: string, value: string) => {
+  const handleModuleInputChange = <T extends Record<string, string>>(setter: React.Dispatch<React.SetStateAction<T>>, field: keyof T, value: string) => {
     if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value.replace(',', '.'))) {
-      setter((prev: any) => ({ ...prev, [field]: value }));
+      setter((prev) => ({ ...prev, [field]: value }));
     }
   };
 

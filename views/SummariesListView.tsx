@@ -41,11 +41,11 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
   const [uploadMode, setUploadMode] = useState<'file' | 'link'>('file');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const [formData, setFormData] = useState({ 
-    title: '', 
-    author: '', 
-    description: '', 
-    type: 'summary' as any,
+  const [formData, setFormData] = useState({
+    title: '',
+    author: '',
+    description: '',
+    type: 'summary' as 'summary' | 'script' | 'other',
     linkUrl: ''
   });
 
@@ -195,7 +195,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                <input type="text" placeholder="Legenda / Título" className="bg-white p-4 rounded-xl outline-none font-bold text-sm border border-transparent focus:border-[#D4A017] transition-colors" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
                <input type="text" placeholder="Autor(a)" className="bg-white p-4 rounded-xl outline-none font-bold text-sm border border-transparent focus:border-[#D4A017] transition-colors" value={formData.author} onChange={e => setFormData({...formData, author: e.target.value})} />
-               <select className="bg-white p-4 rounded-xl font-bold text-sm border border-transparent transition-colors text-gray-700" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})}>
+               <select className="bg-white p-4 rounded-xl font-bold text-sm border border-transparent transition-colors text-gray-700" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as 'summary' | 'script' | 'other'})}>
                  <option value="summary">Resumo / Teórico</option><option value="script">Roteiro / Prática</option><option value="other">Outro / Pasta</option>
                </select>
              </div>
