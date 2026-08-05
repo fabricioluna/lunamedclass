@@ -40,6 +40,13 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
+**➡️ HANDOFF (preparado em 2026-08-05, antes de um `/clear`): Etapas 0, 1 e 2 estão 100%
+concluídas. Próxima ação é iniciar a ETAPA 3 (Firestore) — pule direto para a seção "🏗️ ETAPA 3"
+mais abaixo.** Backup do RTDB já feito (`backups/rtdb-backup-2026-08-05T00-29-59-890Z.json`,
+local, não apagar até confirmar a migração). Working tree limpo, tudo commitado até `dc85eaa`,
+nada enviado ao remoto ainda. Pendência solta (não bloqueia a Etapa 3): revogar a service account
+key do Firebase Admin usada nos itens 0.8/0.9/backup — ver nota de segurança na seção 0.9.
+
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
 Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.
