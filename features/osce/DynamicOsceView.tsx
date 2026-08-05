@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { DynamicOsceStation, ClinicalState } from '../types';
+import { DynamicOsceStation, ClinicalState } from '../../types';
 import { Activity, ShieldCheck, ChevronRight, RotateCcw, Award, Send, HelpCircle, Volume2, VolumeX, UserCircle, History, Zap, XCircle, Printer } from 'lucide-react';
-import { fetchAdvancedAIWithStream, generateRpgOptions, generateFinalFeedback, SosOption, FinalFeedback } from '../services/aiService';
+import { fetchAdvancedAIWithStream, generateRpgOptions, generateFinalFeedback, SosOption, FinalFeedback } from '../../services/aiService';
 
 type SimHistoryEntry = { role: 'user' | 'narrator'; text: string };
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { OsceStation, SimulationInfo, Period, StaticOsceStation, DynamicOsceStation, AcademicUnit } from '../../types'; 
+import { OsceStation, SimulationInfo, Period, StaticOsceStation, DynamicOsceStation, AcademicUnit } from '../../../types'; 
 import { Trash2, ClipboardList, Gamepad2, Bot, UploadCloud } from 'lucide-react';
 
 interface AdminOsceProps {

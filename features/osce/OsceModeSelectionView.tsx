@@ -1,4 +1,3 @@
-// views/OsceModeSelectionView.tsx
 import React from 'react';
 
 interface OsceModeSelectionViewProps {

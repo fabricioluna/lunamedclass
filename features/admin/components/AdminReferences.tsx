@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SimulationInfo, ReferenceMaterial } from '../../types';
+import { SimulationInfo, ReferenceMaterial } from '../../../types';
 import { Trash2 } from 'lucide-react';
 
 interface AdminReferencesProps {

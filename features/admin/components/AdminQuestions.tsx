@@ -1,8 +1,7 @@
-// components/admin/AdminQuestions.tsx
 import React, { useState, useMemo } from 'react';
-import { Question, SimulationInfo, AcademicUnit } from '../../types';
+import { Question, SimulationInfo, AcademicUnit } from '../../../types';
 import { Trash2, Edit3, X } from 'lucide-react';
-import { parseResilientCSV } from '../../utils/csvHelper'; // <-- Importação do Parser CSV
+import { parseResilientCSV } from '../../../utils/csvHelper'; // <-- Importação do Parser CSV
 
 interface AdminQuestionsProps {
   questions: Question[];

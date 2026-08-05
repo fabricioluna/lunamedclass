@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { SimulationInfo, Period, AnalyticsResult } from '../../types';
+import { SimulationInfo, Period, AnalyticsResult } from '../../../types';
 import { 
   Download, TrendingUp, Award, Target,
   Activity, Brain, Clock, BarChart4, ChevronUp, ChevronDown, Printer

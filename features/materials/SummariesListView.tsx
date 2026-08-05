@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../types.ts'; 
+import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../../types.ts'; 
 import {
   Loader2, Search, Plus, FileCheck, X, User,
   CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck,
   Download, Milestone, Layers
 } from 'lucide-react';
-import { subscribeToMaterials, addMaterialFile, addMaterialLink } from '../services/materialsService.ts';
-import { formatFileSize } from '../utils/formatters.ts';
+import { subscribeToMaterials, addMaterialFile, addMaterialLink } from '../../services/materialsService.ts';
+import { formatFileSize } from '../../utils/formatters.ts';
 
 interface SummariesListViewProps {
   disciplineId: string;

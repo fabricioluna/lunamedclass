@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Microscope, Play, User, Activity, Pill, ClipboardList, FilterX, LayoutGrid, Milestone, Layers } from 'lucide-react';
-import { LabSimulation, SimulationInfo, AcademicUnit } from '../types';
-import { fetchLabSimulationsOnce } from '../services/labService';
+import { LabSimulation, SimulationInfo, AcademicUnit } from '../../types';
+import { fetchLabSimulationsOnce } from '../../services/labService';
 
 interface Props {
   disciplineId: string;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { SimulationInfo, Period, AcademicUnit } from '../../types'; 
+import { SimulationInfo, Period, AcademicUnit } from '../../../types'; 
 import { Trash2, Plus, Layers, Info } from 'lucide-react';
 
 interface AdminThemesProps {

@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag, AnalyticsResult } from '../types';
+import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag, AnalyticsResult } from '../../types';
 import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap } from 'lucide-react';
 
-import { useData } from '../contexts/DataContext';
-import { useAuth } from '../contexts/AuthContext';
-import { PERIODS } from '../data/periods';
-import { SIMULATIONS } from '../data/disciplines';
-import { PeriodRequest } from '../services/authService';
-import * as adminService from '../services/adminService';
-import * as questionsService from '../services/questionsService';
-import * as osceService from '../services/osceService';
-import * as labService from '../services/labService';
-import * as resultsService from '../services/resultsService';
-import * as configService from '../services/configService';
+import { useData } from '../../contexts/DataContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { PERIODS } from '../../data/periods';
+import { SIMULATIONS } from '../../data/disciplines';
+import { PeriodRequest } from '../../services/authService';
+import * as adminService from '../../services/adminService';
+import * as questionsService from '../../services/questionsService';
+import * as osceService from '../../services/osceService';
+import * as labService from '../../services/labService';
+import * as resultsService from '../../services/resultsService';
+import * as configService from '../../services/configService';
 
-import AdminStats from '../components/admin/AdminStats';
-import AdminMaterials from '../components/admin/AdminMaterials';
-import AdminQuestions from '../components/admin/AdminQuestions';
-import AdminLab from '../components/admin/AdminLab';
-import AdminOsce from '../components/admin/AdminOsce';
-import AdminThemes from '../components/admin/AdminThemes';
-import AdminReferences from '../components/admin/AdminReferences';
-import AdminDisciplines from '../components/admin/AdminDisciplines';
-import AdminAnalytics from '../components/admin/AdminAnalytics';
+import AdminStats from './components/AdminStats';
+import AdminMaterials from './components/AdminMaterials';
+import AdminQuestions from './components/AdminQuestions';
+import AdminLab from './components/AdminLab';
+import AdminOsce from './components/AdminOsce';
+import AdminThemes from './components/AdminThemes';
+import AdminReferences from './components/AdminReferences';
+import AdminDisciplines from './components/AdminDisciplines';
+import AdminAnalytics from './components/AdminAnalytics';
 
 type AdminTab = 'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags';
 

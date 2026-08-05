@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../../types';
+import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../../../types';
 import { Trash2, Loader2, BadgeCheck } from 'lucide-react';
 import {
   subscribeToAllMaterials, addMaterialFile, addMaterialLink, deleteMaterial, clearMaterials,
-} from '../../services/materialsService';
-import { PERIODS } from '../../data/periods';
-import { formatFileSize } from '../../utils/formatters';
+} from '../../../services/materialsService';
+import { PERIODS } from '../../../data/periods';
+import { formatFileSize } from '../../../utils/formatters';
 
 interface AdminMaterialsProps {
   disciplines: SimulationInfo[];

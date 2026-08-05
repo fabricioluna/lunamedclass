@@ -1,10 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { QuizResult, Question, LabSimulation, SimulationInfo, FirebaseTimestamp } from '../../types';
+import { QuizResult, Question, LabSimulation, SimulationInfo, FirebaseTimestamp } from '../../../types';
 import { TrendingUp, Layers, AlertTriangle, FileDown, Trash2, CalendarDays, ChevronDown, CheckSquare } from 'lucide-react';
-import { PERIODS } from '../../data/periods';
+import { PERIODS } from '../../../data/periods';
 
 // IMPORTAÇÕES DO SERVICE PARA DELETAR RESULTADOS ESPECÍFICOS
-import { deleteResult, deleteResults } from '../../services/resultsService';
+import { deleteResult, deleteResults } from '../../../services/resultsService';
 
 // IMPORTAÇÕES DO GERADOR DE PDF
 import jsPDF from 'jspdf';

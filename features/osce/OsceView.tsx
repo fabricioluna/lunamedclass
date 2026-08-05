@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { OsceStation, StaticOsceStation } from '../types';
+import { OsceStation, StaticOsceStation } from '../../types';
 import { 
   ClipboardList, Timer, CheckCircle2, AlertCircle, ChevronRight, RotateCcw, Map, Trophy, History, FlaskConical
 } from 'lucide-react';

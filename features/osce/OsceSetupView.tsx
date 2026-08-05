@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationInfo, OsceStation, AcademicUnit } from '../types';
+import { SimulationInfo, OsceStation, AcademicUnit } from '../../types';
 import { Milestone, Layers } from 'lucide-react';
-import { fetchOsceStationsOnce } from '../services/osceService';
+import { fetchOsceStationsOnce } from '../../services/osceService';
 
 interface OsceSetupViewProps {
   discipline: SimulationInfo;

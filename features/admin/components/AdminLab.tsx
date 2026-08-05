@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit } from '../../types';
+import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit } from '../../../types';
 import { Trash2, Microscope, Loader2 } from 'lucide-react';
-import { uploadFile } from '../../services/storageService';
-import { parseResilientCSV } from '../../utils/csvHelper';
+import { uploadFile } from '../../../services/storageService';
+import { parseResilientCSV } from '../../../utils/csvHelper';
 
 interface AdminLabProps {
   disciplines: SimulationInfo[];

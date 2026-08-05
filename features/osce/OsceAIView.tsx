@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { OsceStation, ClinicalState, DynamicOsceStation } from '../types';
-import { getAIResponse, fetchAdvancedAIWithStream } from '../services/aiService'; 
+import { OsceStation, ClinicalState, DynamicOsceStation } from '../../types';
+import { getAIResponse, fetchAdvancedAIWithStream } from '../../services/aiService'; 
 import { LogOut, Send, Activity } from 'lucide-react'; 
 
 interface OsceAIAnalytics {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import InteractiveQuiz, { QuizProgressState } from '../components/InteractiveQuiz';
-import { Question, SimulationInfo, QuizDetail } from '../types';
+import InteractiveQuiz, { QuizProgressState } from '../../components/InteractiveQuiz';
+import { Question, SimulationInfo, QuizDetail } from '../../types';
 
 // ============================================================================
 // MICRO-COMPONENTES DE UI (CLEAN CODE)

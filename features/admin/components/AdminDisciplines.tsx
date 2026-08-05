@@ -1,7 +1,7 @@
 import React from 'react';
-import { SimulationInfo } from '../../types';
+import { SimulationInfo } from '../../../types';
 import { Lock, Unlock, ShieldAlert, Layers } from 'lucide-react';
-import { PERIODS } from '../../data/periods';
+import { PERIODS } from '../../../data/periods';
 
 /**
  * Interface rigorosa para controle granular de funcionalidades.

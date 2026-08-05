@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LabSimulation, LabQuestion, QuizDetail } from '../types';
+import { LabSimulation, LabQuestion, QuizDetail } from '../../types';
 import { Microscope, ChevronRight, ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal, Image as ImageIcon, Lightbulb, Search, Target } from 'lucide-react';
 
 interface Props {
