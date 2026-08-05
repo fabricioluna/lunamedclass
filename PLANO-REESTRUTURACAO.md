@@ -40,17 +40,27 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
-**➡️ HANDOFF (2026-08-05): Etapas 0, 1 e 2 concluídas. Etapa 3 (Firestore) está
-CODE-COMPLETE (3.1–3.7 todos feitos e verificados — typecheck/lint/build/vitest/smoke test
-visitante deslogado, tudo verde) mas AINDA NÃO ATIVA EM PRODUÇÃO** — faltam 3 ações manuais do
-usuário antes de valer (publicar `firestore.rules`, rodar `set-admin-claim.mjs --apply`, decidir
-quando rodar `migrate-rtdb-to-firestore.mjs --apply`). Ver os 4 itens em 🔴 na seção "🏗️ ETAPA 3"
-mais abaixo antes de continuar. **Mudanças desta sessão ainda não commitadas** (o usuário não
-pediu commit) — `git status` mostra ~19 arquivos modificados + ~15 novos (services/, hooks/
-useAppConfig.ts, firestore.rules*, scripts novos). Backup do RTDB de antes desta sessão segue
-válido (`backups/rtdb-backup-2026-08-05T00-29-59-890Z.json`, não apagar). Pendência solta (não
-bloqueia): revogar a service account key do Firebase Admin usada nos itens 0.8/0.9/backup — ver
-nota de segurança na seção 0.9.
+**➡️ HANDOFF (2026-08-05, madrugada — sessão autônoma enquanto o usuário dormia): Etapas 0, 1
+e 2 concluídas. Etapa 3 (Firestore) CODE-COMPLETE, todos os itens 3.1–3.7 feitos e verificados.
+Etapa 4 (Reestruturação) parcialmente feita: 4.1, 4.2 e 4.4 concluídos e verificados; 4.6
+investigado (achado: já estava resolvido, alvo do audit original parece equivocado); 4.3 e 4.5
+conscientemente adiados (ver justificativa na seção Etapa 4) — precisam de uma sessão com o
+usuário disponível para testar navegação real.**
+
+🔴 **NADA disso está ativo em produção ainda** — a Etapa 3 sozinha já teria 3 pendências
+manuais do usuário (publicar `firestore.rules`, rodar `set-admin-claim.mjs --apply`, decidir
+quando migrar os dados), e a Etapa 4 é só reorganização de código sobre essa mesma base ainda
+não publicada. Ver os itens 🔴 na seção "🏗️ ETAPA 3" antes de publicar qualquer coisa.
+
+**Estado do git:** 3 commits locais desta sessão (`6f225d0` Etapa 3, `eca749e` item 4.4,
+`9137755` item 4.1), todos **enviados para a branch de backup `etapa-3-firestore` no GitHub**
+(não para `origin/main` — a Vercel faz deploy automático de `main`, e publicar essa migração
+antes das regras do Firestore estarem no ar arrisca quebrar login para a turma inteira).
+`origin/main` continua no commit de antes desta sessão. Rodar `git push origin main` só depois
+de publicar `firestore.rules` e revisar.
+
+Pendência solta (não bloqueia): revogar a service account key do Firebase Admin usada nos itens
+0.8/0.9/backup — ver nota de segurança na seção 0.9.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -516,12 +526,51 @@ publicadas (item 1 acima) para ter valor real; hoje só existe como código loca
 
 ## 🧱 ETAPA 4 — Reestruturação da aplicação *(~1 semana)*
 
-- [ ] **4.1** `App.tsx` de 706 → ~60 linhas. `LoginView`/`PeriodOnboarding` → `features/auth/`; `AppLayout`/`ErrorBoundary` → `components/layout/`; rotas → `routes/AppRoutes.tsx`
-- [ ] **4.2** Zero escrita de banco no JSX — callbacks inline em `App.tsx:523,555,596,618` viram chamadas de service
-- [ ] **4.3** Os 7 "Flow" viram rotas reais (`/disciplina/:id/simulado/executar`) — hoje usam `useState<'setup'|'quiz'>` e o botão *voltar* do navegador não entende
-- [ ] **4.4** Quebrar `constants.tsx` (1.144 linhas) → `data/periods.ts`, `data/disciplines.ts`, `data/medicalEvents.ts`, `theme.ts`. **Separar seed de fallback de runtime** (hoje o mesmo arquivo faz os dois)
-- [ ] **4.5** Estrutura `features/{auth,quiz,osce,lab,materials,admin}`
-- [ ] **4.6** Bundle: `jspdf`/`html2canvas` em import dinâmico. Hoje: principal **1.03 MB**, `AdminView` **563 KB**. Alvo: principal < 400 KB
+**➡️ Trabalho autônomo em 2026-08-05 (sessão da noite, sem interação do usuário — pediu para
+adiantar o máximo possível sem depender de ação dele).** Itens 4.1 e 4.4 concluídos e
+verificados; 4.2 já vinha resolvido como efeito colateral da Etapa 3; 4.6 investigado (achado
+abaixo); 4.3 e 4.5 avaliados e **conscientemente adiados** — ver justificativa nos itens.
+
+- [x] **4.1** `App.tsx` de 694 → 16 linhas *(feito em 2026-08-05)*. `components/layout/ErrorBoundary.tsx`
+  + `AppLayout.tsx`; `features/auth/ProtectedRoute.tsx` (orquestrador) + `LoginView.tsx` +
+  `PeriodOnboardingView.tsx`; `routes/AppRoutes.tsx` (lazy imports, os 7 "Flow", `Router`).
+  Extração mecânica, zero mudança de comportamento — verificado com typecheck/lint/build/vitest
+  e smoke test Playwright em 5 rotas públicas.
+- [x] **4.2** Zero escrita de banco no JSX — **já resolvido pela Etapa 3**: os callbacks inline
+  em `QuizFlow`/`OsceFlow`/`LabFlow` (hoje em `routes/AppRoutes.tsx`) chamam
+  `saveQuizResult`/`saveOsceAnalytics`/`submitSurvey` dos services, não mais `push(ref(db,...))`
+  direto. Ainda são lambdas inline nas rotas (não viraram funções nomeadas em arquivo
+  separado) — se isso incomodar no futuro é polimento, não dívida de arquitetura.
+- [ ] **4.3** Os 7 "Flow" viram rotas reais (`/disciplina/:id/simulado/executar`) — hoje usam `useState<'setup'|'quiz'>` e o botão *voltar* do navegador não entende.
+  🟡 **Adiado conscientemente em 2026-08-05:** exige mover estado hoje só-em-memória (`station`
+  escolhido no OsceFlow, `sim` no LabFlow) para algo que sobreviva à navegação por URL
+  (route state ou busca por ID), criar funções `fetchStationById`/`fetchSimulationById` nos
+  services, e teste real de navegação/refresh no meio de um simulado — não dá para validar com
+  segurança sem um usuário logado de verdade, e o risco de regressão (perder o simulado em
+  andamento) é maior que o problema atual (botão voltar). Fica para uma sessão com o usuário
+  disponível para testar.
+- [x] **4.4** Quebrar `constants.tsx` (1.145 linhas) → `data/periods.ts`, `data/disciplines.ts`,
+  `data/questions.ts` (`INITIAL_QUESTIONS`), `data/medicalEvents.ts`, `theme.ts` *(feito em
+  2026-08-05)*. `THEME` nunca foi importado em lugar nenhum antes — preservado no novo
+  arquivo, não é escopo desta etapa decidir se deveria existir. Efeito colateral bom: os dados
+  de congressos médicos (`MEDICAL_EVENTS_2026`) saíram do bundle principal, já que agora só o
+  `MedicalEventsView` (lazy) importa `data/medicalEvents.ts`.
+- [ ] **4.5** Estrutura `features/{auth,quiz,osce,lab,materials,admin}`.
+  🟡 **Adiado conscientemente em 2026-08-05:** `features/auth/` já existe (item 4.1). Estender
+  para quiz/osce/lab/materials/admin significa mover ~20 arquivos e atualizar import paths em
+  todo o repo — mecânico, mas o volume por si só eleva a chance de um import quebrado passar
+  despercebido sem revisão humana. Melhor concluir em uma sessão dedicada, revisando o diff.
+- [x] **4.6** Bundle: investigado em 2026-08-05. **`jspdf`/`jspdf-autotable` já só são importados
+  em `AdminStats.tsx`**, que só carrega dentro do chunk lazy de `/admin` — nunca estiveram no
+  bundle principal. `html2canvas` nem é importado diretamente no código (dependência
+  transitiva do jsPDF, já isolada em chunk próprio pelo Vite). O alvo "principal < 400 KB" do
+  audit original parece ter sido um diagnóstico equivocado: hoje o bundle principal (~844 KB,
+  219 KB gzip) é dominado por React+ReactDOM+react-router-dom+Firebase (Auth+Firestore+Storage)
+  — código que toda página precisa, carregado antes do login. Reduzir mais exigiria lazy-init
+  do Firebase Storage (só carregar quando materiais/lab realmente usam upload) — mudança de
+  risco médio que toca vários services; não tentada sem poder testar upload de arquivo contra
+  produção. Registrado como próximo passo real, não "dynamic import de jspdf" (que já era
+  verdade).
 
 ---
 
