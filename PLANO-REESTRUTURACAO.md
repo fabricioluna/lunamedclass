@@ -507,6 +507,19 @@ Playwright como visitante deslogado contra `localhost:3000` — tela de login re
 travar, zero erros de console (mesma classe de incidente do `isLoading` na Etapa 2, não
 reproduziu aqui).
 
+✅ **Item "teste no emulador" do Aceite, fechado nesta madrugada:** `firebase.json` +
+`.firebaserc` (project id `demo-luna-medclass`, 100% offline, sem tocar produção) +
+`scripts/test-firestore-rules.mjs` — 15 cenários rodados de verdade contra o Firestore
+Emulator local (Java 21 + `firebase-tools` via `npx`, nada instalado permanentemente):
+isolamento aluno A / aluno B em `quizResults` e `users`, `config/*` só-admin-escreve,
+`materials` (create aluno / update+delete só admin — o fix de segurança desta sessão),
+custom claim `admin` funcionando. **15/15 passaram.** Isso valida a LÓGICA das regras
+independente do que está publicado hoje em produção — reduz bastante o risco do passo 1
+abaixo, mas não substitui: o emulador roda as regras do arquivo local, não sabe o que está
+no console agora. Rodar de novo: `npx firebase-tools emulators:exec --only firestore "node
+scripts/test-firestore-rules.mjs"` (baixa e roda o emulador sozinho, não precisa de nada
+rodando em background depois).
+
 🔴 **Pendências antes deste código valer em produção (ação do usuário):**
 1. Publicar `firestore.rules` no Firebase Console → Firestore Database → Regras (as regras
    atuais do Firestore em produção nunca foram versionadas — eram o que estivesse configurado
@@ -519,8 +532,8 @@ reproduziu aqui).
    painel admin) antes de considerar o RTDB aposentável (D3).
 
 **Aceite:** nenhum import de `firebase` fora de `services/` ✅ · `fmst8` não existe mais no
-repo ✅ · teste provando que aluno A não lê dado de aluno B — **pendente**, depende das regras
-publicadas (item 1 acima) para ter valor real; hoje só existe como código local.
+repo ✅ · teste provando que aluno A não lê dado de aluno B ✅ (validado no emulador, 15/15 —
+falta só publicar em produção, item 1 acima).
 
 ---
 

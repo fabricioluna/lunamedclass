@@ -20,3 +20,9 @@ scripts/serviceAccount.json
 
 # Backups do RTDB (contêm dado real de aluno — nunca versionar)
 backups/
+
+# Cache local do Firebase CLI / emulador (scripts/test-firestore-rules.mjs)
+.firebase/
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
