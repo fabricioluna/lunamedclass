@@ -1,6 +1,6 @@
 import React from 'react';
 import { SimulationInfo } from '../types.ts';
-import { SIMULATIONS } from '../constants.tsx'; // Importamos as simulações locais
+import { SIMULATIONS } from '../data/disciplines'; // Importamos as simulações locais
 
 interface ReferencesViewProps {
   discipline: SimulationInfo;

@@ -30,7 +30,7 @@ const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 
 import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap, KeyRound } from 'lucide-react';
 import { Question, OsceStation, LabSimulation, AcademicUnit } from './types';
-import { PERIODS } from './constants';
+import { PERIODS } from './data/periods';
 import { saveQuizResult, saveOsceAnalytics } from './services/resultsService';
 import { submitSurvey } from './services/surveyService';
 import { DataProvider, useData } from './contexts/DataContext';

@@ -4,7 +4,8 @@ import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, Bo
 
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { PERIODS, SIMULATIONS } from '../constants';
+import { PERIODS } from '../data/periods';
+import { SIMULATIONS } from '../data/disciplines';
 import { PeriodRequest } from '../services/authService';
 import * as adminService from '../services/adminService';
 import * as questionsService from '../services/questionsService';

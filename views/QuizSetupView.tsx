@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { SimulationInfo, Question, AcademicUnit } from '../types';
 import { Milestone, Layers } from 'lucide-react';
 import { fetchQuestionsOnce } from '../services/questionsService';
-import { INITIAL_QUESTIONS } from '../constants';
+import { INITIAL_QUESTIONS } from '../data/questions';
 
 interface QuizSetupViewProps {
   discipline: SimulationInfo;

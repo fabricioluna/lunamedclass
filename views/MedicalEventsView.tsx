@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, MapPin, GraduationCap, Clock, ExternalLink, Search } from 'lucide-react';
 import { MedicalEvent } from '../types'; 
 // IMPORTANDO DA NOSSA FONTE DE VERDADE CORRETA
-import { MEDICAL_EVENTS_2026 } from '../constants'; 
+import { MEDICAL_EVENTS_2026 } from '../data/medicalEvents';
 
 const MedicalEventsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');

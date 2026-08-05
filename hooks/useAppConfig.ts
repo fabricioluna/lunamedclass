@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SIMULATIONS, PERIODS } from '../constants.tsx';
+import { PERIODS } from '../data/periods.ts';
+import { SIMULATIONS } from '../data/disciplines.ts';
 import { Period, SimulationInfo, FeatureFlag } from '../types.ts';
 import { subscribeToPeriods, subscribeToDisciplines, subscribeToFeatureFlags } from '../services/configService.ts';
 

@@ -4,7 +4,7 @@ import { Trash2, Loader2, BadgeCheck } from 'lucide-react';
 import {
   subscribeToAllMaterials, addMaterialFile, addMaterialLink, deleteMaterial, clearMaterials,
 } from '../../services/materialsService';
-import { PERIODS } from '../../constants';
+import { PERIODS } from '../../data/periods';
 import { formatFileSize } from '../../utils/formatters';
 
 interface AdminMaterialsProps {
