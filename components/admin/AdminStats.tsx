@@ -3,8 +3,8 @@ import { QuizResult, Question, LabSimulation, SimulationInfo, FirebaseTimestamp 
 import { TrendingUp, Layers, AlertTriangle, FileDown, Trash2, CalendarDays, ChevronDown, CheckSquare } from 'lucide-react';
 import { PERIODS } from '../../constants'; 
 
-// IMPORTAÇÕES DO FIREBASE PARA DELETAR RESULTADOS ESPECÍFICOS
-import { db, ref, remove } from '../../firebase';
+// IMPORTAÇÕES DO SERVICE PARA DELETAR RESULTADOS ESPECÍFICOS
+import { deleteResult, deleteResults } from '../../services/resultsService';
 
 // IMPORTAÇÕES DO GERADOR DE PDF
 import jsPDF from 'jspdf';
@@ -81,7 +81,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
   const handleDeleteResult = (id?: string) => {
     if (!id) return;
     if (confirm("⚠️ Tem certeza que deseja excluir esta execução? Os gráficos e relatórios serão recalculados instantaneamente.")) {
-      if (db) remove(ref(db, `quizResults/${id}`));
+      deleteResult(id);
     }
   };
 
@@ -278,14 +278,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({
       
       if (doubleCheck === "DELETAR") {
         try {
-          if (!db) throw new Error("Banco de dados não conectado.");
-          
-          const deletePromises = analytics.rawResults.map(qr => {
-            if (qr.id) return remove(ref(db, `quizResults/${qr.id}`));
-            return Promise.resolve();
-          });
-          
-          await Promise.all(deletePromises);
+          const ids = analytics.rawResults.map(qr => qr.id).filter((id): id is string => Boolean(id));
+          await deleteResults(ids);
           alert(`✅ Sucesso: ${count} resultados foram excluídos permanentemente.`);
         } catch (error) {
           console.error("Erro ao excluir resultados em lote:", error);

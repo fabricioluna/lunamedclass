@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Microscope, Play, User, Activity, Pill, ClipboardList, FilterX, LayoutGrid, Milestone, Layers } from 'lucide-react';
 import { LabSimulation, SimulationInfo, AcademicUnit } from '../types';
-import { db } from '../firebase';
-import { ref, get } from 'firebase/database';
+import { fetchLabSimulationsOnce } from '../services/labService';
 
 interface Props {
   disciplineId: string;
@@ -38,16 +37,8 @@ const LabListView: React.FC<Props> = ({
       try {
         setIsFetching(true);
         // Bate no banco apenas uma vez (get) ao invés de manter conexão aberta
-        const snapshot = await get(ref(db, 'labSimulations'));
-        
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const parsedSimulations = Object.keys(data)
-            .filter(k => data[k])
-            .map(k => ({ ...data[k], firebaseId: k })) as LabSimulation[];
-            
-          setLocalSimulations(parsedSimulations);
-        }
+        const parsedSimulations = await fetchLabSimulationsOnce();
+        setLocalSimulations(parsedSimulations);
       } catch (error) {
         console.error("Erro ao sincronizar o laboratório virtual:", error);
       } finally {

@@ -292,11 +292,10 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
                   </button>
                   <button
                     onClick={() => {
-                      const pass = prompt(`⚠️ AÇÃO DESTRUTIVA: Apagar as questões ${discFilter ? 'da disciplina selecionada' : 'de TODAS as disciplinas'}?\nDigite a senha (fmst8) para confirmar:`);
-                      if (pass === 'fmst8') {
+                      if (confirm(`⚠️ AÇÃO DESTRUTIVA: Apagar as questões ${discFilter ? 'da disciplina selecionada' : 'de TODAS as disciplinas'}?`)) {
                         onClearQuestions(discFilter || undefined);
                         alert("✅ Questões apagadas com sucesso.");
-                      } else if (pass !== null) alert("❌ Senha incorreta.");
+                      }
                     }}
                     className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit"
                   >

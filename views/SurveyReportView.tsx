@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, BarChart3, PieChart, HeartHandshake, MessageSquare, TrendingUp, Users, Printer, Stethoscope } from 'lucide-react';
-import { ref, get } from 'firebase/database';
-import { db } from '../firebase';
+import { fetchSurveysOnce } from '../services/surveyService';
 import { SurveyResponse } from '../types';
 
 interface SurveyReportViewProps {
@@ -14,19 +13,14 @@ const SurveyReportView: React.FC<SurveyReportViewProps> = ({ onBack }) => {
 
   useEffect(() => {
     const fetchSurveys = async () => {
-      if (!db) return;
       try {
-        const snapshot = await get(ref(db, 'surveys'));
-        if (snapshot.exists()) {
-          const rawData = snapshot.val();
-          const parsedData = Object.values(rawData) as SurveyResponse[];
-          
-          // BLINDAGEM: Garante que só puxa dados da Turma 9 E que a propriedade 'answers' exista
-          const safeData = parsedData.filter(d => 
-            d && d.unit === 'Turma 9 - HM1' && d.answers
-          );
-          setData(safeData);
-        }
+        const parsedData = await fetchSurveysOnce();
+
+        // BLINDAGEM: Garante que só puxa dados da Turma 9 E que a propriedade 'answers' exista
+        const safeData = parsedData.filter(d =>
+          d && d.unit === 'Turma 9 - HM1' && d.answers
+        );
+        setData(safeData);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       } finally {

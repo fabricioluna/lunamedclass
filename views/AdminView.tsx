@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag, AnalyticsResult } from '../types';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap } from 'lucide-react'; 
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap } from 'lucide-react';
 
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { db, ref, push, remove, set, update, onValue } from '../firebase';
 import { PERIODS, SIMULATIONS } from '../constants';
+import { PeriodRequest } from '../services/authService';
+import * as adminService from '../services/adminService';
+import * as questionsService from '../services/questionsService';
+import * as osceService from '../services/osceService';
+import * as labService from '../services/labService';
+import * as resultsService from '../services/resultsService';
+import * as configService from '../services/configService';
 
 import AdminStats from '../components/admin/AdminStats';
 import AdminMaterials from '../components/admin/AdminMaterials';
@@ -14,19 +20,8 @@ import AdminLab from '../components/admin/AdminLab';
 import AdminOsce from '../components/admin/AdminOsce';
 import AdminThemes from '../components/admin/AdminThemes';
 import AdminReferences from '../components/admin/AdminReferences';
-import AdminDisciplines from '../components/admin/AdminDisciplines'; 
+import AdminDisciplines from '../components/admin/AdminDisciplines';
 import AdminAnalytics from '../components/admin/AdminAnalytics';
-
-interface PeriodRequest {
-  firebaseId?: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  currentPeriodId: string;
-  requestedPeriodId: string;
-  status: 'pending' | 'approved' | 'rejected';
-  timestamp: string;
-}
 
 type AdminTab = 'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags';
 
@@ -36,8 +31,7 @@ interface AdminViewProps {
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const { periods, disciplines } = useData();
-  const { userProfile, isLoadingAuth } = useAuth();
-  const isAdmin = userProfile?.role === 'admin';
+  const { isAdmin, isLoadingAuth } = useAuth();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('requests');
 
@@ -50,25 +44,17 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [adminFeatureFlags, setAdminFeatureFlags] = useState<FeatureFlag[]>([]);
 
   useEffect(() => {
-    if (!isAdmin || !db) return;
+    if (!isAdmin) return;
 
-    const refs: { path: string; setter: (data: Record<string, unknown>) => void }[] = [
-      { path: 'questions', setter: (data) => setAdminQuestions(Object.keys(data).map(k => ({ ...(data[k] as Question), firebaseId: k }))) },
-      { path: 'osce', setter: (data) => setAdminOsceStations(Object.keys(data).map(k => ({ ...(data[k] as OsceStation), firebaseId: k }))) },
-      { path: 'labSimulations', setter: (data) => setAdminLabSimulations(Object.keys(data).map(k => ({ ...(data[k] as LabSimulation), firebaseId: k }))) },
-      { path: 'quizResults', setter: (data) => setAdminQuizResults(Object.keys(data).map(k => ({ ...(data[k] as QuizResult), id: k }))) },
-      { path: 'osceAnalytics', setter: (data) => setAdminOsceAnalytics(Object.keys(data).map(k => ({ ...(data[k] as AnalyticsResult), firebaseId: k }))) },
-      { path: 'periodRequests', setter: (data) => setAdminRequests(Object.keys(data).map(k => ({ ...(data[k] as PeriodRequest), firebaseId: k })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())) },
-      { path: 'feature_flags', setter: (data) => setAdminFeatureFlags(Object.keys(data).map(k => ({ ...(data[k] as FeatureFlag), firebaseId: k }))) }
+    const unsubscribes = [
+      questionsService.subscribeToQuestions(setAdminQuestions),
+      osceService.subscribeToOsceStations(setAdminOsceStations),
+      labService.subscribeToLabSimulations(setAdminLabSimulations),
+      resultsService.subscribeToAllResults(setAdminQuizResults),
+      resultsService.subscribeToOsceAnalytics(setAdminOsceAnalytics),
+      adminService.subscribeToPeriodRequests(setAdminRequests),
+      configService.subscribeToFeatureFlags(setAdminFeatureFlags),
     ];
-
-    const unsubscribes = refs.map(r => {
-      return onValue(ref(db, r.path), snap => {
-        const val = snap.val();
-        if (val) r.setter(val);
-        else r.setter({});
-      });
-    });
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [isAdmin]);
@@ -77,154 +63,104 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   // FUNÇÕES DE APROVAÇÃO DE PERÍODO
   // =========================================================================
   const handleApproveRequest = async (req: PeriodRequest) => {
-    if (!db || !req.firebaseId) return;
     try {
-      await update(ref(db, `users/${req.userId}`), { periodId: req.requestedPeriodId });
-      await update(ref(db, `periodRequests/${req.firebaseId}`), { status: 'approved' });
+      await adminService.approvePeriodRequest(req);
     } catch (error) {
       console.error("Erro ao aprovar requisição:", error);
     }
   };
 
   const handleRejectRequest = async (req: PeriodRequest) => {
-    if (!db || !req.firebaseId) return;
     try {
-      await update(ref(db, `periodRequests/${req.firebaseId}`), { status: 'rejected' });
+      await adminService.rejectPeriodRequest(req);
     } catch (error) {
       console.error("Erro ao rejeitar requisição:", error);
     }
   };
 
   // =========================================================================
-  // DEMAIS FUNÇÕES DE BANCO DE DADOS 
+  // DEMAIS FUNÇÕES DE BANCO DE DADOS
   // =========================================================================
-  
-  // AUTO-SETUP DE FEATURE FLAGS (BIG TECH PATTERN)
-  const handleSeedFlags = async () => {
-    const pass = prompt("Deseja injetar as Flags Padrão da plataforma? Digite a senha master (fmst8):");
-    if (pass === 'fmst8' && db) {
-      const defaultFlags = {
-        pesquisa_institucional: { name: 'pesquisa_institucional', description: 'Libera o botão de pesquisa de satisfação (NPS) no portal do aluno.', isEnabled: false },
-        osce_ia_paciente: { name: 'osce_ia_paciente', description: 'Ativa o motor de Inteligência Artificial para o Paciente Virtual.', isEnabled: true },
-        osce_rpg_dinamico: { name: 'osce_rpg_dinamico', description: 'Ativa a Luna Engine 2.0 para cenários de RPG interativo.', isEnabled: true },
-        lab_virtual_microscopia: { name: 'lab_virtual_microscopia', description: 'Libera o laboratório de identificação visual (Histologia/Anatomia).', isEnabled: true },
-        modo_semana_provas: { name: 'modo_semana_provas', description: 'Trava conteúdos práticos e foca a plataforma apenas em quizzes teóricos.', isEnabled: false },
-        central_materiais: { name: 'central_materiais', description: 'Ativa a visualização da nuvem de resumos e scripts.', isEnabled: true }
-      };
+  // Autoridade real é a Security Rule (Custom Claim `admin`, ver firestore.rules) — esta
+  // tela só é alcançável por quem já é admin. A senha "fmst8" de antes era decorativa
+  // (RTDB não tinha authorization real por baixo) e foi removida (item 3.6 do plano);
+  // o que resta aqui é só confirmação de UX para ações destrutivas.
 
-      try {
-        // Usa "update" em vez de "set" para não apagar as que você já criou manualmente
-        await update(ref(db, 'feature_flags'), defaultFlags);
-        alert("✅ Auto-Setup concluído! Flags estratégicas injetadas na nuvem.");
-      } catch (error) {
-        console.error("Erro ao injetar flags:", error);
-      }
+  const handleSeedFlags = async () => {
+    if (!confirm("Deseja injetar as Flags Padrão da plataforma?")) return;
+    try {
+      await configService.seedDefaultFlags();
+      alert("✅ Auto-Setup concluído! Flags estratégicas injetadas na nuvem.");
+    } catch (error) {
+      console.error("Erro ao injetar flags:", error);
     }
   };
 
   const handleGlobalReset = async () => {
-    const pass = prompt("⚠️ AÇÃO DESTRUTIVA: Apagar absolutamente TODO o banco de dados?\n\nPara confirmar, digite a senha master de sistema (fmst8):");
-    if (pass === 'fmst8' && db) {
-      try {
-        await Promise.all([
-          remove(ref(db, 'questions')), remove(ref(db, 'summaries')), remove(ref(db, 'osce')),
-          remove(ref(db, 'discipline_config')), remove(ref(db, 'labSimulations')),
-          remove(ref(db, 'osceAnalytics')), remove(ref(db, 'periods')), remove(ref(db, 'disciplines')),
-          remove(ref(db, 'periodRequests')), remove(ref(db, 'feature_flags'))
-        ]);
-        alert("✅ Banco de dados completamente resetado.");
-      } catch (error) {
-        console.error("[AdminView] Erro ao resetar banco:", error);
-      }
-    } else if (pass !== null) {
-      alert("❌ Senha master incorreta. Ação cancelada.");
+    if (!confirm("⚠️ AÇÃO DESTRUTIVA: Apagar absolutamente TODO o banco de dados (questões, OSCE, lab, analytics, estrutura base e solicitações)?")) return;
+    if (prompt('Digite DELETAR para confirmar:') !== 'DELETAR') {
+      alert("❌ Confirmação incorreta. Ação cancelada.");
+      return;
+    }
+    try {
+      await adminService.globalDatabaseReset();
+      alert("✅ Banco de dados completamente resetado.");
+    } catch (error) {
+      console.error("[AdminView] Erro ao resetar banco:", error);
     }
   };
 
   const handleSeedDatabase = async () => {
-    const pass = prompt("⚠️ MIGRAR ESTRUTURA BASE: Deseja injetar a árvore de Períodos e Disciplinas para o Firebase?\n\nPara confirmar, digite a senha master (fmst8):");
-    if (pass === 'fmst8' && db) {
-      try {
-        await Promise.all([
-          set(ref(db, 'periods'), PERIODS),
-          set(ref(db, 'disciplines'), SIMULATIONS)
-        ]);
-        alert("✅ Estrutura Base (Períodos e Disciplinas) migrada com sucesso para a Nuvem!");
-      } catch (error) {
-        console.error("[AdminView] Erro ao injetar estrutura:", error);
-      }
+    if (!confirm("⚠️ MIGRAR ESTRUTURA BASE: Deseja injetar a árvore de Períodos e Disciplinas para o Firestore?")) return;
+    try {
+      await configService.seedBaseStructure(PERIODS, SIMULATIONS);
+      alert("✅ Estrutura Base (Períodos e Disciplinas) migrada com sucesso para a Nuvem!");
+    } catch (error) {
+      console.error("[AdminView] Erro ao injetar estrutura:", error);
     }
   };
 
   const handleClearResults = async () => {
-    if (db) await remove(ref(db, 'quizResults')).catch(console.error);
+    await resultsService.clearAllResults().catch(console.error);
   };
-  
+
   const handleClearAnalytics = async () => {
-    const pass = prompt("Deseja apagar os dados brutos de pesquisa (Analytics)? Digite fmst8:");
-    if (pass === 'fmst8' && db) await remove(ref(db, 'osceAnalytics'));
+    if (!confirm("Deseja apagar os dados brutos de pesquisa (Analytics)?")) return;
+    await resultsService.clearOsceAnalytics();
   };
 
   const handleClearQuestions = async (discId?: string) => {
-    if (db) {
-      if (discId) {
-        const promises = adminQuestions.filter(q => q.disciplineId === discId && q.firebaseId).map(q => remove(ref(db, `questions/${q.firebaseId}`)));
-        await Promise.all(promises);
-      } else {
-        await remove(ref(db, 'questions'));
-      }
-    }
+    await questionsService.clearQuestions(discId);
   };
 
   const handleClearOsce = async (discId?: string) => {
-    if (db) {
-      if (discId) {
-        const promises = adminOsceStations.filter(o => o.disciplineId === discId && o.firebaseId).map(o => remove(ref(db, `osce/${o.firebaseId}`)));
-        await Promise.all(promises);
-      } else {
-        await remove(ref(db, 'osce'));
-      }
-    }
+    await osceService.clearOsceStations(discId);
   };
 
   const handleClearLab = async (discId?: string) => {
-    if (db) {
-      if (discId) {
-        const promises = adminLabSimulations.filter(s => s.disciplineId === discId && s.firebaseId).map(s => remove(ref(db, `labSimulations/${s.firebaseId}`)));
-        await Promise.all(promises);
-      } else {
-        await remove(ref(db, 'labSimulations'));
-      }
-    }
+    await labService.clearLabSimulations(discId);
   };
 
   const handleAddTheme = async (disciplineId: string, themeName: string) => {
     const disc = disciplines.find(d => d.id === disciplineId);
-    if (disc && db) await set(ref(db, `discipline_config/${disciplineId}/themes`), Array.from(new Set([...disc.themes, themeName])));
+    if (disc) await configService.updateDisciplineThemes(disciplineId, Array.from(new Set([...disc.themes, themeName])));
   };
 
   const handleRemoveTheme = async (disciplineId: string, themeName: string) => {
     const disc = disciplines.find(d => d.id === disciplineId);
-    if (disc && db) await set(ref(db, `discipline_config/${disciplineId}/themes`), disc.themes.filter(t => t !== themeName));
+    if (disc) await configService.updateDisciplineThemes(disciplineId, disc.themes.filter(t => t !== themeName));
   };
 
   const handleUpdateReferences = async (disciplineId: string, refsList: ReferenceMaterial[]) => {
-    if (db) await set(ref(db, `discipline_config/${disciplineId}/references`), refsList);
+    await configService.updateDisciplineReferences(disciplineId, refsList);
   };
 
   const handleToggleStatus = async (disciplineId: string, currentStatus: string) => {
-    if (db) await set(ref(db, `discipline_config/${disciplineId}/status`), currentStatus === 'active' ? 'locked' : 'active');
+    await configService.toggleDisciplineStatus(disciplineId, currentStatus);
   };
 
   const handleToggleFeature = async (disciplineId: string, featureId: string, isCurrentlyLocked: boolean) => {
-    const disc = disciplines.find(d => d.id === disciplineId);
-    if (!disc || !db) return;
-    
-    let newLockedFeatures = disc.lockedFeatures ? [...disc.lockedFeatures] : [];
-    if (isCurrentlyLocked) newLockedFeatures = newLockedFeatures.filter(id => id !== featureId);
-    else if (!newLockedFeatures.includes(featureId)) newLockedFeatures.push(featureId);
-    
-    await set(ref(db, `discipline_config/${disciplineId}/lockedFeatures`), newLockedFeatures);
+    await configService.toggleDisciplineFeature(disciplineId, featureId, isCurrentlyLocked);
   };
 
   // =========================================================================
@@ -242,9 +178,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           </div>
           <h2 className="text-2xl font-black text-[#003366] mb-4 uppercase tracking-tighter">Área Classificada</h2>
           <p className="text-xs text-gray-500 font-bold tracking-widest uppercase mb-8 leading-relaxed">
-            Seu perfil atual ({userProfile?.role || 'Visitante'}) não possui privilégios de Administrador.
+            Seu perfil atual não possui privilégios de Administrador.
           </p>
-          <button 
+          <button
             onClick={onBack}
             className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] transition-all"
           >
@@ -259,7 +195,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 print:p-0 print:m-0">
-      
+
       <div className="flex flex-col md:flex-row justify-between items-center mb-10 border-b pb-8 gap-4 print:hidden">
         <div className="flex items-center gap-4">
            <button onClick={onBack} className="bg-gray-100 p-3 rounded-xl hover:bg-gray-200 transition-all text-[#003366]">←</button>
@@ -304,7 +240,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       </nav>
 
       {/* RENDERIZAÇÃO DOS COMPONENTES */}
-      
+
       {activeTab === 'flags' && (
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 animate-in fade-in">
           <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 border-b border-gray-100 pb-6">
@@ -317,23 +253,21 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Gestão de Lançamentos e Módulos em Tempo Real</p>
               </div>
             </div>
-            
+
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={handleSeedFlags}
                 className="flex items-center gap-2 bg-blue-50 text-blue-700 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all border border-blue-200"
               >
-                <Zap size={14} /> Auto-Setup 
+                <Zap size={14} /> Auto-Setup
               </button>
-              <button 
+              <button
                 onClick={() => {
                   const name = prompt("Identificador Único da Feature (ex: release_survey_n2):");
                   if (!name) return;
                   const desc = prompt("Descrição amigável (ex: Libera o módulo de pesquisa para a turma):");
-                  if (db) {
-                    set(ref(db, `feature_flags/${name}`), { name, description: desc || '', isEnabled: false });
-                  }
-                }} 
+                  configService.createFeatureFlag(name, desc || '');
+                }}
                 className="bg-[#003366] text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#D4A017] transition-all shadow-md"
               >
                 + Criar Manual
@@ -357,16 +291,16 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                     <span className={`text-[10px] font-black uppercase tracking-widest ${flag.isEnabled ? 'text-green-500' : 'text-gray-400'}`}>
                       {flag.isEnabled ? 'Módulo Online' : 'Módulo Oculto'}
                     </span>
-                    <button 
-                      onClick={() => db && update(ref(db, `feature_flags/${flag.firebaseId}`), { isEnabled: !flag.isEnabled })}
+                    <button
+                      onClick={() => flag.firebaseId && configService.toggleFeatureFlag(flag.firebaseId, !flag.isEnabled)}
                       className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none shadow-inner ${flag.isEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
                     >
                       <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition-transform ${flag.isEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
-                        if (confirm(`Tem certeza que deseja DELETAR permanentemente a flag ${flag.name}?`) && db && flag.firebaseId) {
-                          remove(ref(db, `feature_flags/${flag.firebaseId}`));
+                        if (confirm(`Tem certeza que deseja DELETAR permanentemente a flag ${flag.name}?`) && flag.firebaseId) {
+                          configService.deleteFeatureFlag(flag.firebaseId);
                         }
                       }}
                       className="text-red-400 hover:text-red-600 transition-colors ml-2"
@@ -404,9 +338,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                 const isPending = req.status === 'pending';
                 const currentName = periods.find(p => p.id === req.currentPeriodId)?.name || req.currentPeriodId;
                 const requestedName = periods.find(p => p.id === req.requestedPeriodId)?.name || req.requestedPeriodId;
-                
+
                 return (
-                  <div key={req.firebaseId} className={`flex flex-col md:flex-row items-center justify-between p-4 rounded-2xl border ${isPending ? 'border-[#D4A017]/30 bg-[#D4A017]/5' : 'border-gray-100 bg-gray-50'}`}>
+                  <div key={req.id} className={`flex flex-col md:flex-row items-center justify-between p-4 rounded-2xl border ${isPending ? 'border-[#D4A017]/30 bg-[#D4A017]/5' : 'border-gray-100 bg-gray-50'}`}>
                     <div className="flex flex-col mb-4 md:mb-0 w-full md:w-auto">
                       <span className="font-black text-[#003366]">{req.userName}</span>
                       <span className="text-xs text-gray-500 mb-2">{req.userEmail}</span>
@@ -443,7 +377,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       )}
 
       {activeTab === 'stats' && (
-        <AdminStats 
+        <AdminStats
           quizResults={adminQuizResults}
           questions={adminQuestions}
           labSimulations={adminLabSimulations}
@@ -452,15 +386,15 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       )}
 
       {activeTab === 'analytics' && (
-        <AdminAnalytics 
-          analyticsData={adminOsceAnalytics || []} 
-          disciplines={disciplines} 
+        <AdminAnalytics
+          analyticsData={adminOsceAnalytics || []}
+          disciplines={disciplines}
           periods={periods}
         />
       )}
 
       {activeTab === 'access' && (
-        <AdminDisciplines 
+        <AdminDisciplines
           disciplines={disciplines}
           onToggleStatus={handleToggleStatus}
           onToggleFeature={handleToggleFeature}
@@ -472,52 +406,39 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       )}
 
       {activeTab === 'questions' && (
-        <AdminQuestions 
+        <AdminQuestions
           questions={adminQuestions}
           disciplines={disciplines}
           onAddQuestions={async (qs) => {
-            if (db) {
-              const promises = qs.map(q => push(ref(db, 'questions'), q));
-              await Promise.all(promises).catch(console.error);
-            }
+            await questionsService.addQuestions(qs).catch(console.error);
           }}
-          onUpdateQuestion={async (q) => { 
-            if (db && q.firebaseId) {
-              await set(ref(db, `questions/${q.firebaseId}`), q).catch(console.error);
-            }
+          onUpdateQuestion={async (q) => {
+            await questionsService.updateQuestion(q).catch(console.error);
           }}
-          onRemoveQuestion={async (id) => { 
-            const q = adminQuestions.find(item => item.id === id); 
-            if (db && q?.firebaseId) {
-              await remove(ref(db, `questions/${q.firebaseId}`)).catch(console.error);
+          onRemoveQuestion={async (id) => {
+            const q = adminQuestions.find(item => item.id === id);
+            if (q?.firebaseId) {
+              await questionsService.removeQuestion(q.firebaseId).catch(console.error);
             }
           }}
           onClearQuestions={handleClearQuestions}
           onRemoveQuiz={async (title, discId) => {
-            if (db) {
-              const promises: Promise<void>[] = [];
-              adminQuestions.forEach(q => {
-                if (q.quizTitle === title && (!discId || q.disciplineId === discId)) {
-                  if (q.firebaseId) promises.push(remove(ref(db, `questions/${q.firebaseId}`)));
-                }
-              });
-              await Promise.all(promises).catch(console.error);
-            }
+            await questionsService.removeQuizByTitle(title, discId).catch(console.error);
           }}
         />
       )}
 
       {activeTab === 'lab' && (
-        <AdminLab 
+        <AdminLab
           disciplines={disciplines}
           labSimulations={adminLabSimulations}
           onAddLabSimulation={async (sim) => {
-            if (db) await push(ref(db, 'labSimulations'), sim).catch(console.error);
+            await labService.addLabSimulation(sim).catch(console.error);
           }}
-          onRemoveLabSimulation={async (id) => { 
-            const sim = adminLabSimulations.find(item => item.id === id); 
-            if (db && sim?.firebaseId) {
-              await remove(ref(db, `labSimulations/${sim.firebaseId}`)).catch(console.error);
+          onRemoveLabSimulation={async (id) => {
+            const sim = adminLabSimulations.find(item => item.id === id);
+            if (sim) {
+              await labService.removeLabSimulation(sim).catch(console.error);
             }
           }}
           onClearLab={handleClearLab}
@@ -525,28 +446,25 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       )}
 
       {activeTab === 'osce' && (
-        <AdminOsce 
+        <AdminOsce
           periods={periods}
           disciplines={disciplines}
           osceStations={adminOsceStations}
           onAddOsceStations={async (os) => {
-            if (db) {
-              const promises = os.map(o => push(ref(db, 'osce'), o));
-              await Promise.all(promises).catch(console.error);
-            }
+            await osceService.addOsceStations(os).catch(console.error);
           }}
-          onRemoveOsceStation={async (id) => { 
-            const o = adminOsceStations.find(item => item.id === id); 
-            if (db && o?.firebaseId) {
-              await remove(ref(db, `osce/${o.firebaseId}`)).catch(console.error);
+          onRemoveOsceStation={async (id) => {
+            const o = adminOsceStations.find(item => item.id === id);
+            if (o?.firebaseId) {
+              await osceService.removeOsceStation(o.firebaseId).catch(console.error);
             }
           }}
           onClearOsce={handleClearOsce}
         />
       )}
-      
+
       {activeTab === 'themes' && (
-        <AdminThemes 
+        <AdminThemes
           periods={periods}
           disciplines={disciplines}
           onAddTheme={handleAddTheme}
@@ -555,7 +473,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       )}
 
       {activeTab === 'references' && (
-        <AdminReferences 
+        <AdminReferences
           disciplines={disciplines}
           onUpdateReferences={handleUpdateReferences}
         />

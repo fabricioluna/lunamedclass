@@ -5,9 +5,7 @@ import {
   CheckCircle2, Link as LinkIcon, Cloud, BadgeCheck,
   Download, Milestone, Layers
 } from 'lucide-react';
-import { firestoreDB as db, storage } from '../firebase.ts';
-import { collection, addDoc, query, where, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { subscribeToMaterials, addMaterialFile, addMaterialLink } from '../services/materialsService.ts';
 import { formatFileSize } from '../utils/formatters.ts';
 
 interface SummariesListViewProps {
@@ -51,24 +49,16 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
 
   useEffect(() => {
     // FILTRAGEM MODULAR: Agora filtramos por disciplina E por unidade acadêmica
-    const q = query(
-      collection(db, "materials"), 
-      where("disciplineId", "==", disciplineId),
-      where("unit", "==", selectedUnit)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Summary[];
-      
-      const sortedDocs = docs.sort((a, b) => {
-        const timeA = getSeconds(a.createdAt); 
-        const timeB = getSeconds(b.createdAt); 
+    const unsubscribe = subscribeToMaterials(disciplineId, selectedUnit, (docs) => {
+      const sortedDocs = [...docs].sort((a, b) => {
+        const timeA = getSeconds(a.createdAt);
+        const timeB = getSeconds(b.createdAt);
         return timeB - timeA;
       });
 
       setSummaries(sortedDocs);
-    }, (error) => {
-      console.error("Erro ao carregar materiais:", error);
+    }, () => {
+      console.error("Erro ao carregar materiais.");
     });
 
     return () => unsubscribe();
@@ -90,44 +80,27 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
         type: formData.type,
         disciplineId,
         unit: selectedUnit, // Vínculo estrito com a unidade atual
-        date: new Date().toLocaleDateString('pt-BR'),
-        createdAt: serverTimestamp(),
-        isVerified: false 
+        isVerified: false
       };
 
       if (uploadMode === 'file') {
         if (!selectedFile) return alert("Selecione um arquivo para enviar.");
 
-        const MAX_MB = 50; 
-        const MAX_BYTES = MAX_MB * 1024 * 1024; 
+        const MAX_MB = 50;
+        const MAX_BYTES = MAX_MB * 1024 * 1024;
 
         if (selectedFile.size > MAX_BYTES) {
           setIsUploading(false);
           return alert(`⚠️ Arquivo muito grande!\nO limite é de ${MAX_MB} MB.`);
         }
 
-        const sRef = storageRef(storage, `materials/${disciplineId}/${selectedUnit}/${Date.now()}_${selectedFile.name}`);
-        const snap = await uploadBytes(sRef, selectedFile);
-        const url = await getDownloadURL(snap.ref);
-        const fileSize = formatFileSize(selectedFile.size);
-
-        await addDoc(collection(db, "materials"), {
-          ...baseMaterialData,
-          url,
-          label: selectedFile.name.split('.').pop()?.toUpperCase() || 'PDF',
-          size: fileSize,
-        });
+        await addMaterialFile(baseMaterialData, selectedFile, formatFileSize);
 
       } else {
         if (!formData.linkUrl) return alert("Por favor, cole o link de compartilhamento.");
         if (!formData.linkUrl.startsWith('http')) return alert("O link deve começar com http:// ou https://");
 
-        await addDoc(collection(db, "materials"), {
-          ...baseMaterialData,
-          url: formData.linkUrl,
-          label: 'LINK',
-          size: 'Nuvem Externa',
-        });
+        await addMaterialLink(baseMaterialData, formData.linkUrl);
       }
 
       alert(`Material compartilhado com sucesso na Unidade ${selectedUnit}!`);

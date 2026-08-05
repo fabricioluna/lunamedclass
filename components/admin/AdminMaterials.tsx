@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SimulationInfo, Summary, FirebaseTimestamp, AcademicUnit } from '../../types';
 import { Trash2, Loader2, BadgeCheck } from 'lucide-react';
-import { firestoreDB, storage } from '../../firebase';
-import { collection, query, onSnapshot, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { PERIODS } from '../../constants'; 
+import {
+  subscribeToAllMaterials, addMaterialFile, addMaterialLink, deleteMaterial, clearMaterials,
+} from '../../services/materialsService';
+import { PERIODS } from '../../constants';
 import { formatFileSize } from '../../utils/formatters';
 
 interface AdminMaterialsProps {
@@ -45,12 +45,10 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
 
   // BUSCAR MATERIAIS EM TEMPO REAL
   useEffect(() => {
-    const q = query(collection(firestoreDB, "materials"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Summary[];
-      const sortedDocs = docs.sort((a, b) => {
-        const timeA = getSeconds(a.createdAt); 
-        const timeB = getSeconds(b.createdAt); 
+    const unsubscribe = subscribeToAllMaterials((docs) => {
+      const sortedDocs = [...docs].sort((a, b) => {
+        const timeA = getSeconds(a.createdAt);
+        const timeB = getSeconds(b.createdAt);
         return timeB - timeA;
       });
       setLiveMaterials(sortedDocs);
@@ -77,31 +75,23 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
       // Se for UC, salva sempre como N1 para compatibilidade, senão pega do state
       const targetUnit = isUC ? 'N1' : matUnit;
 
+      const meta = {
+        title: matTitle,
+        author: finalAuthor,
+        description: "Adicionado via Painel Admin",
+        type: matType,
+        disciplineId: matDisc,
+        unit: targetUnit as AcademicUnit, // <-- INJETADO
+        isVerified: matIsVerified
+      };
+
       if (matUploadMode === 'file') {
         if (!matFile) {
           setIsMatUploading(false);
           return alert("Selecione um arquivo para enviar.");
         }
 
-        const sRef = storageRef(storage, `materials/${matDisc}/${targetUnit}/${Date.now()}_${matFile.name}`);
-        const snap = await uploadBytes(sRef, matFile);
-        const url = await getDownloadURL(snap.ref);
-        const fileSize = formatFileSize(matFile.size);
-
-        await addDoc(collection(firestoreDB, "materials"), {
-          title: matTitle,
-          author: finalAuthor,
-          description: "Adicionado via Painel Admin",
-          type: matType,
-          disciplineId: matDisc,
-          unit: targetUnit, // <-- INJETADO
-          url: url,
-          date: new Date().toLocaleDateString('pt-BR'),
-          label: matFile.name.split('.').pop()?.toUpperCase() || 'ARQUIVO',
-          size: fileSize,
-          createdAt: serverTimestamp(),
-          isVerified: matIsVerified 
-        });
+        await addMaterialFile(meta, matFile, formatFileSize);
 
       } else {
         if (!matUrl) {
@@ -109,20 +99,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
           return alert("Insira o link de compartilhamento.");
         }
 
-        await addDoc(collection(firestoreDB, "materials"), {
-          title: matTitle,
-          author: finalAuthor,
-          description: "Adicionado via Painel Admin",
-          type: matType,
-          disciplineId: matDisc,
-          unit: targetUnit, // <-- INJETADO
-          url: matUrl,
-          date: new Date().toLocaleDateString('pt-BR'),
-          label: 'LINK',
-          size: 'Nuvem Externa',
-          createdAt: serverTimestamp(),
-          isVerified: matIsVerified 
-        });
+        await addMaterialLink(meta, matUrl);
       }
 
       setMatTitle(''); 
@@ -143,17 +120,9 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
 
   const handleDeleteLiveMaterial = async (mat: Summary) => {
     if (!confirm(`Excluir permanentemente o material "${mat.title || mat.label}"?`)) return;
-    
+
     try {
-      await deleteDoc(doc(firestoreDB, "materials", mat.id));
-      if (mat.url && mat.url.includes("firebasestorage")) {
-        try {
-          const fileRef = storageRef(storage, mat.url);
-          await deleteObject(fileRef);
-        } catch (storageErr) {
-          console.log("Arquivo físico não encontrado ou já deletado.");
-        }
-      }
+      await deleteMaterial(mat);
     } catch (error) {
       console.error("Erro ao deletar:", error);
       alert("Erro ao excluir o material.");
@@ -161,26 +130,18 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
   };
 
   const handleClearLiveMaterials = async () => {
-    const pass = prompt(`⚠️ AÇÃO DESTRUTIVA: Apagar os materiais ${discFilterMat ? 'da disciplina selecionada' : 'de TODAS as disciplinas'} e DESTRUIR OS ARQUIVOS PDFs DO SERVIDOR?\nDigite a senha (fmst8) para confirmar:`);
-    if (pass === 'fmst8') {
-      try {
-        const matsToDelete = liveMaterials.filter(m => {
-          const matchDisc = !discFilterMat || m.disciplineId === discFilterMat;
-          const matchUnit = !unitFilterMat || (m.unit || 'N1') === unitFilterMat;
-          return matchDisc && matchUnit;
-        });
-        for (const mat of matsToDelete) {
-          await deleteDoc(doc(firestoreDB, "materials", mat.id));
-          if (mat.url && mat.url.includes("firebasestorage")) {
-            try { await deleteObject(storageRef(storage, mat.url)); } catch (e) {}
-          }
-        }
-        alert("✅ Materiais e arquivos selecionados foram apagados com sucesso.");
-      } catch (error) {
-        alert("Erro ao limpar materiais.");
-      }
-    } else if (pass !== null) {
-      alert("❌ Senha incorreta.");
+    if (!confirm(`⚠️ AÇÃO DESTRUTIVA: Apagar os materiais ${discFilterMat ? 'da disciplina selecionada' : 'de TODAS as disciplinas'} e DESTRUIR OS ARQUIVOS PDFs DO SERVIDOR?`)) return;
+
+    try {
+      const matsToDelete = liveMaterials.filter(m => {
+        const matchDisc = !discFilterMat || m.disciplineId === discFilterMat;
+        const matchUnit = !unitFilterMat || (m.unit || 'N1') === unitFilterMat;
+        return matchDisc && matchUnit;
+      });
+      await clearMaterials(matsToDelete);
+      alert("✅ Materiais e arquivos selecionados foram apagados com sucesso.");
+    } catch (error) {
+      alert("Erro ao limpar materiais.");
     }
   };
 

@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { SimulationInfo, Question, AcademicUnit } from '../types';
 import { Milestone, Layers } from 'lucide-react';
-import { db } from '../firebase';
-import { ref, get } from 'firebase/database';
+import { fetchQuestionsOnce } from '../services/questionsService';
 import { INITIAL_QUESTIONS } from '../constants';
 
 interface QuizSetupViewProps {
@@ -27,17 +26,9 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
     const fetchQuestionsOnDemand = async () => {
       try {
         setIsFetching(true);
-        // Lemos o banco apenas 1 vez (get) ao invés de manter conexão aberta (onValue)
-        const snapshot = await get(ref(db, 'questions'));
-        
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const parsedQuestions = Object.keys(data)
-            .filter(k => data[k])
-            .map(k => ({ ...data[k], firebaseId: k })) as Question[];
-          
-          setLocalQuestions([...INITIAL_QUESTIONS, ...parsedQuestions]);
-        }
+        // Lemos o banco apenas 1 vez (get) ao invés de manter conexão aberta (onSnapshot)
+        const parsedQuestions = await fetchQuestionsOnce();
+        setLocalQuestions([...INITIAL_QUESTIONS, ...parsedQuestions]);
       } catch (error) {
         console.error("Erro ao sincronizar o banco de questões:", error);
       } finally {

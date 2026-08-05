@@ -40,12 +40,17 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
-**➡️ HANDOFF (preparado em 2026-08-05, antes de um `/clear`): Etapas 0, 1 e 2 estão 100%
-concluídas. Próxima ação é iniciar a ETAPA 3 (Firestore) — pule direto para a seção "🏗️ ETAPA 3"
-mais abaixo.** Backup do RTDB já feito (`backups/rtdb-backup-2026-08-05T00-29-59-890Z.json`,
-local, não apagar até confirmar a migração). Working tree limpo, tudo commitado até `dc85eaa`,
-nada enviado ao remoto ainda. Pendência solta (não bloqueia a Etapa 3): revogar a service account
-key do Firebase Admin usada nos itens 0.8/0.9/backup — ver nota de segurança na seção 0.9.
+**➡️ HANDOFF (2026-08-05): Etapas 0, 1 e 2 concluídas. Etapa 3 (Firestore) está
+CODE-COMPLETE (3.1–3.7 todos feitos e verificados — typecheck/lint/build/vitest/smoke test
+visitante deslogado, tudo verde) mas AINDA NÃO ATIVA EM PRODUÇÃO** — faltam 3 ações manuais do
+usuário antes de valer (publicar `firestore.rules`, rodar `set-admin-claim.mjs --apply`, decidir
+quando rodar `migrate-rtdb-to-firestore.mjs --apply`). Ver os 4 itens em 🔴 na seção "🏗️ ETAPA 3"
+mais abaixo antes de continuar. **Mudanças desta sessão ainda não commitadas** (o usuário não
+pediu commit) — `git status` mostra ~19 arquivos modificados + ~15 novos (services/, hooks/
+useAppConfig.ts, firestore.rules*, scripts novos). Backup do RTDB de antes desta sessão segue
+válido (`backups/rtdb-backup-2026-08-05T00-29-59-890Z.json`, não apagar). Pendência solta (não
+bloqueia): revogar a service account key do Firebase Admin usada nos itens 0.8/0.9/backup — ver
+nota de segurança na seção 0.9.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -450,24 +455,62 @@ funcionou.**
 gerar outra) — ainda **não revogada**. Ver nota de segurança na seção 0.9 acima; recomendação
 segue de pé.
 
-- [ ] **3.1** Modelar Firestore:
+- [x] **3.1** Modelar Firestore *(feito em 2026-08-05 — `firestore.rules` + `firestore.rules.README.md`)*:
   ```
   users/{uid}                                perfil
-  quizResults/{id}                           índice (userId, createdAt)
+  quizResults/{id}                           filtrado por where(userId==uid)
   questions/{id}  osceStations/{id}  labSimulations/{id}
-  materials/{id}                             já está no Firestore
+  materials/{id}                             já estava no Firestore
   periodRequests/{id}  surveys/{id}  osceAnalytics/{id}
   config/{periods|disciplines|featureFlags}  docs únicos: 1 leitura em vez de N
   ```
-- [ ] **3.2** Custom Claims para admin (Cloud Function `setAdminClaim`); regras passam a usar `request.auth.token.admin`; UID hardcoded (D4) é aposentado
-- [ ] **3.3** Camada `services/` por domínio: `authService`, `questionsService`, `resultsService`, `osceService`, `labService`, `materialsService`, `adminService`
-  > **Regra inegociável:** ao fim desta etapa, `grep -r "from '.*firebase'" views/ components/` deve retornar **vazio**
-- [ ] **3.4** Queries filtradas no servidor — elimina "baixa tudo e filtra no cliente" em `QuizSetupView:31`, `OsceSetupView:36`, `LabListView:41`, `AdminStats`
-- [ ] **3.5** Hooks por domínio (`useQuestions`, `useMyResults`, `useOsceStations`). **Deletar** `contexts/DataContext` + `hooks/useFirebaseData` — hoje o contexto mente: promete `Question[]` e devolve `[]` fixo (`useFirebaseData.ts:17-22`)
-- [ ] **3.6** Eliminar a senha `fmst8` — hardcoded em 6 arquivos (`AdminView`, `AdminLab`, `AdminMaterials`, `AdminOsce`, `AdminQuestions`), protegendo até "apagar banco inteiro". Autoridade passa a ser só a Security Rule; `prompt()` vira, no máximo, confirmação de UX
-- [ ] **3.7** Script de migração RTDB → Firestore, idempotente, com dry-run
+  `discipline_config` (cascata do RTDB) foi eliminado — os overrides (themes/references/
+  status/lockedFeatures) agora vivem direto dentro de cada disciplina em `config/disciplines`.
+- [x] **3.2** Custom Claims para admin *(decisão registrada: **script local**
+  `scripts/set-admin-claim.mjs`, não Cloud Function — projeto não tinha Firebase CLI/plano
+  Blaze configurado e só existe 1 admin; ver pergunta respondida pelo usuário em 2026-08-05)*.
+  `firestore.rules` já usa `request.auth.token.admin`; UID hardcoded (D4) fica só nas regras
+  do RTDB antigo (aposentadas quando o RTDB for desligado).
+- [x] **3.3** Camada `services/` por domínio: `authService`, `configService`, `questionsService`,
+  `osceService`, `labService`, `materialsService`, `resultsService`, `surveyService`,
+  `adminService`, `storageService`.
+  > **Regra inegociável cumprida:** `grep -r "from '.*firebase'" views/ components/` retorna vazio.
+- [x] **3.4** Queries filtradas no servidor — `quizResults` via `where('userId','==',uid)`,
+  `materials` via `where('disciplineId'..).where('unit'..)`, `periodRequests` só admin lê.
+- [x] **3.5** Hooks por domínio: `hooks/useAppConfig.ts` substituiu `hooks/useFirebaseData.ts`
+  (deletado) — `contexts/DataContext` continua existindo (é dado estrutural cross-cutting, não
+  um domínio isolado) mas agora só promete o que de fato entrega (`periods`, `disciplines`,
+  `featureFlags`, `isLoading`, `isOnline` — os campos mortos `questions`/`quizResults`/etc. que
+  sempre devolviam `[]` foram removidos do contrato). Domínios de dados (perguntas, resultados,
+  OSCE, lab, materiais) são buscados direto pelos services nas views que precisam, sob demanda.
+- [x] **3.6** Senha `fmst8` removida dos 5 arquivos que a usavam (`AdminView`, `AdminLab`,
+  `AdminMaterials`, `AdminOsce`, `AdminQuestions`). Autoridade real: Security Rule com Custom
+  Claim; os `prompt()` de senha viraram `confirm()`/double-check de UX.
+- [x] **3.7** `scripts/migrate-rtdb-to-firestore.mjs` — idempotente (reaproveita os IDs do
+  RTDB como ID do doc no Firestore), dry-run por padrão. **Escrito mas NÃO executado** —
+  decisão do usuário em 2026-08-05: avançar por todo o código da Etapa 3 nesta sessão, mas
+  só rodar a migração contra produção depois de revisão.
 
-**Aceite:** teste no emulador provando que aluno A não lê dado de aluno B · nenhum import de `firebase` fora de `services/` · `fmst8` não existe mais no repo
+✅ **Verificado nesta sessão:** `npx tsc --noEmit` limpo · `npm run build` ok · `npx vitest run`
+4/4 · lint sem regressão (26→22 problemas, todos pré-existentes, nenhum novo) · smoke test
+Playwright como visitante deslogado contra `localhost:3000` — tela de login renderiza sem
+travar, zero erros de console (mesma classe de incidente do `isLoading` na Etapa 2, não
+reproduziu aqui).
+
+🔴 **Pendências antes deste código valer em produção (ação do usuário):**
+1. Publicar `firestore.rules` no Firebase Console → Firestore Database → Regras (as regras
+   atuais do Firestore em produção nunca foram versionadas — eram o que estivesse configurado
+   manualmente no console; não se sabe se eram restritivas ou abertas).
+2. Rodar `node scripts/set-admin-claim.mjs --apply` (precisa da `scripts/serviceAccount.json`
+   — apagada ao fim da sessão anterior, precisa gerar de novo ou reaproveitar se ainda existir).
+3. Decidir quando rodar `node scripts/migrate-rtdb-to-firestore.mjs --apply` contra produção
+   (depois de testar o app localmente contra o Firestore com as regras novas publicadas).
+4. Só depois de 1–3 confirmados, testar de ponta a ponta em produção (cadastro, login, quiz,
+   painel admin) antes de considerar o RTDB aposentável (D3).
+
+**Aceite:** nenhum import de `firebase` fora de `services/` ✅ · `fmst8` não existe mais no
+repo ✅ · teste provando que aluno A não lê dado de aluno B — **pendente**, depende das regras
+publicadas (item 1 acima) para ter valor real; hoje só existe como código local.
 
 ---
 

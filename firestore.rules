@@ -1,0 +1,90 @@
+rules_version = '2';
+
+// Modelo de dados e decisões: ver PLANO-REESTRUTURACAO.md, Etapa 3.
+// Autoridade de admin vem do Custom Claim `admin` no ID token (scripts/set-admin-claim.mjs),
+// não mais de um UID hardcoded aqui nem do campo decorativo users/{uid}.role (D5).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Perfil do usuário. Cada aluno só lê/escreve o próprio nó; admin lê/escreve qualquer um
+    // (aprovação de período, correção de cadastro).
+    match /users/{uid} {
+      allow read, write: if isOwner(uid) || isAdmin();
+    }
+
+    // Dados estruturais globais: períodos, disciplinas (com temas/referências/status/features
+    // já embutidos no próprio doc — sem cascata tipo discipline_config do RTDB) e feature flags.
+    // Leitura liberada a qualquer usuário autenticado; escrita só admin.
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Bancos de conteúdo: só admin publica; alunos autenticados leem.
+    match /questions/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /osceStations/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /labSimulations/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Materiais: alunos autenticados podem contribuir (upload próprio, sem dono explícito —
+    // mesma política pública-para-a-turma que já rodava em produção antes desta etapa).
+    // Só admin apaga.
+    match /materials/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Notas de simulados: aluno só cria/lê o próprio resultado (userId == uid no próprio
+    // documento); admin lê/gerencia tudo. Sem update pelo aluno (resultado é imutável depois
+    // de salvo).
+    match /quizResults/{id} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Analytics de OSCE dinâmico: qualquer autenticado grava a própria sessão; só admin lê e
+    // gerencia (mesma política do antigo osceAnalytics no RTDB).
+    match /osceAnalytics/{id} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Solicitação de mudança de período: aluno cria a própria (status inicial 'pending'); só
+    // admin lê a fila e aprova/rejeita.
+    match /periodRequests/{id} {
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Pesquisa institucional: link público, sem login (D6). Só cria, nunca sobrescreve; só
+    // admin lê os resultados agregados.
+    match /surveys/{id} {
+      allow create: if !exists(/databases/$(database)/documents/surveys/$(id));
+      allow read: if isAdmin();
+    }
+  }
+}

@@ -194,7 +194,7 @@ export interface QuizResult {
   discipline?: string;
   unit?: AcademicUnit; // Estatística vinculada à unidade correta
   quizTitle?: string; 
-  type?: 'teorico' | 'laboratorio' | 'osce'; 
+  type?: 'teorico' | 'laboratorio' | 'osce' | 'osce-rpg' | 'osce-estatico';
   timeSpent?: number; 
   details?: QuizDetail[]; 
   createdAt?: FirebaseTimestamp; 
@@ -204,6 +204,7 @@ export interface QuizResult {
 export interface AnalyticsResult {
   id?: string;
   firebaseId?: string;
+  studentId?: string;
   disciplineId?: string;
   unit?: AcademicUnit; // Permite ao admin avaliar lacunas N1 vs N2 separadamente
   theme?: string;

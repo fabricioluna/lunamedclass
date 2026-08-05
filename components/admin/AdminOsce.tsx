@@ -230,8 +230,9 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
             <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Base de Dados</h3>
             {!oscePreview && (
               <button onClick={() => {
-                const pass = prompt(`Apagar Filtro? Senha (fmst8):`);
-                if (pass === 'fmst8') onClearOsce(discFilterOsce || undefined);
+                if (confirm(`⚠️ Apagar as estações ${discFilterOsce ? 'da disciplina selecionada' : 'de TODAS as disciplinas'}?`)) {
+                  onClearOsce(discFilterOsce || undefined);
+                }
               }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit">
                 Zerar Filtro 🗑️
               </button>

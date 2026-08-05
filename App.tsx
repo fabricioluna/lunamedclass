@@ -30,8 +30,9 @@ const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 
 import { AlertTriangle, RefreshCw, LogIn, UserPlus, GraduationCap, KeyRound } from 'lucide-react';
 import { Question, OsceStation, LabSimulation, AcademicUnit } from './types';
-import { PERIODS } from './constants'; 
-import { db, ref, push } from './firebase';
+import { PERIODS } from './constants';
+import { saveQuizResult, saveOsceAnalytics } from './services/resultsService';
+import { submitSurvey } from './services/surveyService';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 
@@ -519,8 +520,8 @@ const QuizFlow = () => {
       onBack={() => setStep('setup')} 
       onSaveResult={(score, total, title, type, time, details) => {
         // ASSINATURA DO ALUNO INJETADA NO PAYLOAD
-        if (db) push(ref(db, 'quizResults'), { userId: currentUser?.uid, userEmail: currentUser?.email, score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });
-      }} 
+        if (currentUser) saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });
+      }}
     />
   );
 };
@@ -550,16 +551,16 @@ const OsceFlow = () => {
   if (step === 'quiz' && station) {
      if (station.mode === 'rpg') {
        return <DynamicOsceView station={station} onBack={() => setStep('setup')} onSaveResult={(score, total, time, analytics) => {
-           if (db) {
-              push(ref(db, 'quizResults'), { userId: currentUser?.uid, userEmail: currentUser?.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-rpg' });
-              push(ref(db, 'osceAnalytics'), { ...analytics, unit, date: new Date().toLocaleString(), studentId: currentUser?.uid });
+           if (currentUser) {
+              saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-rpg' });
+              saveOsceAnalytics({ ...analytics, unit, date: new Date().toLocaleString(), studentId: currentUser.uid });
            }
        }} />;
      }
      return <OsceView station={station} onBack={() => setStep('setup')} onSaveResult={(score, total, time, analytics) => {
-         if (db) {
-            push(ref(db, 'quizResults'), { userId: currentUser?.uid, userEmail: currentUser?.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-estatico' });
-            push(ref(db, 'osceAnalytics'), { ...analytics, unit, date: new Date().toLocaleString() });
+         if (currentUser) {
+            saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-estatico' });
+            saveOsceAnalytics({ ...analytics, unit, date: new Date().toLocaleString() });
          }
      }} />;
   }
@@ -591,7 +592,7 @@ const LabFlow = () => {
   }
   if (step === 'quiz' && sim) {
      return <LabQuizView simulation={sim} onBack={() => setStep('list')} onSaveResult={(score, total, time, details) => {
-         if (db) push(ref(db, 'quizResults'), { userId: currentUser?.uid, userEmail: currentUser?.email, score, total, date: new Date().toLocaleString(), discipline: sim.disciplineId, unit, quizTitle: sim.title, type: 'laboratorio', timeSpent: time || 0, details: details || [] });
+         if (currentUser) saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, date: new Date().toLocaleString(), discipline: sim.disciplineId, unit, quizTitle: sim.title, type: 'laboratorio', timeSpent: time || 0, details: details || [] });
      }} />;
   }
   return null;
@@ -657,7 +658,7 @@ const AppRouter: React.FC = () => {
               <SurveyView 
                 onBack={() => window.location.href = '/'} 
                 onSaveResult={(data) => {
-                  if (db) push(ref(db, 'surveys'), data);
+                  submitSurvey(data.unit, data.answers);
                 }}
               />
             } />

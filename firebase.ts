@@ -9,9 +9,6 @@ import {
   updateProfile,
   sendPasswordResetEmail
 } from "firebase/auth";
-import { 
-  getDatabase, ref, onValue, push, remove, set, update, off 
-} from "firebase/database";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
@@ -33,10 +30,8 @@ if (typeof window !== "undefined") {
   getAnalytics(app);
 }
 
-export const auth = getAuth(app); 
-export const db = getDatabase(app);
-export { ref, onValue, push, remove, set, update, off };
-export { 
+export const auth = getAuth(app);
+export {
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut, 

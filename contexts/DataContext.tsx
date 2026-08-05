@@ -1,26 +1,24 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useFirebaseData } from '../hooks/useFirebaseData.ts';
-import { SimulationInfo, Summary, Question, OsceStation, QuizResult, LabSimulation, Period, FeatureFlag, AnalyticsResult } from '../types.ts';
+import { useAppConfig } from '../hooks/useAppConfig.ts';
+import { SimulationInfo, Period, FeatureFlag } from '../types.ts';
 
-// 1. Definimos o formato da nossa "Nuvem de Dados"
+// Dados estruturais globais (períodos, disciplinas, feature flags) — não confundir com dados
+// de domínio (questões, resultados, materiais...), que cada view busca do seu próprio service
+// sob demanda. Ver PLANO-REESTRUTURACAO.md, item 3.5: este contexto substituiu o antigo
+// DataContext/useFirebaseData baseado em RTDB, que prometia Question[]/QuizResult[]/etc. e
+// sempre devolvia array vazio — um contrato que mentia.
 interface DataContextType {
   isLoading: boolean;
   isOnline: boolean;
-  periods: Period[]; 
+  periods: Period[];
   disciplines: SimulationInfo[];
-  summaries: Summary[];
-  questions: Question[];
-  osceStations: OsceStation[];
-  quizResults: QuizResult[];
-  labSimulations: LabSimulation[];
-  osceAnalytics: AnalyticsResult[];
-  featureFlags: FeatureFlag[]; // <--- ADICIONADO: O interruptor mestre
+  featureFlags: FeatureFlag[];
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const data = useFirebaseData(); 
+  const data = useAppConfig();
   return <DataContext.Provider value={data}>{children}</DataContext.Provider>;
 };
 

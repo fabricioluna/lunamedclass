@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit } from '../../types';
 import { Trash2, Microscope, Loader2 } from 'lucide-react';
-import { storage } from '../../firebase';
-import { deleteObject, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '../../services/storageService';
 import { parseResilientCSV } from '../../utils/csvHelper';
 
 interface AdminLabProps {
@@ -108,9 +107,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
         }
 
         // Subpasta da unidade no Storage
-        const sRef = storageRef(storage, `lab_images/${labDisc}/${targetUnit}/${Date.now()}_${imageFile.name}`);
-        const snap = await uploadBytes(sRef, imageFile as File); 
-        const imageUrl = await getDownloadURL(snap.ref);
+        const imageUrl = await uploadFile(`lab_images/${labDisc}/${targetUnit}/${Date.now()}_${imageFile.name}`, imageFile as File);
 
         // 2. MONTAGEM DA PEÇA (Carga instantânea baseada 100% no CSV)
         finalQuestions.push({
@@ -165,16 +162,8 @@ const AdminLab: React.FC<AdminLabProps> = ({
 
   const handleDeleteLab = async (simId: string) => {
     if (!confirm("Excluir este simulado e TODAS as imagens vinculadas a ele do servidor?")) return;
-    const sim = labSimulations.find(s => s.id === simId);
-    if (!sim) return;
-
+    // onRemoveLabSimulation (labService.removeLabSimulation) já apaga o doc e as imagens.
     if (onRemoveLabSimulation) onRemoveLabSimulation(simId);
-
-    sim.questions.forEach(async (q) => {
-      if (q.imageUrl && q.imageUrl.includes('firebasestorage')) {
-        try { await deleteObject(storageRef(storage, q.imageUrl)); } catch (e) { console.log('Imagem já apagada'); }
-      }
-    });
   };
 
   return (
@@ -234,7 +223,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
             <div className="flex flex-col gap-2">
               <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Labs em Nuvem</h3>
-              <button onClick={() => { if (prompt(`⚠️ Apagar Labs?\nSenha (fmst8):`) === 'fmst8') onClearLab && onClearLab(discFilterLab || undefined); }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit">Apagar {discFilterLab ? 'da Disciplina' : 'Tudo'} 🗑️</button>
+              <button onClick={() => { if (confirm(`⚠️ Apagar Labs ${discFilterLab ? 'da disciplina selecionada' : 'de TODAS as disciplinas'}?`)) onClearLab && onClearLab(discFilterLab || undefined); }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-200 transition-all w-fit">Apagar {discFilterLab ? 'da Disciplina' : 'Tudo'} 🗑️</button>
             </div>
             <div className="flex flex-wrap gap-2">
               <select value={discFilterLab} onChange={e => { setDiscFilterLab(e.target.value); setUnitFilterLab(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">

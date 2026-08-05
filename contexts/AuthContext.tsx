@@ -1,28 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { 
-  auth, db, ref, set, onValue, 
+import {
+  auth,
   GoogleAuthProvider, signInWithPopup, signOut,
   signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile,
   sendPasswordResetEmail
 } from '../firebase';
 import { User as FirebaseUser } from 'firebase/auth';
+import {
+  UserProfile, UserRole, subscribeToProfile, createProfile, stampLastLogin, updateUserPeriod as updateUserPeriodService,
+} from '../services/authService';
 
-export type UserRole = 'student' | 'admin' | 'professor';
-
-export interface UserProfile {
-  uid: string;
-  displayName: string | null;
-  email: string | null;
-  photoURL: string | null;
-  role: UserRole;
-  periodId?: string; 
-  createdAt: string;
-  lastLogin: string;
-}
+export type { UserRole, UserProfile };
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
   userProfile: UserProfile | null;
+  isAdmin: boolean;
   isLoadingAuth: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
@@ -37,25 +30,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
 
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       unsubscribeProfile?.();
       unsubscribeProfile = null;
 
       setCurrentUser(user);
 
-      if (user && db) {
-        const userRef = ref(db, `users/${user.uid}`);
+      if (user) {
+        // Autoridade de admin vem do Custom Claim no ID token, não do campo users/{uid}.role
+        // (decorativo — ver D5 / scripts/set-admin-claim.mjs). Claims só refletem depois de
+        // um novo login, então isso é lido uma vez por sessão, não em tempo real.
+        const tokenResult = await user.getIdTokenResult();
+        setIsAdmin(tokenResult.claims.admin === true);
+
         let hasStampedLoginThisSession = false;
 
-        unsubscribeProfile = onValue(userRef, (snapshot) => {
-          const data = snapshot.val();
-          if (data) {
-            setUserProfile(data);
+        unsubscribeProfile = subscribeToProfile(user.uid, (profile) => {
+          if (profile) {
+            setUserProfile(profile);
           } else {
             const newProfile: UserProfile = {
               uid: user.uid,
@@ -66,20 +64,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               createdAt: new Date().toISOString(),
               lastLogin: new Date().toISOString()
             };
-            set(userRef, newProfile);
+            createProfile(newProfile);
             setUserProfile(newProfile);
           }
           setIsLoadingAuth(false);
 
           // Grava lastLogin só depois de confirmar (ou criar) o perfil, e só uma vez por
           // sessão — senão a própria escrita realimenta este listener ao vivo.
-          if (!hasStampedLoginThisSession) {
+          if (!hasStampedLoginThisSession && profile) {
             hasStampedLoginThisSession = true;
-            set(ref(db, `users/${user.uid}/lastLogin`), new Date().toISOString());
+            stampLastLogin(user.uid);
           }
+        }, (error) => {
+          // Nunca deixar isLoadingAuth travado por um erro de permissão (ex: firestore.rules
+          // ainda não publicado) — mesma lição do incidente de isLoading da Etapa 2, agora do
+          // lado do perfil autenticado em vez da leitura anônima de periods/disciplines.
+          console.error('Falha ao carregar o perfil do usuário:', error);
+          setIsLoadingAuth(false);
         });
       } else {
         setUserProfile(null);
+        setIsAdmin(false);
         setIsLoadingAuth(false);
       }
     });
@@ -103,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     if (userCredential.user) {
       await updateProfile(userCredential.user, { displayName: name });
-      
+
       const newProfile: UserProfile = {
         uid: userCredential.user.uid,
         displayName: name,
@@ -114,8 +119,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString()
       };
-      
-      await set(ref(db, `users/${userCredential.user.uid}`), newProfile);
+
+      await createProfile(newProfile);
       // updateProfile já atualizou auth.currentUser no lugar; usar o objeto real em vez de
       // espalhar userCredential.user, que descartaria os métodos do protótipo (getIdToken etc.)
       setCurrentUser(auth.currentUser);
@@ -128,8 +133,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateUserPeriod = async (periodId: string) => {
-    if (currentUser && db) {
-      await set(ref(db, `users/${currentUser.uid}/periodId`), periodId);
+    if (currentUser) {
+      await updateUserPeriodService(currentUser.uid, periodId);
       setUserProfile(prev => prev ? { ...prev, periodId } : null);
     }
   };
@@ -139,7 +144,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, updateUserPeriod, logout }}>
+    <AuthContext.Provider value={{ currentUser, userProfile, isAdmin, isLoadingAuth, loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, updateUserPeriod, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, LogOut, ArrowUpCircle, X, CheckCircle } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext'; 
+import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { db, ref, push } from '../firebase';
+import { submitPeriodChangeRequest } from '../services/authService';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -36,11 +36,11 @@ const Header: React.FC = () => {
   const currentPeriodName = periods.find(p => p.id === userProfile?.periodId)?.name || 'Sem Período';
 
   const handleRequestPeriodChange = async () => {
-    if (!selectedNewPeriod || !currentUser || !userProfile || !db) return;
-    
+    if (!selectedNewPeriod || !currentUser || !userProfile) return;
+
     setRequestStatus('loading');
     try {
-      await push(ref(db, 'periodRequests'), {
+      await submitPeriodChangeRequest({
         userId: currentUser.uid,
         userName: currentUser.displayName || 'Aluno',
         userEmail: currentUser.email || '',

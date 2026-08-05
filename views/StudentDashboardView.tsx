@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, UserProfile } from '../contexts/AuthContext';
-import { db, ref, onValue } from '../firebase';
-import { query, orderByChild, equalTo } from 'firebase/database';
+import { subscribeToMyResults } from '../services/resultsService';
 import { QuizResult } from '../types';
 import { BrainCircuit, ChevronLeft, Zap, Star, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
 
@@ -17,40 +16,24 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
   useEffect(() => {
     let isMounted = true;
     
-    if (!db || !currentUser) {
+    if (!currentUser) {
       setIsLoading(false);
       return;
     }
 
-    // FILTRO NO SERVIDOR: o banco só devolve os resultados deste aluno.
-    // As Security Rules exigem exatamente esta query (orderByChild 'userId' + equalTo do
-    // próprio uid) — filtrar no cliente voltaria a baixar as notas da turma inteira.
-    const myResultsQuery = query(
-      ref(db, 'quizResults'),
-      orderByChild('userId'),
-      equalTo(currentUser.uid)
-    );
-
-    const unsubscribe = onValue(
-      myResultsQuery,
-      (snapshot) => {
+    // FILTRO NO SERVIDOR: a query (where userId == uid) só devolve os resultados deste
+    // aluno — as Security Rules do Firestore exigem exatamente isso (ver firestore.rules).
+    const unsubscribe = subscribeToMyResults(
+      currentUser.uid,
+      (myResults) => {
         if (!isMounted) return;
-
-        if (snapshot.exists()) {
-          const allData = snapshot.val();
-          const myResults: QuizResult[] = Object.keys(allData)
-            .map(k => ({ ...allData[k], id: k }))
-            .filter(r => r && typeof r.score === 'number' && typeof r.total === 'number');
-
-          setResults(myResults.reverse());
-        } else {
-          setResults([]);
-        }
+        const validResults = myResults.filter(r => typeof r.score === 'number' && typeof r.total === 'number');
+        setResults(validResults.reverse());
         setIsLoading(false);
       },
-      (error) => {
+      () => {
         if (!isMounted) return;
-        console.error('Falha ao carregar o desempenho do aluno:', error);
+        console.error('Falha ao carregar o desempenho do aluno.');
         setResults([]);
         setIsLoading(false);
       }

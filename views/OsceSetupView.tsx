@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SimulationInfo, OsceStation, AcademicUnit } from '../types';
 import { Milestone, Layers } from 'lucide-react';
-import { db } from '../firebase';
-import { ref, get } from 'firebase/database';
+import { fetchOsceStationsOnce } from '../services/osceService';
 
 interface OsceSetupViewProps {
   discipline: SimulationInfo;
@@ -33,30 +32,23 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
       try {
         setIsFetching(true);
         // Bate no banco apenas uma vez (get) e fecha a conexão
-        const snapshot = await get(ref(db, 'osce'));
-        
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const parsedStations = Object.keys(data)
-            .filter(k => data[k])
-            .map(k => ({ ...data[k], firebaseId: k })) as OsceStation[];
-            
-          // REPLICA A REGRA DE NEGÓCIO QUE ANTES FICAVA NO APP.TSX
-          const filteredStations = parsedStations.filter(s => {
-            const isCorrectDisc = s.disciplineId === discipline.id;
-            const sUnit = s.unit || 'N1';
-            const isCorrectUnit = isUC ? true : sUnit === selectedUnit;
-            
-            if (!isCorrectDisc || !isCorrectUnit) return false;
-            
-            if (setupMode === 'static') return s.mode === 'clinical'; 
-            if (setupMode === 'rpg') return s.mode === 'rpg';
-            if (setupMode === 'ai') return s.mode === 'ai';
-            return true;
-          });
+        const parsedStations = await fetchOsceStationsOnce();
 
-          setLocalStations(filteredStations);
-        }
+        // REPLICA A REGRA DE NEGÓCIO QUE ANTES FICAVA NO APP.TSX
+        const filteredStations = parsedStations.filter(s => {
+          const isCorrectDisc = s.disciplineId === discipline.id;
+          const sUnit = s.unit || 'N1';
+          const isCorrectUnit = isUC ? true : sUnit === selectedUnit;
+
+          if (!isCorrectDisc || !isCorrectUnit) return false;
+
+          if (setupMode === 'static') return s.mode === 'clinical';
+          if (setupMode === 'rpg') return s.mode === 'rpg';
+          if (setupMode === 'ai') return s.mode === 'ai';
+          return true;
+        });
+
+        setLocalStations(filteredStations);
       } catch (error) {
         console.error("Erro ao sincronizar as estações clínicas:", error);
       } finally {
