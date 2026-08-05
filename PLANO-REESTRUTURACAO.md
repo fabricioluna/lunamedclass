@@ -57,9 +57,14 @@ remoção de rota/função neste projeto.
 - Vulnerabilidades npm: 18 (2 críticas) → 2 (as 2 restantes exigem major bump do
   `react-router-dom`, adiado para a Etapa 1)
 
-🟡 Dois itens de baixa prioridade ficaram em aberto e **não bloqueiam a Etapa 1**:
-- **0.8** — perfil admin no RTDB com só 2 de 7 campos (consistência de dado, painel funciona normalmente)
-- **0.9** — backfill `userEmail→userId` para resultados anteriores a 19/07/2026 (script pronto em `scripts/backfill-userid.mjs`, não rodado ainda)
+✅ **Atualização de 2026-08-04 (sessão seguinte):** os 3 itens que ficaram pendentes (0.5, 0.8,
+0.9) foram todos fechados. 0.5 confirmado pelo usuário (chave trocada). 0.8 corrigido via script
+(`scripts/fix-admin-profile.mjs`, perfil com os 6 campos que persistem — `photoURL: null` é
+removido pelo próprio RTDB). 0.9 investigado e **não é corrigível**: dos 8233 registros em
+`quizResults`, 8216 não têm nem `userEmail` nem `userId` gravados (são de antes da instrumentação
+existir) — não é um caso de "casar por e-mail", é ausência total do dado. Ver seção ETAPA 0 abaixo
+para detalhes. 🔴 Pendência nova: a service account key usada nos dois scripts foi colada em
+texto plano nesta conversa — recomendado revogá-la (ver nota de segurança na seção 0.9).
 
 **Etapa 1 (Rede de proteção) — ✅ CONCLUÍDA, commitada e enviada em 2026-08-04.**
 
@@ -252,11 +257,14 @@ fazer backup do RTDB antes).
 - [x] **0.2** ~~Criar nó `/admins`~~ — **descartado** (ver D4)
 - [x] **0.3** Publicar regras restritivas no RTDB *(feito 2026-08-04)*
 - [x] **0.4** Corrigir `StudentDashboardView` — query filtrada no servidor *(precisa de deploy)*
-- [ ] **0.5** Revogar e reemitir chave Gemini — **código feito, falta a ação no Google Cloud**
+- [x] **0.5** Revogar e reemitir chave Gemini *(confirmado pelo usuário em 2026-08-04 — chave trocada)*
 - [x] **0.6** Higiene: `npm audit fix`, `dist/` limpo, `.gitignore` e `.env.example`
 - [x] **0.7** Versionar `database.rules.json` + `database.rules.README.md`
-- [ ] **0.8** Corrigir perfil admin incompleto no banco *(baixo impacto)*
-- [ ] **0.9** Rodar backfill `userEmail` → `userId` *(script pronto em `scripts/`)*
+- [x] **0.8** Corrigir perfil admin incompleto no banco *(aplicado em produção, 2026-08-04)*
+- [x] **0.9** Investigar backfill `userEmail` → `userId` *(rodado em produção, 2026-08-04 — ver
+  achado abaixo: não havia nada a corrigir)*
+
+**✅ Etapa 0 — CONCLUÍDA em 2026-08-04.**
 
 ### O que foi feito no código (2026-08-04)
 
@@ -319,32 +327,54 @@ rm -rf dist            # bundle contém a chave antiga
 echo "dist/" >> .gitignore
 ```
 
-### 0.8 — Perfil admin quebrado *(baixo impacto)*
+### 0.8 — Perfil admin quebrado *(✅ resolvido em 2026-08-04)*
 
-O nó `users/BFrlESQGtYZaYnxwTCdlXIidqfO2` tem **só** `role` e `lastLogin`. Alunos têm 7 campos.
-É a race condition do item **2.1** materializada em produção — e a evidência de que aquele bug
-é real, não teórico.
+O nó `users/BFrlESQGtYZaYnxwTCdlXIidqfO2` tinha **só** `role` e `lastLogin`. Era a race condition
+do item **2.1** materializada em produção — evidência de que aquele bug era real, não teórico
+(já corrigido em código desde o commit `6b773a4`, então não deve reincidir).
 
-Impacto prático é baixo: o painel só checa `role`, e o `Header` lê nome/foto do Firebase Auth,
-não deste nó. É consistência de dado, não funcionalidade quebrada.
-
-Corrigir pelo Firebase Console → Realtime Database → `users/BFrlESQ…` → adicionar os campos:
+Resolvido com `scripts/fix-admin-profile.mjs` (dry-run + `--apply`, idempotente). Perfil
+confirmado completo após a execução:
+```json
+{
+  "createdAt": "2026-07-19T15:14:22.561Z",
+  "displayName": "Fabrício Luna",
+  "email": "fabricioluna@gmail.com",
+  "lastLogin": "2026-07-19T15:14:22.561Z",
+  "role": "admin",
+  "uid": "BFrlESQGtYZaYnxwTCdlXIidqfO2"
+}
 ```
-uid:         "BFrlESQGtYZaYnxwTCdlXIidqfO2"
-email:       "fabricioluna@gmail.com"
-displayName: "Fabrício Luna"
-createdAt:   "2026-07-19T15:14:22.561Z"
-```
-A prevenção definitiva é o item **2.1**; sem ele, o problema pode reincidir.
+`photoURL` não aparece: o RTDB trata `null` em `set`/`update` como "remover a chave", não "gravar
+null" — isso vale para qualquer perfil (alunos incluídos) e é inofensivo aqui, já que nada lê
+`photoURL` deste nó (o `Header` usa o Firebase Auth diretamente).
 
-### 0.9 — Backfill `userEmail` → `userId`
+### 0.9 — Backfill `userEmail` → `userId` *(✅ investigado em 2026-08-04 — nada a corrigir)*
 
-`userId` só entrou no payload dos resultados em **19/07/2026** (commit `7fc974f`). Resultados
-anteriores têm só `userEmail` e, com as novas regras, ficaram invisíveis no dashboard do aluno.
+A hipótese original era "resultados antigos têm `userEmail` mas não `userId`". O dry-run de
+`scripts/backfill-userid.mjs` contra o banco de produção mostrou outra coisa: dos 8233 registros
+em `quizResults`, só 17 têm `userId` — e **nenhum dos outros 8216 tem `userEmail` para casar por
+e-mail**. Amostra confirmou: registros de antes de ~19-26/07/2026 não gravam nenhum identificador
+de aluno (nem e-mail, nem uid); só passaram a vir com os dois campos juntos a partir de então.
 
-`scripts/backfill-userid.mjs` resolve. Roda em dry-run por padrão e relata o volume antes de
-escrever — **rode a simulação primeiro**: se forem poucos resultados antigos, talvez nem valha
-aplicar. Instruções no cabeçalho do script (precisa de service account do Firebase).
+Não é um bug corrigível por script — é dado histórico de antes da instrumentação existir.
+`0 corrigíveis` no relatório. Esses ~8216 registros seguem invisíveis no dashboard do aluno e
+**não há como recuperá-los** (a informação de autoria nunca foi gravada). Se isso incomodar,
+a única opção seria comunicar à turma que o histórico anterior a essa data não é resgatável —
+decisão do usuário, não uma pendência técnica.
+
+🔴 **Nota de segurança sobre a chave de serviço usada em 0.8/0.9:** o usuário colou o conteúdo
+da service account key (`firebase-adminsdk-fbsvc@monitor-virtual-fms`, key id
+`cd829135ab8da1c63a26bf665a81f9efba8792b3`) diretamente na conversa para viabilizar os dois
+scripts. O arquivo foi salvo só localmente em `scripts/serviceAccount.json` (gitignored,
+confirmado antes de escrever) e **apagado ao final desta sessão** — nunca foi commitado. Mesmo
+assim, essa chave dá acesso de admin ao RTDB inteiro e ficou em texto plano no histórico da
+conversa, que é um canal diferente (e potencialmente mais persistente) do que um commit git.
+**Recomendação: revogar essa chave específica** em
+[console.cloud.google.com → IAM e admin → Contas de serviço](https://console.cloud.google.com/iam-admin/serviceaccounts)
+→ `firebase-adminsdk-fbsvc@monitor-virtual-fms` → aba Chaves → apagar a chave com esse ID — e
+gerar uma nova só quando precisar rodar outro script administrativo. Ainda não feito nesta
+sessão; decisão e ação são do usuário.
 
 ### ✅ Aceite da Etapa 0
 - [x] `curl "https://monitor-virtual-fms-default-rtdb.firebaseio.com/.json?shallow=true"` → `Permission denied`
