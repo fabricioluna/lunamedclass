@@ -107,19 +107,30 @@ if (APPLY) await firestore.collection('config').doc('periods').set({ items: peri
 // === DISCIPLINAS + DISCIPLINE_CONFIG MESCLADOS ===
 const disciplinesRaw = Array.isArray(data.disciplines) ? data.disciplines : Object.values(data.disciplines || {});
 const disciplineConfig = data.discipline_config || {};
+// Firestore rejeita `undefined` como valor de campo (RTDB não — lá, um campo nunca setado
+// só volta como `undefined` na leitura, sem erro). O merge original forçava exatamente isso
+// sempre que uma disciplina não tinha `references`/`lockedFeatures` e o override também não
+// tinha — a chave existia no objeto, com valor `undefined`. É o motivo de config/disciplines
+// e config/featureFlags terem ficado de fora na primeira aplicação: o erro no meio do array
+// abortou o script antes de chegar em feature_flags. Corrigido: só sobrescreve a chave quando
+// o override realmente tem um valor válido; senão, mantém o que já vinha de `disc` (que pode
+// legitimamente não ter a chave — isso o Firestore aceita numa boa).
 const disciplines = disciplinesRaw.map((disc) => {
   const override = disciplineConfig[disc.id];
   if (!override) return disc;
   return {
     ...disc,
-    themes: Array.isArray(override.themes) ? override.themes : disc.themes,
-    references: Array.isArray(override.references) ? override.references : disc.references,
-    status: override.status || disc.status,
-    lockedFeatures: Array.isArray(override.lockedFeatures) ? override.lockedFeatures : disc.lockedFeatures,
+    ...(Array.isArray(override.themes) && { themes: override.themes }),
+    ...(Array.isArray(override.references) && { references: override.references }),
+    ...(override.status && { status: override.status }),
+    ...(Array.isArray(override.lockedFeatures) && { lockedFeatures: override.lockedFeatures }),
   };
 });
-report.push(`${String(disciplines.length).padStart(5)}  disciplines      → config/disciplines (com discipline_config mesclado)`);
-if (APPLY) await firestore.collection('config').doc('disciplines').set({ items: disciplines });
+// Segunda camada de proteção contra `undefined` (json roundtrip descarta qualquer chave
+// com esse valor, em qualquer nível — não só nas 4 mescladas acima).
+const disciplinesSafe = JSON.parse(JSON.stringify(disciplines));
+report.push(`${String(disciplinesSafe.length).padStart(5)}  disciplines      → config/disciplines (com discipline_config mesclado)`);
+if (APPLY) await firestore.collection('config').doc('disciplines').set({ items: disciplinesSafe });
 
 // === FEATURE FLAGS (mapa, não array) ===
 const featureFlags = data.feature_flags || {};
