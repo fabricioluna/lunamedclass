@@ -40,27 +40,28 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
-**➡️ HANDOFF (2026-08-05, madrugada — sessão autônoma enquanto o usuário dormia): Etapas 0, 1
-e 2 concluídas. Etapa 3 (Firestore) CODE-COMPLETE, todos os itens 3.1–3.7 feitos e verificados.
-Etapa 4 (Reestruturação) parcialmente feita: 4.1, 4.2 e 4.4 concluídos e verificados; 4.6
-investigado (achado: já estava resolvido, alvo do audit original parece equivocado); 4.3 e 4.5
-conscientemente adiados (ver justificativa na seção Etapa 4) — precisam de uma sessão com o
-usuário disponível para testar navegação real.**
+**➡️ HANDOFF (2026-08-05): Etapas 0, 1, 2 e 3 concluídas — Etapa 3 (Firestore) está EM
+PRODUÇÃO e confirmada funcionando (regras publicadas, custom claim aplicado, dados migrados,
+testado com conta real via Playwright). Etapa 4: itens 4.1, 4.2, 4.4, 4.5 e 4.6 concluídos e
+em produção; 4.3 conscientemente adiado (ver justificativa no item).**
 
-🔴 **NADA disso está ativo em produção ainda** — a Etapa 3 sozinha já teria 3 pendências
-manuais do usuário (publicar `firestore.rules`, rodar `set-admin-claim.mjs --apply`, decidir
-quando migrar os dados), e a Etapa 4 é só reorganização de código sobre essa mesma base ainda
-não publicada. Ver os itens 🔴 na seção "🏗️ ETAPA 3" antes de publicar qualquer coisa.
+✅ **Tudo commitado e enviado direto para `origin/main`** — a essa altura da sessão o usuário
+já tinha revisado e publicado as regras/dados, então deploys seguintes (4.5, os 2 bugfixes
+achados testando produção) foram enviados direto pra `main` mesmo, com o de praxe
+typecheck/lint/build/vitest limpo antes de cada um. Não há mais nada represado numa branch de
+backup — `origin/main` é a versão publicada agora.
 
-**Estado do git:** 3 commits locais desta sessão (`6f225d0` Etapa 3, `eca749e` item 4.4,
-`9137755` item 4.1), todos **enviados para a branch de backup `etapa-3-firestore` no GitHub**
-(não para `origin/main` — a Vercel faz deploy automático de `main`, e publicar essa migração
-antes das regras do Firestore estarem no ar arrisca quebrar login para a turma inteira).
-`origin/main` continua no commit de antes desta sessão. Rodar `git push origin main` só depois
-de publicar `firestore.rules` e revisar.
+🟡 **Achado testando de ponta a ponta com conta real:** possível bug (não investigado a fundo,
+pode ser artefato do teste automatizado) na 2ª questão de um simulado — ver seção "🧪 Teste de
+ponta a ponta" dentro da Etapa 4 abaixo. Não é regressão desta sessão (não toquei a lógica de
+`InteractiveQuiz`/`QuizView`, só movi arquivo de lugar). Vale um teste manual rápido.
 
-Pendência solta (não bloqueia): revogar a service account key do Firebase Admin usada nos itens
-0.8/0.9/backup — ver nota de segurança na seção 0.9.
+🧹 **Pendências soltas (não bloqueiam nada):**
+- Apagar ~15 contas de teste `qa.claude.etapa4*@example.com` no Firebase Console →
+  Authentication (busca por "qa.claude.etapa4") — detalhes na seção de teste da Etapa 4.
+- Revogar a service account key antiga do Firebase Admin usada nos itens 0.8/0.9/backup — ver
+  nota de segurança na seção 0.9 (a key mais recente, usada nesta sessão, já foi apagada pelo
+  usuário depois de aplicar a migração — bom hábito, seguir repetindo).
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -555,24 +556,31 @@ abaixo); 4.3 e 4.5 avaliados e **conscientemente adiados** — ver justificativa
   direto. Ainda são lambdas inline nas rotas (não viraram funções nomeadas em arquivo
   separado) — se isso incomodar no futuro é polimento, não dívida de arquitetura.
 - [ ] **4.3** Os 7 "Flow" viram rotas reais (`/disciplina/:id/simulado/executar`) — hoje usam `useState<'setup'|'quiz'>` e o botão *voltar* do navegador não entende.
-  🟡 **Adiado conscientemente em 2026-08-05:** exige mover estado hoje só-em-memória (`station`
-  escolhido no OsceFlow, `sim` no LabFlow) para algo que sobreviva à navegação por URL
-  (route state ou busca por ID), criar funções `fetchStationById`/`fetchSimulationById` nos
-  services, e teste real de navegação/refresh no meio de um simulado — não dá para validar com
-  segurança sem um usuário logado de verdade, e o risco de regressão (perder o simulado em
-  andamento) é maior que o problema atual (botão voltar). Fica para uma sessão com o usuário
-  disponível para testar.
+  🟡 **Adiado conscientemente em 2026-08-05, reavaliado e mantido adiado.** `QuizFlow` já tem
+  uma rede de segurança (localStorage salva as questões escolhidas antes de entrar no modo
+  quiz — dá pra converter com risco baixo). `OsceFlow` e `LabFlow` **não têm nenhuma
+  persistência** da estação/simulação escolhida — confirmado via grep, zero `localStorage` em
+  `features/osce/` e `features/lab/`. Converter esses dois pra rota real sem antes construir
+  `fetchStationById`/`fetchSimulationById` + persistência arriscaria um refresh no meio de uma
+  simulação jogar o aluno de volta pro início, perdendo o progresso — pior que o problema atual
+  (botão voltar sai do fluxo). Decisão: não vale fazer só o Quiz e deixar os outros dois pela
+  metade; os três ficam para uma sessão dedicada com escopo completo (persistência + rotas).
 - [x] **4.4** Quebrar `constants.tsx` (1.145 linhas) → `data/periods.ts`, `data/disciplines.ts`,
   `data/questions.ts` (`INITIAL_QUESTIONS`), `data/medicalEvents.ts`, `theme.ts` *(feito em
   2026-08-05)*. `THEME` nunca foi importado em lugar nenhum antes — preservado no novo
   arquivo, não é escopo desta etapa decidir se deveria existir. Efeito colateral bom: os dados
   de congressos médicos (`MEDICAL_EVENTS_2026`) saíram do bundle principal, já que agora só o
   `MedicalEventsView` (lazy) importa `data/medicalEvents.ts`.
-- [ ] **4.5** Estrutura `features/{auth,quiz,osce,lab,materials,admin}`.
-  🟡 **Adiado conscientemente em 2026-08-05:** `features/auth/` já existe (item 4.1). Estender
-  para quiz/osce/lab/materials/admin significa mover ~20 arquivos e atualizar import paths em
-  todo o repo — mecânico, mas o volume por si só eleva a chance de um import quebrado passar
-  despercebido sem revisão humana. Melhor concluir em uma sessão dedicada, revisando o diff.
+- [x] **4.5** Estrutura `features/{auth,quiz,osce,lab,materials,admin}` *(feito em 2026-08-05)*.
+  `git mv` preservando histórico: `views/{QuizSetupView,QuizView}` → `features/quiz/`;
+  `views/{OsceView,DynamicOsceView,OsceSetupView,OsceAIView,OsceModeSelectionView}` →
+  `features/osce/`; `views/{LabListView,LabQuizView}` → `features/lab/`;
+  `views/SummariesListView` → `features/materials/`; `views/AdminView` +
+  `components/admin/*` → `features/admin/` (`AdminView.tsx` + `components/`). Views que não se
+  encaixam nos 6 domínios (Period/Home/Discipline/Calculators/CareerQuiz/References/
+  Simulators/Survey*/MedicalEvents/StudentDashboard) continuam em `views/` — não fazia sentido
+  criar uma feature só pra elas. Só ajuste de profundidade de import relativo, zero mudança de
+  comportamento; typecheck/lint/build/vitest limpos + smoke test local.
 - [x] **4.6** Bundle: investigado em 2026-08-05. **`jspdf`/`jspdf-autotable` já só são importados
   em `AdminStats.tsx`**, que só carrega dentro do chunk lazy de `/admin` — nunca estiveram no
   bundle principal. `html2canvas` nem é importado diretamente no código (dependência
@@ -584,6 +592,34 @@ abaixo); 4.3 e 4.5 avaliados e **conscientemente adiados** — ver justificativa
   risco médio que toca vários services; não tentada sem poder testar upload de arquivo contra
   produção. Registrado como próximo passo real, não "dynamic import de jspdf" (que já era
   verdade).
+
+### 🧪 Teste de ponta a ponta contra produção (2026-08-05, com conta descartável)
+
+Depois de mover os arquivos (4.5), testei o fluxo real logado contra
+`lunamedclass.vercel.app` via Playwright — cadastro real, navegação por período/disciplina,
+carregamento do banco de questões, início de simulado. **Confirma que o pipeline inteiro da
+Etapa 3 funciona**: cadastro cria perfil no Firestore, `config/periods`/`config/disciplines`
+carregam certo, `questions` (860 migradas) aparecem corretas na tela (ex: HM1/N1 mostrou 5
+bancos oficiais de 40 questões cada). Zero erros de console em todas as telas visitadas.
+
+🟡 **Achado ao tentar responder a 2ª questão de um simulado:** depois de confirmar a resposta
+da questão 1 e clicar "PRÓXIMA", a questão 2 apareceu já em estado de feedback/resposta
+revelada (com as opções desabilitadas), sem eu ter clicado em nada — mas o contador
+"Progresso 0/3" e "3 pendentes" não bateu com isso. Não consegui concluir se é um bug real ou
+um artefato da minha automação (o clique certo pode ter caído no elemento errado durante uma
+transição). **Importante: não mexi em `InteractiveQuiz.tsx` nem na lógica de `QuizView.tsx`
+nesta sessão** — só movi os arquivos de lugar (4.5) e ajustei imports; se for um bug de
+verdade, é pré-existente, não uma regressão desta etapa. Vale o usuário testar manualmente
+respondendo um simulado curto (2-3 questões) pra confirmar se reproduz.
+
+🧹 **Limpeza pendente:** ficaram ~15 contas de teste descartáveis em
+`Firebase Console → Authentication`, todas com prefixo **`qa.claude.etapa4`** no e-mail
+(padrão `qa.claude.etapa4*@example.com`, senha `ClaudeTest#2026!` se precisar inspecionar
+alguma antes de apagar). Não deu pra limpar via script porque `scripts/serviceAccount.json`
+já tinha sido apagada (corretamente) antes desse teste. Basta buscar "qa.claude.etapa4" na
+lista de usuários do Authentication e apagar em lote — cada uma tem um perfil correspondente
+em `users/{uid}` no Firestore que fica órfão mas inofensivo (nenhuma delas concluiu um
+simulado até salvar resultado, então não deixaram `quizResults`).
 
 ---
 
