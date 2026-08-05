@@ -70,6 +70,9 @@ await check('Aluno A lê o PRÓPRIO resultado', async () => {
 await check('Admin lê o resultado de qualquer aluno', async () => {
   await assertSucceeds(getDoc(doc(asAdmin, 'quizResults', 'result_b')));
 });
+await check('Aluno B NÃO lê o resultado do Aluno A (isolamento nos dois sentidos)', async () => {
+  await assertFails(getDoc(doc(asStudentB, 'quizResults', 'result_a')));
+});
 await check('Aluno A NÃO cria resultado em nome do Aluno B (userId falso)', async () => {
   await assertFails(addDoc(collection(asStudentA, 'quizResults'), { userId: STUDENT_B, score: 10, total: 10 }));
 });

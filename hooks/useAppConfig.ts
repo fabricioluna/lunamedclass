@@ -65,7 +65,11 @@ export const useAppConfig = () => {
       }
     );
 
-    const unsubFlags = subscribeToFeatureFlags(setFeatureFlags);
+    // Mesma ressalva de permissão de periods/disciplines: visitante deslogado não lê
+    // config/featureFlags. Sem callback de erro, o SDK do Firestore loga "Uncaught Error in
+    // snapshot listener" sozinho — aqui só engolimos o erro, já que featureFlags vazio já é
+    // o fallback seguro (DisciplineView.checkFlag cai no defaultState quando a flag não existe).
+    const unsubFlags = subscribeToFeatureFlags(setFeatureFlags, () => {});
 
     return () => {
       unsubPeriods();

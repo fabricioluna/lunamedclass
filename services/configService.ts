@@ -30,11 +30,18 @@ export const subscribeToDisciplines = (
   );
 };
 
-export const subscribeToFeatureFlags = (onData: (flags: FeatureFlag[]) => void) => {
-  return onSnapshot(featureFlagsDocRef, (snap) => {
-    const items = (snap.data()?.items as Record<string, FeatureFlag>) || {};
-    onData(Object.keys(items).map((id) => ({ ...items[id], firebaseId: id })));
-  });
+export const subscribeToFeatureFlags = (
+  onData: (flags: FeatureFlag[]) => void,
+  onError?: (error: unknown) => void
+) => {
+  return onSnapshot(
+    featureFlagsDocRef,
+    (snap) => {
+      const items = (snap.data()?.items as Record<string, FeatureFlag>) || {};
+      onData(Object.keys(items).map((id) => ({ ...items[id], firebaseId: id })));
+    },
+    (error) => onError?.(error)
+  );
 };
 
 // === ESCRITA (ADMIN) ===
