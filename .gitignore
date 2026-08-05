@@ -17,3 +17,6 @@ dist
 
 # Chave de servico do Firebase (segredo — nunca versionar)
 scripts/serviceAccount.json
+
+# Backups do RTDB (contêm dado real de aluno — nunca versionar)
+backups/

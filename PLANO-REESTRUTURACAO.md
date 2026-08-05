@@ -430,7 +430,18 @@ Um commit isolado por item, com teste quando cabível.
 
 ## 🏗️ ETAPA 3 — Camada de dados *(~1 semana)*
 
-Maior ganho estrutural. **Ponto de não-retorno: faz backup antes** (Firebase Console → RTDB → Exportar JSON).
+Maior ganho estrutural. **Ponto de não-retorno: faz backup antes.**
+
+✅ **Backup feito em 2026-08-05** via `scripts/backup-rtdb.mjs` (o "Exportar JSON" do console não
+foi encontrado na UI — o script resolve a mesma coisa, só leitura, sem tocar produção).
+`backups/rtdb-backup-2026-08-05T00-29-59-890Z.json` — 5.70 MB, local, fora do git
+(`.gitignore`). Contagem por coleção bate com o esperado (`quizResults`: 8233, mesmo número do
+dry-run do item 0.9). **Não apagar esse arquivo até confirmar que a migração para Firestore
+funcionou.**
+
+🔴 A mesma service account key dos itens 0.8/0.9 foi reaproveitada aqui (o usuário pediu para não
+gerar outra) — ainda **não revogada**. Ver nota de segurança na seção 0.9 acima; recomendação
+segue de pé.
 
 - [ ] **3.1** Modelar Firestore:
   ```
