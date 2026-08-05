@@ -48,11 +48,13 @@ service cloud.firestore {
 
     // Materiais: alunos autenticados podem contribuir (upload próprio, sem dono explícito —
     // mesma política pública-para-a-turma que já rodava em produção antes desta etapa).
-    // Só admin apaga.
+    // Só CRIAM — não existe UI (nem função de service) para aluno editar material alheio, e
+    // sem essa restrição um aluno poderia usar o SDK direto para reescrever url/isVerified de
+    // qualquer material já publicado. Update fica só com admin, junto do delete.
     match /materials/{id} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
 
     // Notas de simulados: aluno só cria/lê o próprio resultado (userId == uid no próprio

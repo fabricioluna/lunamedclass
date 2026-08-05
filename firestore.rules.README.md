@@ -18,7 +18,7 @@ Este arquivo é a primeira vez que essas regras existem como código.
 | `users/{uid}` | só o próprio nó | tudo | — |
 | `config/{periods\|disciplines\|featureFlags}` | leitura | leitura + escrita | — |
 | `questions`, `osceStations`, `labSimulations` | leitura | leitura + escrita | — |
-| `materials` | leitura + cria/edita | tudo | — |
+| `materials` | leitura + cria (não edita nem apaga) | tudo | — |
 | `quizResults` | lê/cria só o próprio (`userId == uid`) | tudo | — |
 | `osceAnalytics` | só cria | tudo | — |
 | `periodRequests` | só cria, com o próprio `userId` e `status: "pending"` | tudo | — |

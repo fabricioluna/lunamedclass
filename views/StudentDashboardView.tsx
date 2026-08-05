@@ -27,8 +27,9 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
       currentUser.uid,
       (myResults) => {
         if (!isMounted) return;
+        // subscribeToMyResults já devolve em ordem de mais recente primeiro
         const validResults = myResults.filter(r => typeof r.score === 'number' && typeof r.total === 'number');
-        setResults(validResults.reverse());
+        setResults(validResults);
         setIsLoading(false);
       },
       () => {
