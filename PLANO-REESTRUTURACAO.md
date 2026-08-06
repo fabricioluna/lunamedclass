@@ -40,18 +40,25 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
-**➡️ HANDOFF (2026-08-06, fim de sessão): Etapas 0-4 concluídas** (detalhes nas seções
-correspondentes abaixo; Etapa 4 tem 1 item conscientemente adiado, o 4.3). **Etapa 5 em
-andamento: 5.1, 5.2, 5.3 e 5.4 concluídos.** 5.1-5.3 enviados a `origin/main`; **5.4 (rate
-limiting em `/api/chat`) implementado nesta sessão e ainda não commitado** — decisão do
-usuário sobre quando commitar/enviar. Nenhuma pendência de segurança conhecida em aberto — a
+**➡️ HANDOFF (2026-08-06, fim de sessão): Etapas 0-5 TODAS concluídas.** (detalhes nas seções
+correspondentes abaixo; Etapa 4 tem 1 item conscientemente adiado, o 4.3 — não bloqueia, é uma
+decisão registrada, não uma pendência). Nenhuma pendência de segurança conhecida em aberto — a
 última (service account key antiga exposta desde a Etapa 0) foi revogada pelo usuário. Sentry
-(5.3) está configurado na Vercel; passa a capturar erros a partir do próximo deploy. **Próxima
-ação: Etapa 5, item 5.5** (`CLAUDE.md` com os padrões do projeto) e depois 5.6 (Dependabot +
-`npm audit` no CI) para fechar a Etapa 5 por completo — nenhum dos dois é bloqueante, são
-hygiene. Ver seção Etapa 5 mais abaixo para o detalhamento de cada item já feito, incluindo a
-limitação assumida no 5.4 (teto por instância, não distribuído) e um achado fora de escopo
-(endpoint sem verificação de auth nenhuma, rate limiting não resolve isso).
+(5.3) está configurado na Vercel; passa a capturar erros a partir do próximo deploy.
+
+Commit `6489938` (5.4, rate limiting) já enviado a `origin/main`. **5.5 (`CLAUDE.md`) e 5.6
+(Dependabot + `npm audit` no CI) implementados nesta sessão — verificar se já foram
+commitados/enviados antes de assumir que estão** (ver final da seção Etapa 5 para o estado
+exato). Ver seção Etapa 5 mais abaixo para o detalhamento de cada item, incluindo a limitação
+assumida no 5.4 (teto por instância, não distribuído), um achado fora de escopo (endpoint
+`/api/chat` sem verificação de auth nenhuma — rate limiting não resolve isso) e a decisão de
+manter `npm audit` não-bloqueante no CI (5.6 — 8 vulnerabilidades conhecidas, todas exigindo
+breaking change para corrigir, `react-router-dom` é a única com relevância real de produção).
+
+**➡️ Próxima ação: Etapa 6** — só agora entram funcionalidades novas (regra de ouro D2/seção
+"Como usar este documento"). Antes de começar qualquer feature nova, vale uma conversa com o
+usuário sobre prioridades — o plano não lista itens pré-definidos para a Etapa 6, é
+propositalmente em aberto.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -726,8 +733,31 @@ anterior — ver [[limite-automacao-credenciais-2026-08]] na memória.
   Fechar isso de verdade exigiria validar Firebase ID token no servidor (SDK `firebase-admin`
   + credenciais de service account como env var na Vercel) — mudança maior que "rate
   limiting", registrar como item novo se o usuário quiser endurecer isso further.
-- [ ] **5.5** `CLAUDE.md` com os padrões: "nenhum componente importa firebase", "toda rota nova nasce protegida", "todo dado de aluno é lido por query filtrada"
-- [ ] **5.6** Dependabot + `npm audit` no CI
+- [x] **5.5** `CLAUDE.md` com os padrões *(feito em 2026-08-06)*. Cobre as 3 regras pedidas
+  (nenhum componente importa firebase / toda rota nova nasce protegida / todo dado de aluno é
+  lido por query filtrada) mais o porquê de cada uma (D4/D5/D6), 3 lições de incidente já
+  vividas neste projeto (isLoading do visitante deslogado, `parseFloat` sem vírgula no IESC/
+  UCCG, `/api/chat` sem auth), convenções de código e os comandos de verificação. Documenta um
+  padrão real do código como exemplo da regra 2: `/survey-report` não tem `<ProtectedRoute>`
+  na rota, mas a Security Rule de `surveys/{id}` exige Custom Claim `admin` para leitura — a
+  autoridade é a regra, não a UI (checado nesta sessão, lendo `firestore.rules` e o componente:
+  não há vazamento, é a aplicação prática do D5).
+- [x] **5.6** Dependabot + `npm audit` no CI *(feito em 2026-08-06)*. `.github/dependabot.yml`
+  monitora `npm` e `github-actions`, PRs semanais. CI ganhou um passo `npm audit
+  --audit-level=high` logo após `npm ci`, com `continue-on-error: true` — **visibilidade, não
+  bloqueio**. Decisão consciente: `npm audit` hoje aponta 8 vulnerabilidades (1 crítica, 3
+  altas, 4 moderadas), mas **todas exigem `--force` com breaking change** para corrigir. A
+  única com relevância real de produção é `react-router-dom` (alta, CSRF em "RSC Mode" — modo
+  que este app não usa, é SPA client-side tradicional); as outras 7 vêm de `firebase-tools`
+  (devDependency só do emulador, não roda em produção). Bloquear o CI nelas sem uma decisão
+  deliberada sobre o bump do `react-router-dom` (já adiado desde a Etapa 0/1 por ser breaking
+  change) deixaria o pipeline vermelho sem caminho de correção imediato — mesmo problema que
+  faria o lint ficar vermelho antes da Etapa 2. Dependabot vira o mecanismo de prevenção de
+  verdade (PR automático a cada vulnerabilidade nova); o `npm audit` no CI é só visibilidade no
+  log. Se o usuário quiser fechar as 8 atuais, o bump do `react-router-dom` é candidato a item
+  novo — não feito aqui, decisão dele.
+
+**✅ Etapa 5 — CONCLUÍDA em 2026-08-06** (5.1 a 5.6, todos os itens).
 
 ---
 
