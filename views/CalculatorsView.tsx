@@ -1,4 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import {
+  calculateTutoriaPartial,
+  calculateTeoricaPartial,
+  calculatePraticaPartial,
+  calculateUCBase,
+  calculateIescBase,
+  calculateUccgBase,
+  calculateHabMedN1,
+  calculateHabMedN2,
+} from '../utils/gradeCalculations';
 
 type CalcType = 'UC' | 'HabMed' | 'IESC' | 'UCCG';
 
@@ -40,30 +50,20 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     n2_formativa: '', n2_somativa: '', n2_teorica: ''
   });
 
-  // --- FUNÇÕES DE CÁLCULO PARCIAL (UC) ---
-  const getTutoriaPartial = () => {
-    const sps = spGrades.map(v => parseFloat(v.replace(',', '.')) || 0);
-    const average100 = (sps.reduce((a, b) => a + b, 0) / (sps.length || 1));
-    return average100 / 10; 
-  };
+  // --- FUNÇÕES DE CÁLCULO PARCIAL (UC) — fórmulas em utils/gradeCalculations.ts (testadas) ---
+  const getTutoriaPartial = () => calculateTutoriaPartial(spGrades);
 
-  const getTeoricaPartial = () => {
-    if (teoricaMode === 'nota') return parseFloat(teoricaNotaDirect.replace(',', '.')) || 0;
-    const total = parseFloat(teoricaTotal) || 1;
-    const acertos = parseFloat(teoricaAcertos.replace(',', '.')) || 0;
-    return (acertos / total) * 10;
-  };
+  const getTeoricaPartial = () =>
+    calculateTeoricaPartial({ mode: teoricaMode, notaDirect: teoricaNotaDirect, total: teoricaTotal, acertos: teoricaAcertos });
 
-  const getPraticaPartial = () => {
-    if (praticaMode === 'nota') {
-      const a = parseFloat(praticaAnatomiaNota.replace(',', '.')) || 0;
-      const m = parseFloat(praticaMorfoNota.replace(',', '.')) || 0;
-      return (a + m) / 2; 
-    }
-    const a = parseFloat(praticaAnatomiaAcertos.replace(',', '.')) || 0;
-    const m = parseFloat(praticaMorfoAcertos.replace(',', '.')) || 0;
-    return ((a + m) / 20) * 10;
-  };
+  const getPraticaPartial = () =>
+    calculatePraticaPartial({
+      mode: praticaMode,
+      anatomiaNota: praticaAnatomiaNota,
+      morfoNota: praticaMorfoNota,
+      anatomiaAcertos: praticaAnatomiaAcertos,
+      morfoAcertos: praticaMorfoAcertos,
+    });
 
   // Previsão Dinâmica para a Prova Teórica
   const getNeededHitsStatus = () => {
@@ -108,17 +108,8 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   // --- FUNÇÕES DE CÁLCULO PARCIAL (HABMED) ---
-  const getHabMedN1 = () => {
-    return (parseFloat(habmedGrades.n1_formativa.replace(',', '.')) * 0.10 || 0) + 
-           (parseFloat(habmedGrades.n1_somativa.replace(',', '.')) * 0.25 || 0) + 
-           (parseFloat(habmedGrades.n1_teorica.replace(',', '.')) * 0.15 || 0);
-  };
-
-  const getHabMedN2 = () => {
-    return (parseFloat(habmedGrades.n2_formativa.replace(',', '.')) * 0.10 || 0) + 
-           (parseFloat(habmedGrades.n2_somativa.replace(',', '.')) * 0.25 || 0) + 
-           (parseFloat(habmedGrades.n2_teorica.replace(',', '.')) * 0.15 || 0);
-  };
+  const getHabMedN1 = () => calculateHabMedN1(habmedGrades);
+  const getHabMedN2 = () => calculateHabMedN2(habmedGrades);
 
   const getHabMedStatus = () => {
     const current = getHabMedN1() + getHabMedN2() + (parseFloat(extraPoints.replace(',', '.')) || 0);
@@ -141,15 +132,11 @@ const CalculatorsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const extra = parseFloat(extraPoints.replace(',', '.')) || 0;
 
     if (activeCalc === 'UC') {
-      base = (getTeoricaPartial() * 0.42) + (getPraticaPartial() * 0.30) + (getTutoriaPartial() * 0.28);
+      base = calculateUCBase(getTeoricaPartial(), getPraticaPartial(), getTutoriaPartial());
     } else if (activeCalc === 'IESC') {
-      const n1 = (parseFloat(iescGrades.n1_teorica) * 0.15) + (parseFloat(iescGrades.n1_pratica) * 0.10) + (parseFloat(iescGrades.n1_extensao) * 0.15) + (parseFloat(iescGrades.n1_portfolio) * 0.10);
-      const n2 = (parseFloat(iescGrades.n2_teorica) * 0.15) + (parseFloat(iescGrades.n2_pratica) * 0.10) + (parseFloat(iescGrades.n2_extensao) * 0.15) + (parseFloat(iescGrades.n2_portfolio) * 0.10);
-      base = n1 + n2;
+      base = calculateIescBase(iescGrades);
     } else if (activeCalc === 'UCCG') {
-      const n1 = (parseFloat(uccgGrades.n1_teorica) * 0.25) + (parseFloat(uccgGrades.n1_extensao) * 0.25);
-      const n2 = (parseFloat(uccgGrades.n2_teorica) * 0.25) + (parseFloat(uccgGrades.n2_extensao) * 0.25);
-      base = n1 + n2;
+      base = calculateUccgBase(uccgGrades);
     } else if (activeCalc === 'HabMed') {
       base = getHabMedN1() + getHabMedN2();
     }

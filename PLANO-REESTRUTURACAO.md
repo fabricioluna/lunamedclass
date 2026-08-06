@@ -46,9 +46,13 @@ testado com conta real via Playwright). Etapa 4: itens 4.1, 4.2, 4.4, 4.5 e 4.6 
 em produção; 4.3 conscientemente adiado (ver justificativa no item). Etapa 4 está fechada em
 termos práticos. Etapa 5, item **5.1 concluído** nesta sessão (ver seção Etapa 5) —
 **próxima ação é 5.2** (testes de regra de negócio: médias, filtro N1/N2, pontuação OSCE).
-Mudanças desta sessão (`.github/workflows/ci.yml`, `package.json`, `package-lock.json`)
-verificadas (typecheck/lint/test/test:rules/build todos verdes), commit `0899613` **enviado a
-`origin/main`**.
+Item 5.1 commitado e enviado (`0899613`) + correção de doc (`3b32e7d`). Item **5.2 concluído**
+nesta sessão (ver seção Etapa 5) — extração de `utils/gradeCalculations.ts`,
+`utils/osceScoring.ts`, `utils/questionFilters.ts` com 36 testes novos, verificado com
+typecheck/lint/vitest/build e smoke test manual em `/calculators`. Achado durante o trabalho,
+não corrigido: bug de exibição em IESC/UCCG (campo vazio mostra "0.00" em vez de indicar erro,
+ver detalhe na seção Etapa 5). **Próxima ação: Etapa 5, item 5.3** (Sentry no lugar dos 40
+`console.error`) — ou decidir se o achado do IESC/UCCG vira item de correção antes de seguir.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -655,7 +659,29 @@ avaliada e descartada em 2026-08-06:**
   `.jar` de ~40MB a cada run) e o passo `npm run test:rules` entre `test` e `build`. Rodado
   localmente antes de mexer no CI: **15/15 passaram**, typecheck/lint (22 problemas
   pré-existentes, nenhum novo)/vitest (4/4)/build todos verdes.
-- [ ] **5.2** Testes de regra de negócio: médias, filtro N1/N2, pontuação OSCE
+- [x] **5.2** Testes de regra de negócio: médias, filtro N1/N2, pontuação OSCE *(feito em
+  2026-08-06)*. As fórmulas viviam como closures dentro de componentes (`views/CalculatorsView.tsx`,
+  `features/osce/OsceView.tsx`, `features/quiz/QuizSetupView.tsx`), sem como testar
+  isoladamente — extraídas para `utils/gradeCalculations.ts`, `utils/osceScoring.ts` e
+  `utils/questionFilters.ts` (mesmo padrão de `utils/csvHelper.ts`), extração mecânica sem
+  mudança de comportamento, componentes agora só chamam as funções puras. 36 testes novos
+  (`*.test.ts` ao lado de cada módulo, convenção já usada no projeto): médias de UC/IESC/UCCG/
+  HabMed com os pesos oficiais, pontuação OSCE (ordem certa/errada, penalidade por erro, piso
+  em zero, gabarito vazio) e o filtro de unidade N1/N2 (questão legado sem `unit` conta como
+  N1; disciplina UC ignora o filtro). Verificado: `tsc`/lint (22 problemas pré-existentes,
+  nenhum novo)/vitest (36/36)/build limpos, e smoke test manual com Playwright contra
+  `localhost:3000/calculators` confirmando que UC (4.34), HabMed (10.00) e IESC (10.00) batem
+  exatamente com o valor calculado antes da extração — zero regressão visível.
+
+  🟡 **Achado durante os testes, não corrigido (fora de escopo deste item — extração não deve
+  mudar comportamento):** IESC e UCCG usam `parseFloat` puro nos campos de nota, sem suporte a
+  vírgula decimal e sem fallback para campo vazio (diferente de UC/HabMed, que tratam os dois
+  casos). Quando um campo fica vazio, o cálculo interno vira `NaN` — e como `NaN` é falsy em
+  JS, o componente (`result ? result.toFixed(2) : "0.00"`) mostra **"0.00"**, indistinguível de
+  uma nota zero real. Confirmado tanto no teste unitário quanto na tela de verdade (Playwright).
+  Se um aluno usar a calculadora de IESC/UCCG com algum campo em branco, vê uma média de 0.00
+  que não reflete o cálculo real. Não corrigido agora — é um bug de comportamento, e este item
+  era sobre testabilidade; decidir se vira item novo (correção) fica para o usuário.
 - [ ] **5.3** Sentry no lugar dos 40 `console.error`
 - [ ] **5.4** Rate limiting em `/api/chat` — hoje qualquer um drena a cota Gemini
 - [ ] **5.5** `CLAUDE.md` com os padrões: "nenhum componente importa firebase", "toda rota nova nasce protegida", "todo dado de aluno é lido por query filtrada"

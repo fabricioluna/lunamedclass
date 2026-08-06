@@ -3,6 +3,7 @@ import { SimulationInfo, Question, AcademicUnit } from '../../types';
 import { Milestone, Layers } from 'lucide-react';
 import { fetchQuestionsOnce } from '../../services/questionsService';
 import { INITIAL_QUESTIONS } from '../../data/questions';
+import { matchesDisciplineAndUnit } from '../../utils/questionFilters';
 
 interface QuizSetupViewProps {
   discipline: SimulationInfo;
@@ -83,14 +84,7 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
   // Identifica todos os títulos de simulados únicos nesta disciplina e UNIDADE
   const uniqueQuizTitles = useMemo(() => {
     const titles = localQuestions
-      .filter(q => {
-        const isCorrectDisc = q.disciplineId === discipline.id;
-        // Lógica Luna: Se não tem unit, é legado (N1). UCs ignoram filtro de unit.
-        const qUnit = q.unit || 'N1';
-        const isCorrectUnit = isUC ? true : qUnit === selectedUnit;
-        
-        return isCorrectDisc && isCorrectUnit && q.quizTitle;
-      })
+      .filter(q => matchesDisciplineAndUnit(q, { disciplineId: discipline.id, isUC, selectedUnit }) && q.quizTitle)
       .map(q => q.quizTitle!);
     return Array.from(new Set(titles));
   }, [localQuestions, discipline.id, isUC, selectedUnit]);
@@ -98,10 +92,7 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
   // Conta quantas questões estão disponíveis com os filtros atuais (Disciplina + Unidade + Temas)
   const totalAvailableInSelectedThemes = useMemo(() => {
     return localQuestions.filter(q => {
-      if (q.disciplineId !== discipline.id) return false;
-      
-      const qUnit = q.unit || 'N1';
-      if (!isUC && qUnit !== selectedUnit) return false;
+      if (!matchesDisciplineAndUnit(q, { disciplineId: discipline.id, isUC, selectedUnit })) return false;
 
       if (selectedQuizTitles.length > 0 && q.quizTitle && !selectedQuizTitles.includes(q.quizTitle)) {
         return false;
@@ -147,11 +138,7 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
     }
 
     let filtered = localQuestions.filter(q => {
-      if (q.disciplineId !== discipline.id) return false;
-      
-      // Filtro de Unidade
-      const qUnit = q.unit || 'N1';
-      if (!isUC && qUnit !== selectedUnit) return false;
+      if (!matchesDisciplineAndUnit(q, { disciplineId: discipline.id, isUC, selectedUnit })) return false;
 
       if (selectedQuizTitles.length > 0) {
         return q.quizTitle && selectedQuizTitles.includes(q.quizTitle);
@@ -254,12 +241,9 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {uniqueQuizTitles.map(title => {
-                  const count = localQuestions.filter(q => {
-                    const isCorrectDisc = q.disciplineId === discipline.id;
-                    const qUnit = q.unit || 'N1';
-                    const isCorrectUnit = isUC ? true : qUnit === selectedUnit;
-                    return isCorrectDisc && isCorrectUnit && q.quizTitle === title;
-                  }).length;
+                  const count = localQuestions.filter(q =>
+                    matchesDisciplineAndUnit(q, { disciplineId: discipline.id, isUC, selectedUnit }) && q.quizTitle === title
+                  ).length;
                   const isSelected = selectedQuizTitles.includes(title);
                   return (
                     <button
@@ -295,12 +279,9 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {discipline.themes.map(theme => {
-                  const count = localQuestions.filter(q => {
-                    const isCorrectDisc = q.disciplineId === discipline.id;
-                    const qUnit = q.unit || 'N1';
-                    const isCorrectUnit = isUC ? true : qUnit === selectedUnit;
-                    return isCorrectDisc && isCorrectUnit && q.theme === theme;
-                  }).length;
+                  const count = localQuestions.filter(q =>
+                    matchesDisciplineAndUnit(q, { disciplineId: discipline.id, isUC, selectedUnit }) && q.theme === theme
+                  ).length;
                   const isSelected = selectedThemes.includes(theme);
                   return (
                     <button

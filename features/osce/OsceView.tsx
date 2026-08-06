@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { OsceStation, StaticOsceStation } from '../../types';
+import { calculateOsceScore } from '../../utils/osceScoring';
 import { 
   ClipboardList, Timer, CheckCircle2, AlertCircle, ChevronRight, RotateCcw, Map, Trophy, History, FlaskConical
 } from 'lucide-react';
@@ -266,23 +267,8 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
   };
 
   const calculateDetailedScore = () => {
-    let points = 0;
-    const maxPoints = safeOrderIndices.length * 1.5;
+    const { errors, grade: finalRounded } = calculateOsceScore(safeOrderIndices, selectedActions);
 
-    safeOrderIndices.forEach((correctIdx, position) => {
-      const userIndex = selectedActions.indexOf(correctIdx);
-      if (userIndex !== -1) {
-        points += 1.0; 
-        if (userIndex === position) points += 0.5; 
-      }
-    });
-
-    const errors = selectedActions.filter(i => !safeOrderIndices.includes(i)).length;
-    points = Math.max(0, points - (errors * 0.5));
-
-    const finalGrade = maxPoints > 0 ? (points / maxPoints) * 10 : 0;
-    const finalRounded = parseFloat(finalGrade.toFixed(1));
-    
     setScore(finalRounded);
 
     const analytics: StaticOsceAnalytics = {
