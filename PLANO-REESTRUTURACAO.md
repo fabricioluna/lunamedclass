@@ -40,29 +40,17 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
-**➡️ HANDOFF (2026-08-06): Etapas 0, 1, 2 e 3 concluídas — Etapa 3 (Firestore) está EM
-PRODUÇÃO e confirmada funcionando (regras publicadas, custom claim aplicado, dados migrados,
-testado com conta real via Playwright). Etapa 4: itens 4.1, 4.2, 4.4, 4.5 e 4.6 concluídos e
-em produção; 4.3 conscientemente adiado (ver justificativa no item). Etapa 4 está fechada em
-termos práticos. Etapa 5, item **5.1 concluído** nesta sessão (ver seção Etapa 5) —
-**próxima ação é 5.2** (testes de regra de negócio: médias, filtro N1/N2, pontuação OSCE).
-Item 5.1 commitado e enviado (`0899613`) + correção de doc (`3b32e7d`). Item **5.2 concluído**
-nesta sessão (ver seção Etapa 5) — extração de `utils/gradeCalculations.ts`,
-`utils/osceScoring.ts`, `utils/questionFilters.ts` com 36 testes novos, verificado com
-typecheck/lint/vitest/build e smoke test manual em `/calculators` (commit `6f30b4d`). Achado
-durante o trabalho (bug de exibição em IESC/UCCG, campo vazio mostrava "0.00" em vez de
-indicar erro) **corrigido na mesma sessão**, a pedido do usuário (commit `f31441f`) — ver
-detalhe na seção Etapa 5. Ambos os commits **enviados a `origin/main`**.
-
-Item **5.3 concluído** na sequência (mesma sessão, 2026-08-06) — Sentry integrado no frontend
-via `sentry.ts` + `captureConsoleIntegration` + `ErrorBoundary`, verificado de ponta a ponta
-contra o Sentry de verdade (200 OK no envelope, não só build passando). Escopo consciente: só
-frontend, `api/chat.ts` ficou de fora por trazer uma vulnerabilidade moderada via
-`@opentelemetry/core` do `@sentry/node`. Detalhe completo na seção Etapa 5. **Ainda não
-commitado.** Pendência do usuário: item 1 da lista de pendências manuais (revogar a service
-account key antiga) segue em aberto; usuário confirmou ciência mas não a execução. Novo:
-adicionar `VITE_SENTRY_DSN` nas env vars da Vercel para o Sentry funcionar em produção.
-**Próxima ação: Etapa 5, item 5.4** (rate limiting em `/api/chat`).
+**➡️ HANDOFF (2026-08-06, fim de sessão): Etapas 0-4 concluídas** (detalhes nas seções
+correspondentes abaixo; Etapa 4 tem 1 item conscientemente adiado, o 4.3). **Etapa 5 em
+andamento: 5.1, 5.2 e 5.3 concluídos e enviados a `origin/main`.** Nenhuma pendência de
+segurança conhecida em aberto — a última (service account key antiga exposta desde a Etapa 0)
+foi revogada pelo usuário nesta sessão. Sentry (5.3) está configurado na Vercel; passa a
+capturar erros a partir do próximo deploy. **Próxima ação: Etapa 5, item 5.4** (rate limiting
+em `/api/chat` — maior risco de custo ainda em aberto: hoje qualquer um pode bater no endpoint
+sem limite e drenar a cota do Gemini). Depois de 5.4, restam 5.5 (`CLAUDE.md` com os padrões
+do projeto) e 5.6 (Dependabot + `npm audit` no CI) para fechar a Etapa 5 por completo — nenhum
+dos dois é bloqueante, são hygiene. Ver seção Etapa 5 mais abaixo para o detalhamento de cada
+item já feito.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -638,18 +626,14 @@ simulado até salvar resultado, então não deixaram `quizResults`).
 
 ## 🔒 ETAPA 5 — Prevenção contínua *(~3 dias)*
 
-**➡️ Próxima ação da próxima sessão: começar por 5.1.** A infra do emulador já existe e foi
-validada manualmente na Etapa 3 (15/15 cenários) — falta só automatizar no CI.
+**➡️ Itens 5.1, 5.2 e 5.3 concluídos e enviados a `origin/main` — próxima ação é o item 5.4**
+(rate limiting em `/api/chat`). Ver detalhamento de cada item mais abaixo nesta seção.
 
-🔴 **1 pendência manual do usuário, arrastada desde a Etapa 0/3** (a 2ª foi resolvida em
-2026-08-06, ver abaixo):
-1. **Revogar a service account key antiga** (`firebase-adminsdk-fbsvc@monitor-virtual-fms`,
-   key id `cd829135ab8da1c63a26bf665a81f9efba8792b3`) — [console.cloud.google.com → IAM e
-   admin → Contas de serviço](https://console.cloud.google.com/iam-admin/serviceaccounts) →
-   aba Chaves → apagar. Não automatizável sem `gcloud` CLI (não instalado no ambiente) ou uma
-   nova service account key local — e gerar uma key só para revogar outra é o mesmo padrão de
-   risco já documentado (ver `exposicao-firebase-rules` na memória). É clique de console, não
-   comando. Usuário confirmou ciência em 2026-08-06, ainda sem confirmação de execução.
+✅ **Revogar a service account key antiga** (`firebase-adminsdk-fbsvc@monitor-virtual-fms`, key
+id `cd829135ab8da1c63a26bf665a81f9efba8792b3`) — **feito pelo usuário, confirmado em
+2026-08-06.** Era a pendência de segurança mais velha do projeto (aberta desde a Etapa 0,
+04/08) — a credencial de admin que ficou exposta em texto plano no histórico da conversa
+finalmente parou de ser válida. Nenhuma pendência de segurança conhecida em aberto no momento.
 
 ✅ **Apagar ~15 contas de teste** `qa.claude.etapa4*@example.com` — **feito pelo usuário
 manualmente em 2026-08-06** (Firebase Console → Authentication). Tentativa de automação via
@@ -713,9 +697,10 @@ anterior — ver [[limite-automacao-credenciais-2026-08]] na memória.
   Seguindo a mesma leitura do item 4.6 (bundle dominado por React+Firebase, carregado antes do
   login de qualquer forma) — não bloqueia, mas é o tipo de coisa que soma se mais SDKs entrarem.
 
-  **Pendência do usuário:** adicionar `VITE_SENTRY_DSN` nas Environment Variables da Vercel
-  (Settings → Environment Variables) para o monitoramento funcionar em produção — sem isso,
-  `initSentry()` roda mas não faz nada (comportamento seguro, só não captura nada).
+  ✅ **`VITE_SENTRY_DSN` adicionada nas Environment Variables da Vercel pelo usuário em
+  2026-08-06** — confirmado pelo usuário. Como env var só é lida em build, o deploy **atual**
+  em produção ainda não tem isso embutido — passa a valer automaticamente no próximo deploy
+  (qualquer novo `git push` a `main` já dispara um; não precisa de ação manual extra na Vercel).
 - [ ] **5.4** Rate limiting em `/api/chat` — hoje qualquer um drena a cota Gemini
 - [ ] **5.5** `CLAUDE.md` com os padrões: "nenhum componente importa firebase", "toda rota nova nasce protegida", "todo dado de aluno é lido por query filtrada"
 - [ ] **5.6** Dependabot + `npm audit` no CI
