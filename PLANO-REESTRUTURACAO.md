@@ -46,10 +46,7 @@ decisão registrada, não uma pendência). Nenhuma pendência de segurança conh
 última (service account key antiga exposta desde a Etapa 0) foi revogada pelo usuário. Sentry
 (5.3) está configurado na Vercel; passa a capturar erros a partir do próximo deploy.
 
-Commit `6489938` (5.4, rate limiting) já enviado a `origin/main`. **5.5 (`CLAUDE.md`) e 5.6
-(Dependabot + `npm audit` no CI) implementados nesta sessão — verificar se já foram
-commitados/enviados antes de assumir que estão** (ver final da seção Etapa 5 para o estado
-exato). Ver seção Etapa 5 mais abaixo para o detalhamento de cada item, incluindo a limitação
+Commits `6489938` (5.4, rate limiting) e `308550a` (5.5+5.6) enviados a `origin/main`. Ver seção Etapa 5 mais abaixo para o detalhamento de cada item, incluindo a limitação
 assumida no 5.4 (teto por instância, não distribuído), um achado fora de escopo (endpoint
 `/api/chat` sem verificação de auth nenhuma — rate limiting não resolve isso) e a decisão de
 manter `npm audit` não-bloqueante no CI (5.6 — 8 vulnerabilidades conhecidas, todas exigindo
