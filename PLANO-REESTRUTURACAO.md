@@ -47,8 +47,8 @@ em produção; 4.3 conscientemente adiado (ver justificativa no item). Etapa 4 e
 termos práticos. Etapa 5, item **5.1 concluído** nesta sessão (ver seção Etapa 5) —
 **próxima ação é 5.2** (testes de regra de negócio: médias, filtro N1/N2, pontuação OSCE).
 Mudanças desta sessão (`.github/workflows/ci.yml`, `package.json`, `package-lock.json`)
-verificadas (typecheck/lint/test/test:rules/build todos verdes) mas **não commitadas** —
-aguardando decisão do usuário sobre commit/push, mesmo padrão das sessões anteriores.
+verificadas (typecheck/lint/test/test:rules/build todos verdes), commit `0899613` **enviado a
+`origin/main`**.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
