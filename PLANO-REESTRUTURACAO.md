@@ -44,7 +44,11 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 PRODUÇÃO e confirmada funcionando (regras publicadas, custom claim aplicado, dados migrados,
 testado com conta real via Playwright). Etapa 4: itens 4.1, 4.2, 4.4, 4.5 e 4.6 concluídos e
 em produção; 4.3 conscientemente adiado (ver justificativa no item). Etapa 4 está fechada em
-termos práticos — **próxima ação é abrir a Etapa 5, começando pelo item 5.1.**
+termos práticos. Etapa 5, item **5.1 concluído** nesta sessão (ver seção Etapa 5) —
+**próxima ação é 5.2** (testes de regra de negócio: médias, filtro N1/N2, pontuação OSCE).
+Mudanças desta sessão (`.github/workflows/ci.yml`, `package.json`, `package-lock.json`)
+verificadas (typecheck/lint/test/test:rules/build todos verdes) mas **não commitadas** —
+aguardando decisão do usuário sobre commit/push, mesmo padrão das sessões anteriores.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -641,7 +645,16 @@ avaliada e descartada em 2026-08-06:**
    credencial). Não insistir nesse caminho em sessões futuras — é uma barreira deliberada, não
    limitação técnica contornável. Segue manual.
 
-- [ ] **5.1** Testes das Security Rules no emulador, rodando no CI — *a autorização vira testável, que é onde o projeto mais falhou*
+- [x] **5.1** Testes das Security Rules no emulador, rodando no CI — *a autorização vira testável, que é onde o projeto mais falhou*. *(feito em 2026-08-06)* `scripts/test-firestore-rules.mjs` já existia da Etapa 3 (validado manualmente, 15/15); esta sessão só automatizou:
+  novo script `npm run test:rules` (`firebase emulators:exec --only firestore "node
+  scripts/test-firestore-rules.mjs"`), `@firebase/rules-unit-testing@^5.0.1` (peer dep exige
+  `firebase@^12`, por isso não a `^4.x` sugerida no comentário original do script) e
+  `firebase-tools@^14.0.0` como devDependencies (antes só rodava via `npx` ad hoc). CI
+  (`.github/workflows/ci.yml`) ganhou `actions/setup-java@v4` (Temurin 21 — o emulador do
+  Firestore roda na JVM), `actions/cache@v4` no `~/.cache/firebase/emulators` (evita rebaixar o
+  `.jar` de ~40MB a cada run) e o passo `npm run test:rules` entre `test` e `build`. Rodado
+  localmente antes de mexer no CI: **15/15 passaram**, typecheck/lint (22 problemas
+  pré-existentes, nenhum novo)/vitest (4/4)/build todos verdes.
 - [ ] **5.2** Testes de regra de negócio: médias, filtro N1/N2, pontuação OSCE
 - [ ] **5.3** Sentry no lugar dos 40 `console.error`
 - [ ] **5.4** Rate limiting em `/api/chat` — hoje qualquer um drena a cota Gemini
