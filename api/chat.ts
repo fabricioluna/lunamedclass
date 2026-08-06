@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, type ModelParams } from '@google/generative-ai';
 import { ClinicalState, PhaseRules } from '../types';
+import { getClientIp, isRateLimited } from './_lib/rateLimit';
 
 interface ChatRequestBody {
   prompt: string;
@@ -11,6 +12,7 @@ interface ChatRequestBody {
 
 interface ChatRequest {
   method?: string;
+  headers: Record<string, string | string[] | undefined>;
   body: ChatRequestBody;
 }
 
@@ -31,6 +33,11 @@ interface GeminiFunctionDeclaration {
 export default async function handler(req: ChatRequest, res: ChatResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
+  }
+
+  const clientIp = getClientIp(req.headers);
+  if (isRateLimited(clientIp)) {
+    return res.status(429).json({ error: 'Muitas requisições. Aguarde um minuto e tente novamente.' });
   }
 
   try {

@@ -42,15 +42,16 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 **➡️ HANDOFF (2026-08-06, fim de sessão): Etapas 0-4 concluídas** (detalhes nas seções
 correspondentes abaixo; Etapa 4 tem 1 item conscientemente adiado, o 4.3). **Etapa 5 em
-andamento: 5.1, 5.2 e 5.3 concluídos e enviados a `origin/main`.** Nenhuma pendência de
-segurança conhecida em aberto — a última (service account key antiga exposta desde a Etapa 0)
-foi revogada pelo usuário nesta sessão. Sentry (5.3) está configurado na Vercel; passa a
-capturar erros a partir do próximo deploy. **Próxima ação: Etapa 5, item 5.4** (rate limiting
-em `/api/chat` — maior risco de custo ainda em aberto: hoje qualquer um pode bater no endpoint
-sem limite e drenar a cota do Gemini). Depois de 5.4, restam 5.5 (`CLAUDE.md` com os padrões
-do projeto) e 5.6 (Dependabot + `npm audit` no CI) para fechar a Etapa 5 por completo — nenhum
-dos dois é bloqueante, são hygiene. Ver seção Etapa 5 mais abaixo para o detalhamento de cada
-item já feito.
+andamento: 5.1, 5.2, 5.3 e 5.4 concluídos.** 5.1-5.3 enviados a `origin/main`; **5.4 (rate
+limiting em `/api/chat`) implementado nesta sessão e ainda não commitado** — decisão do
+usuário sobre quando commitar/enviar. Nenhuma pendência de segurança conhecida em aberto — a
+última (service account key antiga exposta desde a Etapa 0) foi revogada pelo usuário. Sentry
+(5.3) está configurado na Vercel; passa a capturar erros a partir do próximo deploy. **Próxima
+ação: Etapa 5, item 5.5** (`CLAUDE.md` com os padrões do projeto) e depois 5.6 (Dependabot +
+`npm audit` no CI) para fechar a Etapa 5 por completo — nenhum dos dois é bloqueante, são
+hygiene. Ver seção Etapa 5 mais abaixo para o detalhamento de cada item já feito, incluindo a
+limitação assumida no 5.4 (teto por instância, não distribuído) e um achado fora de escopo
+(endpoint sem verificação de auth nenhuma, rate limiting não resolve isso).
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -701,7 +702,30 @@ anterior — ver [[limite-automacao-credenciais-2026-08]] na memória.
   2026-08-06** — confirmado pelo usuário. Como env var só é lida em build, o deploy **atual**
   em produção ainda não tem isso embutido — passa a valer automaticamente no próximo deploy
   (qualquer novo `git push` a `main` já dispara um; não precisa de ação manual extra na Vercel).
-- [ ] **5.4** Rate limiting em `/api/chat` — hoje qualquer um drena a cota Gemini
+- [x] **5.4** Rate limiting em `/api/chat` *(feito em 2026-08-06)*. `api/_lib/rateLimit.ts`
+  (prefixo `_` para a Vercel não tratar como rota) — limitador em memória por IP
+  (`x-forwarded-for`), duas janelas: 10 requisições/60s e 60/hora. `api/chat.ts` chama
+  `isRateLimited` antes de qualquer coisa (antes até de olhar o body) e devolve `429` com
+  mensagem em português quando estoura. 8 testes novos (`api/_lib/rateLimit.test.ts`) cobrindo
+  as duas janelas, expiração e isolamento entre IPs — 44/44 no total. `tsc`/lint (22
+  pré-existentes, nenhum novo)/build verdes.
+
+  🟡 **Limitação assumida conscientemente, documentada no próprio arquivo:** é um teto por
+  instância serverless, não distribuído — zera em cold start e não protege contra abuso
+  coordenado de muitos IPs diferentes. Sobe bastante a barra contra o caso real descrito no
+  handoff anterior (alguém batendo o endpoint em loop), mas não é uma garantia dura. Uma
+  garantia dura pediria Vercel KV/Upstash — recurso externo que precisaria ser provisionado
+  manualmente no dashboard da Vercel (fora do escopo deste item, mesmo padrão de decisão do
+  5.3 sobre não adicionar `@sentry/node`). Não testado contra produção/`vercel dev` porque o
+  projeto não tem esse script e a lógica é pura — coberta pelos testes unitários.
+
+  🔵 **Achado não corrigido, fora do escopo deste item:** `/api/chat` hoje não verifica
+  autenticação nenhuma (nem o frontend envia token, nem o backend checa) — qualquer request
+  HTTP direto (sem estar logado no app) já era aceito antes desta mudança e continua sendo,
+  só que agora limitado. Rate limiting é mitigação de custo/abuso, não controle de acesso.
+  Fechar isso de verdade exigiria validar Firebase ID token no servidor (SDK `firebase-admin`
+  + credenciais de service account como env var na Vercel) — mudança maior que "rate
+  limiting", registrar como item novo se o usuário quiser endurecer isso further.
 - [ ] **5.5** `CLAUDE.md` com os padrões: "nenhum componente importa firebase", "toda rota nova nasce protegida", "todo dado de aluno é lido por query filtrada"
 - [ ] **5.6** Dependabot + `npm audit` no CI
 
