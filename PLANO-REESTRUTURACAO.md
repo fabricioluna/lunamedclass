@@ -49,10 +49,10 @@ termos práticos. Etapa 5, item **5.1 concluído** nesta sessão (ver seção Et
 Item 5.1 commitado e enviado (`0899613`) + correção de doc (`3b32e7d`). Item **5.2 concluído**
 nesta sessão (ver seção Etapa 5) — extração de `utils/gradeCalculations.ts`,
 `utils/osceScoring.ts`, `utils/questionFilters.ts` com 36 testes novos, verificado com
-typecheck/lint/vitest/build e smoke test manual em `/calculators`. Achado durante o trabalho,
-não corrigido: bug de exibição em IESC/UCCG (campo vazio mostra "0.00" em vez de indicar erro,
-ver detalhe na seção Etapa 5). **Próxima ação: Etapa 5, item 5.3** (Sentry no lugar dos 40
-`console.error`) — ou decidir se o achado do IESC/UCCG vira item de correção antes de seguir.
+typecheck/lint/vitest/build e smoke test manual em `/calculators` (commit `6f30b4d`). Achado
+durante o trabalho (bug de exibição em IESC/UCCG, campo vazio mostrava "0.00" em vez de
+indicar erro) **corrigido na mesma sessão**, a pedido do usuário — ver detalhe na seção Etapa
+5. **Próxima ação: Etapa 5, item 5.3** (Sentry no lugar dos 40 `console.error`).
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -673,15 +673,15 @@ avaliada e descartada em 2026-08-06:**
   `localhost:3000/calculators` confirmando que UC (4.34), HabMed (10.00) e IESC (10.00) batem
   exatamente com o valor calculado antes da extração — zero regressão visível.
 
-  🟡 **Achado durante os testes, não corrigido (fora de escopo deste item — extração não deve
-  mudar comportamento):** IESC e UCCG usam `parseFloat` puro nos campos de nota, sem suporte a
-  vírgula decimal e sem fallback para campo vazio (diferente de UC/HabMed, que tratam os dois
-  casos). Quando um campo fica vazio, o cálculo interno vira `NaN` — e como `NaN` é falsy em
-  JS, o componente (`result ? result.toFixed(2) : "0.00"`) mostra **"0.00"**, indistinguível de
-  uma nota zero real. Confirmado tanto no teste unitário quanto na tela de verdade (Playwright).
-  Se um aluno usar a calculadora de IESC/UCCG com algum campo em branco, vê uma média de 0.00
-  que não reflete o cálculo real. Não corrigido agora — é um bug de comportamento, e este item
-  era sobre testabilidade; decidir se vira item novo (correção) fica para o usuário.
+  🟢 **Achado durante os testes, corrigido na mesma sessão (decisão do usuário):** IESC e UCCG
+  usavam `parseFloat` puro nos campos de nota, sem suporte a vírgula decimal (`"8,5"` virava
+  `8`) e sem fallback para campo vazio (um campo em branco fazia o cálculo inteiro virar `NaN`
+  e a tela mostrar **"0.00"**, indistinguível de uma nota zero real, porque `NaN` é falsy em JS
+  e o componente cai no fallback `result ? ... : "0.00"`). `calculateIescBase`/`calculateUccgBase`
+  em `utils/gradeCalculations.ts` passaram a usar o mesmo `toNumberComma` que UC/HabMed já
+  usavam. Confirmado com Playwright contra `/calculators`: 1 campo com vírgula (`"8,5"`) foi de
+  8.00→9.78; 1 campo vazio foi de "0.00"(enganoso)→8.50(correto). Testes atualizados para
+  refletir o comportamento corrigido. `tsc`/lint(22 pré-existentes)/vitest(36/36)/build verdes.
 - [ ] **5.3** Sentry no lugar dos 40 `console.error`
 - [ ] **5.4** Rate limiting em `/api/chat` — hoje qualquer um drena a cota Gemini
 - [ ] **5.5** `CLAUDE.md` com os padrões: "nenhum componente importa firebase", "toda rota nova nasce protegida", "todo dado de aluno é lido por query filtrada"

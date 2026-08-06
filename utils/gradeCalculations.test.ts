@@ -76,21 +76,14 @@ describe('calculateIescBase', () => {
     expect(calculateIescBase(full)).toBeCloseTo(10);
   });
 
-  // Achado registrado no PLANO-REESTRUTURACAO.md (Etapa 5, item 5.2): ao contrário de UC/HabMed,
-  // este cálculo usa parseFloat puro — não normaliza vírgula decimal e não trata campo vazio.
-  it('QUIRK CONHECIDO: vírgula decimal é truncada (parseFloat("8,5") = 8), não convertida', () => {
+  it('aceita vírgula decimal (bug corrigido em 2026-08-06 — antes truncava para o inteiro)', () => {
     const grades = { ...full, n1_teorica: '8,5' };
-    const withComma = calculateIescBase(grades);
-    const withTruncatedValue = calculateIescBase({ ...full, n1_teorica: '8' });
-    expect(withComma).toBeCloseTo(withTruncatedValue);
+    expect(calculateIescBase(grades)).toBeCloseTo(calculateIescBase(full) - 10 * 0.15 + 8.5 * 0.15);
   });
 
-  it('QUIRK CONHECIDO: campo vazio propaga NaN para o resultado inteiro (sem fallback para 0)', () => {
-    // Confirmado também na UI via smoke test manual: CalculatorsView faz
-    // `result ? result.toFixed(2) : "0.00"` — como NaN é falsy em JS, a tela mostra "0.00"
-    // (nota zero) em vez de um erro visível, quando na verdade o cálculo não pôde ser feito.
+  it('campo vazio conta como 0, não propaga NaN (bug corrigido em 2026-08-06 — antes a tela mostrava "0.00" por acidente, um NaN escondido)', () => {
     const grades = { ...full, n1_teorica: '' };
-    expect(calculateIescBase(grades)).toBeNaN();
+    expect(calculateIescBase(grades)).toBeCloseTo(calculateIescBase(full) - 10 * 0.15);
   });
 });
 
@@ -100,8 +93,8 @@ describe('calculateUccgBase', () => {
     expect(calculateUccgBase(full)).toBeCloseTo(10);
   });
 
-  it('QUIRK CONHECIDO: mesmo comportamento de parseFloat puro do IESC (campo vazio -> NaN)', () => {
-    expect(calculateUccgBase({ n1_teorica: '', n1_extensao: '10', n2_teorica: '10', n2_extensao: '10' })).toBeNaN();
+  it('campo vazio conta como 0, não propaga NaN (mesma correção aplicada ao IESC)', () => {
+    expect(calculateUccgBase({ n1_teorica: '', n1_extensao: '10', n2_teorica: '10', n2_extensao: '10' })).toBeCloseTo(7.5);
   });
 });
 

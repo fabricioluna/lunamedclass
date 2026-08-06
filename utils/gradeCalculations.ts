@@ -52,10 +52,6 @@ export function calculateUCBase(teorica: number, pratica: number, tutoria: numbe
 }
 
 // === IESC ===
-// ATENÇÃO: ao contrário de UC/HabMed, estes campos usam `parseFloat` puro — sem suporte a
-// vírgula decimal (ex: "8,5" vira 8) e sem fallback para 0 em campo vazio (campo vazio faz o
-// resultado inteiro virar NaN). Comportamento pré-existente do componente original, preservado
-// aqui tal como estava. Ver achado registrado no PLANO-REESTRUTURACAO.md (Etapa 5, item 5.2).
 export interface IescGrades {
   n1_teorica: string;
   n1_pratica: string;
@@ -69,20 +65,19 @@ export interface IescGrades {
 
 export function calculateIescBase(g: IescGrades): number {
   const n1 =
-    parseFloat(g.n1_teorica) * 0.15 +
-    parseFloat(g.n1_pratica) * 0.1 +
-    parseFloat(g.n1_extensao) * 0.15 +
-    parseFloat(g.n1_portfolio) * 0.1;
+    toNumberComma(g.n1_teorica) * 0.15 +
+    toNumberComma(g.n1_pratica) * 0.1 +
+    toNumberComma(g.n1_extensao) * 0.15 +
+    toNumberComma(g.n1_portfolio) * 0.1;
   const n2 =
-    parseFloat(g.n2_teorica) * 0.15 +
-    parseFloat(g.n2_pratica) * 0.1 +
-    parseFloat(g.n2_extensao) * 0.15 +
-    parseFloat(g.n2_portfolio) * 0.1;
+    toNumberComma(g.n2_teorica) * 0.15 +
+    toNumberComma(g.n2_pratica) * 0.1 +
+    toNumberComma(g.n2_extensao) * 0.15 +
+    toNumberComma(g.n2_portfolio) * 0.1;
   return n1 + n2;
 }
 
 // === UCCG ===
-// Mesma observação do IESC acima: `parseFloat` puro, sem suporte a vírgula nem fallback.
 export interface UccgGrades {
   n1_teorica: string;
   n1_extensao: string;
@@ -91,8 +86,8 @@ export interface UccgGrades {
 }
 
 export function calculateUccgBase(g: UccgGrades): number {
-  const n1 = parseFloat(g.n1_teorica) * 0.25 + parseFloat(g.n1_extensao) * 0.25;
-  const n2 = parseFloat(g.n2_teorica) * 0.25 + parseFloat(g.n2_extensao) * 0.25;
+  const n1 = toNumberComma(g.n1_teorica) * 0.25 + toNumberComma(g.n1_extensao) * 0.25;
+  const n2 = toNumberComma(g.n2_teorica) * 0.25 + toNumberComma(g.n2_extensao) * 0.25;
   return n1 + n2;
 }
 
