@@ -51,8 +51,9 @@ nesta sessão (ver seção Etapa 5) — extração de `utils/gradeCalculations.t
 `utils/osceScoring.ts`, `utils/questionFilters.ts` com 36 testes novos, verificado com
 typecheck/lint/vitest/build e smoke test manual em `/calculators` (commit `6f30b4d`). Achado
 durante o trabalho (bug de exibição em IESC/UCCG, campo vazio mostrava "0.00" em vez de
-indicar erro) **corrigido na mesma sessão**, a pedido do usuário — ver detalhe na seção Etapa
-5. **Próxima ação: Etapa 5, item 5.3** (Sentry no lugar dos 40 `console.error`).
+indicar erro) **corrigido na mesma sessão**, a pedido do usuário (commit `f31441f`) — ver
+detalhe na seção Etapa 5. Ambos os commits **enviados a `origin/main`**. **Próxima ação: Etapa
+5, item 5.3** (Sentry no lugar dos 40 `console.error`).
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
