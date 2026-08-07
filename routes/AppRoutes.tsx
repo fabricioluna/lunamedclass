@@ -25,6 +25,7 @@ const LabListView = lazy(() => import('../features/lab/LabListView'));
 const LabQuizView = lazy(() => import('../features/lab/LabQuizView'));
 const SimulatorsView = lazy(() => import('../views/SimulatorsView'));
 const AreaQuizSetupView = lazy(() => import('../features/simulators/AreaQuizSetupView'));
+const TeoricoAreaListView = lazy(() => import('../features/simulators/TeoricoAreaListView'));
 const SurveyView = lazy(() => import('../views/SurveyView'));
 const SurveyReportView = lazy(() => import('../views/SurveyReportView'));
 const MedicalEventsView = lazy(() => import('../views/MedicalEventsView'));
@@ -387,28 +388,29 @@ const LabExecFlow = () => {
   );
 };
 
-// --- SIMULADORES POR ÁREA DE CONHECIMENTO: SETUP (rota nova, Etapa 6) ---
-// /simulators é pública (lista de áreas), mas configurar/executar exige login (ProtectedRoute) —
-// mesmo padrão de acesso do resto do app; só a listagem de áreas é aberta (D6-style).
+// --- SIMULADORES › SIMULADO TEÓRICO POR ÁREA: SETUP (Etapa 6) ---
+// /simulators (tipos) e /simulators/teorico (áreas) são públicas, mas configurar/executar
+// exige login (ProtectedRoute) — mesmo padrão de acesso do resto do app; só a navegação até
+// aqui é aberta (D6-style).
 const AreaSetupFlow = () => {
   const { areaId } = useParams();
   const navigate = useNavigate();
   const { areasConhecimento } = useData();
   const area = areasConhecimento.find(a => a.id === areaId);
 
-  if (!area) return <Navigate to="/simulators" replace />;
+  if (!area) return <Navigate to="/simulators/teorico" replace />;
 
   return (
     <AreaQuizSetupView
       areaId={area.id}
       areaLabel={area.label}
       onBack={() => navigate(-1)}
-      onStart={() => navigate(`/simulators/${area.id}/executar`)}
+      onStart={() => navigate(`/simulators/teorico/${area.id}/executar`)}
     />
   );
 };
 
-// --- SIMULADORES POR ÁREA DE CONHECIMENTO: EXECUÇÃO (rota nova, Etapa 6) ---
+// --- SIMULADORES › SIMULADO TEÓRICO POR ÁREA: EXECUÇÃO (Etapa 6) ---
 // Reaproveita QuizView sem modificação — só usa discipline.title/.references (confirmado por
 // leitura), então um objeto sintético satisfazendo SimulationInfo resolve sem tocar no componente.
 const AreaExecFlow = () => {
@@ -430,8 +432,8 @@ const AreaExecFlow = () => {
     }
   });
 
-  if (!area) return <Navigate to="/simulators" replace />;
-  if (!questions) return <Navigate to={`/simulators/${area.id}`} replace />;
+  if (!area) return <Navigate to="/simulators/teorico" replace />;
+  if (!questions) return <Navigate to={`/simulators/teorico/${area.id}`} replace />;
 
   const syntheticDiscipline: SimulationInfo = {
     id: area.id,
@@ -551,8 +553,9 @@ const AppRoutes: React.FC = () => {
             <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
             <Route path="/medical-events" element={<MedicalEventsView />} />
             <Route path="/simulators" element={<SimulatorsView />} />
-            <Route path="/simulators/:areaId" element={<ProtectedRoute><AreaSetupFlow /></ProtectedRoute>} />
-            <Route path="/simulators/:areaId/executar" element={<ProtectedRoute><AreaExecFlow /></ProtectedRoute>} />
+            <Route path="/simulators/teorico" element={<TeoricoAreaListView />} />
+            <Route path="/simulators/teorico/:areaId" element={<ProtectedRoute><AreaSetupFlow /></ProtectedRoute>} />
+            <Route path="/simulators/teorico/:areaId/executar" element={<ProtectedRoute><AreaExecFlow /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -57,17 +57,20 @@ iniciada (item 6.1 concluído).** Nenhuma pendência de segurança conhecida em 
   Conhecimento** — dois eixos transversais independentes (ex. "Anatomia" + "Sistema Reprodutor
   Feminino"), cruzando disciplinas, **ambos opcionais** (refinado nesta mesma sessão depois do
   usuário ver a v1 rodando — era só 1 eixo e obrigatório). `/simulators` (que era um mockup
-  morto, nunca ligado a rota nenhuma) virou a porta de entrada real para revisão cross-
-  disciplina no Simulado Teórico, com filtro por Subárea dentro da tela de configurar. Únicos 2
-  docs de `config/*` com leitura pública no Firestore (decisão consciente, D6-style). Ver seção
-  Etapa 6 para detalhe completo, incluindo a limitação de verificação (não dá pra testar com
-  dado real sem a conta admin).
+  morto, nunca ligado a rota nenhuma) virou a navegação real em **2 níveis** — escolher o tipo
+  de simulador primeiro (só Simulado Teórico funcional, os outros "Em breve"), depois a Área,
+  com filtro por Subárea dentro da tela de configurar — corrigido também nesta sessão depois
+  do usuário apontar que a v1 tinha pulado o nível de tipo. Únicos 2 docs de `config/*` com
+  leitura pública no Firestore (decisão consciente, D6-style). Ver seção Etapa 6 para detalhe
+  completo, incluindo a limitação de verificação (não dá pra testar com dado real sem a conta
+  admin).
 
 **➡️ Próxima ação:** item 6.1 tem uma pendência de verificação que só o usuário consegue fechar
 (precisa da conta admin real): criar 1-2 Áreas e Subáreas pelo admin, marcar questões de
-disciplinas diferentes com elas, e confirmar em `/simulators` que o filtro cruza disciplinas de
-verdade e o resultado salva certo no dashboard. Depois disso, ou já direto: conversar com o
-usuário sobre o que entra a seguir na Etapa 6 — segue em aberto, sem itens pré-definidos.
+disciplinas diferentes com elas, e confirmar em `/simulators → Simulado Teórico` que o filtro
+cruza disciplinas de verdade e o resultado salva certo no dashboard. Depois disso, ou já
+direto: conversar com o usuário sobre o que entra a seguir na Etapa 6 — segue em aberto, sem
+itens pré-definidos.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -866,28 +869,42 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
 
   **`/simulators` deixou de ser mockup morto** — os 8 cards antigos apontavam pra rotas que não
   existiam no roteador (`/lab-anatomy`, `/prescription-simulation` etc., achado nesta sessão).
-  Agora lista as Áreas reais; escolher uma leva a `/simulators/:areaId`
-  (`AreaQuizSetupView.tsx`) — configurar quantidade/ordem, cross-disciplina, sem filtro de N1/
-  N2 (não faz sentido pra revisão de fim de curso), **e opcionalmente estreitar por Subárea**
-  (só mostra as subáreas que de fato têm questão dentro daquela área, pra não levar a um
-  resultado vazio) → `/simulators/:areaId/executar`, reaproveitando **`QuizView` sem nenhuma
-  modificação** (só usa `discipline.title`/`.references`, então um objeto `SimulationInfo`
-  sintético resolve). `/simulators` continua pública; as duas rotas novas exigem login
-  (`ProtectedRoute`), mesmo padrão do resto do app.
 
-  **Escopo desta rodada (decidido com o usuário):** só Simulado Teórico. OSCE/Lab/Materiais não
-  ganharam os campos ainda — extensão futura do mesmo padrão, se fizer sentido depois.
+  🔄 **2º refinamento pós-implementação (mesma sessão):** a primeira versão fez `/simulators`
+  virar diretamente a lista de Áreas — o usuário apontou que isso pulava um nível: a rotina
+  pretendida é **clicar em "Simuladores" → escolher o TIPO de simulador (Lab, Paciente
+  Virtual, RPG, Simulado Teórico...) → só depois escolher o tema**. Corrigido pra 2 níveis:
+  - `views/SimulatorsView.tsx` — volta a ser a lista de **tipos** (Simulado Teórico,
+    Laboratório Virtual, OSCE Estático, OSCE RPG, Paciente Virtual), baseada em funcionalidade
+    real do app (não resgatei os cards 100% fantasiosos do mockup original, tipo
+    "Propedêutica", que nunca corresponderam a nada implementado). Só **Simulado Teórico** é
+    clicável — os outros aparecem com badge "Em breve" (`opacity-70 grayscale`, mesmo padrão
+    visual já usado em `DisciplineView.tsx` pra feature bloqueada) até ganharem Área/Subárea
+    também.
+  - `features/simulators/TeoricoAreaListView.tsx` (novo) — o que antes vivia em
+    `SimulatorsView.tsx`: lista as Áreas reais, com link "← Voltar aos Simuladores".
+  - Rotas: `/simulators` (tipos, pública) → `/simulators/teorico` (áreas do Simulado Teórico,
+    pública) → `/simulators/teorico/:areaId` (configurar, protegida) →
+    `/simulators/teorico/:areaId/executar` (protegida). Escolher uma área ainda leva à
+    configuração de quantidade/ordem cross-disciplina, sem filtro N1/N2, **com filtro opcional
+    por Subárea** (só mostra as que de fato têm questão dentro da área escolhida) →
+    reaproveitando **`QuizView` sem nenhuma modificação** (objeto `SimulationInfo` sintético).
+
+  **Escopo desta rodada (decidido com o usuário):** só Simulado Teórico tem Área/Subárea e
+  fluxo funcional. OSCE/Lab/Materiais aparecem na lista de tipos como "Em breve" — extensão
+  futura do mesmo padrão, se fizer sentido depois.
 
   🟡 **Verificação parcial, limitação conhecida:** criar Área/Subárea e marcar questões exige
   Custom Claim `admin`, que esta sessão não tem como conceder (mesma restrição já documentada —
   nenhuma credencial de service account disponível). Testado com Playwright tudo que dá pra
-  testar sem admin: `/simulators` carrega sem crash logado/deslogado antes e depois do
-  refinamento, estado vazio aparece corretamente, área/execução inexistente cai nos fallbacks
-  certos, clicar numa área deslogado cai no login. **Falta testar ao vivo** (precisa da conta
-  admin real): criar Área(s)/Subárea(s), marcar questões de disciplinas diferentes, e confirmar
-  que o filtro por subárea em `/simulators` estreita certo e o resultado salva certo no
-  dashboard — a mecânica de rota é idêntica à já validada no item 4.3, risco baixo, mas não é a
-  mesma coisa que ver rodando com dado real.
+  testar sem admin, incluindo depois da correção de hierarquia: `/simulators` mostra os 5 tipos
+  (1 clicável, 4 "Em breve"), clicar em Simulado Teórico leva pra `/simulators/teorico`, área/
+  execução inexistente cai nos fallbacks certos (voltam pro nível de Área, não pro topo),
+  clicar num tipo "Em breve" não navega, acesso deslogado cai no login (8/8). **Falta testar ao
+  vivo** (precisa da conta admin real): criar Área(s)/Subárea(s), marcar questões de
+  disciplinas diferentes, e confirmar que o filtro por subárea estreita certo e o resultado
+  salva certo no dashboard — a mecânica de rota é idêntica à já validada no item 4.3, risco
+  baixo, mas não é a mesma coisa que ver rodando com dado real.
 
   `tsc`/lint (22 pré-existentes, nenhum novo)/vitest (44/44)/build/`test:rules` (21/21) verdes.
 
