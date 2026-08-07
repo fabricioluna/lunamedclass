@@ -1,47 +1,72 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PenTool, Microscope, ClipboardList, Sword, UserSquare2, Clock } from 'lucide-react';
+import { Microscope, ClipboardList, Sword, UserSquare2, Clock, Pill, FileSearch, Stethoscope, Activity } from 'lucide-react';
 
 interface SimulatorType {
   title: string;
   description: string;
   icon: React.ReactNode;
-  path?: string; // ausente = ainda não disponível
+  path?: string; // ausente = ainda não disponível ("Em breve")
 }
 
-// Nível 1 da navegação de Simuladores: escolher o TIPO primeiro (Teórico, Lab, OSCE...), só
-// depois o tema/área dentro do tipo escolhido — corrigido nesta sessão depois de um erro:
-// a versão anterior pulava direto pro seletor de Área do Simulado Teórico, sem esse primeiro
-// nível. Só Simulado Teórico tem Área/Subárea cadastrável hoje; os demais ficam "Em breve"
-// até ganharem a mesma classificação (decisão do usuário, não fica escondido — mantém a
-// expectativa certa do que vai existir, ao contrário do mockup original que apontava pra
-// rotas que nunca existiram).
+// Nível 1 da navegação de Simuladores: escolher o TIPO primeiro (Lab, OSCE...), só depois o
+// tema dentro do tipo escolhido. Simulado Teórico fica de fora desta lista por decisão do
+// usuário — continua acessível só pelo caminho Período → Disciplina → Simulado, como sempre
+// foi; o fluxo por Área de Conhecimento já construído (`/simulators/teorico`) segue existindo
+// no código, só não está linkado daqui por enquanto.
+//
+// Os 4 tipos abaixo (Laboratório, OSCE Estático, OSCE RPG, Paciente Virtual) já são features
+// reais e usadas hoje dentro do fluxo por disciplina — por isso aparecem "disponíveis" mesmo
+// sem navegação cross-disciplina própria ainda: o clique leva pro início do fluxo normal
+// (seleção de período/disciplina), de onde o aluno já chega em cada um deles normalmente.
+//
+// Os 4 últimos (Prescrição Farmacológica, Interpretação de Exames, Propedêutica, Evolução
+// Clínico-Hospitalar) são planos reais do usuário, ainda não implementados — ficam "Em breve"
+// em vez de linkar pra rota inexistente (era exatamente o erro do mockup original).
 const SIMULATOR_TYPES: SimulatorType[] = [
   {
-    title: 'Simulado Teórico',
-    description: 'Questões de múltipla escolha, revisando por Área de Conhecimento e cruzando disciplinas.',
-    icon: <PenTool className="w-8 h-8 text-[#D4A017]" />,
-    path: '/simulators/teorico',
-  },
-  {
     title: 'Laboratório Virtual',
-    description: 'Identificação de lâminas, peças anatômicas e exames por assunto.',
+    description: 'Identificação de lâminas, peças anatômicas e exames — acesse pela sua disciplina.',
     icon: <Microscope className="w-8 h-8 text-[#D4A017]" />,
+    path: '/',
   },
   {
     title: 'OSCE Estático',
-    description: 'Checklists sequenciais e protocolos técnicos por assunto.',
+    description: 'Checklists sequenciais e protocolos técnicos — acesse pela sua disciplina.',
     icon: <ClipboardList className="w-8 h-8 text-[#D4A017]" />,
+    path: '/',
   },
   {
     title: 'OSCE RPG (Luna Engine)',
-    description: 'Decisões dinâmicas com sinais vitais em tempo real.',
+    description: 'Decisões dinâmicas com sinais vitais em tempo real — acesse pela sua disciplina.',
     icon: <Sword className="w-8 h-8 text-[#D4A017]" />,
+    path: '/',
   },
   {
     title: 'Paciente Virtual (IA)',
-    description: 'Anamnese livre conversando com a IA.',
+    description: 'Anamnese livre conversando com a IA — acesse pela sua disciplina.',
     icon: <UserSquare2 className="w-8 h-8 text-[#D4A017]" />,
+    path: '/',
+  },
+  {
+    title: 'Prescrição Farmacológica',
+    description: 'Prática de escolha posológica, interações medicamentosas e preenchimento de receitas.',
+    icon: <Pill className="w-8 h-8 text-[#D4A017]" />,
+  },
+  {
+    title: 'Interpretação de Exames',
+    description: 'Análise crítica de exames laboratoriais, gasometrias, ECG e exames de imagem.',
+    icon: <FileSearch className="w-8 h-8 text-[#D4A017]" />,
+  },
+  {
+    title: 'Propedêutica',
+    description: 'Refinamento de manobras de exame físico, palpação, percussão e ausculta semiológica.',
+    icon: <Stethoscope className="w-8 h-8 text-[#D4A017]" />,
+  },
+  {
+    title: 'Evolução Clínico-Hospitalar',
+    description: 'Construção e registro técnico da evolução diária de pacientes internados.',
+    icon: <Activity className="w-8 h-8 text-[#D4A017]" />,
   },
 ];
 
@@ -57,7 +82,7 @@ const SimulatorsView: React.FC = () => {
             Simuladores
           </h2>
           <p className="mt-3 max-w-2xl mx-auto text-base text-gray-500 sm:mt-4">
-            Escolha o tipo de simulado — depois você escolhe o tema dentro dele.
+            Conheça os tipos de simulado disponíveis no portal.
           </p>
         </div>
 

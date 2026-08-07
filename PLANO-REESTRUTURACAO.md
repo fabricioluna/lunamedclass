@@ -55,22 +55,24 @@ iniciada (item 6.1 concluído).** Nenhuma pendência de segurança conhecida em 
   em 3 services (`id: data.id ?? d.id` na leitura), sem precisar de backfill. Ver seção Etapa 4.
 - **Etapa 6, item 6.1** (primeira funcionalidade nova do projeto): **Área + Subárea de
   Conhecimento** — dois eixos transversais independentes (ex. "Anatomia" + "Sistema Reprodutor
-  Feminino"), cruzando disciplinas, **ambos opcionais** (refinado nesta mesma sessão depois do
-  usuário ver a v1 rodando — era só 1 eixo e obrigatório). `/simulators` (que era um mockup
-  morto, nunca ligado a rota nenhuma) virou a navegação real em **2 níveis** — escolher o tipo
-  de simulador primeiro (só Simulado Teórico funcional, os outros "Em breve"), depois a Área,
-  com filtro por Subárea dentro da tela de configurar — corrigido também nesta sessão depois
-  do usuário apontar que a v1 tinha pulado o nível de tipo. Únicos 2 docs de `config/*` com
-  leitura pública no Firestore (decisão consciente, D6-style). Ver seção Etapa 6 para detalhe
-  completo, incluindo a limitação de verificação (não dá pra testar com dado real sem a conta
-  admin).
+  Feminino"), cruzando disciplinas, **ambos opcionais**. `/simulators` virou navegação em 2
+  níveis (tipo de simulador → tema). Passou por 3 rodadas de refinamento na mesma sessão depois
+  do usuário ver cada versão rodando: (1) 1 eixo obrigatório → 2 eixos opcionais; (2)
+  `/simulators` virou direto o seletor de Área → corrigido pra escolher o tipo primeiro; (3)
+  Simulado Teórico **saiu temporariamente da lista** de `/simulators` (fica só dentro de
+  disciplina por enquanto — decisão do usuário, código intacto) e os 4 tipos já reais (Lab,
+  OSCE Estático, OSCE RPG, Paciente Virtual) **viraram clicáveis** (levam pro início do fluxo
+  normal por disciplina), mais 4 simuladores futuros reais do usuário (Prescrição
+  Farmacológica, Interpretação de Exames, Propedêutica, Evolução Clínico-Hospitalar) voltaram
+  como "Em breve". Único doc-par de `config/*` com leitura pública no Firestore (decisão
+  consciente, D6-style). Ver seção Etapa 6 para o detalhe completo de cada rodada.
 
-**➡️ Próxima ação:** item 6.1 tem uma pendência de verificação que só o usuário consegue fechar
-(precisa da conta admin real): criar 1-2 Áreas e Subáreas pelo admin, marcar questões de
-disciplinas diferentes com elas, e confirmar em `/simulators → Simulado Teórico` que o filtro
-cruza disciplinas de verdade e o resultado salva certo no dashboard. Depois disso, ou já
-direto: conversar com o usuário sobre o que entra a seguir na Etapa 6 — segue em aberto, sem
-itens pré-definidos.
+**➡️ Próxima ação:** conversar com o usuário sobre o que entra a seguir na Etapa 6 — ele
+sinalizou que quer trabalhar os 4 simuladores futuros (Prescrição/Exames/Propedêutica/
+Evolução) "detalhadamente depois", um de cada vez, mas não definiu qual primeiro. Quando o
+Simulado Teórico voltar a ficar visível em `/simulators`, ainda fica pendente o teste ao vivo
+com a conta admin real (criar Área(s)/Subárea(s), marcar questões de disciplinas diferentes,
+confirmar que o filtro cruza disciplinas de verdade e salva certo no dashboard).
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -890,18 +892,37 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     por Subárea** (só mostra as que de fato têm questão dentro da área escolhida) →
     reaproveitando **`QuizView` sem nenhuma modificação** (objeto `SimulationInfo` sintético).
 
-  **Escopo desta rodada (decidido com o usuário):** só Simulado Teórico tem Área/Subárea e
-  fluxo funcional. OSCE/Lab/Materiais aparecem na lista de tipos como "Em breve" — extensão
-  futura do mesmo padrão, se fizer sentido depois.
+  🔄 **3º refinamento pós-implementação (mesma sessão):** o usuário perguntou o que aconteceu
+  com os simuladores que existiam no mockup original (8 cards) e deu 2 instruções novas:
+  1. **Prescrição Farmacológica, Interpretação de Exames (como simulador próprio, não a
+     categoria dentro do Lab), Propedêutica e Evolução Clínico-Hospitalar são planos reais**,
+     não lixo do mockup — voltaram pra lista de `/simulators` como "Em breve" (mesmo badge).
+  2. **Simulado Teórico saiu da lista de `/simulators`** — "por enquanto prefiro que deixe
+     apenas dentro das disciplinas". Todo o código do fluxo por Área/Subárea continua intacto
+     (`/simulators/teorico`, `AreaQuizSetupView.tsx`, admin) — só o card em `SimulatorsView.tsx`
+     foi removido, nada foi revertido. Fácil religar depois (é 1 objeto na lista
+     `SIMULATOR_TYPES`).
+  3. **Princípio novo, aplicado já nesta sessão:** "ao adicionar um simulador dentro das
+     disciplinas, ele já pode ficar disponível em /simulators" — Laboratório Virtual, OSCE
+     Estático, OSCE RPG e Paciente Virtual (IA) já são features reais usadas hoje dentro do
+     fluxo por disciplina, então viraram clicáveis em `/simulators` **mesmo sem navegação
+     cross-disciplina própria ainda**: o clique leva pro início do fluxo normal (`/`, seleção de
+     período), de onde o aluno já chega em cada um deles do jeito que já funciona hoje. Não é
+     uma segunda vitrine por tema — é só destravar o acesso, honesto sobre pra onde leva.
+
+  **Escopo desta rodada (decidido com o usuário):** só o Simulado Teórico teve o trabalho de
+  Área/Subárea + fluxo cross-disciplina construído — e está temporariamente fora da lista
+  pública por decisão do usuário, não por limitação técnica. Os 4 tipos com plano real
+  (Prescrição/Exames/Propedêutica/Evolução) ainda não têm nenhuma implementação — "vamos
+  trabalhar bem em cada um detalhadamente depois", segundo o usuário.
 
   🟡 **Verificação parcial, limitação conhecida:** criar Área/Subárea e marcar questões exige
   Custom Claim `admin`, que esta sessão não tem como conceder (mesma restrição já documentada —
-  nenhuma credencial de service account disponível). Testado com Playwright tudo que dá pra
-  testar sem admin, incluindo depois da correção de hierarquia: `/simulators` mostra os 5 tipos
-  (1 clicável, 4 "Em breve"), clicar em Simulado Teórico leva pra `/simulators/teorico`, área/
-  execução inexistente cai nos fallbacks certos (voltam pro nível de Área, não pro topo),
-  clicar num tipo "Em breve" não navega, acesso deslogado cai no login (8/8). **Falta testar ao
-  vivo** (precisa da conta admin real): criar Área(s)/Subárea(s), marcar questões de
+  nenhuma credencial de service account disponível). Testado com Playwright em cada rodada,
+  incluindo a final: `/simulators` mostra os 8 tipos (4 clicáveis levando pra `/`, 4 "Em breve"),
+  Simulado Teórico não aparece mais na lista (mas `/simulators/teorico` continua funcionando se
+  acessado direto). **Falta testar ao vivo** (precisa da conta admin real, quando o Simulado
+  Teórico voltar a ficar visível): criar Área(s)/Subárea(s), marcar questões de
   disciplinas diferentes, e confirmar que o filtro por subárea estreita certo e o resultado
   salva certo no dashboard — a mecânica de rota é idêntica à já validada no item 4.3, risco
   baixo, mas não é a mesma coisa que ver rodando com dado real.
