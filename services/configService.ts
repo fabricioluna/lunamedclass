@@ -1,12 +1,16 @@
 import { firestoreDB } from '../firebase';
 import { doc, getDoc, setDoc, onSnapshot, updateDoc, deleteField } from 'firebase/firestore';
-import { Period, SimulationInfo, FeatureFlag, ReferenceMaterial } from '../types';
+import { Period, SimulationInfo, FeatureFlag, ReferenceMaterial, AreaConhecimento, SubareaConhecimento } from '../types';
 
 // Coleção "config": docs únicos (config/periods, config/disciplines, config/featureFlags) —
 // 1 leitura por app em vez de N. Ver PLANO-REESTRUTURACAO.md, item 3.1.
 const periodsDocRef = doc(firestoreDB, 'config', 'periods');
 const disciplinesDocRef = doc(firestoreDB, 'config', 'disciplines');
 const featureFlagsDocRef = doc(firestoreDB, 'config', 'featureFlags');
+// config/areasConhecimento e config/subareasConhecimento têm leitura pública nas Security
+// Rules (Etapa 6) — as demais acima exigem login. Ver firestore.rules.
+const areasConhecimentoDocRef = doc(firestoreDB, 'config', 'areasConhecimento');
+const subareasConhecimentoDocRef = doc(firestoreDB, 'config', 'subareasConhecimento');
 
 export const subscribeToPeriods = (
   onData: (periods: Period[]) => void,
@@ -43,6 +47,30 @@ export const subscribeToFeatureFlags = (
     (error) => onError?.(error)
   );
 };
+
+// Área e Subárea são dois eixos independentes (sem cascata), mas com o mesmo formato
+// { id, label } e o mesmo padrão de leitura/escrita — generalizado aqui em vez de duplicado.
+const subscribeToTagList = <T extends { id: string; label: string }>(
+  docRef: ReturnType<typeof doc>,
+  onData: (items: T[]) => void,
+  onError?: (error: unknown) => void
+) => {
+  return onSnapshot(
+    docRef,
+    (snap) => onData((snap.data()?.items as T[]) || []),
+    (error) => onError?.(error)
+  );
+};
+
+export const subscribeToAreasConhecimento = (
+  onData: (areas: AreaConhecimento[]) => void,
+  onError?: (error: unknown) => void
+) => subscribeToTagList<AreaConhecimento>(areasConhecimentoDocRef, onData, onError);
+
+export const subscribeToSubareasConhecimento = (
+  onData: (subareas: SubareaConhecimento[]) => void,
+  onError?: (error: unknown) => void
+) => subscribeToTagList<SubareaConhecimento>(subareasConhecimentoDocRef, onData, onError);
 
 // === ESCRITA (ADMIN) ===
 
@@ -125,6 +153,55 @@ export const toggleFeatureFlag = (id: string, isEnabled: boolean) =>
 
 export const deleteFeatureFlag = (id: string) =>
   updateDoc(featureFlagsDocRef, { [`items.${id}`]: deleteField() });
+
+const getTagListArray = async <T extends { id: string; label: string }>(
+  docRef: ReturnType<typeof doc>
+): Promise<T[]> => {
+  const snap = await getDoc(docRef);
+  return (snap.data()?.items as T[]) || [];
+};
+
+const createTagListEntry = async <T extends { id: string; label: string }>(
+  docRef: ReturnType<typeof doc>,
+  idPrefix: string,
+  label: string
+) => {
+  const items = await getTagListArray<T>(docRef);
+  const newItem = { id: `${idPrefix}_${Date.now()}`, label } as T;
+  await setDoc(docRef, { items: [...items, newItem] });
+};
+
+const renameTagListEntry = async <T extends { id: string; label: string }>(
+  docRef: ReturnType<typeof doc>,
+  id: string,
+  label: string
+) => {
+  const items = await getTagListArray<T>(docRef);
+  const updated = items.map((item) => (item.id === id ? { ...item, label } : item));
+  await setDoc(docRef, { items: updated });
+};
+
+const deleteTagListEntry = async <T extends { id: string; label: string }>(
+  docRef: ReturnType<typeof doc>,
+  id: string
+) => {
+  const items = await getTagListArray<T>(docRef);
+  await setDoc(docRef, { items: items.filter((item) => item.id !== id) });
+};
+
+export const createAreaConhecimento = (label: string) =>
+  createTagListEntry<AreaConhecimento>(areasConhecimentoDocRef, 'area', label);
+export const renameAreaConhecimento = (id: string, label: string) =>
+  renameTagListEntry<AreaConhecimento>(areasConhecimentoDocRef, id, label);
+export const deleteAreaConhecimento = (id: string) =>
+  deleteTagListEntry<AreaConhecimento>(areasConhecimentoDocRef, id);
+
+export const createSubareaConhecimento = (label: string) =>
+  createTagListEntry<SubareaConhecimento>(subareasConhecimentoDocRef, 'subarea', label);
+export const renameSubareaConhecimento = (id: string, label: string) =>
+  renameTagListEntry<SubareaConhecimento>(subareasConhecimentoDocRef, id, label);
+export const deleteSubareaConhecimento = (id: string) =>
+  deleteTagListEntry<SubareaConhecimento>(subareasConhecimentoDocRef, id);
 
 export const resetConfigCollections = async () => {
   await Promise.all([

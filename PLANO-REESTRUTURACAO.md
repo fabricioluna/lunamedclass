@@ -40,54 +40,34 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
-**➡️ HANDOFF (2026-08-06/07, fim de sessão): Etapas 0-5 concluídas, Etapa 4 agora 100% completa
-(4.3 fechado nesta sessão).** Nenhuma pendência de segurança conhecida em aberto. Sentry (5.3)
-configurado na Vercel. Ver seção Etapa 5 mais abaixo para detalhamento (5.4 rate limiting com
-teto por instância não distribuído; 5.6 `npm audit` não-bloqueante no CI por 8 vulnerabilidades
-que exigem breaking change).
+**➡️ HANDOFF (2026-08-07, fim de sessão): Etapas 0-5 concluídas, Etapa 4 100% completa, Etapa 6
+iniciada (item 6.1 concluído).** Nenhuma pendência de segurança conhecida em aberto.
 
-**Item 4.3 concluído nesta sessão:** os fluxos de Simulado/OSCE/Laboratório em
-`routes/AppRoutes.tsx` viraram rotas reais (`/simulado/executar`, `/osce/configurar/:mode`,
-`/osce/estacao/:stationId`, `/lab/simulacao/:simId`) — botão voltar do navegador agora
-funciona corretamente e F5 no meio de uma estação OSCE/simulação de Lab não perde mais a
-seleção (busca por `firebaseId` no Firestore via `fetchOsceStationById`/
-`fetchLabSimulationById`, novos em `services/`). Detalhe completo na seção Etapa 4 abaixo.
+**Resumo do que fechou nesta sessão** (detalhe completo em cada seção):
+- **Etapa 4, item 4.3**: Simulado/OSCE/Laboratório viraram rotas reais (botão voltar do
+  navegador funciona, F5 não perde mais a estação/simulação escolhida). Ver seção Etapa 4.
+- **Decisão D9** (durante o 4.3): só **Simulado Teórico** conta resultado/nota por enquanto —
+  Lab/OSCE (todos os modos) pararam de salvar, reversível numa constante só
+  (`utils/resultsPolicy.ts`). Ver seção Etapa 4.
+- **Bug corrigido**: questões migradas na Etapa 3 tinham `id` ausente (a migração usa o `id`
+  original como ID do documento e remove o campo de dentro dos dados, de propósito) — quebrava
+  a gravação parcial por questão e explicava um achado antigo nunca resolvido da Etapa 4. Fix
+  em 3 services (`id: data.id ?? d.id` na leitura), sem precisar de backfill. Ver seção Etapa 4.
+- **Etapa 6, item 6.1** (primeira funcionalidade nova do projeto): **Área + Subárea de
+  Conhecimento** — dois eixos transversais independentes (ex. "Anatomia" + "Sistema Reprodutor
+  Feminino"), cruzando disciplinas, **ambos opcionais** (refinado nesta mesma sessão depois do
+  usuário ver a v1 rodando — era só 1 eixo e obrigatório). `/simulators` (que era um mockup
+  morto, nunca ligado a rota nenhuma) virou a porta de entrada real para revisão cross-
+  disciplina no Simulado Teórico, com filtro por Subárea dentro da tela de configurar. Únicos 2
+  docs de `config/*` com leitura pública no Firestore (decisão consciente, D6-style). Ver seção
+  Etapa 6 para detalhe completo, incluindo a limitação de verificação (não dá pra testar com
+  dado real sem a conta admin).
 
-**Decisão nova, tomada durante o 4.3 (junto com o usuário):** só o **Simulado Teórico** conta
-resultado/nota a partir de agora — Laboratório, OSCE Estático, OSCE RPG e OSCE IA **pararam de
-salvar** (`utils/resultsPolicy.ts`, `COUNTED_RESULT_TYPES`), decisão "por enquanto", reversível
-num só lugar. As telas do admin "Estatísticas" e "Research Analytics" também pararam de
-mostrar esses tipos (dado antigo não foi apagado, só escondido). Ver Decisão D9 e detalhamento
-na seção Etapa 4.
-
-✅ **Achado durante a verificação manual, CORRIGIDO na mesma sessão (usuário pediu pra
-resolver na hora):** pelo menos parte das questões do Simulado Teórico migradas pro Firestore
-(Etapa 3) tinham o campo `id` **undefined** (só `firebaseId`). Isso quebrava a gravação
-parcial por questão (`handlePartialAnswer` em `features/quiz/QuizView.tsx`, lançava `Function
-addDoc() called with invalid data. Unsupported field value: undefined`) e explica um achado
-antigo nunca resolvido da Etapa 4 ("2ª questão aparece respondida sem motivo" — se duas
-questões têm `id: undefined`, `answers[q.id]` colide entre elas).
-
-**Causa raiz encontrada:** `scripts/migrate-rtdb-to-firestore.mjs:97` — `const { id, ...rest }
-= item; batch.set(firestore.collection(firestoreCollection).doc(id), rest)` — a migração usa o
-`id` original como ID do próprio documento no Firestore e **remove o campo de dentro dos
-dados** de propósito (evitar redundância). Ou seja, `d.id` (o ID do documento) É o valor
-original de `id` — restaurar um a partir do outro na leitura é a correção certa, não um
-workaround. Mesmo padrão afeta `osceStations` e `labSimulations` (mesmo loop de migração),
-ainda sem sintoma visível hoje (nada no código depende de `.id` pra eles, só de
-`.firebaseId`), mas corrigido preventivamente pra não repetir o mesmo bug depois.
-
-**Fix:** `services/questionsService.ts`, `services/osceService.ts`, `services/labService.ts` —
-os 3 mapeadores `toQuestion`/`toStation`/`toSimulation` agora fazem `id: data.id ?? d.id` além
-de `firebaseId: d.id`. Sem mudança de schema, sem precisar de credencial de admin pra rodar
-backfill — corrige na camada de leitura, efeito imediato pra qualquer documento já existente.
-Reverificado com Playwright: simulado teórico completo do início ao fim, sem o erro do
-Firestore, resultado aparecendo no dashboard do aluno. `tsc`/lint(22 pré-existentes)/vitest(44/
-44)/build todos verdes depois do fix.
-
-**➡️ Próxima ação: Etapa 6** — só agora entram funcionalidades novas (regra de ouro D2). Antes
-de começar, vale uma conversa com o usuário sobre prioridades — o plano não lista itens
-pré-definidos pra essa etapa, é propositalmente em aberto.
+**➡️ Próxima ação:** item 6.1 tem uma pendência de verificação que só o usuário consegue fechar
+(precisa da conta admin real): criar 1-2 Áreas e Subáreas pelo admin, marcar questões de
+disciplinas diferentes com elas, e confirmar em `/simulators` que o filtro cruza disciplinas de
+verdade e o resultado salva certo no dashboard. Depois disso, ou já direto: conversar com o
+usuário sobre o que entra a seguir na Etapa 6 — segue em aberto, sem itens pré-definidos.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -842,6 +822,74 @@ anterior — ver [[limite-automacao-credenciais-2026-08]] na memória.
 ## 🚀 ETAPA 6 — Evolução
 
 Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras claras.
+
+- [x] **6.1 — Área + Subárea de Conhecimento + revisão cross-disciplina no Simulado Teórico**
+  *(concluído em 2026-08-07, com um refinamento na mesma sessão depois do usuário ver a
+  primeira versão rodando)*. Eixo de classificação transversal, independente de disciplina/UC/
+  período — hoje o portal só organizava conteúdo por disciplina (UC específica) e por `theme`
+  granular preso a cada disciplina. Caso de uso: aluno no fim do curso revisando por assunto,
+  cruzando todas as UCs onde aquele assunto apareceu, sem precisar lembrar em qual UC foi dado.
+
+  **Nome deliberadamente diferente de "Tema/Eixo"** (aba já existente no admin, conceito
+  diferente — o `theme` por disciplina) — chamados de **Área** e **Subárea de Conhecimento**
+  pra não colidir.
+
+  🔄 **Refinamento pós-implementação (mesma sessão):** a primeira versão tinha só 1 eixo
+  (Área) e o campo era **obrigatório** no cadastro de questão. O usuário reconsiderou depois de
+  ver rodando: (1) obrigatório trava o cadastro de conteúdo novo — melhor ir classificando aos
+  poucos; (2) 1 eixo só não bastava pro exemplo real ("Anatomia" + "Sistema Reprodutor
+  Feminino" são duas coisas diferentes — área ampla vs. assunto específico). Decisão fechada:
+  **dois eixos independentes, ambos opcionais, sem cascata entre eles** (a mesma subárea pode
+  combinar com várias áreas — ex. "Sistema Reprodutor Feminino" em Anatomia, Histologia,
+  Fisiologia...). Servem pra todo tipo de disciplina do currículo (UC, Habilidades Médicas,
+  IESC, UCCG), não só ciências biomédicas clássicas.
+
+  **Modelo**: `AreaConhecimento`/`SubareaConhecimento { id, label }` em `types.ts`;
+  `Question.areaConhecimentoId`/`subareaConhecimentoId` ambos opcionais, sem validação de
+  obrigatoriedade no formulário. `config/areasConhecimento` + `config/subareasConhecimento` no
+  Firestore, mesmo padrão de `config/periods`/`config/disciplines`
+  (`services/configService.ts` — CRUD generalizado num helper genérico `createTagListEntry`/
+  `renameTagListEntry`/`deleteTagListEntry` reaproveitado pelos dois eixos, em vez de duplicar
+  a lógica; exposto via `useAppConfig`/`DataContext`).
+
+  **Únicos 2 docs de `config/*` com leitura pública** (`firestore.rules`) — decisão consciente:
+  as listas (só rótulos, sem dado sensível) precisam aparecer em `/simulators` pra visitante
+  deslogado; as perguntas em si continuam exigindo login normalmente. 6 cenários em
+  `scripts/test-firestore-rules.mjs` confirmando isso (anônimo lê áreas/subáreas, não escreve;
+  admin escreve) sem abrir `config/periods`/`disciplines`/`featureFlags` (21/21 no total).
+
+  **Admin**: componente `AdminTagList.tsx` genérico (título/descrição/CRUD via props) — usado
+  duas vezes (`AdminView.tsx`) pras abas "Áreas de Conhecimento" e "Subáreas de Conhecimento",
+  em vez de dois arquivos quase-idênticos. `AdminQuestions.tsx` ganhou os dois seletores
+  (opcionais) nos dois formulários (import CSV e modal manual); editar uma questão permite
+  também **limpar** uma classificação já existente (dropdown em branco), não só trocar.
+
+  **`/simulators` deixou de ser mockup morto** — os 8 cards antigos apontavam pra rotas que não
+  existiam no roteador (`/lab-anatomy`, `/prescription-simulation` etc., achado nesta sessão).
+  Agora lista as Áreas reais; escolher uma leva a `/simulators/:areaId`
+  (`AreaQuizSetupView.tsx`) — configurar quantidade/ordem, cross-disciplina, sem filtro de N1/
+  N2 (não faz sentido pra revisão de fim de curso), **e opcionalmente estreitar por Subárea**
+  (só mostra as subáreas que de fato têm questão dentro daquela área, pra não levar a um
+  resultado vazio) → `/simulators/:areaId/executar`, reaproveitando **`QuizView` sem nenhuma
+  modificação** (só usa `discipline.title`/`.references`, então um objeto `SimulationInfo`
+  sintético resolve). `/simulators` continua pública; as duas rotas novas exigem login
+  (`ProtectedRoute`), mesmo padrão do resto do app.
+
+  **Escopo desta rodada (decidido com o usuário):** só Simulado Teórico. OSCE/Lab/Materiais não
+  ganharam os campos ainda — extensão futura do mesmo padrão, se fizer sentido depois.
+
+  🟡 **Verificação parcial, limitação conhecida:** criar Área/Subárea e marcar questões exige
+  Custom Claim `admin`, que esta sessão não tem como conceder (mesma restrição já documentada —
+  nenhuma credencial de service account disponível). Testado com Playwright tudo que dá pra
+  testar sem admin: `/simulators` carrega sem crash logado/deslogado antes e depois do
+  refinamento, estado vazio aparece corretamente, área/execução inexistente cai nos fallbacks
+  certos, clicar numa área deslogado cai no login. **Falta testar ao vivo** (precisa da conta
+  admin real): criar Área(s)/Subárea(s), marcar questões de disciplinas diferentes, e confirmar
+  que o filtro por subárea em `/simulators` estreita certo e o resultado salva certo no
+  dashboard — a mecânica de rota é idêntica à já validada no item 4.3, risco baixo, mas não é a
+  mesma coisa que ver rodando com dado real.
+
+  `tsc`/lint (22 pré-existentes, nenhum novo)/vitest (44/44)/build/`test:rules` (21/21) verdes.
 
 ---
 

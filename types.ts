@@ -39,15 +39,33 @@ export interface Question {
   disciplineId: string;
   unit?: AcademicUnit; // Suporte à separação N1/N2. Undefined = legado (N1)
   theme: string;
+  areaConhecimentoId?: string; // Área transversal (Anatomia, Histologia...) — Etapa 6. Opcional, classificação incremental.
+  subareaConhecimentoId?: string; // Subárea transversal (Sistema Reprodutor Feminino...) — eixo independente da Área, sem cascata entre os dois.
   q: string;
   options: string[];
   answer: number;
   explanation: string;
   tag: string;
   isPractical: boolean;
-  quizTitle?: string; 
+  quizTitle?: string;
   author?: string;
-  image?: string; 
+  image?: string;
+}
+
+// Área de Conhecimento: eixo transversal por assunto (Anatomia, Histologia...), independente
+// de disciplina/UC/período — diferente do `theme` acima, que é por disciplina. Ambos os campos
+// (Área e Subárea) são opcionais e independentes entre si (sem cascata) — ver
+// PLANO-REESTRUTURACAO.md, Etapa 6.
+export interface AreaConhecimento {
+  id: string;
+  label: string;
+}
+
+// Subárea de Conhecimento: eixo transversal mais específico (Sistema Reprodutor Feminino...),
+// independente da Área — a mesma subárea pode combinar com várias áreas diferentes.
+export interface SubareaConhecimento {
+  id: string;
+  label: string;
 }
 
 // === INTERFACES COMPARTILHADAS ===

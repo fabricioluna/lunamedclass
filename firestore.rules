@@ -32,6 +32,22 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Exceção deliberada (Etapa 6): a lista de Áreas de Conhecimento é só rótulos (Anatomia,
+    // Histologia...), sem dado sensível, e precisa aparecer em /simulators pra visitante
+    // deslogado (D6-style). As duas regras coexistem: uma requisição a config/areasConhecimento
+    // passa se QUALQUER match aplicável liberar — não precisa excluir esse docId do genérico
+    // acima. Conteúdo de verdade (questions) continua exigindo login normalmente.
+    match /config/areasConhecimento {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Mesma exceção, mesma justificativa, pro eixo Subárea (independente da Área, ver types.ts).
+    match /config/subareasConhecimento {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Bancos de conteúdo: só admin publica; alunos autenticados leem.
     match /questions/{id} {
       allow read: if isSignedIn();

@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Question, SimulationInfo, AcademicUnit } from '../../../types';
+import { Question, SimulationInfo, AcademicUnit, AreaConhecimento, SubareaConhecimento } from '../../../types';
 import { Trash2, Edit3, X } from 'lucide-react';
 import { parseResilientCSV } from '../../../utils/csvHelper'; // <-- Importação do Parser CSV
 
 interface AdminQuestionsProps {
   questions: Question[];
   disciplines: SimulationInfo[];
+  areasConhecimento: AreaConhecimento[];
+  subareasConhecimento: SubareaConhecimento[];
   onAddQuestions: (qs: Question[]) => void;
   onUpdateQuestion: (q: Question) => void;
   onRemoveQuestion: (id: string) => void;
@@ -16,6 +18,8 @@ interface AdminQuestionsProps {
 const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   questions,
   disciplines,
+  areasConhecimento,
+  subareasConhecimento,
   onAddQuestions,
   onUpdateQuestion,
   onRemoveQuestion,
@@ -31,9 +35,11 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   // ESTADOS DE IMPORTAÇÃO CSV (Refatorado)
   const [qDiscipline, setQDiscipline] = useState('');
   const [qTheme, setQTheme] = useState('');
-  const [qUnit, setQUnit] = useState<AcademicUnit>('N1'); 
-  const [qTitle, setQTitle] = useState(''); 
-  const [qAuthor, setQAuthor] = useState(''); 
+  const [qAreaConhecimento, setQAreaConhecimento] = useState('');
+  const [qSubareaConhecimento, setQSubareaConhecimento] = useState('');
+  const [qUnit, setQUnit] = useState<AcademicUnit>('N1');
+  const [qTitle, setQTitle] = useState('');
+  const [qAuthor, setQAuthor] = useState('');
   const [qFile, setQFile] = useState<File | null>(null);
 
   // ESTADOS DO MODAL DE EDIÇÃO / ADIÇÃO MANUAL
@@ -43,7 +49,9 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   
   const [mqDiscipline, setMqDiscipline] = useState('');
   const [mqTheme, setMqTheme] = useState('');
-  const [mqUnit, setMqUnit] = useState<AcademicUnit>('N1'); 
+  const [mqAreaConhecimento, setMqAreaConhecimento] = useState('');
+  const [mqSubareaConhecimento, setMqSubareaConhecimento] = useState('');
+  const [mqUnit, setMqUnit] = useState<AcademicUnit>('N1');
   const [mqQuizTitle, setMqQuizTitle] = useState('');
   const [mqText, setMqText] = useState('');
   const [mqOptions, setMqOptions] = useState<string[]>(['', '', '', '']);
@@ -118,11 +126,16 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
           }
 
           // Mapper: Traduz o CSV para a tipagem estrita do sistema (types.ts)
+          // Área/Subárea opcionais: omite a chave em vez de gravar undefined (Firestore
+          // rejeita valor de campo undefined em addDoc/setDoc — mesma causa do bug de `id`
+          // ausente corrigido nesta sessão, ver questionsService.ts).
           return {
             id: `q_${Date.now()}_${idx}`,
             disciplineId: qDiscipline,
-            unit: targetUnit, 
+            unit: targetUnit,
             theme: qTheme,
+            ...(qAreaConhecimento ? { areaConhecimentoId: qAreaConhecimento } : {}),
+            ...(qSubareaConhecimento ? { subareaConhecimentoId: qSubareaConhecimento } : {}),
             q: pergunta,
             options: opts,
             answer: answerIdx,
@@ -158,6 +171,8 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     setEditingQId('');
     setMqDiscipline(discFilter || '');
     setMqTheme(themeFilter || '');
+    setMqAreaConhecimento('');
+    setMqSubareaConhecimento('');
     setMqUnit(unitFilter || 'N1');
     setMqQuizTitle(quizFilter || '');
     setMqText('');
@@ -172,7 +187,9 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     setEditingQId(q.id);
     setMqDiscipline(q.disciplineId);
     setMqTheme(q.theme);
-    setMqUnit(q.unit || 'N1'); 
+    setMqAreaConhecimento(q.areaConhecimentoId || '');
+    setMqSubareaConhecimento(q.subareaConhecimentoId || '');
+    setMqUnit(q.unit || 'N1');
     setMqQuizTitle(q.quizTitle || '');
     setMqText(q.q);
     
@@ -197,16 +214,22 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
     if (modalMode === 'edit') {
       const existingQ = questions.find(q => q.id === editingQId);
       if (existingQ) {
+        // Área/Subárea removidas do spread e reconstruídas condicionalmente: permite o admin
+        // LIMPAR uma classificação existente (dropdown em branco) sem deixar a chave antiga
+        // vazando por trás do spread, e sem gravar `undefined` (Firestore rejeita).
+        const { areaConhecimentoId: _oldArea, subareaConhecimentoId: _oldSubarea, ...restExisting } = existingQ;
         onUpdateQuestion({
-          ...existingQ,
+          ...restExisting,
           disciplineId: mqDiscipline,
           theme: mqTheme,
-          unit: targetUnit, 
+          unit: targetUnit,
           quizTitle: mqQuizTitle,
           q: mqText,
           options: mqOptions,
           answer: mqAnswer,
-          explanation: mqExplanation
+          explanation: mqExplanation,
+          ...(mqAreaConhecimento ? { areaConhecimentoId: mqAreaConhecimento } : {}),
+          ...(mqSubareaConhecimento ? { subareaConhecimentoId: mqSubareaConhecimento } : {}),
         });
         alert("Questão atualizada com sucesso!");
       }
@@ -215,7 +238,9 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
         id: `q_manual_${Date.now()}`,
         disciplineId: mqDiscipline,
         theme: mqTheme,
-        unit: targetUnit, 
+        ...(mqAreaConhecimento ? { areaConhecimentoId: mqAreaConhecimento } : {}),
+        ...(mqSubareaConhecimento ? { subareaConhecimentoId: mqSubareaConhecimento } : {}),
+        unit: targetUnit,
         quizTitle: mqQuizTitle,
         q: mqText,
         options: mqOptions,
@@ -264,7 +289,17 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
               <option value="">Eixo Temático...</option>
               {qDiscipline && disciplines.find(d => d.id === qDiscipline)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
-            
+
+            <select value={qAreaConhecimento} onChange={e => setQAreaConhecimento(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]">
+              <option value="">Área de Conhecimento (opcional)...</option>
+              {areasConhecimento.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+            </select>
+
+            <select value={qSubareaConhecimento} onChange={e => setQSubareaConhecimento(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]">
+              <option value="">Subárea de Conhecimento (opcional)...</option>
+              {subareasConhecimento.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+
             <input type="text" placeholder="Nome do Simulado (Ex: P1 Cárdio Fafá)" value={qTitle} onChange={e => setQTitle(e.target.value)} maxLength={50} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required />
             <input type="text" placeholder="Autor (opcional)" value={qAuthor} onChange={e => setQAuthor(e.target.value)} maxLength={30} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" />
 
@@ -411,11 +446,27 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
                    </div>
                  )}
 
-                 <div className="md:col-span-2">
+                 <div>
                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Tema</label>
                    <select value={mqTheme} onChange={e => setMqTheme(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm border focus:border-[#003366] outline-none" disabled={!mqDiscipline}>
                      <option value="">Selecione o Eixo...</option>
                      {mqDiscipline && disciplines.find(d => d.id === mqDiscipline)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
+                   </select>
+                 </div>
+
+                 <div>
+                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Área de Conhecimento (opcional)</label>
+                   <select value={mqAreaConhecimento} onChange={e => setMqAreaConhecimento(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm border focus:border-[#003366] outline-none">
+                     <option value="">Selecione...</option>
+                     {areasConhecimento.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+                   </select>
+                 </div>
+
+                 <div>
+                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Subárea de Conhecimento (opcional)</label>
+                   <select value={mqSubareaConhecimento} onChange={e => setMqSubareaConhecimento(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm border focus:border-[#003366] outline-none">
+                     <option value="">Selecione...</option>
+                     {subareasConhecimento.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                    </select>
                  </div>
                </div>

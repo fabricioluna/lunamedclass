@@ -24,12 +24,13 @@ const ReferencesView = lazy(() => import('../views/ReferencesView'));
 const LabListView = lazy(() => import('../features/lab/LabListView'));
 const LabQuizView = lazy(() => import('../features/lab/LabQuizView'));
 const SimulatorsView = lazy(() => import('../views/SimulatorsView'));
+const AreaQuizSetupView = lazy(() => import('../features/simulators/AreaQuizSetupView'));
 const SurveyView = lazy(() => import('../views/SurveyView'));
 const SurveyReportView = lazy(() => import('../views/SurveyReportView'));
 const MedicalEventsView = lazy(() => import('../views/MedicalEventsView'));
 const StudentDashboardView = lazy(() => import('../views/StudentDashboardView'));
 
-import { Question, OsceStation, LabSimulation, AcademicUnit } from '../types';
+import { Question, OsceStation, LabSimulation, SimulationInfo, AcademicUnit } from '../types';
 import { PERIODS } from '../data/periods';
 import { saveQuizResult, saveOsceAnalytics } from '../services/resultsService';
 import { submitSurvey } from '../services/surveyService';
@@ -386,6 +387,89 @@ const LabExecFlow = () => {
   );
 };
 
+// --- SIMULADORES POR ÁREA DE CONHECIMENTO: SETUP (rota nova, Etapa 6) ---
+// /simulators é pública (lista de áreas), mas configurar/executar exige login (ProtectedRoute) —
+// mesmo padrão de acesso do resto do app; só a listagem de áreas é aberta (D6-style).
+const AreaSetupFlow = () => {
+  const { areaId } = useParams();
+  const navigate = useNavigate();
+  const { areasConhecimento } = useData();
+  const area = areasConhecimento.find(a => a.id === areaId);
+
+  if (!area) return <Navigate to="/simulators" replace />;
+
+  return (
+    <AreaQuizSetupView
+      areaId={area.id}
+      areaLabel={area.label}
+      onBack={() => navigate(-1)}
+      onStart={() => navigate(`/simulators/${area.id}/executar`)}
+    />
+  );
+};
+
+// --- SIMULADORES POR ÁREA DE CONHECIMENTO: EXECUÇÃO (rota nova, Etapa 6) ---
+// Reaproveita QuizView sem modificação — só usa discipline.title/.references (confirmado por
+// leitura), então um objeto sintético satisfazendo SimulationInfo resolve sem tocar no componente.
+const AreaExecFlow = () => {
+  const { areaId } = useParams();
+  const navigate = useNavigate();
+  const { areasConhecimento } = useData();
+  const { currentUser } = useAuth();
+  const area = areasConhecimento.find(a => a.id === areaId);
+
+  const questionsKey = `quiz_questions_area_${areaId}`;
+  const [questions] = useState<Question[] | null>(() => {
+    const raw = localStorage.getItem(questionsKey);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
+
+  if (!area) return <Navigate to="/simulators" replace />;
+  if (!questions) return <Navigate to={`/simulators/${area.id}`} replace />;
+
+  const syntheticDiscipline: SimulationInfo = {
+    id: area.id,
+    periodId: '',
+    title: area.label,
+    category: 'UC',
+    description: '',
+    meta: '',
+    icon: '📚',
+    status: 'active',
+    themes: [],
+  };
+
+  return (
+    <QuizView
+      questions={questions}
+      discipline={syntheticDiscipline}
+      onBack={() => navigate(-1)}
+      onSaveResult={(score, total, _title, type, time, details) => {
+        if (currentUser) {
+          saveQuizResult({
+            userId: currentUser.uid,
+            userEmail: currentUser.email,
+            score,
+            total,
+            date: new Date().toLocaleString(),
+            discipline: area.id,
+            quizTitle: area.label,
+            type: type || 'teorico',
+            timeSpent: time || 0,
+            details: details || [],
+          });
+        }
+      }}
+    />
+  );
+};
+
 const MaterialsFlow = () => {
   const { disciplineId } = useParams();
   const unit = useAcademicUnit();
@@ -467,6 +551,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/career-quiz" element={<CareerQuiz onBack={() => window.history.back()} />} />
             <Route path="/medical-events" element={<MedicalEventsView />} />
             <Route path="/simulators" element={<SimulatorsView />} />
+            <Route path="/simulators/:areaId" element={<ProtectedRoute><AreaSetupFlow /></ProtectedRoute>} />
+            <Route path="/simulators/:areaId/executar" element={<ProtectedRoute><AreaExecFlow /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

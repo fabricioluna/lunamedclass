@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag, AnalyticsResult } from '../../types';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap } from 'lucide-react';
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap, Tags } from 'lucide-react';
 
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,15 +24,16 @@ import AdminThemes from './components/AdminThemes';
 import AdminReferences from './components/AdminReferences';
 import AdminDisciplines from './components/AdminDisciplines';
 import AdminAnalytics from './components/AdminAnalytics';
+import AdminTagList from './components/AdminTagList';
 
-type AdminTab = 'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags';
+type AdminTab = 'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags' | 'areas' | 'subareas';
 
 interface AdminViewProps {
   onBack: () => void;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
-  const { periods, disciplines } = useData();
+  const { periods, disciplines, areasConhecimento, subareasConhecimento } = useData();
   const { isAdmin, isLoadingAuth } = useAuth();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('requests');
@@ -222,6 +223,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           { id: 'analytics', label: 'Research Analytics', icon: <BrainCircuit size={16}/> },
           { id: 'access', label: 'Acessos', icon: <Lock size={16}/> },
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
+          { id: 'areas', label: 'Áreas de Conhecimento', icon: <Tags size={16}/> },
+          { id: 'subareas', label: 'Subáreas de Conhecimento', icon: <Tags size={16}/> },
           { id: 'questions', label: 'Questões', icon: <FileText size={16}/> },
           { id: 'osce', label: 'OSCE', icon: <Stethoscope size={16}/> },
           { id: 'lab', label: 'Lab Virtual', icon: <Microscope size={16}/> },
@@ -425,6 +428,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         <AdminQuestions
           questions={adminQuestions}
           disciplines={disciplines}
+          areasConhecimento={areasConhecimento}
+          subareasConhecimento={subareasConhecimento}
           onAddQuestions={async (qs) => {
             await questionsService.addQuestions(qs).catch(console.error);
           }}
@@ -492,6 +497,36 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         <AdminReferences
           disciplines={disciplines}
           onUpdateReferences={handleUpdateReferences}
+        />
+      )}
+
+      {activeTab === 'areas' && (
+        <AdminTagList
+          title="Áreas de Conhecimento"
+          description="Eixo transversal por assunto (Anatomia, Histologia...) — usado no cadastro de questões e em /simulators"
+          createLabel="+ Nova Área"
+          promptLabel="Nome da Área de Conhecimento (ex: Anatomia):"
+          emptyMessage="Nenhuma Área de Conhecimento cadastrada ainda."
+          deleteConfirmMessage={(label) => `Apagar a área "${label}"? Questões já marcadas com ela mantêm o vínculo, mas o filtro deixa de aparecer em /simulators.`}
+          items={areasConhecimento}
+          onCreate={configService.createAreaConhecimento}
+          onRename={configService.renameAreaConhecimento}
+          onDelete={configService.deleteAreaConhecimento}
+        />
+      )}
+
+      {activeTab === 'subareas' && (
+        <AdminTagList
+          title="Subáreas de Conhecimento"
+          description="Eixo transversal mais específico (Sistema Reprodutor Feminino...) — independente da Área, combina com qualquer uma"
+          createLabel="+ Nova Subárea"
+          promptLabel="Nome da Subárea de Conhecimento (ex: Sistema Reprodutor Feminino):"
+          emptyMessage="Nenhuma Subárea de Conhecimento cadastrada ainda."
+          deleteConfirmMessage={(label) => `Apagar a subárea "${label}"? Questões já marcadas com ela mantêm o vínculo, mas o filtro deixa de aparecer em /simulators.`}
+          items={subareasConhecimento}
+          onCreate={configService.createSubareaConhecimento}
+          onRename={configService.renameSubareaConhecimento}
+          onDelete={configService.deleteSubareaConhecimento}
         />
       )}
     </div>

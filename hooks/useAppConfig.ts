@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { PERIODS } from '../data/periods.ts';
 import { SIMULATIONS } from '../data/disciplines.ts';
-import { Period, SimulationInfo, FeatureFlag } from '../types.ts';
-import { subscribeToPeriods, subscribeToDisciplines, subscribeToFeatureFlags } from '../services/configService.ts';
+import { Period, SimulationInfo, FeatureFlag, AreaConhecimento, SubareaConhecimento } from '../types.ts';
+import { subscribeToPeriods, subscribeToDisciplines, subscribeToFeatureFlags, subscribeToAreasConhecimento, subscribeToSubareasConhecimento } from '../services/configService.ts';
 
 export const useAppConfig = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -12,6 +12,8 @@ export const useAppConfig = () => {
   const [periods, setPeriods] = useState<Period[]>(PERIODS);
   const [disciplines, setDisciplines] = useState<SimulationInfo[]>(SIMULATIONS);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
+  const [areasConhecimento, setAreasConhecimento] = useState<AreaConhecimento[]>([]);
+  const [subareasConhecimento, setSubareasConhecimento] = useState<SubareaConhecimento[]>([]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -71,12 +73,19 @@ export const useAppConfig = () => {
     // o fallback seguro (DisciplineView.checkFlag cai no defaultState quando a flag não existe).
     const unsubFlags = subscribeToFeatureFlags(setFeatureFlags, () => {});
 
+    // config/areasConhecimento tem leitura pública (Etapa 6) — não devia falhar nem pra
+    // visitante deslogado, mas mantém o mesmo formato defensivo por consistência.
+    const unsubAreas = subscribeToAreasConhecimento(setAreasConhecimento, () => {});
+    const unsubSubareas = subscribeToSubareasConhecimento(setSubareasConhecimento, () => {});
+
     return () => {
       unsubPeriods();
       unsubDisciplines();
       unsubFlags();
+      unsubAreas();
+      unsubSubareas();
     };
   }, []);
 
-  return { isLoading, isOnline, periods, disciplines, featureFlags };
+  return { isLoading, isOnline, periods, disciplines, featureFlags, areasConhecimento, subareasConhecimento };
 };

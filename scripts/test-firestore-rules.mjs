@@ -57,6 +57,8 @@ await testEnv.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(db, 'quizResults', 'result_a'), { userId: STUDENT_A, score: 8, total: 10 });
   await setDoc(doc(db, 'quizResults', 'result_b'), { userId: STUDENT_B, score: 5, total: 10 });
   await setDoc(doc(db, 'config', 'periods'), { items: [{ id: 'p1', name: 'Período 1' }] });
+  await setDoc(doc(db, 'config', 'areasConhecimento'), { items: [{ id: 'a1', label: 'Anatomia' }] });
+  await setDoc(doc(db, 'config', 'subareasConhecimento'), { items: [{ id: 's1', label: 'Sistema Reprodutor Feminino' }] });
   await setDoc(doc(db, 'materials', 'mat1'), { title: 'Original', disciplineId: 'hm1', unit: 'N1' });
 });
 
@@ -92,6 +94,26 @@ await check('Aluno NÃO escreve em config/periods', async () => {
 });
 await check('Admin escreve em config/periods', async () => {
   await assertSucceeds(setDoc(doc(asAdmin, 'config', 'periods'), { items: [] }));
+});
+
+// === ÁREAS DE CONHECIMENTO — única leitura pública de config/* (Etapa 6, D6-style) ===
+await check('Visitante anônimo LÊ config/areasConhecimento (pública por design)', async () => {
+  await assertSucceeds(getDoc(doc(asAnon, 'config', 'areasConhecimento')));
+});
+await check('Visitante anônimo NÃO escreve em config/areasConhecimento', async () => {
+  await assertFails(setDoc(doc(asAnon, 'config', 'areasConhecimento'), { items: [] }));
+});
+await check('Admin escreve em config/areasConhecimento', async () => {
+  await assertSucceeds(setDoc(doc(asAdmin, 'config', 'areasConhecimento'), { items: [] }));
+});
+await check('Visitante anônimo LÊ config/subareasConhecimento (pública por design)', async () => {
+  await assertSucceeds(getDoc(doc(asAnon, 'config', 'subareasConhecimento')));
+});
+await check('Visitante anônimo NÃO escreve em config/subareasConhecimento', async () => {
+  await assertFails(setDoc(doc(asAnon, 'config', 'subareasConhecimento'), { items: [] }));
+});
+await check('Admin escreve em config/subareasConhecimento', async () => {
+  await assertSucceeds(setDoc(doc(asAdmin, 'config', 'subareasConhecimento'), { items: [] }));
 });
 
 // === MATERIALS — aluno cria, não edita nem apaga o de outro (fix desta sessão) ===
