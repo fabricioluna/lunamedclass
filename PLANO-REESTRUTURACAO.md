@@ -42,8 +42,7 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 **➡️ HANDOFF (2026-08-07, fim de sessão): Etapas 0-5 concluídas, Etapa 4 100% completa, Etapa 6
 iniciada (item 6.1 concluído, com 4 rodadas de refinamento).** Nenhuma pendência de segurança
-conhecida em aberto. Mudanças do 4º refinamento (abaixo) ainda **não commitadas** — aguardando
-"sim" do usuário.
+conhecida em aberto. Commit `512db2c` (4º refinamento), **enviado a `origin/main`**.
 
 **Resumo do que fechou nesta sessão** (detalhe completo em cada seção):
 - **Etapa 4, item 4.3**: Simulado/OSCE/Laboratório viraram rotas reais (botão voltar do
@@ -73,9 +72,7 @@ conhecida em aberto. Mudanças do 4º refinamento (abaixo) ainda **não commitad
   (decisão consciente, D6-style, mantida do 2º refinamento). Ver seção Etapa 6 para o detalhe
   completo de cada rodada.
 
-**➡️ Próxima ação:** pedir "sim" do usuário para commit + push do 4º refinamento (mudanças em
-`routes/AppRoutes.tsx`, `views/SimulatorsView.tsx` e os 2 arquivos novos em
-`features/simulators/`). Depois, conversar sobre o que entra a seguir na Etapa 6 — o usuário
+**➡️ Próxima ação:** conversar sobre o que entra a seguir na Etapa 6 — o usuário
 sinalizou que quer trabalhar os 4 simuladores futuros (Prescrição/Exames/Propedêutica/Evolução)
 "detalhadamente depois", um de cada vez, mas não definiu qual primeiro. Quando o Simulado
 Teórico voltar a ficar visível em `/simulators`, ainda fica pendente o teste ao vivo com a conta
