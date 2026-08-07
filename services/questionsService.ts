@@ -7,8 +7,15 @@ import { Question } from '../types';
 
 const questionsCollection = collection(firestoreDB, 'questions');
 
-const toQuestion = (d: { id: string; data: () => Record<string, unknown> }): Question =>
-  ({ ...(d.data() as unknown as Question), firebaseId: d.id });
+// scripts/migrate-rtdb-to-firestore.mjs usou o `id` original como ID do próprio documento e
+// removeu o campo de dentro dos dados (`const { id, ...rest } = item`) — questões migradas do
+// RTDB não têm `id` interno, só `firebaseId`. Isso quebrava o rastreio de resposta por questão
+// (`answers[q.id]` colidindo em `undefined`) e a gravação parcial em `QuizView.handlePartialAnswer`.
+// `d.id` é exatamente o valor original de `id` antes da migração — restaurar daqui é a correção certa.
+const toQuestion = (d: { id: string; data: () => Record<string, unknown> }): Question => {
+  const data = d.data() as unknown as Question;
+  return { ...data, id: data.id ?? d.id, firebaseId: d.id };
+};
 
 export const fetchQuestionsOnce = async (): Promise<Question[]> => {
   const snap = await getDocs(questionsCollection);

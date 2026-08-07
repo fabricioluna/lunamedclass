@@ -1,6 +1,6 @@
 import { firestoreDB } from '../firebase';
 import {
-  collection, doc, getDocs, onSnapshot,
+  collection, doc, getDoc, getDocs, onSnapshot,
   addDoc, deleteDoc, query, where, writeBatch,
 } from 'firebase/firestore';
 import { LabSimulation } from '../types';
@@ -8,12 +8,21 @@ import { deleteFileByUrl } from './storageService';
 
 const labCollection = collection(firestoreDB, 'labSimulations');
 
-const toSimulation = (d: { id: string; data: () => Record<string, unknown> }): LabSimulation =>
-  ({ ...(d.data() as unknown as LabSimulation), firebaseId: d.id });
+// Mesmo gap da migração RTDB→Firestore documentado em questionsService.ts: `id` pode faltar
+// nos dados de simulações migradas. `d.id` é o valor original antes da migração.
+const toSimulation = (d: { id: string; data: () => Record<string, unknown> }): LabSimulation => {
+  const data = d.data() as unknown as LabSimulation;
+  return { ...data, id: data.id ?? d.id, firebaseId: d.id };
+};
 
 export const fetchLabSimulationsOnce = async (): Promise<LabSimulation[]> => {
   const snap = await getDocs(labCollection);
   return snap.docs.map(toSimulation);
+};
+
+export const fetchLabSimulationById = async (firebaseId: string): Promise<LabSimulation | null> => {
+  const snap = await getDoc(doc(firestoreDB, 'labSimulations', firebaseId));
+  return snap.exists() ? toSimulation(snap) : null;
 };
 
 export const subscribeToLabSimulations = (onData: (simulations: LabSimulation[]) => void) => {

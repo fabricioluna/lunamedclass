@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { QuizResult, Question, LabSimulation, SimulationInfo, FirebaseTimestamp } from '../../../types';
 import { TrendingUp, Layers, AlertTriangle, FileDown, Trash2, CalendarDays, ChevronDown, CheckSquare } from 'lucide-react';
 import { PERIODS } from '../../../data/periods';
+import { isCountedResultType } from '../../../utils/resultsPolicy';
 
 // IMPORTAÇÕES DO SERVICE PARA DELETAR RESULTADOS ESPECÍFICOS
 import { deleteResult, deleteResults } from '../../../services/resultsService';
@@ -627,7 +628,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({
                       { id: 'teorico', label: 'Teórico' },
                       { id: 'laboratorio', label: 'Lab Virtual' },
                       { id: 'osce', label: 'OSCE' }
-                    ].map(type => (
+                    ].filter(type => isCountedResultType(type.id as QuizResult['type'])).map(type => (
                       <label key={type.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
                          <input type="checkbox" checked={filterTypes.includes(type.id)} onChange={(e) => {
                            if(e.target.checked) setFilterTypes([...filterTypes, type.id]);

@@ -40,22 +40,54 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 
 ## 🚦 Status Atual
 
-**➡️ HANDOFF (2026-08-06, fim de sessão): Etapas 0-5 TODAS concluídas.** (detalhes nas seções
-correspondentes abaixo; Etapa 4 tem 1 item conscientemente adiado, o 4.3 — não bloqueia, é uma
-decisão registrada, não uma pendência). Nenhuma pendência de segurança conhecida em aberto — a
-última (service account key antiga exposta desde a Etapa 0) foi revogada pelo usuário. Sentry
-(5.3) está configurado na Vercel; passa a capturar erros a partir do próximo deploy.
+**➡️ HANDOFF (2026-08-06/07, fim de sessão): Etapas 0-5 concluídas, Etapa 4 agora 100% completa
+(4.3 fechado nesta sessão).** Nenhuma pendência de segurança conhecida em aberto. Sentry (5.3)
+configurado na Vercel. Ver seção Etapa 5 mais abaixo para detalhamento (5.4 rate limiting com
+teto por instância não distribuído; 5.6 `npm audit` não-bloqueante no CI por 8 vulnerabilidades
+que exigem breaking change).
 
-Commits `6489938` (5.4, rate limiting) e `308550a` (5.5+5.6) enviados a `origin/main`. Ver seção Etapa 5 mais abaixo para o detalhamento de cada item, incluindo a limitação
-assumida no 5.4 (teto por instância, não distribuído), um achado fora de escopo (endpoint
-`/api/chat` sem verificação de auth nenhuma — rate limiting não resolve isso) e a decisão de
-manter `npm audit` não-bloqueante no CI (5.6 — 8 vulnerabilidades conhecidas, todas exigindo
-breaking change para corrigir, `react-router-dom` é a única com relevância real de produção).
+**Item 4.3 concluído nesta sessão:** os fluxos de Simulado/OSCE/Laboratório em
+`routes/AppRoutes.tsx` viraram rotas reais (`/simulado/executar`, `/osce/configurar/:mode`,
+`/osce/estacao/:stationId`, `/lab/simulacao/:simId`) — botão voltar do navegador agora
+funciona corretamente e F5 no meio de uma estação OSCE/simulação de Lab não perde mais a
+seleção (busca por `firebaseId` no Firestore via `fetchOsceStationById`/
+`fetchLabSimulationById`, novos em `services/`). Detalhe completo na seção Etapa 4 abaixo.
 
-**➡️ Próxima ação: Etapa 6** — só agora entram funcionalidades novas (regra de ouro D2/seção
-"Como usar este documento"). Antes de começar qualquer feature nova, vale uma conversa com o
-usuário sobre prioridades — o plano não lista itens pré-definidos para a Etapa 6, é
-propositalmente em aberto.
+**Decisão nova, tomada durante o 4.3 (junto com o usuário):** só o **Simulado Teórico** conta
+resultado/nota a partir de agora — Laboratório, OSCE Estático, OSCE RPG e OSCE IA **pararam de
+salvar** (`utils/resultsPolicy.ts`, `COUNTED_RESULT_TYPES`), decisão "por enquanto", reversível
+num só lugar. As telas do admin "Estatísticas" e "Research Analytics" também pararam de
+mostrar esses tipos (dado antigo não foi apagado, só escondido). Ver Decisão D9 e detalhamento
+na seção Etapa 4.
+
+✅ **Achado durante a verificação manual, CORRIGIDO na mesma sessão (usuário pediu pra
+resolver na hora):** pelo menos parte das questões do Simulado Teórico migradas pro Firestore
+(Etapa 3) tinham o campo `id` **undefined** (só `firebaseId`). Isso quebrava a gravação
+parcial por questão (`handlePartialAnswer` em `features/quiz/QuizView.tsx`, lançava `Function
+addDoc() called with invalid data. Unsupported field value: undefined`) e explica um achado
+antigo nunca resolvido da Etapa 4 ("2ª questão aparece respondida sem motivo" — se duas
+questões têm `id: undefined`, `answers[q.id]` colide entre elas).
+
+**Causa raiz encontrada:** `scripts/migrate-rtdb-to-firestore.mjs:97` — `const { id, ...rest }
+= item; batch.set(firestore.collection(firestoreCollection).doc(id), rest)` — a migração usa o
+`id` original como ID do próprio documento no Firestore e **remove o campo de dentro dos
+dados** de propósito (evitar redundância). Ou seja, `d.id` (o ID do documento) É o valor
+original de `id` — restaurar um a partir do outro na leitura é a correção certa, não um
+workaround. Mesmo padrão afeta `osceStations` e `labSimulations` (mesmo loop de migração),
+ainda sem sintoma visível hoje (nada no código depende de `.id` pra eles, só de
+`.firebaseId`), mas corrigido preventivamente pra não repetir o mesmo bug depois.
+
+**Fix:** `services/questionsService.ts`, `services/osceService.ts`, `services/labService.ts` —
+os 3 mapeadores `toQuestion`/`toStation`/`toSimulation` agora fazem `id: data.id ?? d.id` além
+de `firebaseId: d.id`. Sem mudança de schema, sem precisar de credencial de admin pra rodar
+backfill — corrige na camada de leitura, efeito imediato pra qualquer documento já existente.
+Reverificado com Playwright: simulado teórico completo do início ao fim, sem o erro do
+Firestore, resultado aparecendo no dashboard do aluno. `tsc`/lint(22 pré-existentes)/vitest(44/
+44)/build todos verdes depois do fix.
+
+**➡️ Próxima ação: Etapa 6** — só agora entram funcionalidades novas (regra de ouro D2). Antes
+de começar, vale uma conversa com o usuário sobre prioridades — o plano não lista itens
+pré-definidos pra essa etapa, é propositalmente em aberto.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -265,6 +297,7 @@ fazer backup do RTDB antes).
 | D6 | `/survey` continua pública (write-only); `/survey-report` vira admin | Link aberto para a turma |
 | D7 | Gabarito visível a aluno logado é **limitação aceita** | Quiz client-side sempre expõe resposta no DevTools; corrigir exige correção server-side (Etapa 6) |
 | D8 | Fechar vazamento tem precedência sobre quebrar feature | LGPD > dashboard fora do ar numa turma piloto |
+| D9 | Só **Simulado Teórico** conta resultado/nota "por enquanto" (`utils/resultsPolicy.ts`) | Decisão do usuário em 2026-08-06/07: Lab, OSCE (estático/RPG/IA) ficam de fora até a confiabilidade desses modos ser revisada — reversível numa constante só |
 
 ---
 
@@ -534,10 +567,9 @@ falta só publicar em produção, item 1 acima).
 
 ## 🧱 ETAPA 4 — Reestruturação da aplicação *(~1 semana)*
 
-**➡️ Trabalho autônomo em 2026-08-05 (sessão da noite, sem interação do usuário — pediu para
-adiantar o máximo possível sem depender de ação dele).** Itens 4.1 e 4.4 concluídos e
-verificados; 4.2 já vinha resolvido como efeito colateral da Etapa 3; 4.6 investigado (achado
-abaixo); 4.3 e 4.5 avaliados e **conscientemente adiados** — ver justificativa nos itens.
+**✅ Etapa 4 — CONCLUÍDA por completo em 2026-08-06/07** (4.1/4.2/4.4/4.5 feitos em 2026-08-05;
+4.3 — adiado naquela sessão por depender de persistência que ainda não existia — fechado numa
+sessão dedicada em 2026-08-06/07, ver detalhamento no item).
 
 - [x] **4.1** `App.tsx` de 694 → 16 linhas *(feito em 2026-08-05)*. `components/layout/ErrorBoundary.tsx`
   + `AppLayout.tsx`; `features/auth/ProtectedRoute.tsx` (orquestrador) + `LoginView.tsx` +
@@ -549,16 +581,65 @@ abaixo); 4.3 e 4.5 avaliados e **conscientemente adiados** — ver justificativa
   `saveQuizResult`/`saveOsceAnalytics`/`submitSurvey` dos services, não mais `push(ref(db,...))`
   direto. Ainda são lambdas inline nas rotas (não viraram funções nomeadas em arquivo
   separado) — se isso incomodar no futuro é polimento, não dívida de arquitetura.
-- [ ] **4.3** Os 7 "Flow" viram rotas reais (`/disciplina/:id/simulado/executar`) — hoje usam `useState<'setup'|'quiz'>` e o botão *voltar* do navegador não entende.
-  🟡 **Adiado conscientemente em 2026-08-05, reavaliado e mantido adiado.** `QuizFlow` já tem
-  uma rede de segurança (localStorage salva as questões escolhidas antes de entrar no modo
-  quiz — dá pra converter com risco baixo). `OsceFlow` e `LabFlow` **não têm nenhuma
-  persistência** da estação/simulação escolhida — confirmado via grep, zero `localStorage` em
-  `features/osce/` e `features/lab/`. Converter esses dois pra rota real sem antes construir
-  `fetchStationById`/`fetchSimulationById` + persistência arriscaria um refresh no meio de uma
-  simulação jogar o aluno de volta pro início, perdendo o progresso — pior que o problema atual
-  (botão voltar sai do fluxo). Decisão: não vale fazer só o Quiz e deixar os outros dois pela
-  metade; os três ficam para uma sessão dedicada com escopo completo (persistência + rotas).
+- [x] **4.3** Os "Flow" de Simulado/OSCE/Laboratório viram rotas reais *(concluído em
+  2026-08-06/07, sessão dedicada, como planejado no adiamento original)*.
+
+  **Rotas novas** em `routes/AppRoutes.tsx`:
+  ```
+  /disciplina/:id/simulado/executar
+  /disciplina/:id/osce/configurar/:mode      (mode = static|ai|rpg, path param)
+  /disciplina/:id/osce/estacao/:stationId
+  /disciplina/:id/lab/simulacao/:simId
+  ```
+  Quiz não precisou de persistência nova — `QuizSetupView` já grava as questões escolhidas no
+  `localStorage` antes de `onStart`; a rota de execução só lê essa chave de volta. OSCE/Lab
+  precisaram de fetch por ID, que não existia: `fetchOsceStationById`
+  (`services/osceService.ts`) e `fetchLabSimulationById` (`services/labService.ts`), padrão
+  `getDoc(doc(...))` igual já usado em `authService`/`configService`. `firestore.rules` não
+  precisou mudar (a regra de leitura já cobria `getDoc` igual cobria `getDocs`). `onBack` das
+  rotas novas usa `navigate(-1)` — histórico de navegador de verdade agora, em vez de
+  `setStep(...)` manual.
+
+  **Verificado com Playwright ad-hoc** (contra `npm run dev` local, 2 contas de teste
+  descartáveis `qa.claude.etapa43*@example.com`, senha `ClaudeTest#2026!` — mesmo padrão de
+  sessões anteriores, apagar em Firebase Console quando for limpar):
+  - **Quiz** (`hm1`/periodo1): navega pra `/executar` ✅ · F5 no meio permanece ✅ · botão
+    voltar cai no setup, avançar volta pro executar ✅ · acesso direto a `/executar` sem
+    localStorage cai no setup ✅.
+  - **OSCE estático** (`hm1`/periodo1, único modo com estação seedada em N1): setup → estação
+    (`/osce/estacao/<firebaseId>`) ✅ · F5 permanece na mesma estação ✅ · cadeia de voltar
+    (estação → configurar → mode-selection) ✅ · ID de estação inexistente e modo inválido na
+    URL caem no fallback sem crash ✅. **13/13 verificações automatizadas passaram.**
+  - **OSCE RPG/IA** (`hm2`/periodo2): a navegação pras rotas `/osce/configurar/rpg` e
+    `/osce/configurar/ai` funciona (confirmado), mas **não havia nenhuma estação RPG/IA
+    cadastrada** em N1 nem N2 no banco atual pra testar a execução de ponta a ponta — limitação
+    de dado de teste, não algo que dava pra contornar sem popular o banco. O código de
+    despacho (`station.mode === 'rpg' → DynamicOsceView`, `'ai' → OsceAIView`) é estruturalmente
+    idêntico ao caminho estático já validado.
+  - **Laboratório**: nenhuma das disciplinas UC do período1 testadas (`uci`, `ucii`, `iesc1`,
+    `uccg1`) tinha simulação cadastrada pra testar a execução real — mesma limitação de dado. O
+    fallback de ID inválido (`/lab/simulacao/<inexistente>` → volta pra lista) foi confirmado
+    funcionando; o componente de execução (`LabExecFlow`) usa o mesmo padrão comprovado do
+    `OsceExecFlow`.
+  - `npx tsc --noEmit`, `npm run lint` (22 pré-existentes, nenhum novo), `npx vitest run`
+    (44/44), `npm run build` — todos verdes antes e depois do teste manual.
+
+  ✅ **Achado durante o teste manual, corrigido na mesma sessão (ver handoff no topo do
+  documento para os detalhes técnicos completos):** parte das questões do Simulado Teórico
+  migradas ao Firestore tinham `id: undefined` (só `firebaseId`), quebrando a gravação parcial
+  por questão e provavelmente explicando o achado não resolvido da Etapa 4 sobre a "2ª questão
+  aparecendo já respondida". Causa raiz: `scripts/migrate-rtdb-to-firestore.mjs` usa o `id`
+  original como ID do documento e remove o campo de dentro dos dados de propósito. Corrigido em
+  `services/questionsService.ts`/`osceService.ts`/`labService.ts` (`id: data.id ?? d.id` na
+  leitura) — não é regressão desta mudança de rotas, é pré-existente desde a migração da Etapa 3.
+
+  🟢 **Decisão nova, tomada com o usuário durante este item (ver D9):** por enquanto, só o
+  Simulado Teórico conta resultado/nota — Laboratório, OSCE Estático, OSCE RPG e OSCE IA
+  pararam de salvar (`utils/resultsPolicy.ts`). Motivada por uma pergunta lateral (o modo IA
+  nunca salvou nada, achado ao ler `OsceAIView.tsx`) que o usuário decidiu expandir depois de
+  ver o inventário completo do que cada modo salva hoje. `AdminStats` ("Estatísticas") e
+  `AdminAnalytics` ("Research Analytics") pararam de exibir esses tipos — dado antigo
+  permanece no Firestore, só ficou escondido nas duas telas.
 - [x] **4.4** Quebrar `constants.tsx` (1.145 linhas) → `data/periods.ts`, `data/disciplines.ts`,
   `data/questions.ts` (`INITIAL_QUESTIONS`), `data/medicalEvents.ts`, `theme.ts` *(feito em
   2026-08-05)*. `THEME` nunca foi importado em lugar nenhum antes — preservado no novo

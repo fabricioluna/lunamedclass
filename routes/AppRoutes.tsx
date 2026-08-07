@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import ProtectedRoute from '../features/auth/ProtectedRoute';
@@ -33,6 +33,9 @@ import { Question, OsceStation, LabSimulation, AcademicUnit } from '../types';
 import { PERIODS } from '../data/periods';
 import { saveQuizResult, saveOsceAnalytics } from '../services/resultsService';
 import { submitSurvey } from '../services/surveyService';
+import { fetchOsceStationById } from '../services/osceService';
+import { fetchLabSimulationById } from '../services/labService';
+import { isCountedResultType } from '../utils/resultsPolicy';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -44,6 +47,19 @@ const useAcademicUnit = (): AcademicUnit => {
   const params = new URLSearchParams(search);
   return (params.get('unit') as AcademicUnit) || 'N1';
 };
+
+const isValidOsceSetupMode = (mode?: string): mode is 'static' | 'ai' | 'rpg' =>
+  mode === 'static' || mode === 'ai' || mode === 'rpg';
+
+// ============================================================================
+// LOADER INLINE REUTILIZÁVEL (fetch por ID nas rotas de execução OSCE/Lab)
+// ============================================================================
+const InlineSpinner = ({ label }: { label: string }) => (
+  <div className="flex-grow flex flex-col items-center justify-center p-6 bg-[#f4f7f6]">
+    <div className="w-12 h-12 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
+    <h3 className="text-[#003366] font-black uppercase tracking-widest text-xs">{label}</h3>
+  </div>
+);
 
 // ============================================================================
 // FLUXOS DE ROTEAMENTO (MOTOR DE PROGRESSÃO CURRICULAR E ISOLAMENTO ESTrito)
@@ -114,7 +130,30 @@ const DisciplineFlow = () => {
   return <DisciplineView disciplineId={disciplineId!} disciplines={disciplines} onSelectOption={handleSelectOption} />;
 };
 
+// --- SIMULADO: SETUP (rota inalterada) ---
 const QuizFlow = () => {
+  const { disciplineId } = useParams();
+  const unit = useAcademicUnit();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const discipline = disciplines.find(d => d.id === disciplineId);
+
+  if (!discipline) return <Navigate to="/" replace />;
+
+  return (
+    <QuizSetupView
+      discipline={discipline}
+      selectedUnit={unit}
+      onBack={() => navigate(-1)}
+      onStart={() => navigate(`/disciplina/${disciplineId}/simulado/executar${unit ? `?unit=${unit}` : ''}`)}
+    />
+  );
+};
+
+// --- SIMULADO: EXECUÇÃO (rota nova) ---
+// QuizSetupView já grava as questões escolhidas no localStorage antes de chamar onStart
+// (todo caminho: início normal ou "continuar simulado salvo") — só precisamos ler de volta.
+const QuizExecFlow = () => {
   const { disciplineId } = useParams();
   const unit = useAcademicUnit();
   const navigate = useNavigate();
@@ -122,97 +161,229 @@ const QuizFlow = () => {
   const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
 
-  const [step, setStep] = useState<'setup' | 'quiz'>('setup');
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const questionsKey = `quiz_questions_${disciplineId}_${unit}`;
+  const [questions] = useState<Question[] | null>(() => {
+    const raw = localStorage.getItem(questionsKey);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
 
   if (!discipline) return <Navigate to="/" replace />;
-
-  if (step === 'setup') {
-     return <QuizSetupView discipline={discipline} selectedUnit={unit} onBack={() => navigate(-1)} onStart={(q) => { setQuestions(q); setStep('quiz'); }} />;
+  if (!questions) {
+    return <Navigate to={`/disciplina/${disciplineId}/simulado${unit ? `?unit=${unit}` : ''}`} replace />;
   }
+
   return (
     <QuizView
       questions={questions}
       discipline={discipline}
-      onBack={() => setStep('setup')}
+      onBack={() => navigate(-1)}
       onSaveResult={(score, total, title, type, time, details) => {
-        // ASSINATURA DO ALUNO INJETADA NO PAYLOAD
         if (currentUser) saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });
       }}
     />
   );
 };
 
-const OsceFlow = () => {
+// --- OSCE: ESCOLHA DE MODO (rota inalterada) ---
+const OsceModeFlow = () => {
   const { disciplineId } = useParams();
   const unit = useAcademicUnit();
   const navigate = useNavigate();
   const { disciplines } = useData();
-  const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
-
-  const [step, setStep] = useState<'mode' | 'setup' | 'quiz' | 'ai-setup' | 'ai-quiz'>('mode');
-  const [mode, setMode] = useState<'static' | 'rpg' | 'ai' | 'all'>('all');
-  const [station, setStation] = useState<OsceStation | null>(null);
 
   if (!discipline) return <Navigate to="/" replace />;
 
-  if (step === 'mode') {
-     return <OsceModeSelectionView onBack={() => navigate(-1)} onSelectMode={(m) => {
-        if (m === 'ai') { setStep('ai-setup'); } else { setMode(m); setStep('setup'); }
-     }} />;
-  }
-  if (step === 'setup') {
-     return <OsceSetupView discipline={discipline} selectedUnit={unit} setupMode={mode} onBack={() => setStep('mode')} onStart={(s) => { setStation(s); setStep('quiz'); }} />;
-  }
-  if (step === 'quiz' && station) {
-     if (station.mode === 'rpg') {
-       return <DynamicOsceView station={station} onBack={() => setStep('setup')} onSaveResult={(score, total, time, analytics) => {
-           if (currentUser) {
-              saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-rpg' });
-              saveOsceAnalytics({ ...analytics, unit, date: new Date().toLocaleString(), studentId: currentUser.uid });
-           }
-       }} />;
-     }
-     return <OsceView station={station} onBack={() => setStep('setup')} onSaveResult={(score, total, time, analytics) => {
-         if (currentUser) {
-            saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-estatico' });
-            saveOsceAnalytics({ ...analytics, unit, date: new Date().toLocaleString() });
-         }
-     }} />;
-  }
-  if (step === 'ai-setup') {
-     return <OsceSetupView discipline={discipline} selectedUnit={unit} setupMode="ai" onBack={() => setStep('mode')} onStart={(s) => { setStation(s); setStep('ai-quiz'); }} />;
-  }
-  if (step === 'ai-quiz' && station) {
-     return <OsceAIView station={station} onBack={() => setStep('ai-setup')} />;
-  }
-  return null;
+  return (
+    <OsceModeSelectionView
+      onBack={() => navigate(-1)}
+      onSelectMode={(mode) => navigate(`/disciplina/${disciplineId}/osce/configurar/${mode}${unit ? `?unit=${unit}` : ''}`)}
+    />
+  );
 };
 
+// --- OSCE: CONFIGURAÇÃO / ESCOLHA DE ESTAÇÃO (rota nova) ---
+const OsceSetupFlow = () => {
+  const { disciplineId, mode } = useParams();
+  const unit = useAcademicUnit();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const discipline = disciplines.find(d => d.id === disciplineId);
+
+  if (!discipline) return <Navigate to="/" replace />;
+  if (!isValidOsceSetupMode(mode)) {
+    return <Navigate to={`/disciplina/${disciplineId}/osce${unit ? `?unit=${unit}` : ''}`} replace />;
+  }
+
+  return (
+    <OsceSetupView
+      discipline={discipline}
+      selectedUnit={unit}
+      setupMode={mode}
+      onBack={() => navigate(-1)}
+      onStart={(station) => navigate(`/disciplina/${disciplineId}/osce/estacao/${station.firebaseId}${unit ? `?unit=${unit}` : ''}`)}
+    />
+  );
+};
+
+// --- OSCE: EXECUÇÃO DA ESTAÇÃO (rota nova) ---
+// Busca a estação por ID no Firestore (sobrevive a F5) e despacha pelo próprio station.mode —
+// não depende de qual tela de setup o aluno usou pra chegar aqui.
+type OsceExecState =
+  | { status: 'loading' }
+  | { status: 'ready'; station: OsceStation }
+  | { status: 'not-found' };
+
+const OsceExecFlow = () => {
+  const { disciplineId, stationId } = useParams();
+  const unit = useAcademicUnit();
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const [state, setState] = useState<OsceExecState>({ status: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    setState({ status: 'loading' });
+
+    if (!stationId) {
+      setState({ status: 'not-found' });
+      return;
+    }
+
+    fetchOsceStationById(stationId)
+      .then((station) => {
+        if (cancelled) return;
+        setState(station ? { status: 'ready', station } : { status: 'not-found' });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'not-found' });
+      });
+
+    return () => { cancelled = true; };
+  }, [stationId]);
+
+  if (state.status === 'loading') return <InlineSpinner label="Carregando estação..." />;
+  if (state.status === 'not-found') {
+    return <Navigate to={`/disciplina/${disciplineId}/osce${unit ? `?unit=${unit}` : ''}`} replace />;
+  }
+
+  const { station } = state;
+  const onBack = () => navigate(-1);
+
+  // Só Simulado Teórico conta resultado por enquanto — ver utils/resultsPolicy.ts.
+  // Decisão "por enquanto" do usuário: reversível trocando COUNTED_RESULT_TYPES lá.
+  if (station.mode === 'rpg') {
+    return (
+      <DynamicOsceView
+        station={station}
+        onBack={onBack}
+        onSaveResult={isCountedResultType('osce-rpg') ? (score, total, time, analytics) => {
+          if (currentUser) {
+            saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-rpg' });
+            saveOsceAnalytics({ ...analytics, unit, date: new Date().toLocaleString(), studentId: currentUser.uid });
+          }
+        } : undefined}
+      />
+    );
+  }
+
+  if (station.mode === 'ai') {
+    return <OsceAIView station={station} onBack={onBack} />;
+  }
+
+  return (
+    <OsceView
+      station={station}
+      onBack={onBack}
+      onSaveResult={isCountedResultType('osce-estatico') ? (score, total, time, analytics) => {
+        if (currentUser) {
+          saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-estatico' });
+          saveOsceAnalytics({ ...analytics, unit, date: new Date().toLocaleString() });
+        }
+      } : undefined}
+    />
+  );
+};
+
+// --- LABORATÓRIO: LISTA (rota inalterada) ---
 const LabFlow = () => {
   const { disciplineId } = useParams();
   const unit = useAcademicUnit();
   const { search } = useLocation();
+  const navigate = useNavigate();
   const cat = new URLSearchParams(search).get('cat');
   const { disciplines } = useData();
-  const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
-
-  const [step, setStep] = useState<'list' | 'quiz'>('list');
-  const [sim, setSim] = useState<LabSimulation | null>(null);
 
   if (!discipline) return <Navigate to="/" replace />;
 
-  if (step === 'list') {
-     return <LabListView disciplineId={discipline.id} disciplines={disciplines} selectedUnit={unit} categoryFilter={cat} onStart={(s) => { setSim(s); setStep('quiz'); }} />;
+  return (
+    <LabListView
+      disciplineId={discipline.id}
+      disciplines={disciplines}
+      selectedUnit={unit}
+      categoryFilter={cat}
+      onStart={(sim) => navigate(`/disciplina/${disciplineId}/lab/simulacao/${sim.firebaseId}${unit ? `?unit=${unit}` : ''}`)}
+    />
+  );
+};
+
+// --- LABORATÓRIO: EXECUÇÃO DA SIMULAÇÃO (rota nova) ---
+type LabExecState =
+  | { status: 'loading' }
+  | { status: 'ready'; sim: LabSimulation }
+  | { status: 'not-found' };
+
+const LabExecFlow = () => {
+  const { disciplineId, simId } = useParams();
+  const unit = useAcademicUnit();
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const [state, setState] = useState<LabExecState>({ status: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    setState({ status: 'loading' });
+
+    if (!simId) {
+      setState({ status: 'not-found' });
+      return;
+    }
+
+    fetchLabSimulationById(simId)
+      .then((sim) => {
+        if (cancelled) return;
+        setState(sim ? { status: 'ready', sim } : { status: 'not-found' });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'not-found' });
+      });
+
+    return () => { cancelled = true; };
+  }, [simId]);
+
+  if (state.status === 'loading') return <InlineSpinner label="Carregando simulação..." />;
+  if (state.status === 'not-found') {
+    return <Navigate to={`/disciplina/${disciplineId}/lab${unit ? `?unit=${unit}` : ''}`} replace />;
   }
-  if (step === 'quiz' && sim) {
-     return <LabQuizView simulation={sim} onBack={() => setStep('list')} onSaveResult={(score, total, time, details) => {
-         if (currentUser) saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, date: new Date().toLocaleString(), discipline: sim.disciplineId, unit, quizTitle: sim.title, type: 'laboratorio', timeSpent: time || 0, details: details || [] });
-     }} />;
-  }
-  return null;
+
+  const { sim } = state;
+
+  return (
+    <LabQuizView
+      simulation={sim}
+      onBack={() => navigate(-1)}
+      onSaveResult={isCountedResultType('laboratorio') ? (score, total, time, details) => {
+        if (currentUser) saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, date: new Date().toLocaleString(), discipline: sim.disciplineId, unit, quizTitle: sim.title, type: 'laboratorio', timeSpent: time || 0, details: details || [] });
+      } : undefined}
+    />
+  );
 };
 
 const MaterialsFlow = () => {
@@ -260,9 +431,17 @@ const AppRoutes: React.FC = () => {
             <Route path="/" element={<ProtectedRoute><PeriodFlow /></ProtectedRoute>} />
             <Route path="/periodo/:periodId" element={<ProtectedRoute><HomeFlow /></ProtectedRoute>} />
             <Route path="/disciplina/:disciplineId" element={<ProtectedRoute><DisciplineFlow /></ProtectedRoute>} />
+
             <Route path="/disciplina/:disciplineId/simulado" element={<ProtectedRoute><QuizFlow /></ProtectedRoute>} />
-            <Route path="/disciplina/:disciplineId/osce" element={<ProtectedRoute><OsceFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/simulado/executar" element={<ProtectedRoute><QuizExecFlow /></ProtectedRoute>} />
+
+            <Route path="/disciplina/:disciplineId/osce" element={<ProtectedRoute><OsceModeFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/osce/configurar/:mode" element={<ProtectedRoute><OsceSetupFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/osce/estacao/:stationId" element={<ProtectedRoute><OsceExecFlow /></ProtectedRoute>} />
+
             <Route path="/disciplina/:disciplineId/lab" element={<ProtectedRoute><LabFlow /></ProtectedRoute>} />
+            <Route path="/disciplina/:disciplineId/lab/simulacao/:simId" element={<ProtectedRoute><LabExecFlow /></ProtectedRoute>} />
+
             <Route path="/disciplina/:disciplineId/materiais" element={<ProtectedRoute><MaterialsFlow /></ProtectedRoute>} />
             <Route path="/disciplina/:disciplineId/referencias" element={<ProtectedRoute><ReferencesFlow /></ProtectedRoute>} />
 

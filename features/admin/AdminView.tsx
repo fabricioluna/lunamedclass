@@ -13,6 +13,7 @@ import * as osceService from '../../services/osceService';
 import * as labService from '../../services/labService';
 import * as resultsService from '../../services/resultsService';
 import * as configService from '../../services/configService';
+import { isCountedResultType, OSCE_ANALYTICS_ENABLED } from '../../utils/resultsPolicy';
 
 import AdminStats from './components/AdminStats';
 import AdminMaterials from './components/AdminMaterials';
@@ -379,7 +380,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
       {activeTab === 'stats' && (
         <AdminStats
-          quizResults={adminQuizResults}
+          quizResults={adminQuizResults.filter(r => isCountedResultType(r.type))}
           questions={adminQuestions}
           labSimulations={adminLabSimulations}
           disciplines={disciplines}
@@ -387,11 +388,25 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       )}
 
       {activeTab === 'analytics' && (
-        <AdminAnalytics
-          analyticsData={adminOsceAnalytics || []}
-          disciplines={disciplines}
-          periods={periods}
-        />
+        OSCE_ANALYTICS_ENABLED ? (
+          <AdminAnalytics
+            analyticsData={adminOsceAnalytics || []}
+            disciplines={disciplines}
+            periods={periods}
+          />
+        ) : (
+          <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl border border-gray-100 text-center">
+            <BrainCircuit size={40} className="mx-auto text-gray-300 mb-4" />
+            <h3 className="text-[#003366] font-black uppercase tracking-widest text-sm mb-2">
+              Research Analytics desativado por enquanto
+            </h3>
+            <p className="text-gray-500 text-xs max-w-md mx-auto">
+              Esta tela é só dados de OSCE, e o registro de resultado do OSCE está pausado por
+              decisão do administrador. Os dados já coletados continuam no banco, não foram
+              apagados.
+            </p>
+          </div>
+        )
       )}
 
       {activeTab === 'access' && (
