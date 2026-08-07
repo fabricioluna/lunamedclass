@@ -41,7 +41,9 @@ quiz vocacional. Em uso por **turma piloto** (uso leve).
 ## 🚦 Status Atual
 
 **➡️ HANDOFF (2026-08-07, fim de sessão): Etapas 0-5 concluídas, Etapa 4 100% completa, Etapa 6
-iniciada (item 6.1 concluído).** Nenhuma pendência de segurança conhecida em aberto.
+iniciada (item 6.1 concluído, com 4 rodadas de refinamento).** Nenhuma pendência de segurança
+conhecida em aberto. Mudanças do 4º refinamento (abaixo) ainda **não commitadas** — aguardando
+"sim" do usuário.
 
 **Resumo do que fechou nesta sessão** (detalhe completo em cada seção):
 - **Etapa 4, item 4.3**: Simulado/OSCE/Laboratório viraram rotas reais (botão voltar do
@@ -56,23 +58,29 @@ iniciada (item 6.1 concluído).** Nenhuma pendência de segurança conhecida em 
 - **Etapa 6, item 6.1** (primeira funcionalidade nova do projeto): **Área + Subárea de
   Conhecimento** — dois eixos transversais independentes (ex. "Anatomia" + "Sistema Reprodutor
   Feminino"), cruzando disciplinas, **ambos opcionais**. `/simulators` virou navegação em 2
-  níveis (tipo de simulador → tema). Passou por 3 rodadas de refinamento na mesma sessão depois
-  do usuário ver cada versão rodando: (1) 1 eixo obrigatório → 2 eixos opcionais; (2)
+  níveis (tipo de simulador → tema). Passou por **4 rodadas** de refinamento na mesma sessão
+  depois do usuário ver cada versão rodando: (1) 1 eixo obrigatório → 2 eixos opcionais; (2)
   `/simulators` virou direto o seletor de Área → corrigido pra escolher o tipo primeiro; (3)
   Simulado Teórico **saiu temporariamente da lista** de `/simulators` (fica só dentro de
-  disciplina por enquanto — decisão do usuário, código intacto) e os 4 tipos já reais (Lab,
-  OSCE Estático, OSCE RPG, Paciente Virtual) **viraram clicáveis** (levam pro início do fluxo
-  normal por disciplina), mais 4 simuladores futuros reais do usuário (Prescrição
-  Farmacológica, Interpretação de Exames, Propedêutica, Evolução Clínico-Hospitalar) voltaram
-  como "Em breve". Único doc-par de `config/*` com leitura pública no Firestore (decisão
-  consciente, D6-style). Ver seção Etapa 6 para o detalhe completo de cada rodada.
+  disciplina por enquanto — decisão do usuário, código intacto), 4 simuladores futuros reais
+  (Prescrição/Exames/Propedêutica/Evolução) voltaram como "Em breve"; (4) — depois de ver
+  produção no ar — os cards "disponíveis" de Lab/OSCE, que só levavam pra `/` (sem valor real),
+  ganharam uma tela intermediária de verdade (`/simulators/:typeSlug`): escolher o tipo →
+  escolher a disciplina que tem esse conteúdo → cair direto na lista já filtrada
+  (`/disciplina/:id/lab?cat=X` ou `/osce/configurar/:mode`, rotas do item 4.3, reaproveitadas
+  sem alteração). Laboratório virou 4 cards por categoria (Anatomia/Histologia/Farmacologia/
+  Exames) em vez de 1 genérico. Único doc-par de `config/*` com leitura pública no Firestore
+  (decisão consciente, D6-style, mantida do 2º refinamento). Ver seção Etapa 6 para o detalhe
+  completo de cada rodada.
 
-**➡️ Próxima ação:** conversar com o usuário sobre o que entra a seguir na Etapa 6 — ele
-sinalizou que quer trabalhar os 4 simuladores futuros (Prescrição/Exames/Propedêutica/
-Evolução) "detalhadamente depois", um de cada vez, mas não definiu qual primeiro. Quando o
-Simulado Teórico voltar a ficar visível em `/simulators`, ainda fica pendente o teste ao vivo
-com a conta admin real (criar Área(s)/Subárea(s), marcar questões de disciplinas diferentes,
-confirmar que o filtro cruza disciplinas de verdade e salva certo no dashboard).
+**➡️ Próxima ação:** pedir "sim" do usuário para commit + push do 4º refinamento (mudanças em
+`routes/AppRoutes.tsx`, `views/SimulatorsView.tsx` e os 2 arquivos novos em
+`features/simulators/`). Depois, conversar sobre o que entra a seguir na Etapa 6 — o usuário
+sinalizou que quer trabalhar os 4 simuladores futuros (Prescrição/Exames/Propedêutica/Evolução)
+"detalhadamente depois", um de cada vez, mas não definiu qual primeiro. Quando o Simulado
+Teórico voltar a ficar visível em `/simulators`, ainda fica pendente o teste ao vivo com a conta
+admin real (criar Área(s)/Subárea(s), marcar questões de disciplinas diferentes, confirmar que
+o filtro cruza disciplinas de verdade e salva certo no dashboard).
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -916,18 +924,54 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   (Prescrição/Exames/Propedêutica/Evolução) ainda não têm nenhuma implementação — "vamos
   trabalhar bem em cada um detalhadamente depois", segundo o usuário.
 
-  🟡 **Verificação parcial, limitação conhecida:** criar Área/Subárea e marcar questões exige
-  Custom Claim `admin`, que esta sessão não tem como conceder (mesma restrição já documentada —
-  nenhuma credencial de service account disponível). Testado com Playwright em cada rodada,
-  incluindo a final: `/simulators` mostra os 8 tipos (4 clicáveis levando pra `/`, 4 "Em breve"),
-  Simulado Teórico não aparece mais na lista (mas `/simulators/teorico` continua funcionando se
-  acessado direto). **Falta testar ao vivo** (precisa da conta admin real, quando o Simulado
-  Teórico voltar a ficar visível): criar Área(s)/Subárea(s), marcar questões de
-  disciplinas diferentes, e confirmar que o filtro por subárea estreita certo e o resultado
-  salva certo no dashboard — a mecânica de rota é idêntica à já validada no item 4.3, risco
-  baixo, mas não é a mesma coisa que ver rodando com dado real.
+  🔄 **4º refinamento pós-implementação (mesma sessão, depois de ver produção no ar):** o
+  usuário mostrou print de `lunamedclass.vercel.app/simulators` e apontou que o 3º refinamento
+  tinha ficado sem sentido: clicar num tipo "disponível" (Laboratório Virtual etc.) só levava
+  pra `/` (seleção de período) — não entregava nada além do que já existia. Fluxo desejado, no
+  exemplo dele: *Laboratório Virtual → UCVI - Percepção, Consciência e Emoção → Anatomia →
+  ORGANIZAÇÃO DO SISTEMA NERVOSO CENTRAL E MEDULA ESPINAL*, e pediu pra já separar o Laboratório
+  por categoria (Anatomia/Histologia/Farmacologia/Exames), cada uma como card próprio. Decisão
+  de escopo confirmada via pergunta: os 4 tipos de Lab **e** os 3 de OSCE (Estático/RPG/Paciente
+  Virtual) nesta mesma rodada — 7 cards clicáveis no total.
+  - `features/simulators/simulatorTypesConfig.tsx` (novo) — fonte única de
+    título/descrição/ícone/destino dos 7 tipos reais (`AVAILABLE_SIMULATOR_TYPES`) e dos 4
+    "Em breve" (`COMING_SOON_SIMULATOR_TYPES`), usada tanto por `SimulatorsView.tsx` quanto pela
+    tela de seleção de disciplina. Nome cuidadosamente diferenciado: o card real vira
+    "Laboratório de Exames" (categoria já existente, identificação de imagem) pra não colidir
+    com o card futuro "Interpretação de Exames" (plano mais amplo, análise crítica).
+  - `features/simulators/FilteredDisciplineListView.tsx` (novo) — presentacional: recebe a
+    lista de disciplinas que de fato têm conteúdo daquele tipo (com contagem) e navega pro
+    `buildPath` de cada uma ao clicar.
+  - `routes/AppRoutes.tsx` — rota nova `/simulators/:typeSlug` (`TypeDisciplineListFlow`,
+    dentro de `<ProtectedRoute>` — precisa ler `labSimulations`/`osceStations`, que não são
+    públicas). Busca via `fetchLabSimulationsOnce()`/`fetchOsceStationsOnce()` (já existiam),
+    filtra por `category`/`mode`, agrupa por `disciplineId`, cruza com `useData().disciplines`.
+    Slug sem match cai em `<Navigate to="/simulators" replace />`.
+  - `views/SimulatorsView.tsx` — os 7 cards disponíveis passam a vir de
+    `AVAILABLE_SIMULATOR_TYPES`, linkando pra `/simulators/${slug}` (não mais `/`).
+  - **Nenhuma mudança** em `LabListView.tsx`, `LabQuizView.tsx`, `OsceSetupView.tsx` ou
+    `firestore.rules` — o destino final de cada card (`/disciplina/:id/lab?cat=X` e
+    `/disciplina/:id/osce/configurar/:mode`) já existia e já funcionava desde o item 4.3; só
+    faltava o nível intermediário "em qual disciplina esse tipo de conteúdo existe".
 
-  `tsc`/lint (22 pré-existentes, nenhum novo)/vitest (44/44)/build/`test:rules` (21/21) verdes.
+  🟡 **Lição de teste desta rodada:** o roteiro Playwright pareceu inicialmente flaky num dos
+  checks (`/simulators/osce-estatico` às vezes "travava" numa tela de sincronização global) —
+  investigado a fundo (inclusive comparando dev server vs. build de produção via `vite preview`,
+  e isolando a sequência exata de navegação) até achar a causa real: o **seletor do script de
+  teste** misturava CSS e `text=` numa única string separada por vírgula (sintaxe inválida do
+  Playwright), o que fazia a espera falhar silenciosamente e o check rodar cedo demais. Corrigido
+  com `.or()`; depois disso, 11/11 checks passaram de forma consistente, incluindo clique real
+  até `/disciplina/hm1/osce/configurar/static`. Não era bug do `DataContext`/`AppLayout` (código
+  não tocado nesta rodada).
+
+  🟡 **Verificação parcial, limitação conhecida (herdada do 3º refinamento):** criar
+  Área/Subárea e marcar questões ainda exige Custom Claim `admin`, que esta sessão não tem como
+  conceder. Sem esse acesso, não dá pra popular Lab/OSCE com mais disciplinas de teste — a
+  verificação desta rodada usou o dado real já existente no banco (1 disciplina com estação
+  OSCE Estático, nenhuma com Lab de Anatomia ainda) e confirmou que o estado vazio
+  ("Nenhuma disciplina com esse conteúdo cadastrado ainda.") também renderiza corretamente.
+
+  `tsc`/lint (22 pré-existentes, nenhum novo)/vitest (44/44)/build verdes.
 
 ---
 

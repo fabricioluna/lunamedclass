@@ -26,6 +26,7 @@ const LabQuizView = lazy(() => import('../features/lab/LabQuizView'));
 const SimulatorsView = lazy(() => import('../views/SimulatorsView'));
 const AreaQuizSetupView = lazy(() => import('../features/simulators/AreaQuizSetupView'));
 const TeoricoAreaListView = lazy(() => import('../features/simulators/TeoricoAreaListView'));
+const FilteredDisciplineListView = lazy(() => import('../features/simulators/FilteredDisciplineListView'));
 const SurveyView = lazy(() => import('../views/SurveyView'));
 const SurveyReportView = lazy(() => import('../views/SurveyReportView'));
 const MedicalEventsView = lazy(() => import('../views/MedicalEventsView'));
@@ -35,9 +36,10 @@ import { Question, OsceStation, LabSimulation, SimulationInfo, AcademicUnit } fr
 import { PERIODS } from '../data/periods';
 import { saveQuizResult, saveOsceAnalytics } from '../services/resultsService';
 import { submitSurvey } from '../services/surveyService';
-import { fetchOsceStationById } from '../services/osceService';
-import { fetchLabSimulationById } from '../services/labService';
+import { fetchOsceStationById, fetchOsceStationsOnce } from '../services/osceService';
+import { fetchLabSimulationById, fetchLabSimulationsOnce } from '../services/labService';
 import { isCountedResultType } from '../utils/resultsPolicy';
+import { AVAILABLE_SIMULATOR_TYPES } from '../features/simulators/simulatorTypesConfig';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -472,6 +474,64 @@ const AreaExecFlow = () => {
   );
 };
 
+// --- SIMULADORES › TIPO → DISCIPLINA (Etapa 6) ---
+// Cada tipo em AVAILABLE_SIMULATOR_TYPES já aponta pra uma rota de disciplina que EXISTE e já
+// funciona (LabListView já entende ?cat=, OsceSetupView já entende /configurar/:mode) — só
+// falta saber em quais disciplinas aquele tipo de conteúdo existe de verdade. Precisa de login
+// (diferente de /simulators e /simulators/teorico) porque lê labSimulations/osceStations, que
+// não são públicas — ao contrário de config/areasConhecimento.
+type TypeDisciplineListState =
+  | { status: 'loading' }
+  | { status: 'ready'; disciplines: { id: string; title: string; count: number }[] };
+
+const TypeDisciplineListFlow = () => {
+  const { typeSlug } = useParams();
+  const navigate = useNavigate();
+  const { disciplines } = useData();
+  const config = AVAILABLE_SIMULATOR_TYPES.find((t) => t.slug === typeSlug);
+  const [state, setState] = useState<TypeDisciplineListState>({ status: 'loading' });
+
+  useEffect(() => {
+    if (!config) return;
+    let cancelled = false;
+    setState({ status: 'loading' });
+
+    const fetchPromise = config.source === 'lab'
+      ? fetchLabSimulationsOnce().then((sims) => sims.filter((s) => s.category?.toLowerCase() === config.matchValue).map((s) => s.disciplineId))
+      : fetchOsceStationsOnce().then((stations) => stations.filter((s) => s.mode === config.matchValue).map((s) => s.disciplineId));
+
+    fetchPromise
+      .then((disciplineIds) => {
+        if (cancelled) return;
+        const counts = new Map<string, number>();
+        disciplineIds.forEach((id) => counts.set(id, (counts.get(id) || 0) + 1));
+        const list = disciplines
+          .filter((d) => counts.has(d.id))
+          .map((d) => ({ id: d.id, title: d.title, count: counts.get(d.id)! }));
+        setState({ status: 'ready', disciplines: list });
+      })
+      .catch((error) => {
+        console.error('Erro ao buscar disciplinas do tipo de simulador:', error);
+        if (!cancelled) setState({ status: 'ready', disciplines: [] });
+      });
+
+    return () => { cancelled = true; };
+  }, [config, disciplines]);
+
+  if (!config) return <Navigate to="/simulators" replace />;
+
+  return (
+    <FilteredDisciplineListView
+      title={config.title}
+      description={config.description}
+      disciplines={state.status === 'ready' ? state.disciplines : []}
+      isFetching={state.status === 'loading'}
+      onBack={() => navigate('/simulators')}
+      onSelectDiscipline={(disciplineId) => navigate(config.buildPath(disciplineId))}
+    />
+  );
+};
+
 const MaterialsFlow = () => {
   const { disciplineId } = useParams();
   const unit = useAcademicUnit();
@@ -556,6 +616,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/simulators/teorico" element={<TeoricoAreaListView />} />
             <Route path="/simulators/teorico/:areaId" element={<ProtectedRoute><AreaSetupFlow /></ProtectedRoute>} />
             <Route path="/simulators/teorico/:areaId/executar" element={<ProtectedRoute><AreaExecFlow /></ProtectedRoute>} />
+            <Route path="/simulators/:typeSlug" element={<ProtectedRoute><TypeDisciplineListFlow /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
