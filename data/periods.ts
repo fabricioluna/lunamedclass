@@ -79,7 +79,9 @@ export const PERIODS: Period[] = [
     description: 'Mecanismos de Agressão e Defesa, Imunologia e Microbiologia.',
     semester: '2027.1',
     workload: '600h',
-    icon: '🔬'
+    icon: '🔬',
+    // O brasão acompanha a turma, não o período: a Turma VIII passou para o 3º período (6.2).
+    crest: '/turma8.jpg'
   },
   {
     id: 'periodo2',
@@ -87,8 +89,8 @@ export const PERIODS: Period[] = [
     description: 'Ciclo da Homeostase e Prática Clínica Básica.',
     semester: '2026.2',
     workload: '610h',
-    icon: '🎓',
-    crest: '/turma8.jpg' 
+    // Equilíbrio = Ciclo da Homeostase (UCIV Funções Biológicas, UCV Agressão e Defesa).
+    icon: '⚖️'
   },
   {
     id: 'periodo1',

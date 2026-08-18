@@ -72,12 +72,17 @@ conhecida em aberto. Commit `512db2c` (4º refinamento), **enviado a `origin/mai
   (decisão consciente, D6-style, mantida do 2º refinamento). Ver seção Etapa 6 para o detalhe
   completo de cada rodada.
 
-**➡️ Próxima ação:** conversar sobre o que entra a seguir na Etapa 6 — o usuário
-sinalizou que quer trabalhar os 4 simuladores futuros (Prescrição/Exames/Propedêutica/Evolução)
-"detalhadamente depois", um de cada vez, mas não definiu qual primeiro. Quando o Simulado
-Teórico voltar a ficar visível em `/simulators`, ainda fica pendente o teste ao vivo com a conta
-admin real (criar Área(s)/Subárea(s), marcar questões de disciplinas diferentes, confirmar que
-o filtro cruza disciplinas de verdade e salva certo no dashboard).
+**➡️ Sessão de 2026-08-18: itens 6.2, 6.3 e 6.4 planejados e aprovados pelo usuário** (ver
+seção Etapa 6 e decisão D10). Ordem acordada: **6.2 → 6.3 → 6.4** (por risco — o 6.4 é o único
+que pode derrubar tela em produção). **6.2 com código concluído** (não commitado ainda;
+pendente o usuário aplicar em produção pela aba "Períodos" do admin). **Próximo: 6.3
+(flashcards com repetição espaçada no Lab).** Os 4 simuladores futuros
+(Prescrição/Exames/Propedêutica/Evolução) continuam na fila, sem prioridade definida.
+
+**Pendência antiga ainda aberta:** quando o Simulado Teórico voltar a ficar visível em
+`/simulators`, falta o teste ao vivo com a conta admin real (criar Área(s)/Subárea(s), marcar
+questões de disciplinas diferentes, confirmar que o filtro cruza disciplinas de verdade e salva
+certo no dashboard).
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -288,6 +293,7 @@ fazer backup do RTDB antes).
 | D7 | Gabarito visível a aluno logado é **limitação aceita** | Quiz client-side sempre expõe resposta no DevTools; corrigir exige correção server-side (Etapa 6) |
 | D8 | Fechar vazamento tem precedência sobre quebrar feature | LGPD > dashboard fora do ar numa turma piloto |
 | D9 | Só **Simulado Teórico** conta resultado/nota "por enquanto" (`utils/resultsPolicy.ts`) | Decisão do usuário em 2026-08-06/07: Lab, OSCE (estático/RPG/IA) ficam de fora até a confiabilidade desses modos ser revisada — reversível numa constante só |
+| D10 | Liberação de conteúdo = **gate central em `config/contentRelease` + `isPublished` denormalizado** em cada doc (item 6.4) | Decisão do usuário em 2026-08-18. Gate puro consultado por `get()` nas rules seria mais elegante, mas quebraria as leituras cross-disciplina do Simulado Teórico por Área (6.1): "rules não são filtros" — a query inteira falha se um único doc do resultado estiver bloqueado. O campo denormalizado é analisável em query; o gate central mantém a liberação em 1 clique por disciplina/unidade |
 
 ---
 
@@ -969,6 +975,141 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   ("Nenhuma disciplina com esse conteúdo cadastrado ainda.") também renderiza corretamente.
 
   `tsc`/lint (22 pré-existentes, nenhum novo)/vitest (44/44)/build verdes.
+
+- [x] **6.2 — Brasão/ícone dos períodos + edição segura de `config/periods`**
+  *(código concluído em 2026-08-18; falta o usuário aplicar em produção pelo painel)*. O crest `TURMA VIII` (`public/turma8.jpg`) acompanha a turma:
+  sai do 2º período e vai para o 3º. O 2º período volta ao padrão dos outros 10 períodos —
+  emoji em `Period.icon`, renderizado pelo fallback já existente em
+  `views/PeriodSelectionView.tsx` — trocando o 🎓 genérico por **⚖️** (equilíbrio = "Ciclo da
+  Homeostase", nome do próprio período; nenhum outro período usa esse emoji).
+
+  ⚠️ **Achado que define o item:** `data/periods.ts` é só **fallback**. Quem manda para aluno
+  logado é `config/periods` no Firestore (`hooks/useAppConfig.ts` só usa o arquivo local quando
+  a leitura vem vazia ou negada). Mudar o arquivo altera apenas o visitante deslogado. E o
+  botão "Injetar Estrutura (Seed)" do admin **não serve** para isso: `seedBaseStructure()` faz
+  `setDoc` cru em `config/periods` **e** `config/disciplines`, apagando temas, referências,
+  `status` e `lockedFeatures` editados pelo admin. Por isso o item inclui um caminho de
+  escrita pontual.
+
+  - `services/configService.ts`: `updatePeriodField(periodId, field, value)`, mesmo molde do
+    `updateDisciplineField` já existente (lê o array, altera só o item alvo, regrava).
+  - `data/periods.ts`: `crest` migra de `periodo2` para `periodo3`; `periodo2.icon` vira ⚖️.
+  - Admin: edição de ícone/brasão por período, para o usuário aplicar em produção sem seed
+    destrutivo e sem depender de uma sessão do Claude no próximo período.
+
+  **Testes:** unitário provando que `updatePeriodField` preserva os demais campos e os demais
+  períodos (o risco real aqui é justamente sobrescrever config); visual em `/` deslogado
+  (círculo grande + marca d'água a 3% em `PeriodSelectionView`); aplicação em produção pelo
+  painel e reconferência logado; `typecheck`/`lint`/`test`/`build`.
+
+  ✅ **Entregue (2026-08-18):**
+  - `utils/configItems.ts` + `utils/configItems.test.ts` (9 casos): `setItemField` e
+    `removeItemField`, puros. `removeItemField` existe porque o Firestore **rejeita
+    `undefined`** numa escrita — tirar um brasão exige apagar a chave, não gravar undefined.
+    `updateDisciplineField` passou a usar o mesmo util (o `map` inline estava duplicado).
+  - `services/configService.ts`: `updatePeriodIcon` / `updatePeriodCrest(periodId, crest|null)`
+    sobre um `updatePeriodField` interno, no mesmo molde do lado de disciplinas.
+  - `data/periods.ts` (fallback do visitante deslogado): `crest: '/turma8.jpg'` migrou para
+    `periodo3`; `periodo2.icon` virou ⚖️.
+  - `features/admin/components/AdminPeriods.tsx` + aba "Períodos" no `AdminView`: preview do
+    emoji/brasão, edição por período, salvar só o que mudou, botão de remover brasão.
+  - Verificação: `typecheck` ✅, `vitest` 53/53 (44 antes + 9 novos) ✅, `lint` 22 problemas
+    (os mesmos pré-existentes, nenhum nos arquivos tocados) ✅, `build` ✅, e conferência no
+    bundle de produção: `periodo3` com `crest`, `periodo2` com `icon:"⚖️"` e sem `crest`.
+
+  🟡 **Pendente com o usuário (não dá para fazer sem Custom Claim `admin`):** aplicar em
+  produção pela aba "Períodos" — só isso muda o que o **aluno logado** vê, já que
+  `config/periods` no Firestore tem precedência sobre `data/periods.ts`.
+
+- [ ] **6.3 — Flashcards com repetição espaçada (estilo Anki) no Laboratório Virtual**
+  *(planejado em 2026-08-18)*. Hoje o Lab tem autoavaliação binária "Acertei/Errei"
+  (`features/lab/LabQuizView.tsx`) que só alimenta estatística — não muda o que o aluno vê
+  depois. Pedido do usuário: 3 botões (Difícil/Médio/Fácil) onde o difícil reaparece mais e o
+  fácil menos, **independente por usuário**, e recomendação do que ele mais erra.
+
+  **Motor (SM-2 simplificado)** em `utils/srs.ts` + `utils/srs.test.ts` — regra de negócio pura
+  em `utils` com teste ao lado, como manda o CLAUDE.md:
+  `SrsCardState { cardId, answerLabel, ease, intervalDays, repetitions, lapses, reviews,
+  dueAt, lastRating, lastReviewedAt }`; `hard` → intervalo 0 (volta na mesma sessão) e
+  `ease -= 0.2` com piso 1.3, `lapses++`; `medium` → `interval * ease`; `easy` →
+  `interval * ease * 1.3` e `ease += 0.15`. `buildSessionQueue()` põe vencidos primeiro,
+  depois inéditos, e reinsere o card "Difícil" ~4 posições à frente (é isso que dá a sensação
+  de "aparece mais vezes"). `getWeakestCards()` rankeia por `lapses`/`ease` = a recomendação
+  de estudo.
+
+  **Persistência:** subcoleção `users/{uid}/flashcardProgress/{simulationId}`, 1 doc por
+  simulação com mapa `cards: { [questionId]: SrsCardState }`. Doc único em vez de 1 doc por
+  card porque uma lâmina de 150 imagens viraria 150 leituras por sessão (~30 KB no mapa, longe
+  do limite de 1 MB). Sob `users/{uid}` porque o isolamento por aluno passa a vir da **rota do
+  documento**, não de um `where` que uma tela nova pode esquecer (regra 3 por construção).
+  ⚠️ Regras do Firestore **não são recursivas**: `match /users/{uid}` não cobre a subcoleção —
+  precisa de `match /users/{uid}/flashcardProgress/{simId}` explícito. Service novo:
+  `services/flashcardsService.ts`. `answerLabel` fica denormalizado no estado para o dashboard
+  citar a lâmina sem baixar a simulação inteira.
+
+  **UI:** modo "Flashcards (Revisão Espaçada)" **pré-selecionado** no setup do Lab, convivendo
+  com Sequencial/Aleatório/Intervalo (decisão do usuário — o modo intervalo é uso real de
+  véspera de prova). Cada botão mostra quando o card volta ("Difícil · agora", "Médio · 3 d",
+  "Fácil · 8 d"). Badge "X para revisar" em `LabListView`; bloco "seus pontos fracos" no
+  `StudentDashboardView`.
+  ⚠️ Manter a gravação gota-a-gota em `quizResults` (hard → 0/1, medium|easy → 1/1), senão
+  `AdminStats` para de enxergar o Lab.
+
+  **Testes:** o grosso em `utils/srs.test.ts`, sem Firebase (piso do ease; 3× "fácil" leva o
+  intervalo a semanas; "difícil" reinsere na sessão e derruba o intervalo; fila ordena vencidos
+  antes de inéditos; ranking por lapses). `npm run test:rules` com 4 cenários de isolamento
+  (aluno A lê/escreve o próprio ✅, lê/escreve o de B ❌, anônimo ❌). Manual com 2 contas
+  provando estado independente; persistência ao sair e voltar da rota; `AdminStats` ainda
+  contabilizando Lab.
+
+- [ ] **6.4 — Liberação de conteúdo por disciplina × unidade × tipo (painel admin)**
+  *(planejado em 2026-08-18)*. Pedido do usuário: início de período, todo o conteúdo já
+  carregado no banco **não** deve ficar disponível — ele quer ir liberando conforme o semestre
+  anda, **em lote por disciplina/unidade, não item por item**, e valendo para **todos** os
+  tipos de conteúdo (materiais, lab, questões, OSCE).
+
+  ⚠️ **Por que não um gate central puro** (só `config/contentRelease` consultado por `get()`
+  nas rules, que seria o mais elegante): quebraria as leituras cross-disciplina. Tanto
+  `services/questionsService.ts` quanto `services/osceService.ts` têm ramo **sem filtro de
+  disciplina**, e é exatamente ele que alimenta o Simulado Teórico por Área (item 6.1). Como
+  "rules não são filtros", uma regra baseada em `resource.data.disciplineId` faz a query
+  inteira falhar se **um único** documento do resultado estiver bloqueado.
+
+  **Desenho aprovado pelo usuário (2026-08-18): gate central + campo denormalizado.**
+  1. `config/contentRelease` = `{ gates: { "ucv|N1|materials": true, ... } }` — matriz
+     disciplina × unidade × tipo. É a fonte da verdade e o que o admin opera.
+  2. Cada doc de `materials`/`labSimulations`/`questions`/`osceStations` carrega
+     `isPublished: boolean` **derivado** do gate; ligar um gate propaga em `writeBatch`
+     (blocos de 500) para os docs daquela disciplina+unidade+tipo.
+  3. Rules leem `resource.data.isPublished == true` — analisável em query, funciona igual em
+     consulta por disciplina e em consulta cross-disciplina.
+  4. Conteúdo novo herda o gate no momento da criação (o service consulta o gate antes de
+     gravar); ação "ressincronizar gates" no admin cobre divergências.
+
+  | # | O quê | Onde |
+  |---|---|---|
+  | 6.4.1 | `ContentKind`, `ContentGateKey`, `isPublished?` nos 4 tipos | `types.ts` |
+  | 6.4.2 | `utils/contentRelease.ts` + teste: montar/parsear chave, normalizar unidade ausente (legado = N1), resolver "este doc está liberado?" | `utils/` |
+  | 6.4.3 | `services/contentReleaseService.ts`: ler gates, ligar/desligar propagando em lote, ressincronizar | `services/` |
+  | 6.4.4 | `where('isPublished','==',true)` nas queries de aluno dos 4 services + **`firestore.indexes.json` novo** (não existe hoje; `firebase.json` só declara `rules`) | `services/`, raiz |
+  | 6.4.5 | Rules dos 4 matches + `config/contentRelease`; `create` de material por aluno forçado a `isPublished: false` | `firestore.rules` |
+  | 6.4.6 | Backfill `isPublished: false` em tudo — script rodado **uma vez, pelo usuário** (exige Custom Claim admin) | `scripts/` |
+  | 6.4.7 | Aba "Liberação de Conteúdo": matriz com switches + "liberar unidade inteira" | `features/admin/` |
+  | 6.4.8 | Estado vazio honesto no aluno ("Conteúdo ainda não liberado pela monitoria") em vez de lista vazia sem explicação | Lab/Materiais/Quiz |
+
+  **Testes:** `utils/contentRelease.test.ts` (unidade ausente cai em N1; gate desconhecido =
+  **bloqueado**, nunca o contrário). `npm run test:rules`: aluno lê liberado ✅ / bloqueado ❌;
+  aluno cria material com `isPublished: true` ❌ e com `false` ✅; aluno escreve em
+  `config/contentRelease` ❌; admin lê e escreve tudo ✅. Emulador: ligar um gate propaga para
+  todos os docs da disciplina+unidade numa escrita só, e material criado depois já nasce
+  liberado. **Regressão do 6.1** (o teste que justifica o desenho): `/simulators/teorico/:areaId`
+  com questões de 3 disciplinas, uma bloqueada — a sessão monta com as outras duas, não falha
+  inteira.
+
+  ⚠️ **Ordem de publicação obrigatória:** índices → backfill → rules → deploy do código. Fora
+  dessa ordem a turma inteira fica sem conteúdo nenhum. É o único dos três itens que pode
+  derrubar tela em produção — fazer por último, em horário de baixo uso, com rollback das rules
+  à mão.
 
 ---
 

@@ -1,6 +1,7 @@
 import { firestoreDB } from '../firebase';
 import { doc, getDoc, setDoc, onSnapshot, updateDoc, deleteField } from 'firebase/firestore';
 import { Period, SimulationInfo, FeatureFlag, ReferenceMaterial, AreaConhecimento, SubareaConhecimento } from '../types';
+import { setItemField, removeItemField } from '../utils/configItems';
 
 // Coleção "config": docs únicos (config/periods, config/disciplines, config/featureFlags) —
 // 1 leitura por app em vez de N. Ver PLANO-REESTRUTURACAO.md, item 3.1.
@@ -92,8 +93,38 @@ const updateDisciplineField = async <K extends keyof SimulationInfo>(
   value: SimulationInfo[K]
 ) => {
   const items = await getDisciplinesArray();
-  const updated = items.map((d) => (d.id === disciplineId ? { ...d, [field]: value } : d));
-  await setDoc(disciplinesDocRef, { items: updated });
+  await setDoc(disciplinesDocRef, { items: setItemField(items, disciplineId, field, value) });
+};
+
+const getPeriodsArray = async (): Promise<Period[]> => {
+  const snap = await getDoc(periodsDocRef);
+  return (snap.data()?.items as Period[]) || [];
+};
+
+// Escrita pontual em config/periods (item 6.2). Existe justamente para NÃO precisar de
+// `seedBaseStructure()` para trocar um brasão: aquele regrava periods e disciplines inteiros
+// a partir dos arquivos locais, apagando tudo que o admin editou pelo painel.
+const updatePeriodField = async <K extends keyof Period>(
+  periodId: string,
+  field: K,
+  value: Period[K]
+) => {
+  const items = await getPeriodsArray();
+  await setDoc(periodsDocRef, { items: setItemField(items, periodId, field, value) });
+};
+
+export const updatePeriodIcon = (periodId: string, icon: string) =>
+  updatePeriodField(periodId, 'icon', icon);
+
+// `crest` é opcional: sem brasão, PeriodSelectionView cai no emoji de `icon` (é o estado de
+// 11 dos 12 períodos). Passar null remove a chave em vez de gravar undefined, que o Firestore
+// recusaria.
+export const updatePeriodCrest = async (periodId: string, crest: string | null) => {
+  const items = await getPeriodsArray();
+  const updated = crest
+    ? setItemField(items, periodId, 'crest', crest)
+    : removeItemField(items, periodId, 'crest');
+  await setDoc(periodsDocRef, { items: updated });
 };
 
 export const updateDisciplineThemes = (disciplineId: string, themes: string[]) =>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag, AnalyticsResult } from '../../types';
-import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap, Tags } from 'lucide-react';
+import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap, Tags, Shield } from 'lucide-react';
 
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,8 +25,9 @@ import AdminReferences from './components/AdminReferences';
 import AdminDisciplines from './components/AdminDisciplines';
 import AdminAnalytics from './components/AdminAnalytics';
 import AdminTagList from './components/AdminTagList';
+import AdminPeriods from './components/AdminPeriods';
 
-type AdminTab = 'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags' | 'areas' | 'subareas';
+type AdminTab = 'requests' | 'questions' | 'osce' | 'stats' | 'analytics' | 'references' | 'materials' | 'themes' | 'lab' | 'access' | 'flags' | 'areas' | 'subareas' | 'periods';
 
 interface AdminViewProps {
   onBack: () => void;
@@ -222,6 +223,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
           { id: 'analytics', label: 'Research Analytics', icon: <BrainCircuit size={16}/> },
           { id: 'access', label: 'Acessos', icon: <Lock size={16}/> },
+          { id: 'periods', label: 'Períodos', icon: <Shield size={16}/> },
           { id: 'themes', label: 'Temas/Eixos', icon: <Layers size={16}/> },
           { id: 'areas', label: 'Áreas de Conhecimento', icon: <Tags size={16}/> },
           { id: 'subareas', label: 'Subáreas de Conhecimento', icon: <Tags size={16}/> },
@@ -490,6 +492,14 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           disciplines={disciplines}
           onAddTheme={handleAddTheme}
           onRemoveTheme={handleRemoveTheme}
+        />
+      )}
+
+      {activeTab === 'periods' && (
+        <AdminPeriods
+          periods={periods}
+          onUpdateIcon={configService.updatePeriodIcon}
+          onUpdateCrest={configService.updatePeriodCrest}
         />
       )}
 
