@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Microscope, Play, User, Activity, Pill, ClipboardList, FilterX, LayoutGrid, Milestone, Layers, Brain } from 'lucide-react';
 import { LabSimulation, SimulationInfo, AcademicUnit } from '../../types';
 import { fetchLabSimulationsOnce } from '../../services/labService';
-import { fetchFlashcardProgress } from '../../services/flashcardsService';
+import { fetchFlashcardProgressDoc } from '../../services/flashcardsService';
 import { getDeckCounts } from '../../utils/srs';
 
 interface Props {
@@ -81,7 +81,7 @@ const LabListView: React.FC<Props> = ({
     const simsToCheck = filtered.filter(s => s.firebaseId);
 
     Promise.all(simsToCheck.map(async (sim) => {
-      const progress = await fetchFlashcardProgress(userId, sim.firebaseId as string);
+      const { cards: progress } = await fetchFlashcardProgressDoc(userId, sim.firebaseId as string);
       // Badge conta só o que precisa VOLTAR (aprendendo + revisão vencida). Lâmina inédita não
       // é "para revisar" — o baralho novo inteiro apareceria como pendência em toda simulação.
       const { learningCount, reviewCount } = getDeckCounts(sim.questions.map(q => q.id), progress, Date.now());

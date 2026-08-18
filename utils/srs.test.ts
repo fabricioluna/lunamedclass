@@ -21,6 +21,9 @@ import {
   EASY_INTERVAL_DAYS,
   MIN_EASE,
   LEARN_AHEAD_LIMIT_MIN,
+  isResumableSession,
+  restoreSession,
+  RESUMABLE_SESSION_MAX_AGE_MS,
   type SrsCardState,
 } from './srs';
 
@@ -367,6 +370,45 @@ describe('getWeakestCards', () => {
       errada: { ...graduate('errada'), againCount: 1 },
     };
     expect(getWeakestCards(states, 10).map((w) => w.cardId)).toEqual(['errada']);
+  });
+});
+
+describe('retomar sessão interrompida (item 6.6)', () => {
+  const sessaoBase = {
+    startedAt: NOW - 10 * 60 * 1000,
+    updatedAt: NOW - 5 * 60 * 1000,
+    options: { order: 'sequential' as const },
+    mainQueue: ['b', 'c'],
+    learningQueue: ['a'],
+    answers: { a: false, d: true },
+  };
+
+  it('sessão recente com lâminas restantes é retomável', () => {
+    expect(isResumableSession(sessaoBase, NOW)).toBe(true);
+  });
+
+  it('sessão sem nada restante NÃO é retomável (já tinha acabado)', () => {
+    expect(isResumableSession({ ...sessaoBase, mainQueue: [], learningQueue: [] }, NOW)).toBe(false);
+  });
+
+  it('sessão velha demais NÃO é retomável — as lâminas já mudaram de estado', () => {
+    const antiga = { ...sessaoBase, updatedAt: NOW - RESUMABLE_SESSION_MAX_AGE_MS - 1000 };
+    expect(isResumableSession(antiga, NOW)).toBe(false);
+  });
+
+  it('ausência de sessão não quebra', () => {
+    expect(isResumableSession(undefined, NOW)).toBe(false);
+    expect(isResumableSession(null, NOW)).toBe(false);
+  });
+
+  it('restoreSession devolve as filas exatamente como estavam', () => {
+    const restaurada = restoreSession(sessaoBase, new Set(['a', 'b', 'c']));
+    expect(restaurada).toEqual({ mainQueue: ['b', 'c'], learningQueue: ['a'] });
+  });
+
+  it('restoreSession descarta lâmina apagada do baralho depois que o aluno parou', () => {
+    const restaurada = restoreSession(sessaoBase, new Set(['b'])); // 'a' e 'c' sumiram
+    expect(restaurada).toEqual({ mainQueue: ['b'], learningQueue: [] });
   });
 });
 

@@ -223,6 +223,46 @@ export interface SessionOptions {
   random?: () => number; // injetável para teste determinístico
 }
 
+// Configuração da sessão sem a função `random` — é o que dá pra gravar no Firestore.
+export type PersistedSessionOptions = Omit<SessionOptions, 'random'>;
+
+// Sessão interrompida, guardada junto do progresso do aluno para ele retomar depois (item 6.6).
+// O progresso de cada lâmina já era salvo a cada clique; o que faltava era a SESSÃO em si — a
+// configuração, a posição na fila e o placar parcial, que sumiam se o aluno fechasse a aba.
+export interface PersistedSession {
+  startedAt: number;
+  updatedAt: number;
+  options: PersistedSessionOptions;
+  mainQueue: string[];
+  learningQueue: string[];
+  // cardId → acertou de primeira nesta sessão. Vira o `details[]` do resultado ao encerrar.
+  answers: Record<string, boolean>;
+}
+
+// Depois disso, retomar deixa de fazer sentido: as lâminas mudaram de estado, outras venceram,
+// e a fila guardada não representa mais o que o aluno tem pra estudar. A sessão velha é
+// contabilizada e uma nova é montada do zero.
+export const RESUMABLE_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+export function isResumableSession(
+  session: PersistedSession | undefined | null,
+  now: number,
+  maxAgeMs: number = RESUMABLE_SESSION_MAX_AGE_MS,
+): boolean {
+  if (!session) return false;
+  if (now - session.updatedAt > maxAgeMs) return false;
+  return session.mainQueue.length + session.learningQueue.length > 0;
+}
+
+// Ao retomar, descarta id que não existe mais no baralho (lâmina apagada pela monitoria depois
+// que o aluno parou) — sem isso a sessão retomada travaria num card sem imagem.
+export function restoreSession(session: PersistedSession, validCardIds: Set<string>): SrsSession {
+  return {
+    mainQueue: session.mainQueue.filter((id) => validCardIds.has(id)),
+    learningQueue: session.learningQueue.filter((id) => validCardIds.has(id)),
+  };
+}
+
 export function shuffle<T>(items: T[], random: () => number = Math.random): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {

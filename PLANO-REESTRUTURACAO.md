@@ -85,6 +85,7 @@ seção Etapa 6 e decisões D10/D11).
   outras classes fantasma** — qualquer utilitário usado só dentro de `features/`/`routes/` e em
   nenhum arquivo escaneado esteve sumindo do build esse tempo todo.
 - **6.5 (Lab vira Anki de verdade)** — ✅ concluído, aguardando teste do usuário em produção.
+- **6.6 (retomar sessão de onde parou)** — ✅ concluído junto, mesmo dia.
 - **6.4 (liberação de conteúdo)** — 🔜 **próximo**. O mais arriscado de todos (índice novo +
   backfill + rules, ordem de publicação obrigatória).
 
@@ -1259,6 +1260,38 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   🟡 **Não coberto:** taxa de retenção histórica no painel (exigiria um log de revisões, que
   hoje não existe — só o estado atual de cada card é guardado). O painel mostra o que é
   honestamente derivável do estado.
+
+
+- [x] **6.6 — Retomar sessão de flashcards de onde parou**
+  *(concluído em 2026-08-18, a pedido do usuário: "caso o usuário precise parar de estudar e
+  voltar depois")*.
+
+  **Metade já funcionava** e vale registrar por quê: o estado de cada lâmina é gravado no
+  instante do clique, então `buildSession` sempre devolveu as lâminas em aprendizado pra fila,
+  no horário certo. O que se perdia ao fechar a aba era (a) a configuração escolhida, (b) a
+  posição na fila e (c) — o mais grave — **o registro da sessão no Meu Desempenho**, porque
+  `finishSession` só rodava no clique explícito de encerrar.
+
+  - `utils/srs.ts`: `PersistedSession` (config + filas + placar parcial), `isResumableSession`
+    (janela de 24h — `RESUMABLE_SESSION_MAX_AGE_MS`; depois disso as lâminas já mudaram de
+    estado e retomar a fila velha seria mentira) e `restoreSession`, que descarta id de lâmina
+    apagada pela monitoria enquanto o aluno estava fora.
+  - `services/flashcardsService.ts`: a sessão em andamento **pega carona na mesma escrita que
+    já salvava o card** (`upsertFlashcardCardState` com `activeSession`) — retomar não custa
+    nenhuma operação a mais no banco. Mais `clearActiveSession` (via `deleteField`) e
+    `fetchFlashcardProgressDoc`, que devolve cards + sessão. `stripUndefined` virou recursivo:
+    `rangeStart`/`newLimit` são opcionais e o Firestore recusa `undefined`.
+  - `features/lab/LabQuizView.tsx`: card "Sessão interrompida" no topo do setup, com
+    **Continuar de onde parei** / **Começar sessão nova**. Nos dois caminhos o que já foi
+    respondido vira resultado — inclusive ao começar do zero, senão o estudo abandonado sumiria
+    do histórico.
+  - Verificação: `typecheck` ✅, `vitest` **105/105** (52 no motor SRS) ✅, `lint` 22
+    (pré-existentes) ✅, `build` ✅.
+
+  🟡 **Limite conhecido:** a sessão só é gravada quando o aluno responde alguma lâmina — abrir
+  a sessão e fechar sem responder nada não deixa rastro (e não precisa deixar). E a retomada é
+  por simulação: estudar dois baralhos em paralelo mantém uma sessão pendente em cada, o que é
+  o comportamento desejado.
 
 
 ---

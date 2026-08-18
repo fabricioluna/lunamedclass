@@ -2,13 +2,17 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LabSimulation, LabQuestion, QuizDetail } from '../../types';
 import {
   ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal,
-  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Clock, Info,
+  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Clock, Info, RotateCcw,
 } from 'lucide-react';
 import {
-  SrsCardState, SrsRating, SrsSession, getOrCreateCardState, answerCard,
+  SrsCardState, SrsRating, SrsSession, PersistedSession, PersistedSessionOptions,
+  getOrCreateCardState, answerCard,
   buildSession, pickNextCard, applyAnswerToSession, getSessionCounts, getDeckCounts,
+  isResumableSession, restoreSession,
 } from '../../utils/srs';
-import { fetchFlashcardProgress, upsertFlashcardCardState } from '../../services/flashcardsService';
+import {
+  fetchFlashcardProgressDoc, upsertFlashcardCardState, clearActiveSession,
+} from '../../services/flashcardsService';
 
 interface Props {
   simulation: LabSimulation;
@@ -126,6 +130,8 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   // === PROGRESSO PERSISTIDO (por aluno) ===
   const [progress, setProgress] = useState<Record<string, SrsCardState>>({});
   const [isProgressLoaded, setIsProgressLoaded] = useState(!userId);
+  // Sessão interrompida numa visita anterior (item 6.6).
+  const [pendingSession, setPendingSession] = useState<PersistedSession | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -134,8 +140,12 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     }
     let cancelled = false;
     setIsProgressLoaded(false);
-    fetchFlashcardProgress(userId, simulationId)
-      .then((cards) => { if (!cancelled) setProgress(cards); })
+    fetchFlashcardProgressDoc(userId, simulationId)
+      .then(({ cards, activeSession }) => {
+        if (cancelled) return;
+        setProgress(cards);
+        setPendingSession(activeSession ?? null);
+      })
       .catch((err) => console.error('Erro ao carregar progresso de flashcards:', err))
       .finally(() => { if (!cancelled) setIsProgressLoaded(true); });
     return () => { cancelled = true; };
@@ -156,8 +166,9 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   // Acertos por lâmina DISTINTA, pela PRIMEIRA resposta dada na sessão — é a métrica de
   // retenção do Anki. Uma lâmina errada e depois acertada na mesma sessão conta como erro:
   // senão bastaria insistir até acertar para a nota ficar perfeita.
-  const sessionAnswersRef = useRef<Map<string, boolean>>(new Map());
+  const sessionAnswersRef = useRef<Record<string, boolean>>({});
   const sessionStartRef = useRef<number>(Date.now());
+  const sessionOptionsRef = useRef<PersistedSessionOptions>({ order: 'sequential' });
   const [answeredCount, setAnsweredCount] = useState(0);
 
   const counts = useMemo(() => getSessionCounts(session, progress), [session, progress]);
@@ -191,6 +202,29 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
 
   useEffect(() => { setIsRevealed(false); }, [currentCardId]);
 
+  // Só oferece retomar enquanto a sessão guardada ainda representa o que há pra estudar
+  // (ver RESUMABLE_SESSION_MAX_AGE_MS): depois disso as lâminas já mudaram de estado.
+  const canResume = useMemo(
+    () => isResumableSession(pendingSession, Date.now()),
+    [pendingSession]
+  );
+  const pendingSessionRemaining = pendingSession
+    ? pendingSession.mainQueue.length + pendingSession.learningQueue.length
+    : 0;
+  const pendingSessionAnswered = pendingSession ? Object.keys(pendingSession.answers).length : 0;
+
+  // "Começar sessão nova": o que já foi respondido na sessão antiga vira resultado agora, em
+  // vez de sumir.
+  const handleDiscardPending = () => {
+    if (!pendingSession) return;
+    flushSessionResult(pendingSession.answers, pendingSession.startedAt);
+    if (userId) {
+      clearActiveSession(userId, simulationId)
+        .catch(err => console.error('Erro ao limpar sessão de flashcards:', err));
+    }
+    setPendingSession(null);
+  };
+
   const parsedNewLimit = useMemo(() => {
     const trimmed = newLimitText.trim();
     if (trimmed === '') return undefined; // sem limite
@@ -198,44 +232,78 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : undefined;
   }, [newLimitText]);
 
-  const handleStart = () => {
-    const built = buildSession(questionIds, progress, Date.now(), {
-      order,
-      rangeStart: useRange ? rangeStart : undefined,
-      rangeEnd: useRange ? rangeEnd : undefined,
-      newLimit: parsedNewLimit,
-    });
+  // Contabiliza uma sessão (a atual ou uma abandonada em outra visita) como UM resultado.
+  // Sem isso, fechar a aba no meio perdia o estudo do "Meu Desempenho" — o progresso das
+  // lâminas sobrevivia, mas a sessão em si não virava linha no histórico.
+  const flushSessionResult = (answers: Record<string, boolean>, startedAt: number) => {
+    const cardIds = Object.keys(answers);
+    if (!onSaveResult || cardIds.length === 0) return;
 
-    if (built.mainQueue.length === 0 && built.learningQueue.length === 0) {
-      alert('Nada para estudar com essa configuração! Ou o baralho está em dia (volte mais tarde), ou o intervalo escolhido não tem lâminas pendentes.');
-      return;
-    }
+    const details: QuizDetail[] = cardIds.map((cardId) => ({
+      questionId: cardId,
+      isCorrect: answers[cardId],
+      theme: 'Laboratório Virtual',
+    }));
+    const score = cardIds.filter((id) => answers[id]).length;
+    const timeSpent = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+    onSaveResult(score, cardIds.length, timeSpent, details);
+  };
 
-    sessionAnswersRef.current = new Map();
-    sessionStartRef.current = Date.now();
-    setAnsweredCount(0);
+  const beginSession = (built: SrsSession, options: PersistedSessionOptions, answers: Record<string, boolean>, startedAt: number) => {
+    sessionAnswersRef.current = answers;
+    sessionStartRef.current = startedAt;
+    sessionOptionsRef.current = options;
+    setAnsweredCount(Object.keys(answers).length);
     setSession(built);
     setIsSessionComplete(false);
     setIsRevealed(false);
     setIsSetupMode(false);
   };
 
-  const finishSession = () => {
-    const answers = sessionAnswersRef.current;
-    if (onSaveResult && answers.size > 0) {
-      const details: QuizDetail[] = [];
-      let score = 0;
-      for (const [cardId, wasCorrect] of answers) {
-        if (wasCorrect) score++;
-        details.push({
-          questionId: cardId,
-          isCorrect: wasCorrect,
-          theme: 'Laboratório Virtual',
-        });
-      }
-      const timeSpent = Math.round((Date.now() - sessionStartRef.current) / 1000);
-      onSaveResult(score, answers.size, timeSpent, details);
+  const handleResume = () => {
+    if (!pendingSession) return;
+    const validIds = new Set(questionIds);
+    beginSession(
+      restoreSession(pendingSession, validIds),
+      pendingSession.options,
+      { ...pendingSession.answers },
+      pendingSession.startedAt,
+    );
+    setPendingSession(null);
+  };
+
+  const handleStart = () => {
+    const options: PersistedSessionOptions = {
+      order,
+      rangeStart: useRange ? rangeStart : undefined,
+      rangeEnd: useRange ? rangeEnd : undefined,
+      newLimit: parsedNewLimit,
+    };
+    const built = buildSession(questionIds, progress, Date.now(), options);
+
+    if (built.mainQueue.length === 0 && built.learningQueue.length === 0) {
+      alert('Nada para estudar com essa configuração! Ou o baralho está em dia (volte mais tarde), ou o intervalo escolhido não tem lâminas pendentes.');
+      return;
     }
+
+    // Havia uma sessão pendente e o aluno optou por começar do zero: o que ele já respondeu
+    // naquela sessão não pode simplesmente sumir do histórico.
+    if (pendingSession) {
+      flushSessionResult(pendingSession.answers, pendingSession.startedAt);
+      setPendingSession(null);
+    }
+
+    beginSession(built, options, {}, Date.now());
+  };
+
+  const finishSession = () => {
+    flushSessionResult(sessionAnswersRef.current, sessionStartRef.current);
+    if (userId) {
+      clearActiveSession(userId, simulationId)
+        .catch(err => console.error('Erro ao limpar sessão de flashcards:', err));
+    }
+    sessionAnswersRef.current = {};
+    setAnsweredCount(0);
     setIsSetupMode(true);
   };
 
@@ -249,17 +317,28 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     const nextState = answerCard(prevState, rating, now);
 
     // Só a PRIMEIRA resposta da lâmina nesta sessão entra na nota.
-    if (!sessionAnswersRef.current.has(currentCardId)) {
-      sessionAnswersRef.current.set(currentCardId, rating !== 'again');
-      setAnsweredCount(sessionAnswersRef.current.size);
+    if (!(currentCardId in sessionAnswersRef.current)) {
+      sessionAnswersRef.current = { ...sessionAnswersRef.current, [currentCardId]: rating !== 'again' };
+      setAnsweredCount(Object.keys(sessionAnswersRef.current).length);
     }
 
     const nextProgress = { ...progress, [currentCardId]: nextState };
+    const nextSession = applyAnswerToSession(session, currentCardId, nextState, nextProgress);
     setProgress(nextProgress);
-    setSession(prev => applyAnswerToSession(prev, currentCardId, nextState, nextProgress));
+    setSession(nextSession);
 
     if (userId) {
-      upsertFlashcardCardState(userId, simulationId, currentCardId, nextState)
+      // A sessão pega carona na MESMA escrita do card: retomar depois não custa nenhuma
+      // operação a mais no banco.
+      const persisted: PersistedSession = {
+        startedAt: sessionStartRef.current,
+        updatedAt: now,
+        options: sessionOptionsRef.current,
+        mainQueue: nextSession.mainQueue,
+        learningQueue: nextSession.learningQueue,
+        answers: sessionAnswersRef.current,
+      };
+      upsertFlashcardCardState(userId, simulationId, currentCardId, nextState, persisted)
         .catch(err => console.error('Erro ao salvar progresso de flashcards:', err));
     }
   };
@@ -281,6 +360,28 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
           <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Flashcards</h2>
           <p className="text-[#D4A017] font-black text-xs uppercase tracking-[0.2em]">{simulation.title} • {simulation.questions.length} Peças</p>
         </div>
+
+        {/* SESSÃO INTERROMPIDA — retomar de onde parou (item 6.6) */}
+        {canResume && pendingSession && (
+          <div className="bg-[#003366] text-white p-6 md:p-8 rounded-[2.5rem] shadow-xl mb-6 animate-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-2 mb-3">
+              <RotateCcw size={16} className="text-[#D4A017]"/>
+              <h3 className="font-black uppercase tracking-widest text-[10px] text-[#D4A017]">Sessão interrompida</h3>
+            </div>
+            <p className="text-sm font-medium text-blue-100 mb-6 leading-relaxed">
+              Você parou no meio de uma sessão com <strong className="text-white">{pendingSessionRemaining} lâmina{pendingSessionRemaining > 1 ? 's' : ''}</strong> ainda por estudar
+              {pendingSessionAnswered > 0 && <> (já respondeu {pendingSessionAnswered})</>}. Quer continuar de onde parou?
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button onClick={handleResume} className="flex-1 bg-[#D4A017] text-[#003366] py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white transition-all shadow-lg">
+                Continuar de onde parei
+              </button>
+              <button onClick={handleDiscardPending} className="flex-1 bg-white/10 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/20 transition-all border border-white/20">
+                Começar sessão nova
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white p-6 md:p-10 rounded-[3rem] shadow-xl border border-gray-100">
 
@@ -387,8 +488,9 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   // TELA 2: FIM DE SESSÃO
   // ==========================================
   if (isSessionComplete) {
-    const acertos = [...sessionAnswersRef.current.values()].filter(Boolean).length;
-    const total = sessionAnswersRef.current.size;
+    const respostas = Object.values(sessionAnswersRef.current);
+    const acertos = respostas.filter(Boolean).length;
+    const total = respostas.length;
 
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 animate-in zoom-in duration-500 pb-32 text-center">
