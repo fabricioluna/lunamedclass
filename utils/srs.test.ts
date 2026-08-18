@@ -23,6 +23,8 @@ import {
   LEARN_AHEAD_LIMIT_MIN,
   isResumableSession,
   restoreSession,
+  countDifficultCards,
+  isDifficultCard,
   RESUMABLE_SESSION_MAX_AGE_MS,
   type SrsCardState,
 } from './srs';
@@ -370,6 +372,47 @@ describe('getWeakestCards', () => {
       errada: { ...graduate('errada'), againCount: 1 },
     };
     expect(getWeakestCards(states, 10).map((w) => w.cardId)).toEqual(['errada']);
+  });
+});
+
+describe('treino focado nas lâminas difíceis (item 6.7)', () => {
+  const deck = ['a', 'b', 'c', 'd'];
+  // 'a' errada 2x e ainda por vencer; 'b' errada 1x; 'c' nunca errada; 'd' nunca estudada.
+  const states: Record<string, SrsCardState> = {
+    a: { ...graduate('a'), againCount: 2, dueAt: NOW + 30 * DAY },
+    b: { ...graduate('b'), againCount: 1, dueAt: NOW + 5 * DAY },
+    c: { ...graduate('c'), againCount: 0, dueAt: NOW + DAY },
+  };
+
+  it('conta como difícil só a lâmina que o aluno já marcou "Não lembrei"', () => {
+    expect(countDifficultCards(deck, states)).toBe(2); // a e b
+  });
+
+  it('lâmina nunca estudada não entra na conta (não dá pra errar o que não se viu)', () => {
+    expect(isDifficultCard(states.d)).toBe(false);
+    expect(isDifficultCard(undefined)).toBe(false);
+  });
+
+  it('limiar maior restringe às lâminas erradas mais vezes', () => {
+    expect(countDifficultCards(deck, states, 2)).toBe(1); // só 'a'
+  });
+
+  it('sessão focada traz as difíceis IGNORANDO a data de revisão', () => {
+    // 'a' e 'b' só venceriam daqui a semanas; numa sessão normal não apareceriam.
+    expect(buildSession(deck, states, NOW).mainQueue).not.toContain('a');
+    const focada = buildSession(deck, states, NOW, { focus: 'difficult' });
+    expect(focada.mainQueue).toEqual(['a', 'b']);
+    expect(focada.learningQueue).toEqual([]);
+  });
+
+  it('sessão focada respeita ordem aleatória e intervalo', () => {
+    const soPrimeira = buildSession(deck, states, NOW, { focus: 'difficult', rangeStart: 1, rangeEnd: 1 });
+    expect(soPrimeira.mainQueue).toEqual(['a']);
+  });
+
+  it('baralho sem nenhuma lâmina errada devolve sessão focada vazia', () => {
+    const semErros = { c: { ...graduate('c'), againCount: 0 } };
+    expect(buildSession(deck, semErros, NOW, { focus: 'difficult' }).mainQueue).toEqual([]);
   });
 });
 

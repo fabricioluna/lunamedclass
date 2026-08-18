@@ -86,6 +86,7 @@ seção Etapa 6 e decisões D10/D11).
   nenhum arquivo escaneado esteve sumindo do build esse tempo todo.
 - **6.5 (Lab vira Anki de verdade)** — ✅ concluído, aguardando teste do usuário em produção.
 - **6.6 (retomar sessão de onde parou)** — ✅ concluído junto, mesmo dia.
+- **6.7 (treino focado nas lâminas difíceis)** — ✅ concluído junto, mesmo dia.
 - **6.4 (liberação de conteúdo)** — 🔜 **próximo**. O mais arriscado de todos (índice novo +
   backfill + rules, ordem de publicação obrigatória).
 
@@ -1292,6 +1293,35 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   a sessão e fechar sem responder nada não deixa rastro (e não precisa deixar). E a retomada é
   por simulação: estudar dois baralhos em paralelo mantém uma sessão pendente em cada, o que é
   o comportamento desejado.
+
+
+- [x] **6.7 — Treino focado nas lâminas que o aluno erra**
+  *(concluído em 2026-08-18, a pedido do usuário: "informar ao aluno (você tem 15 cards que não
+  memorizou) e dar a opção dele selecionar e treinar apenas esses")*. É o **Custom Study /
+  baralho filtrado** do Anki (`prop:lapses>N`), caso de uso real de véspera de prova.
+
+  ⚠️ **Armadilha resolvida na definição:** o usuário pediu "não lembrou **ou lembrou com
+  dificuldade**", mas no modelo de 3 botões o "Lembrei com esforço" é o **Good** do Anki — o
+  caminho normal de quem acertou, não um sinal de dificuldade. Filtrar por ele jogaria o
+  baralho inteiro no filtro. O critério adotado é **`againCount >= 1`** ("você já marcou 'Não
+  lembrei' nessa lâmina"), o mesmo que já alimenta o "Pontos Fracos" no dashboard.
+
+  - `utils/srs.ts`: `SessionFocus = 'all' | 'difficult'`, `isDifficultCard`,
+    `countDifficultCards` e o ramo focado em `buildSession`, que **ignora a data de revisão de
+    propósito** — o aluno quer treinar agora o que erra, mesmo que a repetição espaçada só
+    fosse cobrar aquilo semana que vem. Limiar configurável (`minAgainCount`) já no motor,
+    ainda sem UI.
+  - `features/lab/LabQuizView.tsx`: bloco "Você tem N lâminas que ainda não memorizou" com
+    alternância **Sessão normal / Treinar só essas N**. O limite de lâminas novas some no modo
+    focado (não entra lâmina inédita), e o botão de começar muda de rótulo.
+  - As respostas do treino focado **contam normalmente** para o agendamento e para o resultado
+    da sessão — acertar ali empurra a lâmina pra frente como em qualquer revisão.
+  - Verificação: `typecheck` ✅, `vitest` **111/111** (58 no motor SRS) ✅, `lint` 22
+    (pré-existentes) ✅, `build` ✅ + classes de cor conferidas no CSS de produção.
+
+  🟡 **Não feito:** link direto do "Pontos Fracos" do dashboard para o treino focado do baralho
+  correspondente (hoje o link leva pra tela de configuração do lab, onde o aluno escolhe o modo).
+  Exigiria passar o foco por query param na rota.
 
 
 ---

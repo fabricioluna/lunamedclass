@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LabSimulation, LabQuestion, QuizDetail } from '../../types';
 import {
   ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal,
-  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Clock, Info, RotateCcw,
+  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Clock, Info, RotateCcw, Flame,
 } from 'lucide-react';
 import {
   SrsCardState, SrsRating, SrsSession, PersistedSession, PersistedSessionOptions,
   getOrCreateCardState, answerCard,
   buildSession, pickNextCard, applyAnswerToSession, getSessionCounts, getDeckCounts,
-  isResumableSession, restoreSession,
+  isResumableSession, restoreSession, countDifficultCards, SessionFocus,
 } from '../../utils/srs';
 import {
   fetchFlashcardProgressDoc, upsertFlashcardCardState, clearActiveSession,
@@ -126,6 +126,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   const [rangeStart, setRangeStart] = useState(1);
   const [rangeEnd, setRangeEnd] = useState(simulation.questions.length);
   const [newLimitText, setNewLimitText] = useState(''); // vazio = sem limite (padrão do usuário)
+  const [focus, setFocus] = useState<SessionFocus>('all'); // 'difficult' = treino só do que erra (item 6.7)
 
   // === PROGRESSO PERSISTIDO (por aluno) ===
   const [progress, setProgress] = useState<Record<string, SrsCardState>>({});
@@ -153,6 +154,11 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
 
   const deckCounts = useMemo(
     () => getDeckCounts(questionIds, progress, Date.now()),
+    [questionIds, progress]
+  );
+
+  const difficultCount = useMemo(
+    () => countDifficultCards(questionIds, progress),
     [questionIds, progress]
   );
 
@@ -277,12 +283,16 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
       order,
       rangeStart: useRange ? rangeStart : undefined,
       rangeEnd: useRange ? rangeEnd : undefined,
-      newLimit: parsedNewLimit,
+      // Limite de novas não se aplica ao treino focado: lá não entra lâmina inédita.
+      newLimit: focus === 'difficult' ? undefined : parsedNewLimit,
+      focus,
     };
     const built = buildSession(questionIds, progress, Date.now(), options);
 
     if (built.mainQueue.length === 0 && built.learningQueue.length === 0) {
-      alert('Nada para estudar com essa configuração! Ou o baralho está em dia (volte mais tarde), ou o intervalo escolhido não tem lâminas pendentes.');
+      alert(focus === 'difficult'
+        ? 'Nenhuma lâmina difícil neste baralho ainda! O treino focado só reúne as que você já marcou como "Não lembrei".'
+        : 'Nada para estudar com essa configuração! Ou o baralho está em dia (volte mais tarde), ou o intervalo escolhido não tem lâminas pendentes.');
       return;
     }
 
@@ -400,6 +410,45 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
             )}
           </div>
 
+          {/* TREINO FOCADO NAS LÂMINAS DIFÍCEIS (item 6.7) */}
+          {isProgressLoaded && difficultCount > 0 && (
+            <div className={`p-5 rounded-2xl border-2 mb-8 transition-all ${focus === 'difficult' ? 'border-red-300 bg-red-50/50' : 'border-gray-100 bg-gray-50'}`}>
+              <div className="flex items-start gap-3 mb-4">
+                <div className={`p-2.5 rounded-xl shrink-0 ${focus === 'difficult' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-500'}`}>
+                  <Flame size={20}/>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-black text-[#003366] text-sm">
+                    Você tem {difficultCount} lâmina{difficultCount > 1 ? 's' : ''} que ainda não memorizou
+                  </h4>
+                  <p className="text-[10px] text-gray-500 font-medium mt-0.5">
+                    São as que você já marcou como "Não lembrei" pelo menos uma vez.
+                  </p>
+                </div>
+              </div>
+              <div className="flex p-1 bg-white rounded-xl shadow-inner border border-gray-100">
+                <button
+                  onClick={() => setFocus('all')}
+                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${focus === 'all' ? 'bg-[#003366] text-white shadow-sm' : 'text-gray-400 hover:text-[#003366]'}`}
+                >
+                  Sessão normal
+                </button>
+                <button
+                  onClick={() => setFocus('difficult')}
+                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${focus === 'difficult' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400 hover:text-red-500'}`}
+                >
+                  Treinar só essas {difficultCount}
+                </button>
+              </div>
+              {focus === 'difficult' && (
+                <p className="text-[10px] text-red-700 font-bold mt-3 leading-relaxed">
+                  O treino focado ignora a data de revisão e traz as {difficultCount} de uma vez. As respostas
+                  continuam contando: acertar aqui empurra a lâmina pra frente normalmente.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* COMO FUNCIONA */}
           <div className="bg-blue-50/50 border border-blue-100 p-5 rounded-2xl mb-8">
             <p className="flex items-center gap-2 text-[10px] font-black uppercase text-blue-800 tracking-widest mb-3">
@@ -460,7 +509,8 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
             </div>
           )}
 
-          {/* LIMITE DE NOVAS */}
+          {/* LIMITE DE NOVAS — sem sentido no treino focado, que não traz lâmina inédita */}
+          {focus === 'all' && (
           <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-8 flex items-center gap-4">
             <div className="flex-1">
               <h4 className="font-black text-[#003366] text-sm">Limite de lâminas novas</h4>
@@ -475,9 +525,10 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
               className="w-32 p-3 text-center rounded-xl border-2 border-gray-200 font-black text-sm focus:border-[#D4A017] outline-none placeholder:font-medium placeholder:text-[10px] placeholder:text-gray-400"
             />
           </div>
+          )}
 
           <button onClick={handleStart} disabled={!isProgressLoaded} className="w-full bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-sm tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#003366] disabled:hover:text-white">
-            Começar a estudar 🧠
+            {focus === 'difficult' ? `Treinar as ${difficultCount} difíceis 🔥` : 'Começar a estudar 🧠'}
           </button>
         </div>
       </div>

@@ -215,12 +215,38 @@ export interface SrsSession {
   learningQueue: string[];
 }
 
+// 'all' = sessão normal de repetição espaçada. 'difficult' = treino focado só nas lâminas que
+// o aluno já errou, ignorando a data de revisão — é o "Custom Study"/baralho filtrado do Anki,
+// para quem quer martelar o ponto fraco antes da prova (item 6.7).
+export type SessionFocus = 'all' | 'difficult';
+
+// Uma lâmina é "difícil" quando o aluno já marcou "Não lembrei" nela. Deliberadamente NÃO
+// inclui "Lembrei com esforço": esse botão é o caminho normal de quem acertou (o "Good" do
+// Anki), então usá-lo como sinal de dificuldade jogaria o baralho inteiro no filtro.
+export const DEFAULT_MIN_AGAIN_COUNT = 1;
+
 export interface SessionOptions {
   order?: 'sequential' | 'random';
   rangeStart?: number; // 1-based, inclusive
   rangeEnd?: number; // 1-based, inclusive
   newLimit?: number; // undefined = sem limite (padrão escolhido pelo usuário)
+  focus?: SessionFocus;
+  minAgainCount?: number; // só com focus 'difficult'; default DEFAULT_MIN_AGAIN_COUNT
   random?: () => number; // injetável para teste determinístico
+}
+
+export function isDifficultCard(state: SrsCardState | undefined, minAgainCount = DEFAULT_MIN_AGAIN_COUNT): boolean {
+  return !!state && state.reviews > 0 && state.againCount >= minAgainCount;
+}
+
+// Quantas lâminas do baralho o aluno já errou — o "você tem N lâminas que não memorizou" que
+// aparece na tela de configuração.
+export function countDifficultCards(
+  cardIds: string[],
+  states: Record<string, SrsCardState>,
+  minAgainCount = DEFAULT_MIN_AGAIN_COUNT,
+): number {
+  return cardIds.filter((id) => isDifficultCard(states[id], minAgainCount)).length;
 }
 
 // Configuração da sessão sem a função `random` — é o que dá pra gravar no Firestore.
@@ -286,8 +312,21 @@ export function buildSession(
   now: number,
   options: SessionOptions = {},
 ): SrsSession {
-  const { order = 'sequential', rangeStart, rangeEnd, newLimit, random = Math.random } = options;
+  const {
+    order = 'sequential', rangeStart, rangeEnd, newLimit,
+    focus = 'all', minAgainCount = DEFAULT_MIN_AGAIN_COUNT, random = Math.random,
+  } = options;
   const pool = applyRange(cardIds, rangeStart, rangeEnd);
+
+  // Treino focado: ignora data de vencimento de propósito. O aluno pediu pra praticar AGORA o
+  // que ele erra, mesmo que a repetição espaçada só fosse cobrar aquilo semana que vem.
+  if (focus === 'difficult') {
+    const difficult = pool.filter((id) => isDifficultCard(states[id], minAgainCount));
+    return {
+      mainQueue: order === 'random' ? shuffle(difficult, random) : difficult,
+      learningQueue: [],
+    };
+  }
 
   const newCards: string[] = [];
   const dueReviews: string[] = [];
