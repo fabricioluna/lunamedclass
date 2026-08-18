@@ -1,22 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LabSimulation, LabQuestion, QuizDetail } from '../../types';
 import {
-  Microscope, ChevronRight, ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal,
-  Image as ImageIcon, Lightbulb, Search, Target, Brain, Flame, PartyPopper,
+  ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal,
+  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Clock, Info,
 } from 'lucide-react';
 import {
-  SrsCardState, SrsRating, getOrCreateCardState, reviewCard, formatDueLabel,
-  buildSessionQueue, getSessionCounts, reinsertForRetry,
+  SrsCardState, SrsRating, SrsSession, getOrCreateCardState, answerCard,
+  buildSession, pickNextCard, applyAnswerToSession, getSessionCounts, getDeckCounts,
 } from '../../utils/srs';
 import { fetchFlashcardProgress, upsertFlashcardCardState } from '../../services/flashcardsService';
 
 interface Props {
   simulation: LabSimulation;
   onBack: () => void;
-  // NOVO: A propriedade que envia os dados gota a gota para o Analytics
+  // Grava UM resultado por sessão (não por lâmina — ver D11 no PLANO-REESTRUTURACAO.md).
   onSaveResult?: (score: number, total: number, timeSpent?: number, details?: QuizDetail[]) => void;
-  // Dono do progresso de flashcards (Etapa 6, item 6.3) — sem isso, o modo flashcard não
-  // aparece, pois não há como isolar o progresso por aluno.
   userId?: string;
 }
 
@@ -35,10 +33,6 @@ const getDisplayImageName = (q: LabQuestion, index: number) => {
   return `Imagem ${index + 1}`;
 };
 
-type LabMode = 'flashcard' | 'sequential' | 'random' | 'range';
-
-// Card com a imagem, a pergunta e (quando revelado) as dicas — idêntico nos dois modos de
-// execução, só muda o que aparece embaixo depois de revelar.
 const QuestionMedia: React.FC<{ q: LabQuestion; displayName: string }> = ({ q, displayName }) => (
   <>
     <div className="w-full h-72 md:h-[450px] bg-black rounded-[1.5rem] mb-8 overflow-hidden shadow-inner flex items-center justify-center relative">
@@ -89,22 +83,47 @@ const AnswerReveal: React.FC<{ q: LabQuestion }> = ({ q }) => (
   </>
 );
 
+// Os 3 contadores que o Anki mostra o tempo todo. É a resposta visual para "não entendi como
+// fica a repetição": o número de "aprendendo" sobe quando o aluno erra e desce conforme acerta.
+const SessionCounters: React.FC<{ newCount: number; learningCount: number; reviewCount: number }> = ({
+  newCount, learningCount, reviewCount,
+}) => (
+  <div className="flex items-center gap-3">
+    <span className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-100 min-w-[62px]">
+      <span className="text-lg font-black text-blue-700 leading-none">{newCount}</span>
+      <span className="text-[8px] font-black uppercase tracking-widest text-blue-400 mt-1">Novas</span>
+    </span>
+    <span className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-red-50 border border-red-100 min-w-[62px]">
+      <span className="text-lg font-black text-red-600 leading-none">{learningCount}</span>
+      <span className="text-[8px] font-black uppercase tracking-widest text-red-400 mt-1">Aprendendo</span>
+    </span>
+    <span className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-green-50 border border-green-100 min-w-[62px]">
+      <span className="text-lg font-black text-green-700 leading-none">{reviewCount}</span>
+      <span className="text-[8px] font-black uppercase tracking-widest text-green-500 mt-1">Revisão</span>
+    </span>
+  </div>
+);
+
+const RATING_BUTTONS: { rating: SrsRating; label: string; className: string }[] = [
+  { rating: 'again', label: 'Não lembrei', className: 'bg-red-500 hover:bg-red-600' },
+  { rating: 'good', label: 'Lembrei com esforço', className: 'bg-amber-500 hover:bg-amber-600' },
+  { rating: 'easy', label: 'Lembrei fácil', className: 'bg-green-500 hover:bg-green-600' },
+];
+
 const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId }) => {
   const simulationId = simulation.firebaseId || simulation.id;
   const questionIds = useMemo(() => simulation.questions.map(q => q.id), [simulation.questions]);
   const questionMap = useMemo(() => new Map(simulation.questions.map(q => [q.id, q])), [simulation.questions]);
 
-  // ==========================================
-  // ESTADOS DE CONFIGURAÇÃO (SETUP)
-  // ==========================================
+  // === CONFIGURAÇÃO DA SESSÃO (tudo dentro do flashcard — item 6.5) ===
   const [isSetupMode, setIsSetupMode] = useState(true);
-  const [mode, setMode] = useState<LabMode>('flashcard'); // Padrão: flashcard, como decidido com o usuário.
+  const [order, setOrder] = useState<'sequential' | 'random'>('sequential');
+  const [useRange, setUseRange] = useState(false);
   const [rangeStart, setRangeStart] = useState(1);
   const [rangeEnd, setRangeEnd] = useState(simulation.questions.length);
+  const [newLimitText, setNewLimitText] = useState(''); // vazio = sem limite (padrão do usuário)
 
-  // ==========================================
-  // PROGRESSO DE FLASHCARDS (por aluno, Etapa 6 item 6.3)
-  // ==========================================
+  // === PROGRESSO PERSISTIDO (por aluno) ===
   const [progress, setProgress] = useState<Record<string, SrsCardState>>({});
   const [isProgressLoaded, setIsProgressLoaded] = useState(!userId);
 
@@ -122,140 +141,135 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     return () => { cancelled = true; };
   }, [userId, simulationId]);
 
-  const sessionCounts = useMemo(
-    () => getSessionCounts(questionIds, progress, Date.now()),
+  const deckCounts = useMemo(
+    () => getDeckCounts(questionIds, progress, Date.now()),
     [questionIds, progress]
   );
 
-  // ==========================================
-  // ESTADOS DO JOGO ATIVO — modos clássicos (sequencial/aleatório/intervalo)
-  // ==========================================
-  const [activeQuestions, setActiveQuestions] = useState<LabQuestion[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // === SESSÃO EM ANDAMENTO ===
+  const [session, setSession] = useState<SrsSession>({ mainQueue: [], learningQueue: [] });
+  const [currentCardId, setCurrentCardId] = useState<string | null>(null);
+  const [waitingUntil, setWaitingUntil] = useState<number | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
-  const [answerRecorded, setAnswerRecorded] = useState<'correct' | 'incorrect' | null>(null);
-
-  // ==========================================
-  // ESTADO DA SESSÃO DE FLASHCARDS
-  // ==========================================
-  const [srsQueue, setSrsQueue] = useState<string[]>([]);
-  const [sessionStats, setSessionStats] = useState({ reviewed: 0, hard: 0 });
   const [isSessionComplete, setIsSessionComplete] = useState(false);
 
-  // Limpa a resposta revelada e o registo ao trocar de imagem
+  // Acertos por lâmina DISTINTA, pela PRIMEIRA resposta dada na sessão — é a métrica de
+  // retenção do Anki. Uma lâmina errada e depois acertada na mesma sessão conta como erro:
+  // senão bastaria insistir até acertar para a nota ficar perfeita.
+  const sessionAnswersRef = useRef<Map<string, boolean>>(new Map());
+  const sessionStartRef = useRef<number>(Date.now());
+  const [answeredCount, setAnsweredCount] = useState(0);
+
+  const counts = useMemo(() => getSessionCounts(session, progress), [session, progress]);
+
+  // Escolhe a próxima lâmina sempre que a sessão muda. Fica num efeito (e não no clique) porque
+  // o "learn ahead" depende do relógio: uma lâmina que ainda não venceu pode virar a próxima
+  // alguns segundos depois, sem nenhuma ação do aluno.
   useEffect(() => {
-    setIsRevealed(false);
-    setAnswerRecorded(null);
-  }, [currentIndex]);
+    if (isSetupMode || isSessionComplete) return;
 
-  // Função que inicia o simulado com base nas escolhas do aluno
-  const handleStart = () => {
-    if (mode === 'flashcard') {
-      const queue = buildSessionQueue(questionIds, progress, Date.now());
-      if (queue.length === 0) {
-        alert('Nada para revisar agora! Todos os cards estão em dia — volte mais tarde ou escolha outro modo de treino.');
-        return;
+    const advance = () => {
+      const next = pickNextCard(session, progress, Date.now());
+      if (next.kind === 'card') {
+        setCurrentCardId(prev => (prev === next.cardId ? prev : next.cardId));
+        setWaitingUntil(null);
+      } else if (next.kind === 'waiting') {
+        setCurrentCardId(null);
+        setWaitingUntil(next.dueAt);
+      } else {
+        setCurrentCardId(null);
+        setWaitingUntil(null);
+        setIsSessionComplete(true);
       }
-      setSrsQueue(queue);
-      setSessionStats({ reviewed: 0, hard: 0 });
-      setIsSessionComplete(false);
-      setCurrentIndex(0);
-      setIsRevealed(false);
-      setIsSetupMode(false);
+    };
+
+    advance();
+    // Só precisa de relógio enquanto houver lâmina esperando o degrau vencer.
+    const timer = window.setInterval(advance, 1000);
+    return () => window.clearInterval(timer);
+  }, [session, progress, isSetupMode, isSessionComplete]);
+
+  useEffect(() => { setIsRevealed(false); }, [currentCardId]);
+
+  const parsedNewLimit = useMemo(() => {
+    const trimmed = newLimitText.trim();
+    if (trimmed === '') return undefined; // sem limite
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : undefined;
+  }, [newLimitText]);
+
+  const handleStart = () => {
+    const built = buildSession(questionIds, progress, Date.now(), {
+      order,
+      rangeStart: useRange ? rangeStart : undefined,
+      rangeEnd: useRange ? rangeEnd : undefined,
+      newLimit: parsedNewLimit,
+    });
+
+    if (built.mainQueue.length === 0 && built.learningQueue.length === 0) {
+      alert('Nada para estudar com essa configuração! Ou o baralho está em dia (volte mais tarde), ou o intervalo escolhido não tem lâminas pendentes.');
       return;
     }
 
-    let qs = [...simulation.questions];
-
-    if (mode === 'range') {
-      const s = Math.max(1, rangeStart);
-      const e = Math.min(qs.length, rangeEnd);
-      qs = qs.slice(s - 1, e);
-    }
-
-    if (mode === 'random') {
-      qs = qs.sort(() => Math.random() - 0.5);
-    }
-
-    if (qs.length === 0) {
-      alert("Intervalo inválido! Nenhuma imagem selecionada.");
-      return;
-    }
-
-    setActiveQuestions(qs);
-    setCurrentIndex(0);
+    sessionAnswersRef.current = new Map();
+    sessionStartRef.current = Date.now();
+    setAnsweredCount(0);
+    setSession(built);
+    setIsSessionComplete(false);
     setIsRevealed(false);
-    setAnswerRecorded(null);
     setIsSetupMode(false);
   };
 
-  // NOVO: Função que regista o Acerto/Erro gota a gota no Firebase (modos clássicos)
-  const handleRecordAnswer = (isCorrect: boolean) => {
-    setAnswerRecorded(isCorrect ? 'correct' : 'incorrect');
-
-    if (onSaveResult) {
-      const q = activeQuestions[currentIndex];
-      onSaveResult(
-        isCorrect ? 1 : 0,
-        1, // Total avaliado neste momento
-        0, // Tempo ignorado no gota a gota para não corromper a média global
-        [{
-          questionId: q.id,
-          isCorrect: isCorrect,
-          theme: 'Laboratório Virtual' // Usamos a flag de Lab como tema para os gráficos
-        }]
-      );
+  const finishSession = () => {
+    const answers = sessionAnswersRef.current;
+    if (onSaveResult && answers.size > 0) {
+      const details: QuizDetail[] = [];
+      let score = 0;
+      for (const [cardId, wasCorrect] of answers) {
+        if (wasCorrect) score++;
+        details.push({
+          questionId: cardId,
+          isCorrect: wasCorrect,
+          theme: 'Laboratório Virtual',
+        });
+      }
+      const timeSpent = Math.round((Date.now() - sessionStartRef.current) / 1000);
+      onSaveResult(score, answers.size, timeSpent, details);
     }
+    setIsSetupMode(true);
   };
 
-  const handleNext = () => { if (currentIndex < activeQuestions.length - 1) setCurrentIndex(currentIndex + 1); };
-  const handlePrev = () => { if (currentIndex > 0) setCurrentIndex(currentIndex - 1); };
-
-  // Avalia o card atual no modo flashcard: "Difícil" reinsere ~4 posições à frente NA MESMA
-  // sessão (não avança o índice — o próximo card já ocupa a posição atual); "Médio"/"Fácil"
-  // avançam. Compatível com o analytics existente: hard vira 0/1, medium/easy viram 1/1.
-  const handleRateFlashcard = (rating: SrsRating) => {
-    const cardId = srsQueue[currentIndex];
-    const q = cardId ? questionMap.get(cardId) : undefined;
-    if (!cardId || !q) return;
+  const handleRate = (rating: SrsRating) => {
+    if (!currentCardId) return;
+    const q = questionMap.get(currentCardId);
+    if (!q) return;
 
     const now = Date.now();
-    const prevState = getOrCreateCardState(progress, cardId, now, q.answer);
-    const nextState = reviewCard(prevState, rating, now);
-    setProgress(prev => ({ ...prev, [cardId]: nextState }));
+    const prevState = getOrCreateCardState(progress, currentCardId, now, q.answer);
+    const nextState = answerCard(prevState, rating, now);
+
+    // Só a PRIMEIRA resposta da lâmina nesta sessão entra na nota.
+    if (!sessionAnswersRef.current.has(currentCardId)) {
+      sessionAnswersRef.current.set(currentCardId, rating !== 'again');
+      setAnsweredCount(sessionAnswersRef.current.size);
+    }
+
+    const nextProgress = { ...progress, [currentCardId]: nextState };
+    setProgress(nextProgress);
+    setSession(prev => applyAnswerToSession(prev, currentCardId, nextState, nextProgress));
 
     if (userId) {
-      upsertFlashcardCardState(userId, simulationId, cardId, nextState)
+      upsertFlashcardCardState(userId, simulationId, currentCardId, nextState)
         .catch(err => console.error('Erro ao salvar progresso de flashcards:', err));
-    }
-
-    if (onSaveResult) {
-      onSaveResult(rating === 'hard' ? 0 : 1, 1, 0, [{
-        questionId: cardId,
-        isCorrect: rating !== 'hard',
-        theme: 'Laboratório Virtual',
-      }]);
-    }
-
-    setSessionStats(prev => ({
-      reviewed: prev.reviewed + 1,
-      hard: prev.hard + (rating === 'hard' ? 1 : 0),
-    }));
-
-    if (rating === 'hard') {
-      setSrsQueue(prev => reinsertForRetry(prev, currentIndex));
-      setIsRevealed(false); // currentIndex não muda — precisa resetar aqui na mão
-    } else if (currentIndex + 1 >= srsQueue.length) {
-      setIsSessionComplete(true);
-    } else {
-      setCurrentIndex(i => i + 1);
     }
   };
 
   // ==========================================
-  // TELA 1: CONFIGURAÇÃO INICIAL (SETUP)
+  // TELA 1: CONFIGURAÇÃO
   // ==========================================
   if (isSetupMode) {
+    const totalPendente = deckCounts.newCount + deckCounts.learningCount + deckCounts.reviewCount;
+
     return (
       <div className="max-w-3xl mx-auto px-4 py-12 animate-in fade-in duration-500 pb-32">
         <button onClick={onBack} className="group flex items-center text-[#003366] font-bold mb-8 hover:text-[#D4A017] transition-all">
@@ -263,76 +277,106 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         </button>
 
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-blue-50 text-[#003366] rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 shadow-sm"><Microscope size={40}/></div>
-          <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Configurar Lab</h2>
+          <div className="w-20 h-20 bg-blue-50 text-[#003366] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm"><Brain size={40}/></div>
+          <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Flashcards</h2>
           <p className="text-[#D4A017] font-black text-xs uppercase tracking-[0.2em]">{simulation.title} • {simulation.questions.length} Peças</p>
         </div>
 
         <div className="bg-white p-6 md:p-10 rounded-[3rem] shadow-xl border border-gray-100">
-          <h3 className="font-black text-[#003366] mb-6 uppercase tracking-widest text-xs text-center border-b pb-4">Como você deseja treinar?</h3>
 
-          <div className="grid gap-4 mb-8">
-            <button onClick={() => setMode('flashcard')} disabled={!userId} className={`p-6 rounded-2xl border-2 text-left flex items-center gap-4 transition-all ${mode === 'flashcard' ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'} ${!userId ? 'opacity-50 cursor-not-allowed' : ''}`}>
-               <div className={`p-3 rounded-xl ${mode === 'flashcard' ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><Brain size={24}/></div>
-               <div className="flex-1">
-                 <h4 className="font-black text-[#003366] text-lg flex items-center gap-2">
-                   Flashcards (Revisão Espaçada)
-                   <span className="bg-[#D4A017]/20 text-[#D4A017] text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">Recomendado</span>
-                 </h4>
-                 <p className="text-xs text-gray-500 font-medium">
-                   {!userId
-                     ? 'Faça login para usar a revisão espaçada.'
-                     : isProgressLoaded
-                       ? `${sessionCounts.dueCount} para revisar hoje • ${sessionCounts.newCount} inéditas`
-                       : 'Carregando seu progresso...'}
-                 </p>
-               </div>
+          {/* SITUAÇÃO DO BARALHO */}
+          <div className="flex flex-col items-center gap-4 pb-8 border-b mb-8">
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Situação do baralho hoje</p>
+            {isProgressLoaded ? (
+              <SessionCounters {...deckCounts} />
+            ) : (
+              <div className="w-8 h-8 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin"/>
+            )}
+            {isProgressLoaded && totalPendente === 0 && (
+              <p className="text-xs text-green-600 font-bold text-center">
+                Tudo em dia! As lâminas já estudadas voltam sozinhas na data certa.
+              </p>
+            )}
+          </div>
+
+          {/* COMO FUNCIONA */}
+          <div className="bg-blue-50/50 border border-blue-100 p-5 rounded-2xl mb-8">
+            <p className="flex items-center gap-2 text-[10px] font-black uppercase text-blue-800 tracking-widest mb-3">
+              <Info size={14}/> Como funciona a repetição
+            </p>
+            <ul className="text-xs text-gray-600 font-medium space-y-1.5 leading-relaxed">
+              <li><strong className="text-red-600">Não lembrei</strong> — a lâmina volta ainda nesta sessão, em poucos minutos.</li>
+              <li><strong className="text-amber-600">Lembrei com esforço</strong> — volta mais adiante na sessão e depois no dia seguinte.</li>
+              <li><strong className="text-green-600">Lembrei fácil</strong> — sai da sessão e só volta daqui a alguns dias.</li>
+              <li className="pt-1 text-gray-500">A cada acerto o intervalo cresce (1 dia → 3 → 8 → 20...). Quanto mais você erra, mais a lâmina aparece.</li>
+            </ul>
+          </div>
+
+          {/* ORDEM */}
+          <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-3">Ordem das lâminas</p>
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <button onClick={() => setOrder('sequential')} className={`p-5 rounded-2xl border-2 text-left flex items-center gap-3 transition-all ${order === 'sequential' ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
+              <div className={`p-2.5 rounded-xl ${order === 'sequential' ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><ListOrdered size={20}/></div>
+              <div>
+                <h4 className="font-black text-[#003366] text-sm">Sequencial</h4>
+                <p className="text-[10px] text-gray-500 font-medium">Ordem cadastrada</p>
+              </div>
             </button>
-
-            <button onClick={() => setMode('sequential')} className={`p-6 rounded-2xl border-2 text-left flex items-center gap-4 transition-all ${mode === 'sequential' ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
-               <div className={`p-3 rounded-xl ${mode === 'sequential' ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><ListOrdered size={24}/></div>
-               <div>
-                 <h4 className="font-black text-[#003366] text-lg">Ordem Sequencial</h4>
-                 <p className="text-xs text-gray-500 font-medium">Todas as imagens na ordem original cadastrada.</p>
-               </div>
-            </button>
-
-            <button onClick={() => setMode('random')} className={`p-6 rounded-2xl border-2 text-left flex items-center gap-4 transition-all ${mode === 'random' ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
-               <div className={`p-3 rounded-xl ${mode === 'random' ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><Shuffle size={24}/></div>
-               <div>
-                 <h4 className="font-black text-[#003366] text-lg">Modo Aleatório</h4>
-                 <p className="text-xs text-gray-500 font-medium">Imagens misturadas para testar a sua memória real.</p>
-               </div>
-            </button>
-
-            <button onClick={() => setMode('range')} className={`p-6 rounded-2xl border-2 text-left flex items-center gap-4 transition-all ${mode === 'range' ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
-               <div className={`p-3 rounded-xl ${mode === 'range' ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><SlidersHorizontal size={24}/></div>
-               <div className="flex-1">
-                 <h4 className="font-black text-[#003366] text-lg">Intervalo Específico</h4>
-                 <p className="text-xs text-gray-500 font-medium">Estude apenas uma parte (ex: da imagem 40 a 100).</p>
-               </div>
+            <button onClick={() => setOrder('random')} className={`p-5 rounded-2xl border-2 text-left flex items-center gap-3 transition-all ${order === 'random' ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
+              <div className={`p-2.5 rounded-xl ${order === 'random' ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><Shuffle size={20}/></div>
+              <div>
+                <h4 className="font-black text-[#003366] text-sm">Aleatória</h4>
+                <p className="text-[10px] text-gray-500 font-medium">Testa a memória real</p>
+              </div>
             </button>
           </div>
 
-          {mode === 'range' && (
-            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 animate-in zoom-in duration-300">
-               <p className="text-center text-[10px] font-black uppercase text-gray-500 tracking-widest mb-4">Defina o intervalo desejado</p>
+          {/* INTERVALO ESPECÍFICO */}
+          <button onClick={() => setUseRange(!useRange)} className={`w-full p-5 rounded-2xl border-2 text-left flex items-center gap-3 transition-all mb-4 ${useRange ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
+            <div className={`p-2.5 rounded-xl ${useRange ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><SlidersHorizontal size={20}/></div>
+            <div className="flex-1">
+              <h4 className="font-black text-[#003366] text-sm">Estudar só um intervalo</h4>
+              <p className="text-[10px] text-gray-500 font-medium">Ex: da lâmina 40 à 100 — útil na véspera da prova</p>
+            </div>
+            <span className={`w-11 h-6 rounded-full flex items-center px-1 transition-all shrink-0 ${useRange ? 'bg-[#003366] justify-end' : 'bg-gray-200 justify-start'}`}>
+              <span className="w-4 h-4 bg-white rounded-full shadow"/>
+            </span>
+          </button>
+
+          {useRange && (
+            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-6 animate-in zoom-in duration-300">
                <div className="flex items-center justify-center gap-4">
                   <div className="flex flex-col items-center">
-                    <label className="text-[10px] font-bold text-[#003366] mb-1 uppercase">Da Imagem nº:</label>
-                    <input type="number" min={1} max={rangeEnd} value={rangeStart} onChange={e => setRangeStart(Number(e.target.value))} className="w-24 p-3 text-center rounded-xl border-2 border-gray-200 font-black text-lg focus:border-[#D4A017] outline-none" />
+                    <label className="text-[10px] font-bold text-[#003366] mb-1 uppercase">Da lâmina nº</label>
+                    <input type="number" min={1} max={simulation.questions.length} value={rangeStart} onChange={e => setRangeStart(Number(e.target.value))} className="w-24 p-3 text-center rounded-xl border-2 border-gray-200 font-black text-lg focus:border-[#D4A017] outline-none" />
                   </div>
                   <span className="text-gray-300 font-black text-2xl mt-4">→</span>
                   <div className="flex flex-col items-center">
-                    <label className="text-[10px] font-bold text-[#003366] mb-1 uppercase">Até a nº:</label>
-                    <input type="number" min={rangeStart} max={simulation.questions.length} value={rangeEnd} onChange={e => setRangeEnd(Number(e.target.value))} className="w-24 p-3 text-center rounded-xl border-2 border-gray-200 font-black text-lg focus:border-[#D4A017] outline-none" />
+                    <label className="text-[10px] font-bold text-[#003366] mb-1 uppercase">Até a nº</label>
+                    <input type="number" min={1} max={simulation.questions.length} value={rangeEnd} onChange={e => setRangeEnd(Number(e.target.value))} className="w-24 p-3 text-center rounded-xl border-2 border-gray-200 font-black text-lg focus:border-[#D4A017] outline-none" />
                   </div>
                </div>
             </div>
           )}
 
-          <button onClick={handleStart} disabled={mode === 'flashcard' && (!userId || !isProgressLoaded)} className="w-full bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-sm tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#003366] disabled:hover:text-white">
-            Iniciar Prática 🔬
+          {/* LIMITE DE NOVAS */}
+          <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-8 flex items-center gap-4">
+            <div className="flex-1">
+              <h4 className="font-black text-[#003366] text-sm">Limite de lâminas novas</h4>
+              <p className="text-[10px] text-gray-500 font-medium">Deixe vazio para estudar o baralho inteiro</p>
+            </div>
+            <input
+              type="number"
+              min={1}
+              placeholder="sem limite"
+              value={newLimitText}
+              onChange={e => setNewLimitText(e.target.value)}
+              className="w-32 p-3 text-center rounded-xl border-2 border-gray-200 font-black text-sm focus:border-[#D4A017] outline-none placeholder:font-medium placeholder:text-[10px] placeholder:text-gray-400"
+            />
+          </div>
+
+          <button onClick={handleStart} disabled={!isProgressLoaded} className="w-full bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-sm tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#003366] disabled:hover:text-white">
+            Começar a estudar 🧠
           </button>
         </div>
       </div>
@@ -340,134 +384,88 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   }
 
   // ==========================================
-  // TELA 2A: SESSÃO DE FLASHCARDS EM EXECUÇÃO
+  // TELA 2: FIM DE SESSÃO
   // ==========================================
-  if (mode === 'flashcard') {
-    if (isSessionComplete) {
-      return (
-        <div className="max-w-2xl mx-auto px-4 py-12 animate-in zoom-in duration-500 pb-32 text-center">
-          <div className="w-20 h-20 bg-amber-50 text-[#D4A017] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm"><PartyPopper size={40}/></div>
-          <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Sessão Concluída!</h2>
-          <p className="text-gray-500 text-sm mb-10">{simulation.title}</p>
-
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100 flex justify-center gap-10 mb-10">
-            <div className="text-center">
-              <p className="text-3xl font-black text-[#003366]">{sessionStats.reviewed}</p>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Revisados</p>
-            </div>
-            <div className="w-px bg-gray-100" />
-            <div className="text-center">
-              <p className="text-3xl font-black text-red-500">{sessionStats.hard}</p>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Não Lembradas</p>
-            </div>
-          </div>
-
-          <button onClick={() => setIsSetupMode(true)} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all">
-            Voltar ao Início
-          </button>
-        </div>
-      );
-    }
-
-    const cardId = srsQueue[currentIndex];
-    const q = cardId ? questionMap.get(cardId) : undefined;
-    if (!q) return null;
-
-    const displayName = getDisplayImageName(q, currentIndex);
-    const now = Date.now();
-    const currentState = getOrCreateCardState(progress, q.id, now, q.answer);
-
-    // Foco na experiência de recall (estilo Anki: "How well did you remember this?"), não num
-    // rótulo de dificuldade abstrata — é o texto que decide o rating, então precisa continuar
-    // descrevendo o que aconteceu na cabeça do aluno, não o efeito (prazo) dessa escolha.
-    const ratingButtons: { rating: SrsRating; label: string; icon: React.ReactElement; className: string }[] = [
-      { rating: 'hard', label: 'Não lembrei', icon: <Flame size={18}/>, className: 'bg-red-500 hover:bg-red-600' },
-      { rating: 'medium', label: 'Lembrei com esforço', icon: <Eye size={18}/>, className: 'bg-amber-500 hover:bg-amber-600' },
-      { rating: 'easy', label: 'Lembrei fácil', icon: <PartyPopper size={18}/>, className: 'bg-green-500 hover:bg-green-600' },
-    ];
+  if (isSessionComplete) {
+    const acertos = [...sessionAnswersRef.current.values()].filter(Boolean).length;
+    const total = sessionAnswersRef.current.size;
 
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 animate-in fade-in duration-500 pb-32">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <button onClick={() => setIsSetupMode(true)} className="text-[10px] font-black uppercase text-gray-400 hover:text-[#003366] transition-colors mb-2 flex items-center gap-1"><ChevronLeft size={12}/> Trocar Modo</button>
-            <h2 className="text-xl font-black text-[#003366]">{simulation.title}</h2>
-            <p className="text-[10px] font-black uppercase text-[#D4A017] tracking-[0.2em]">{simulation.author}</p>
+      <div className="max-w-2xl mx-auto px-4 py-12 animate-in zoom-in duration-500 pb-32 text-center">
+        <div className="w-20 h-20 bg-amber-50 text-[#D4A017] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm"><PartyPopper size={40}/></div>
+        <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Sessão Concluída!</h2>
+        <p className="text-gray-500 text-sm mb-10">{simulation.title}</p>
+
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100 flex justify-center gap-10 mb-6">
+          <div className="text-center">
+            <p className="text-3xl font-black text-[#003366]">{total}</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Lâminas</p>
           </div>
-          <div className="bg-white px-4 py-2 rounded-xl shadow-sm border font-black text-[#003366] text-xs flex flex-col items-center">
-            <span>{currentIndex + 1} / {srsQueue.length}</span>
-            <span className="text-[8px] text-gray-400 uppercase tracking-widest flex items-center gap-1"><Brain size={10}/> Flashcards</span>
+          <div className="w-px bg-gray-100" />
+          <div className="text-center">
+            <p className="text-3xl font-black text-green-600">{acertos}</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">De primeira</p>
+          </div>
+          <div className="w-px bg-gray-100" />
+          <div className="text-center">
+            <p className="text-3xl font-black text-red-500">{total - acertos}</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Não lembradas</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-xl border border-gray-100">
-          <QuestionMedia q={q} displayName={displayName} />
+        <p className="text-xs text-gray-400 font-medium mb-10 max-w-md mx-auto">
+          As lâminas que você não lembrou voltam antes das outras na próxima sessão.
+        </p>
 
-          {!isRevealed ? (
-            <button
-              onClick={() => setIsRevealed(true)}
-              className="w-full md:w-2/3 mx-auto bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#D4A017] hover:text-[#003366] hover:scale-105 transition-all shadow-xl"
-            >
-              <Eye size={20}/> Revelar Resposta
-            </button>
-          ) : (
-            <div className="animate-in slide-in-from-top-4 duration-500">
-              <AnswerReveal q={q} />
-
-              <div className="mt-8">
-                <p className="text-center text-[10px] font-black uppercase text-gray-500 tracking-widest mb-4">Você lembrou dessa identificação?</p>
-                <div className="grid grid-cols-3 gap-3">
-                  {ratingButtons.map(({ rating, label, icon, className }) => (
-                    <button
-                      key={rating}
-                      onClick={() => handleRateFlashcard(rating)}
-                      className={`${className} text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all shadow-md flex flex-col items-center gap-1.5 text-center`}
-                    >
-                      {icon} {label}
-                      <span className="text-[8px] font-bold normal-case opacity-80">
-                        {formatDueLabel(reviewCard(currentState, rating, now).intervalDays)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <button onClick={finishSession} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all">
+          Salvar e Voltar
+        </button>
       </div>
     );
   }
 
   // ==========================================
-  // TELA 2B: MODOS CLÁSSICOS (SEQUENCIAL/ALEATÓRIO/INTERVALO) EM EXECUÇÃO
+  // TELA 3: ESPERANDO O DEGRAU VENCER
   // ==========================================
-  const q = activeQuestions[currentIndex];
+  if (waitingUntil !== null) {
+    const minutosRestantes = Math.max(1, Math.ceil((waitingUntil - Date.now()) / 60000));
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 animate-in fade-in duration-500 pb-32 text-center">
+        <div className="w-20 h-20 bg-blue-50 text-[#003366] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm"><Clock size={40}/></div>
+        <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tighter mb-3">Tudo revisado por enquanto</h2>
+        <p className="text-gray-500 text-sm mb-10 max-w-md mx-auto">
+          Ainda há lâminas em aprendizado, mas a próxima só volta em cerca de {minutosRestantes} minuto{minutosRestantes > 1 ? 's' : ''}.
+          Você pode esperar aqui ou encerrar a sessão.
+        </p>
+        <button onClick={finishSession} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all">
+          Encerrar e Salvar
+        </button>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // TELA 4: A SESSÃO EM SI
+  // ==========================================
+  const q = currentCardId ? questionMap.get(currentCardId) : undefined;
   if (!q) return null;
 
-  const displayName = getDisplayImageName(q, currentIndex);
+  const displayName = getDisplayImageName(q, questionIds.indexOf(q.id));
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 animate-in fade-in duration-500 pb-32">
-
-      {/* Header Superior */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div>
-          <button onClick={() => setIsSetupMode(true)} className="text-[10px] font-black uppercase text-gray-400 hover:text-[#003366] transition-colors mb-2 flex items-center gap-1"><ChevronLeft size={12}/> Trocar Modo</button>
+          <button onClick={finishSession} className="text-[10px] font-black uppercase text-gray-400 hover:text-[#003366] transition-colors mb-2 flex items-center gap-1"><ChevronLeft size={12}/> Encerrar sessão</button>
           <h2 className="text-xl font-black text-[#003366]">{simulation.title}</h2>
-          <p className="text-[10px] font-black uppercase text-[#D4A017] tracking-[0.2em]">{simulation.author}</p>
+          <p className="text-[10px] font-black uppercase text-[#D4A017] tracking-[0.2em]">{answeredCount} estudadas nesta sessão</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-xl shadow-sm border font-black text-[#003366] text-xs flex flex-col items-center">
-          <span>{currentIndex + 1} / {activeQuestions.length}</span>
-          <span className="text-[8px] text-gray-400 uppercase tracking-widest">
-            {mode === 'sequential' ? 'Sequencial' : mode === 'random' ? 'Aleatório' : 'Intervalo'}
-          </span>
-        </div>
+        <SessionCounters {...counts} />
       </div>
 
       <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-xl border border-gray-100">
         <QuestionMedia q={q} displayName={displayName} />
 
-        {/* ANTES DE REVELAR */}
         {!isRevealed ? (
           <button
             onClick={() => setIsRevealed(true)}
@@ -478,63 +476,22 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         ) : (
           <div className="animate-in slide-in-from-top-4 duration-500">
             <AnswerReveal q={q} />
-            {/* BLOCO DE AUTOAVALIAÇÃO (GOTA A GOTA DO ANALYTICS) */}
-            {!answerRecorded ? (
-              <div className="mt-8 bg-blue-50/50 border-2 border-blue-100 p-6 rounded-2xl flex flex-col items-center animate-in zoom-in duration-300">
-                <p className="text-[10px] font-black uppercase text-blue-800 tracking-widest mb-4">Seja sincero: Você acertou a identificação?</p>
-                <div className="flex gap-4 w-full md:w-2/3">
-                  <button onClick={() => handleRecordAnswer(true)} className="flex-1 bg-green-500 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 hover:scale-105 transition-all shadow-md">
-                    👍 Acertei
-                  </button>
-                  <button onClick={() => handleRecordAnswer(false)} className="flex-1 bg-red-500 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 hover:scale-105 transition-all shadow-md">
-                    👎 Errei
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-8 bg-gray-50 border-2 border-gray-100 p-4 rounded-2xl flex justify-center items-center animate-in fade-in">
-                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
-                  {answerRecorded === 'correct' ? '✅ Acerto Registrado nas Estatísticas!' : '❌ Erro Registrado para Revisão'}
-                </p>
-              </div>
-            )}
 
+            <div className="mt-8">
+              <p className="text-center text-[10px] font-black uppercase text-gray-500 tracking-widest mb-4">Você lembrou dessa identificação?</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {RATING_BUTTONS.map(({ rating, label, className }) => (
+                  <button
+                    key={rating}
+                    onClick={() => handleRate(rating)}
+                    className={`${className} text-white py-5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all shadow-md text-center`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Navegação entre as imagens */}
-      <div className="flex justify-between items-center mt-8 gap-4">
-        <button
-          onClick={handlePrev}
-          disabled={currentIndex === 0}
-          className="bg-white p-4 md:px-6 rounded-2xl shadow-sm border border-gray-100 text-[#003366] disabled:opacity-30 flex items-center gap-2 font-black uppercase text-[10px] hover:bg-gray-50 transition-all"
-        >
-          <ChevronLeft size={16}/> Anterior
-        </button>
-
-        {/* Se for a última questão, mostra o botão Finalizar. Caso contrário, botão Próxima.
-            Ambos estão desativados se a resposta não tiver sido revelada E registada. */}
-        {currentIndex === activeQuestions.length - 1 ? (
-          <button
-            onClick={() => setIsSetupMode(true)}
-            disabled={!isRevealed || !answerRecorded}
-            className={`px-8 py-4 rounded-2xl shadow-lg border border-transparent font-black uppercase text-[10px] tracking-widest transition-all
-              ${(!isRevealed || !answerRecorded) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-[#D4A017] text-[#003366] hover:scale-105'}
-            `}
-          >
-            Finalizar e Voltar
-          </button>
-        ) : (
-          <button
-            onClick={handleNext}
-            disabled={!isRevealed || !answerRecorded}
-            className={`bg-white p-4 md:px-6 rounded-2xl shadow-sm border flex items-center gap-2 font-black uppercase text-[10px] transition-all
-              ${(!isRevealed || !answerRecorded) ? 'border-gray-100 text-gray-300 cursor-not-allowed opacity-50' : 'border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white'}
-            `}
-          >
-            Próxima <ChevronRight size={16}/>
-          </button>
         )}
       </div>
     </div>

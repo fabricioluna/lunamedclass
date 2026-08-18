@@ -1,47 +1,112 @@
-// Motor de repetição espaçada (SM-2 simplificado, "estilo Anki") para o Laboratório Virtual —
-// Etapa 6, item 6.3. Cada card guarda `ease` (fator de facilidade), `intervalDays` (dias até
-// reaparecer) e `dueAt`. Puro e sem Firebase de propósito: quem persiste é
-// services/flashcardsService.ts, um doc por simulação em users/{uid}/flashcardProgress/{simId}.
+// Motor de repetição espaçada do Laboratório Virtual — Etapa 6, item 6.5 (reescrita do 6.3).
 //
-// Só 3 botões (o Anki tem 4 — "Again"/"Hard"/"Good"/"Easy"). "Difícil" aqui acumula o papel do
-// "Again": volta na mesma sessão, não só amanhã, porque com 3 níveis não há um degrau
-// intermediário de "quase errei" para absorver esse caso.
+// O 6.3 só tinha os intervalos em DIAS. Faltava a metade em MINUTOS — os "degraus de
+// aprendizado" — que é justamente a que o aluno sente: sem eles, marcar "não lembrei" não
+// trazia a lâmina de volta de um jeito perceptível. Aqui o modelo é o do Anki de verdade:
+// cada card anda por 4 fases, e só depois de vencer os degraus curtos é que passa a ser
+// agendado em dias.
+//
+//   nova  ──"lembrei"──►  aprendendo (1min → 10min)  ──graduou──►  revisão (1d → 3d → 8d...)
+//                              ▲                                        │
+//                              └──────── reaprendendo (10min) ◄──"não lembrei"
+//
+// Puro e sem Firebase de propósito: quem persiste é services/flashcardsService.ts.
+//
+// São 3 botões, não os 4 do Anki: `again`/`good`/`easy` (o "Hard" do Anki fica deliberadamente
+// de fora — com 3 níveis, "não lembrei" já cobre o caso do erro).
 
-export type SrsRating = 'hard' | 'medium' | 'easy';
+export type SrsRating = 'again' | 'good' | 'easy';
+
+// Fases do Anki. `new` nunca foi vista; `learning` está subindo os degraus curtos; `review` já
+// graduou e é agendada em dias; `relearning` é uma card de revisão que caiu e voltou pros
+// degraus curtos.
+export type SrsPhase = 'new' | 'learning' | 'review' | 'relearning';
+
+// Versão do formato do estado persistido. O formato 1 (item 6.3) não tinha fase nem degraus e
+// usava outros nomes de rating — é descartado na leitura em vez de convertido (decisão do
+// usuário em 2026-08-18: era só o progresso do teste dele, não vale carregar código de
+// compatibilidade pra sempre). Ver normalizeCardState.
+export const SRS_SCHEMA_VERSION = 2;
 
 export interface SrsCardState {
+  schemaVersion: number;
   cardId: string;
-  answerLabel?: string; // Denormalizado para listar "pontos fracos" sem baixar a simulação inteira.
+  answerLabel?: string; // Denormalizado: o dashboard cita a lâmina sem baixar a simulação inteira.
+  phase: SrsPhase;
+  stepIndex: number; // Posição nos degraus de aprendizado/reaprendizado.
   ease: number;
   intervalDays: number;
-  repetitions: number; // Zera a cada "Difícil" — é o que faz o card recomeçar a progressão.
-  lapses: number; // Só cresce — histórico de vezes que o aluno marcou "Difícil".
+  lapses: number; // Só conta queda de card JÁ graduada — é a métrica de "lapso" do Anki.
+  againCount: number; // Conta todo "não lembrei", inclusive em card nova. É o que ranqueia os pontos fracos.
   reviews: number;
-  dueAt: number; // epoch ms
+  dueAt: number; // epoch ms — minutos nas fases curtas, dias na revisão.
   lastRating?: SrsRating;
   lastReviewedAt?: number;
 }
 
-const DEFAULT_EASE = 2.5;
-const MIN_EASE = 1.3; // Piso do próprio Anki — abaixo disso o card nunca sai do modo "sempre difícil".
-const EASE_PENALTY_HARD = 0.2;
-const EASE_BONUS_EASY = 0.15;
-const EASY_INTERVAL_MULTIPLIER = 1.3; // Bônus extra do Anki para respostas "Easy" além do fator de facilidade.
-const FIRST_INTERVAL_MEDIUM_DAYS = 1;
-const FIRST_INTERVAL_EASY_DAYS = 4;
+// === PARÂMETROS (os padrões do próprio Anki) ===
+export const LEARNING_STEPS_MIN = [1, 10];
+export const RELEARNING_STEPS_MIN = [10];
+export const GRADUATING_INTERVAL_DAYS = 1;
+export const EASY_INTERVAL_DAYS = 4;
+export const DEFAULT_EASE = 2.5;
+export const MIN_EASE = 1.3; // Piso do Anki: abaixo disso o card nunca sai de "sempre difícil".
+export const EASE_PENALTY_AGAIN = 0.2;
+export const EASE_BONUS_EASY = 0.15;
+export const EASY_BONUS = 1.3;
+export const MINIMUM_INTERVAL_DAYS = 1;
+// Se só sobram cards de aprendizado e nenhuma venceu ainda, o Anki adianta as que vencem
+// dentro desta janela em vez de encerrar a sessão. Sem isso, o aluno que erra a última lâmina
+// ficaria olhando pra uma tela de "acabou" com card pendente.
+export const LEARN_AHEAD_LIMIT_MIN = 20;
+
+const ONE_MINUTE_MS = 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const clampEase = (ease: number) => Math.max(MIN_EASE, ease);
+const daysToMs = (days: number) => days * ONE_DAY_MS;
+const minutesToMs = (minutes: number) => minutes * ONE_MINUTE_MS;
 
 export function createInitialCardState(cardId: string, now: number, answerLabel?: string): SrsCardState {
   return {
+    schemaVersion: SRS_SCHEMA_VERSION,
     cardId,
     answerLabel,
+    phase: 'new',
+    stepIndex: 0,
     ease: DEFAULT_EASE,
     intervalDays: 0,
-    repetitions: 0,
     lapses: 0,
+    againCount: 0,
     reviews: 0,
-    dueAt: now, // Nunca revisado = devido imediatamente, entra na fila como inédito (ver buildSessionQueue).
+    dueAt: now,
   };
+}
+
+// Estado gravado no formato antigo (item 6.3) é DESCARTADO, virando card nova. Não é conversão:
+// o formato 1 não guardava fase nem degrau, então qualquer mapeamento seria chute.
+export function normalizeCardState(raw: unknown, cardId: string, now: number, answerLabel?: string): SrsCardState {
+  if (!raw || typeof raw !== 'object') return createInitialCardState(cardId, now, answerLabel);
+  const candidate = raw as Partial<SrsCardState>;
+  if (candidate.schemaVersion !== SRS_SCHEMA_VERSION) {
+    return createInitialCardState(cardId, now, answerLabel);
+  }
+  return { ...(candidate as SrsCardState), answerLabel: candidate.answerLabel ?? answerLabel };
+}
+
+export function normalizeProgress(
+  raw: Record<string, unknown> | undefined,
+): Record<string, SrsCardState> {
+  if (!raw) return {};
+  const result: Record<string, SrsCardState> = {};
+  for (const [cardId, state] of Object.entries(raw)) {
+    const candidate = state as Partial<SrsCardState> | null;
+    // Descarta o formato antigo em silêncio: vira card nova na próxima sessão.
+    if (candidate && typeof candidate === 'object' && candidate.schemaVersion === SRS_SCHEMA_VERSION) {
+      result[cardId] = candidate as SrsCardState;
+    }
+  }
+  return result;
 }
 
 export function getOrCreateCardState(
@@ -53,134 +118,315 @@ export function getOrCreateCardState(
   return states[cardId] ?? createInitialCardState(cardId, now, answerLabel);
 }
 
-export function reviewCard(state: SrsCardState, rating: SrsRating, now: number): SrsCardState {
-  const reviews = state.reviews + 1;
-  const base = { ...state, reviews, lastRating: rating, lastReviewedAt: now };
+const stepsFor = (phase: SrsPhase) => (phase === 'relearning' ? RELEARNING_STEPS_MIN : LEARNING_STEPS_MIN);
 
-  if (rating === 'hard') {
+// Aplica a resposta do aluno e devolve o novo estado. Espelha a tabela do Anki; o único desvio
+// consciente é não ter o botão "Hard".
+export function answerCard(state: SrsCardState, rating: SrsRating, now: number): SrsCardState {
+  const base: SrsCardState = {
+    ...state,
+    reviews: state.reviews + 1,
+    lastRating: rating,
+    lastReviewedAt: now,
+    againCount: state.againCount + (rating === 'again' ? 1 : 0),
+  };
+
+  // --- Card já graduada (revisão) ---
+  if (state.phase === 'review') {
+    if (rating === 'again') {
+      return {
+        ...base,
+        phase: 'relearning',
+        stepIndex: 0,
+        ease: clampEase(state.ease - EASE_PENALTY_AGAIN),
+        lapses: state.lapses + 1,
+        // O Anki usa "new interval 0%" por padrão: a card volta pro piso quando regraduar.
+        intervalDays: MINIMUM_INTERVAL_DAYS,
+        dueAt: now + minutesToMs(RELEARNING_STEPS_MIN[0]),
+      };
+    }
+
+    if (rating === 'good') {
+      const intervalDays = Math.max(MINIMUM_INTERVAL_DAYS, Math.round(state.intervalDays * state.ease));
+      return { ...base, intervalDays, dueAt: now + daysToMs(intervalDays) };
+    }
+
+    const ease = state.ease + EASE_BONUS_EASY;
+    const intervalDays = Math.max(MINIMUM_INTERVAL_DAYS, Math.round(state.intervalDays * ease * EASY_BONUS));
+    return { ...base, ease, intervalDays, dueAt: now + daysToMs(intervalDays) };
+  }
+
+  // --- Card nova, em aprendizado ou em reaprendizado (degraus curtos) ---
+  const isRelearning = state.phase === 'relearning';
+  const steps = stepsFor(state.phase);
+
+  if (rating === 'again') {
     return {
       ...base,
-      ease: Math.max(MIN_EASE, state.ease - EASE_PENALTY_HARD),
-      intervalDays: 0,
-      repetitions: 0,
-      lapses: state.lapses + 1,
-      dueAt: now, // Reaparece na mesma sessão — buildSessionQueue/reinsertForRetry cuidam do "quando".
+      phase: isRelearning ? 'relearning' : 'learning',
+      stepIndex: 0,
+      dueAt: now + minutesToMs(steps[0]),
     };
   }
 
-  if (rating === 'medium') {
-    const intervalDays = state.repetitions === 0
-      ? FIRST_INTERVAL_MEDIUM_DAYS
-      : Math.max(1, Math.round(state.intervalDays * state.ease));
+  if (rating === 'easy') {
+    // "Lembrei fácil" pula os degraus restantes e gradua na hora.
+    const intervalDays = isRelearning
+      ? Math.max(MINIMUM_INTERVAL_DAYS, Math.round(state.intervalDays * EASY_BONUS))
+      : EASY_INTERVAL_DAYS;
     return {
       ...base,
+      phase: 'review',
+      stepIndex: 0,
       intervalDays,
-      repetitions: state.repetitions + 1,
-      dueAt: now + intervalDays * ONE_DAY_MS,
+      dueAt: now + daysToMs(intervalDays),
     };
   }
 
-  // easy
-  const intervalDays = state.repetitions === 0
-    ? FIRST_INTERVAL_EASY_DAYS
-    : Math.max(1, Math.round(state.intervalDays * state.ease * EASY_INTERVAL_MULTIPLIER));
+  // rating === 'good': avança um degrau; se era o último, gradua.
+  const nextStep = state.stepIndex + 1;
+  if (nextStep < steps.length) {
+    return {
+      ...base,
+      phase: isRelearning ? 'relearning' : 'learning',
+      stepIndex: nextStep,
+      dueAt: now + minutesToMs(steps[nextStep]),
+    };
+  }
+
+  const intervalDays = isRelearning
+    ? Math.max(MINIMUM_INTERVAL_DAYS, state.intervalDays)
+    : GRADUATING_INTERVAL_DAYS;
   return {
     ...base,
-    ease: state.ease + EASE_BONUS_EASY,
+    phase: 'review',
+    stepIndex: 0,
     intervalDays,
-    repetitions: state.repetitions + 1,
-    dueAt: now + intervalDays * ONE_DAY_MS,
+    dueAt: now + daysToMs(intervalDays),
   };
 }
 
-// Frase pro botão mostrar "quando volta" antes do aluno clicar ("Revisa agora" / "Revisa em 1
-// dia" / "Revisa em 8 dias") — é esse feedback que faz a repetição espaçada fazer sentido pra
-// quem usa. Frase completa (não só o número) porque "revisa em agora" soa errado em português —
-// "agora" não pede o "em".
-export function formatDueLabel(intervalDays: number): string {
-  if (intervalDays <= 0) return 'Revisa agora';
-  if (intervalDays === 1) return 'Revisa em 1 dia';
-  return `Revisa em ${intervalDays} dias`;
+// === SESSÃO ===
+
+export interface SrsSession {
+  // Novas + revisões devidas, já na ordem escolhida pelo aluno. Consumida da frente pro fim.
+  mainQueue: string[];
+  // Cards nos degraus curtos, esperando a hora de voltar. Ordenada por dueAt.
+  learningQueue: string[];
 }
 
-export function previewInterval(state: SrsCardState, rating: SrsRating, now: number): number {
-  return reviewCard(state, rating, now).intervalDays;
+export interface SessionOptions {
+  order?: 'sequential' | 'random';
+  rangeStart?: number; // 1-based, inclusive
+  rangeEnd?: number; // 1-based, inclusive
+  newLimit?: number; // undefined = sem limite (padrão escolhido pelo usuário)
+  random?: () => number; // injetável para teste determinístico
 }
 
-// Fila da sessão: vencidos primeiro (mais atrasado primeiro — quem devia ter sido revisado há
-// mais tempo é o que mais precisa de atenção), depois os inéditos, na ordem original. Cards já
-// vistos e ainda não vencidos ficam de fora — é o comportamento normal de revisão espaçada,
-// não uma omissão.
-export function buildSessionQueue(
+export function shuffle<T>(items: T[], random: () => number = Math.random): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+export function applyRange<T>(items: T[], rangeStart?: number, rangeEnd?: number): T[] {
+  if (rangeStart === undefined && rangeEnd === undefined) return items;
+  const start = Math.max(1, rangeStart ?? 1);
+  const end = Math.min(items.length, rangeEnd ?? items.length);
+  if (end < start) return [];
+  return items.slice(start - 1, end);
+}
+
+export function buildSession(
   cardIds: string[],
   states: Record<string, SrsCardState>,
   now: number,
-): string[] {
-  const due: string[] = [];
-  const unseen: string[] = [];
+  options: SessionOptions = {},
+): SrsSession {
+  const { order = 'sequential', rangeStart, rangeEnd, newLimit, random = Math.random } = options;
+  const pool = applyRange(cardIds, rangeStart, rangeEnd);
 
-  for (const id of cardIds) {
+  const newCards: string[] = [];
+  const dueReviews: string[] = [];
+  const learning: string[] = [];
+
+  for (const id of pool) {
     const state = states[id];
-    if (!state || state.reviews === 0) {
-      unseen.push(id);
+    if (!state || state.phase === 'new') {
+      newCards.push(id);
+    } else if (state.phase === 'learning' || state.phase === 'relearning') {
+      // Ficou pela metade numa sessão anterior — volta pros degraus, na hora marcada.
+      learning.push(id);
     } else if (state.dueAt <= now) {
-      due.push(id);
+      dueReviews.push(id);
     }
+    // Card de revisão ainda não vencida fica de fora: é o ponto da repetição espaçada.
   }
 
-  due.sort((a, b) => states[a].dueAt - states[b].dueAt);
-  return [...due, ...unseen];
+  const orderedNew = order === 'random' ? shuffle(newCards, random) : newCards;
+  const limitedNew = newLimit === undefined ? orderedNew : orderedNew.slice(0, Math.max(0, newLimit));
+  const orderedReviews = order === 'random' ? shuffle(dueReviews, random) : dueReviews;
+
+  // Revisões antes das novas: card já vista e vencida é prioridade sobre conteúdo inédito
+  // (mesma lógica do Anki, que trata a revisão como dívida acumulada).
+  const mainQueue = [...orderedReviews, ...limitedNew];
+
+  return {
+    mainQueue,
+    learningQueue: sortLearningQueue(learning, states),
+  };
+}
+
+const sortLearningQueue = (queue: string[], states: Record<string, SrsCardState>): string[] =>
+  [...queue].sort((a, b) => (states[a]?.dueAt ?? 0) - (states[b]?.dueAt ?? 0));
+
+export type NextCardResult =
+  | { kind: 'card'; cardId: string }
+  // Só restam cards de aprendizado, e a próxima só vence depois da janela de learn ahead.
+  | { kind: 'waiting'; cardId: string; dueAt: number }
+  | { kind: 'done' };
+
+// Escolhe o próximo card da sessão, na mesma ordem de prioridade do Anki.
+export function pickNextCard(
+  session: SrsSession,
+  states: Record<string, SrsCardState>,
+  now: number,
+): NextCardResult {
+  const nextLearning = session.learningQueue[0];
+  const nextLearningDue = nextLearning ? (states[nextLearning]?.dueAt ?? 0) : undefined;
+
+  // 1. Card de aprendizado que já venceu tem precedência sobre tudo.
+  if (nextLearning && nextLearningDue !== undefined && nextLearningDue <= now) {
+    return { kind: 'card', cardId: nextLearning };
+  }
+
+  // 2. Fila principal (revisões vencidas + novas).
+  if (session.mainQueue.length > 0) {
+    return { kind: 'card', cardId: session.mainQueue[0] };
+  }
+
+  // 3. Learn ahead: nada mais a fazer, então adianta a card de aprendizado que está por vencer.
+  if (nextLearning && nextLearningDue !== undefined) {
+    if (nextLearningDue - now <= minutesToMs(LEARN_AHEAD_LIMIT_MIN)) {
+      return { kind: 'card', cardId: nextLearning };
+    }
+    return { kind: 'waiting', cardId: nextLearning, dueAt: nextLearningDue };
+  }
+
+  return { kind: 'done' };
+}
+
+// Recoloca o card na sessão conforme a fase em que ficou depois da resposta.
+export function applyAnswerToSession(
+  session: SrsSession,
+  cardId: string,
+  newState: SrsCardState,
+  states: Record<string, SrsCardState>,
+): SrsSession {
+  const mainQueue = session.mainQueue.filter((id) => id !== cardId);
+  const learningQueue = session.learningQueue.filter((id) => id !== cardId);
+
+  const stillLearning = newState.phase === 'learning' || newState.phase === 'relearning';
+  if (!stillLearning) {
+    // Graduou: sai da sessão e volta só daqui a dias.
+    return { mainQueue, learningQueue };
+  }
+
+  return {
+    mainQueue,
+    learningQueue: sortLearningQueue([...learningQueue, cardId], { ...states, [cardId]: newState }),
+  };
 }
 
 export interface SessionCounts {
-  dueCount: number;
   newCount: number;
+  learningCount: number;
+  reviewCount: number;
 }
 
-// Mesmo critério do buildSessionQueue, mas só contando — usado na tela de setup para mostrar
-// "X para revisar hoje · Y inéditas" antes do aluno decidir começar a sessão.
+// Os 3 contadores que o Anki mostra o tempo todo (novas / aprendendo / revisão) — é a resposta
+// visual pra "não entendi como fica a repetição".
 export function getSessionCounts(
+  session: SrsSession,
+  states: Record<string, SrsCardState>,
+): SessionCounts {
+  let newCount = 0;
+  let reviewCount = 0;
+  for (const id of session.mainQueue) {
+    const state = states[id];
+    if (!state || state.phase === 'new') newCount++;
+    else reviewCount++;
+  }
+  return { newCount, learningCount: session.learningQueue.length, reviewCount };
+}
+
+// Contagem para a tela de configuração e para o badge da lista, ANTES de montar a sessão.
+export function getDeckCounts(
   cardIds: string[],
   states: Record<string, SrsCardState>,
   now: number,
 ): SessionCounts {
-  let dueCount = 0;
   let newCount = 0;
+  let learningCount = 0;
+  let reviewCount = 0;
   for (const id of cardIds) {
     const state = states[id];
-    if (!state || state.reviews === 0) newCount++;
-    else if (state.dueAt <= now) dueCount++;
+    if (!state || state.phase === 'new') newCount++;
+    else if (state.phase === 'learning' || state.phase === 'relearning') learningCount++;
+    else if (state.dueAt <= now) reviewCount++;
   }
-  return { dueCount, newCount };
+  return { newCount, learningCount, reviewCount };
 }
 
-const RETRY_OFFSET = 4;
+export interface DeckMastery {
+  studied: number;
+  mastered: number; // "mature" no Anki: intervalo >= 21 dias
+  learning: number;
+  dueToday: number;
+}
 
-// Reinsere o card marcado "Difícil" ~4 posições à frente na fila da sessão em andamento — sem
-// isso, `dueAt: now` só faria diferença numa sessão futura, e o aluno nunca sentiria o card
-// "aparecer de novo" na prática.
-export function reinsertForRetry(queue: string[], currentIndex: number, offset = RETRY_OFFSET): string[] {
-  if (currentIndex < 0 || currentIndex >= queue.length) return queue;
-  const cardId = queue[currentIndex];
-  const withoutCurrent = [...queue.slice(0, currentIndex), ...queue.slice(currentIndex + 1)];
-  const insertAt = Math.min(currentIndex + offset, withoutCurrent.length);
-  return [...withoutCurrent.slice(0, insertAt), cardId, ...withoutCurrent.slice(insertAt)];
+const MATURE_INTERVAL_DAYS = 21;
+
+export function getDeckMastery(
+  states: Record<string, SrsCardState>,
+  now: number,
+): DeckMastery {
+  let studied = 0;
+  let mastered = 0;
+  let learning = 0;
+  let dueToday = 0;
+
+  for (const state of Object.values(states)) {
+    if (state.reviews === 0) continue;
+    studied++;
+    if (state.phase === 'review' && state.intervalDays >= MATURE_INTERVAL_DAYS) mastered++;
+    if (state.phase === 'learning' || state.phase === 'relearning') learning++;
+    if (state.dueAt <= now) dueToday++;
+  }
+
+  return { studied, mastered, learning, dueToday };
 }
 
 export interface WeakCardSummary {
   cardId: string;
   answerLabel?: string;
   ease: number;
+  againCount: number;
   lapses: number;
   reviews: number;
 }
 
-// Ranking de "pontos fracos": mais vezes marcado Difícil primeiro; empate desempata pelo ease
-// mais baixo (facilidade menor = mais penalizado ao longo do tempo, mesmo com poucos lapsos).
+// Ranking de pontos fracos: mais "não lembrei" primeiro; empate desempata pelo ease mais baixo
+// (facilidade menor = card que vem penalizando ao longo do tempo, mesmo com poucos erros).
 export function getWeakestCards(states: Record<string, SrsCardState>, limit: number): WeakCardSummary[] {
   return Object.values(states)
-    .filter((s) => s.reviews > 0)
-    .sort((a, b) => b.lapses - a.lapses || a.ease - b.ease)
+    .filter((s) => s.reviews > 0 && s.againCount > 0)
+    .sort((a, b) => b.againCount - a.againCount || a.ease - b.ease)
     .slice(0, limit)
-    .map(({ cardId, answerLabel, ease, lapses, reviews }) => ({ cardId, answerLabel, ease, lapses, reviews }));
+    .map(({ cardId, answerLabel, ease, againCount, lapses, reviews }) => ({
+      cardId, answerLabel, ease, againCount, lapses, reviews,
+    }));
 }

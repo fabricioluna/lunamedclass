@@ -4,7 +4,7 @@ import { useAuth, UserProfile } from '../contexts/AuthContext';
 import { subscribeToMyResults } from '../services/resultsService';
 import { fetchAllFlashcardProgressDocs } from '../services/flashcardsService';
 import { fetchLabSimulationById } from '../services/labService';
-import { getWeakestCards } from '../utils/srs';
+import { getWeakestCards, getDeckMastery, type SrsCardState } from '../utils/srs';
 import { QuizResult, LabSimulation, AcademicUnit } from '../types';
 import { BrainCircuit, ChevronLeft, Zap, Star, TrendingUp, TrendingDown, CheckCircle, XCircle, Brain, ChevronRight } from 'lucide-react';
 
@@ -21,7 +21,15 @@ interface WeakLabCard {
   unit?: AcademicUnit;
   cardId: string;
   answerLabel?: string;
-  lapses: number;
+  againCount: number;
+}
+
+// Visão consolidada do estudo de flashcards, somando todos os baralhos do aluno.
+interface FlashcardOverview {
+  studied: number;
+  mastered: number;
+  learning: number;
+  dueToday: number;
 }
 
 const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
@@ -30,6 +38,7 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
   const [results, setResults] = useState<QuizResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [weakestCards, setWeakestCards] = useState<WeakLabCard[]>([]);
+  const [flashcardOverview, setFlashcardOverview] = useState<FlashcardOverview | null>(null);
   const [isLoadingWeakest, setIsLoadingWeakest] = useState(true);
 
   useEffect(() => {
@@ -67,7 +76,7 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
 
   // "Seus pontos fracos no Laboratório Virtual" (Etapa 6, item 6.3): 1 leitura de coleção pra
   // pegar TODO o progresso de flashcards do aluno (sem precisar saber os IDs das simulações de
-  // antemão — ver fetchAllFlashcardProgressDocs), rankeia globalmente por lapses/ease, e só
+  // antemão — ver fetchAllFlashcardProgressDocs), rankeia globalmente por erros/ease, e só
   // então busca os poucos labs de origem do top 5 pra montar o link de estudo.
   useEffect(() => {
     if (!currentUser) {
@@ -80,12 +89,20 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
 
     fetchAllFlashcardProgressDocs(currentUser.uid)
       .then(async (docs) => {
+        // Junta o progresso de todos os baralhos num mapa só para a visão consolidada.
+        const allCards: Record<string, SrsCardState> = {};
+        for (const docData of docs) {
+          for (const [cardId, state] of Object.entries(docData.cards)) {
+            allCards[`${docData.simulationId}:${cardId}`] = state;
+          }
+        }
+        if (!cancelled) setFlashcardOverview(getDeckMastery(allCards, Date.now()));
+
         const globalWeakest = docs
           .flatMap((docData) =>
             getWeakestCards(docData.cards, 5).map((card) => ({ ...card, simulationId: docData.simulationId }))
           )
-          .filter((card) => card.lapses > 0)
-          .sort((a, b) => b.lapses - a.lapses || a.ease - b.ease)
+          .sort((a, b) => b.againCount - a.againCount || a.ease - b.ease)
           .slice(0, 5);
 
         if (globalWeakest.length === 0) {
@@ -112,7 +129,7 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
               unit: sim.unit,
               cardId: card.cardId,
               answerLabel: card.answerLabel,
-              lapses: card.lapses,
+              againCount: card.againCount,
             };
           })
           .filter((card): card is WeakLabCard => card !== null);
@@ -267,6 +284,38 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
 
       </div>
 
+      {/* FLASHCARDS DO LABORATÓRIO VIRTUAL — visão consolidada (Etapa 6, item 6.5).
+          Vem do estado de repetição espaçada, não de quizResults: são métricas de estudo
+          (o que já está memorizado, o que vence hoje), não de nota. */}
+      {!isLoadingWeakest && flashcardOverview && flashcardOverview.studied > 0 && (
+        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm mb-8">
+          <h3 className="text-[10px] font-black text-[#003366] uppercase tracking-widest mb-4 flex items-center gap-1.5">
+            <Brain size={14}/> Flashcards do Laboratório Virtual
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 rounded-2xl bg-gray-50">
+              <p className="text-2xl font-black text-[#003366]">{flashcardOverview.studied}</p>
+              <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mt-1">Em estudo</p>
+            </div>
+            <div className="text-center p-3 rounded-2xl bg-green-50">
+              <p className="text-2xl font-black text-green-600">{flashcardOverview.mastered}</p>
+              <p className="text-[9px] font-black uppercase text-green-500 tracking-widest mt-1">Dominadas</p>
+            </div>
+            <div className="text-center p-3 rounded-2xl bg-red-50">
+              <p className="text-2xl font-black text-red-500">{flashcardOverview.learning}</p>
+              <p className="text-[9px] font-black uppercase text-red-400 tracking-widest mt-1">Aprendendo</p>
+            </div>
+            <div className="text-center p-3 rounded-2xl bg-amber-50">
+              <p className="text-2xl font-black text-[#D4A017]">{flashcardOverview.dueToday}</p>
+              <p className="text-[9px] font-black uppercase text-amber-500 tracking-widest mt-1">Para hoje</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-gray-400 font-medium mt-4 text-center">
+            "Dominadas" = lâminas cujo intervalo de revisão já passou de 21 dias.
+          </p>
+        </div>
+      )}
+
       {/* SEUS PONTOS FRACOS NO LABORATÓRIO VIRTUAL (Etapa 6, item 6.3) */}
       {!isLoadingWeakest && weakestCards.length > 0 && (
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm mb-8">
@@ -285,7 +334,7 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
                   <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider truncate">{card.simulationTitle}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 pl-3">
-                  <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-lg">{card.lapses}x não lembrada</span>
+                  <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-lg">{card.againCount}x não lembrada</span>
                   <ChevronRight size={16} className="text-gray-300 group-hover:text-red-500 transition-colors"/>
                 </div>
               </button>

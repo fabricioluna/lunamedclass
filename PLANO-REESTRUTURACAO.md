@@ -84,11 +84,9 @@ seção Etapa 6 e decisões D10/D11).
   `features/lab/LabQuizView.tsx` e era descartado do CSS. ⚠️ **Vale varrer o app atrás de
   outras classes fantasma** — qualquer utilitário usado só dentro de `features/`/`routes/` e em
   nenhum arquivo escaneado esteve sumindo do build esse tempo todo.
-- **6.5 (Lab vira Anki de verdade)** — 🔜 **próximo a implementar**, planejado e com as 3
-  decisões fechadas (1 resultado por sessão / limite de novas configurável com padrão vazio /
-  zerar o progresso existente).
-- **6.4 (liberação de conteúdo)** — na fila depois do 6.5. O mais arriscado de todos (índice
-  novo + backfill + rules, ordem de publicação obrigatória).
+- **6.5 (Lab vira Anki de verdade)** — ✅ concluído, aguardando teste do usuário em produção.
+- **6.4 (liberação de conteúdo)** — 🔜 **próximo**. O mais arriscado de todos (índice novo +
+  backfill + rules, ordem de publicação obrigatória).
 
 Os 4 simuladores futuros (Prescrição/Exames/Propedêutica/Evolução) continuam na fila, sem
 prioridade definida.
@@ -1170,8 +1168,8 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   derrubar tela em produção — fazer por último, em horário de baixo uso, com rollback das rules
   à mão.
 
-- [ ] **6.5 — Laboratório Virtual vira Anki de verdade (retrabalho do 6.3)**
-  *(planejado em 2026-08-18, depois do usuário testar o 6.3 em produção)*. O 6.3 entregou a
+- [x] **6.5 — Laboratório Virtual vira Anki de verdade (retrabalho do 6.3)**
+  *(concluído em 2026-08-18, depois do usuário testar o 6.3 em produção)*. O 6.3 entregou a
   **metade dos dias** do Anki (intervalos, ease, ranking de pontos fracos) mas **não a metade
   dos minutos** — que é justamente a que o aluno sente. Três queixas reais do usuário, todas
   confirmadas no código:
@@ -1224,6 +1222,43 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   respeitando horário e *learn ahead*, **"Não lembrei" na última lâmina da fila** (o bug de hoje
   vira teste de regressão), ordem aleatória embaralhando de verdade, limite de novas
   respeitando "vazio = sem limite". Mais `npm run test:rules` e teste manual com 2 contas.
+
+  ✅ **Entregue (2026-08-18):**
+  - `utils/srs.ts` **reescrito** + `utils/srs.test.ts` com **46 casos** (o anterior tinha 27 e
+    cobria o modelo antigo): 4 fases, degraus `[1min, 10min]` / reaprendizado `[10min]`,
+    graduação em 1 dia, "fácil" em 4, ease 2,5 com piso 1,3. Ratings renomeados para o
+    vocabulário do Anki (`again`/`good`/`easy`). `lapses` ficou fiel ao Anki (só card já
+    graduada) e entrou um `againCount` separado, que conta todo "não lembrei" — é ele que
+    ranqueia os pontos fracos, senão erro em card nova não apareceria no ranking.
+  - Escalonador novo: `buildSession` / `pickNextCard` / `applyAnswerToSession`, com fila de
+    aprendizado ordenada por horário e *learn ahead* de 20 min. **Bug do 6.3 vira teste de
+    regressão**: com outras lâminas na fila, "não lembrei" agora mostra a PRÓXIMA (antes podia
+    repetir a mesma na hora).
+  - `SRS_SCHEMA_VERSION = 2` + `normalizeProgress`: o formato do 6.3 é **descartado na leitura**
+    (vira card nova). Zerou sem script destrutivo e sem exigir Custom Claim — o doc antigo é
+    sobrescrito card a card conforme o aluno estuda.
+  - `features/lab/LabQuizView.tsx` reescrito: os 3 modos antigos viraram **configuração dentro
+    do flashcard** (ordem sequencial/aleatória, intervalo específico, limite de novas com
+    padrão vazio = sem limite). Botões sem rótulo de prazo; entraram os **3 contadores do Anki**
+    (Novas/Aprendendo/Revisão), o box "como funciona a repetição" e uma tela de espera para
+    quando só restam lâminas de aprendizado fora da janela de learn ahead.
+  - `utils/resultsPolicy.ts`: **D9 revista** — `laboratorio` volta a contar. `LabQuizView` grava
+    1 resultado por sessão com `details[]` por lâmina, contando **acerto de primeira** (lâmina
+    errada e depois acertada na mesma sessão conta como erro — senão bastaria insistir até
+    acertar para a nota fechar em 100%).
+  - `views/StudentDashboardView.tsx`: painel "Flashcards do Laboratório Virtual" (em estudo /
+    dominadas / aprendendo / para hoje) vindo do estado SRS, e o ranking de pontos fracos agora
+    por `againCount`.
+  - `features/lab/LabListView.tsx`: badge passou a contar só o que precisa VOLTAR
+    (aprendendo + revisão vencida) — com o critério antigo, um baralho inédito inteiro
+    apareceria como pendência.
+  - Verificação: `typecheck` ✅, `vitest` **99/99** ✅, `test:rules` 26/26 ✅ (emulador),
+    `lint` 22 (os mesmos pré-existentes) ✅, `build` ✅ + conferência de que as 7 classes de cor
+    usadas na tela sobreviveram ao CSS de produção (lição do `deb2a85`).
+
+  🟡 **Não coberto:** taxa de retenção histórica no painel (exigiria um log de revisões, que
+  hoje não existe — só o estado atual de cada card é guardado). O painel mostra o que é
+  honestamente derivável do estado.
 
 
 ---

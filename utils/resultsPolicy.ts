@@ -1,10 +1,15 @@
 import { QuizResult } from '../types';
 
-// Decisão "por enquanto" (2026-08-06, com o usuário): só Simulado Teórico conta pra
-// nota/estatística/pesquisa. Lab, OSCE (estático/RPG/IA) ficam de fora até a confiabilidade
+// Decisão "por enquanto" (2026-08-06, com o usuário): só Simulado Teórico contava pra
+// nota/estatística/pesquisa. Lab e OSCE (estático/RPG/IA) ficaram de fora até a confiabilidade
 // desses modos ser revisada. Reversível: adicionar o tipo de volta em COUNTED_RESULT_TYPES
 // (e religar OSCE_ANALYTICS_ENABLED, abaixo).
-export const COUNTED_RESULT_TYPES: NonNullable<QuizResult['type']>[] = ['teorico'];
+//
+// Revisto em 2026-08-18 (item 6.5): `laboratorio` VOLTA A CONTAR, porque o usuário testou os
+// flashcards e não achou o desempenho no dashboard — o Lab agora grava **1 resultado por
+// sessão** de flashcards (não 1 por lâmina; ver D11 no PLANO: 1 doc por lâmina daria ~4.000
+// leituras por abertura do dashboard num semestre). OSCE segue fora.
+export const COUNTED_RESULT_TYPES: NonNullable<QuizResult['type']>[] = ['teorico', 'laboratorio'];
 
 export const isCountedResultType = (type?: QuizResult['type']): boolean =>
   !!type && COUNTED_RESULT_TYPES.includes(type);

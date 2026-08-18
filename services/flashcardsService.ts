@@ -1,8 +1,8 @@
 import { firestoreDB } from '../firebase';
 import { doc, getDoc, getDocs, setDoc, collection } from 'firebase/firestore';
-import { SrsCardState } from '../utils/srs';
+import { SrsCardState, normalizeProgress } from '../utils/srs';
 
-// Progresso de flashcards por aluno (Etapa 6, item 6.3) — 1 doc por simulação em
+// Progresso de flashcards por aluno (Etapa 6, itens 6.3/6.5) — 1 doc por simulação em
 // users/{uid}/flashcardProgress/{simulationId}, não 1 doc por card: uma lâmina com 150 imagens
 // viraria 150 leituras por sessão; um mapa de 150 estados fica na casa de ~30 KB, longe do
 // limite de 1 MB por doc do Firestore.
@@ -19,12 +19,25 @@ export interface FlashcardProgressDoc {
 const progressRef = (uid: string, simulationId: string) =>
   doc(firestoreDB, 'users', uid, 'flashcardProgress', simulationId);
 
+// O Firestore recusa `undefined` numa escrita — e `answerLabel` é opcional. Limpar aqui evita
+// que uma lâmina sem resposta cadastrada derrube o salvamento da sessão inteira.
+const stripUndefined = (state: SrsCardState): SrsCardState => {
+  const clean: Record<string, unknown> = { ...state };
+  for (const key of Object.keys(clean)) {
+    if (clean[key] === undefined) delete clean[key];
+  }
+  return clean as unknown as SrsCardState;
+};
+
+// A normalização descarta silenciosamente o formato do item 6.3 (sem fase/degraus) — decisão
+// do usuário de zerar em vez de converter. Na prática o documento antigo continua no banco até
+// o aluno estudar de novo, quando é sobrescrito card a card.
 export const fetchFlashcardProgress = async (
   uid: string,
   simulationId: string,
 ): Promise<Record<string, SrsCardState>> => {
   const snap = await getDoc(progressRef(uid, simulationId));
-  return (snap.data()?.cards as Record<string, SrsCardState>) || {};
+  return normalizeProgress(snap.data()?.cards as Record<string, unknown> | undefined);
 };
 
 // Escreve só o card revisado (merge recursivo do Firestore em `cards.<cardId>`), não o mapa
@@ -38,7 +51,7 @@ export const upsertFlashcardCardState = async (
 ) => {
   await setDoc(
     progressRef(uid, simulationId),
-    { simulationId, cards: { [cardId]: state } },
+    { simulationId, cards: { [cardId]: stripUndefined(state) } },
     { merge: true },
   );
 };
@@ -48,5 +61,11 @@ export const upsertFlashcardCardState = async (
 // coleção em vez de 1 leitura por simulação existente no banco.
 export const fetchAllFlashcardProgressDocs = async (uid: string): Promise<FlashcardProgressDoc[]> => {
   const snap = await getDocs(collection(firestoreDB, 'users', uid, 'flashcardProgress'));
-  return snap.docs.map((d) => d.data() as FlashcardProgressDoc);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      simulationId: (data.simulationId as string) || d.id,
+      cards: normalizeProgress(data.cards as Record<string, unknown> | undefined),
+    };
+  });
 };

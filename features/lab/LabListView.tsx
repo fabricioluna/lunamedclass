@@ -3,7 +3,7 @@ import { Microscope, Play, User, Activity, Pill, ClipboardList, FilterX, LayoutG
 import { LabSimulation, SimulationInfo, AcademicUnit } from '../../types';
 import { fetchLabSimulationsOnce } from '../../services/labService';
 import { fetchFlashcardProgress } from '../../services/flashcardsService';
-import { getSessionCounts } from '../../utils/srs';
+import { getDeckCounts } from '../../utils/srs';
 
 interface Props {
   disciplineId: string;
@@ -82,8 +82,10 @@ const LabListView: React.FC<Props> = ({
 
     Promise.all(simsToCheck.map(async (sim) => {
       const progress = await fetchFlashcardProgress(userId, sim.firebaseId as string);
-      const { dueCount } = getSessionCounts(sim.questions.map(q => q.id), progress, Date.now());
-      return [sim.firebaseId as string, dueCount] as const;
+      // Badge conta só o que precisa VOLTAR (aprendendo + revisão vencida). Lâmina inédita não
+      // é "para revisar" — o baralho novo inteiro apareceria como pendência em toda simulação.
+      const { learningCount, reviewCount } = getDeckCounts(sim.questions.map(q => q.id), progress, Date.now());
+      return [sim.firebaseId as string, learningCount + reviewCount] as const;
     }))
       .then((entries) => { if (!cancelled) setDueCounts(Object.fromEntries(entries)); })
       .catch((err) => console.error('Erro ao carregar contagem de revisão dos flashcards:', err));
