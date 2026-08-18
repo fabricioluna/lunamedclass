@@ -87,8 +87,12 @@ seção Etapa 6 e decisões D10/D11).
 - **6.5 (Lab vira Anki de verdade)** — ✅ concluído, aguardando teste do usuário em produção.
 - **6.6 (retomar sessão de onde parou)** — ✅ concluído junto, mesmo dia.
 - **6.7 (treino focado nas lâminas difíceis)** — ✅ concluído junto, mesmo dia.
-- **6.4 (liberação de conteúdo)** — 🔜 **próximo**. O mais arriscado de todos (índice novo +
-  backfill + rules, ordem de publicação obrigatória).
+- **6.8 (liberação por unidade N1/N2 na aba "Acessos")** — ✅ concluído. O usuário apontou que a
+  aba "Acessos" já resolvia quase tudo que o 6.4 planejava; só faltava a granularidade de
+  unidade, que é o que este item entregou.
+- **6.4 (liberação de conteúdo via Security Rules)** — ⏸️ **em grande parte superado pelo 6.8**.
+  Só sobrou a parte de segurança (a trava atual é de UI, contornável via SDK). Reavaliar se
+  vale o risco antes de executar.
 
 Os 4 simuladores futuros (Prescrição/Exames/Propedêutica/Evolução) continuam na fila, sem
 prioridade definida.
@@ -1122,7 +1126,10 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   específicos" ficaria para uma iteração futura, se o usuário sentir falta.
 
 - [ ] **6.4 — Liberação de conteúdo por disciplina × unidade × tipo (painel admin)**
-  *(planejado em 2026-08-18)*. Pedido do usuário: início de período, todo o conteúdo já
+  *(planejado em 2026-08-18; ⚠️ **em grande parte SUPERADO pelo item 6.8**, ver adiante — a aba
+  "Acessos" já fazia o essencial e ganhou granularidade de unidade. O que resta deste item é
+  só a camada de Security Rules, que é problema de segurança, não de pedagogia. Reavaliar com
+  o usuário antes de executar: pode não valer o risco de índice + backfill + rules.)*. Pedido do usuário: início de período, todo o conteúdo já
   carregado no banco **não** deve ficar disponível — ele quer ir liberando conforme o semestre
   anda, **em lote por disciplina/unidade, não item por item**, e valendo para **todos** os
   tipos de conteúdo (materiais, lab, questões, OSCE).
@@ -1322,6 +1329,44 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   🟡 **Não feito:** link direto do "Pontos Fracos" do dashboard para o treino focado do baralho
   correspondente (hoje o link leva pra tela de configuração do lab, onde o aluno escolhe o modo).
   Exigiria passar o foco por query param na rota.
+
+
+- [x] **6.8 — Liberação de funcionalidades por unidade (N1/N2) na aba "Acessos"**
+  *(concluído em 2026-08-18)*.
+
+  ⚠️ **Achado que reescreve o item 6.4:** o usuário apontou que "o 6.4 acredito que já
+  funcionava antes" — e estava certo. A aba **"Acessos"** (`AdminDisciplines.tsx`) já bloqueava
+  disciplina inteira (`status`) e funcionalidades específicas (`lockedFeatures`: Teórico,
+  Prática, Materiais, Referências, IA). O 6.4 foi planejado sem que essa tela fosse examinada a
+  fundo — **lição: mapear o que já existe antes de desenhar substituto**. A única lacuna real
+  era a que a própria UI confessava num badge: *"Aplica a N1 e N2 Simetricamente"*.
+
+  - `utils/featureLocks.ts` + `utils/featureLocks.test.ts` (16 casos): codificação
+    `"quiz"` (global/legado) vs `"quiz:N1"` (por unidade) **dentro do mesmo array
+    `lockedFeatures`** — sem migração de dados, documento antigo continua significando
+    exatamente o que significava. `isFeatureLocked`, `setFeatureLock`, `getFeatureLockState`.
+    O caso delicado tem teste próprio: **destravar a N1 a partir de uma trava global precisa
+    expandir o global na N2 antes**, senão liberar a N1 liberaria a N2 junto.
+  - `services/configService.ts`: `toggleDisciplineFeature` → `setDisciplineFeatureLock`
+    (disciplina, funcionalidade, escopo `N1`/`N2`/`all`, travar ou não).
+  - `features/admin/components/AdminDisciplines.tsx`: o badge simétrico virou **dois botões por
+    funcionalidade** (N1 e N2, verde/vermelho) nas disciplinas modulares (HABMED/IESC/UCCG). UC
+    não tem unidade e mantém o botão único de antes. O rótulo da funcionalidade fica âmbar
+    quando só uma das unidades está travada.
+  - `views/DisciplineView.tsx`: as travas passam a ser avaliadas **contra a unidade escolhida**.
+    Em disciplina modular o aluno já passou pela tela de seleção nesse ponto, então a unidade é
+    conhecida; em UC ela é nula e só a trava global vale. As mensagens de bloqueio agora dizem
+    em qual unidade.
+  - Verificação: `typecheck` ✅, `vitest` **127/127** ✅, `lint` 22 (pré-existentes) ✅,
+    `build` ✅ + classes de cor conferidas no CSS de produção.
+
+  🟡 **Limite importante, herdado (não introduzido aqui):** esta trava é **pedagógica, não de
+  segurança** — vive em `config/disciplines` e é aplicada no cliente (`DisciplineView`).
+  Contraria a regra 2 do CLAUDE.md se alguém a tratar como controle de acesso real: um aluno
+  com o SDK do Firebase ainda consegue ler `questions`/`materials` da unidade "bloqueada"
+  direto do Firestore. Para a turma piloto isso é aceitável (o objetivo é dosar o conteúdo, não
+  proteger segredo), mas **não deve ser confundido com autorização**. Fechar essa fresta é o
+  que sobrou do item 6.4 original.
 
 
 ---

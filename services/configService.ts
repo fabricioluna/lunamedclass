@@ -1,7 +1,8 @@
 import { firestoreDB } from '../firebase';
 import { doc, getDoc, setDoc, onSnapshot, updateDoc, deleteField } from 'firebase/firestore';
-import { Period, SimulationInfo, FeatureFlag, ReferenceMaterial, AreaConhecimento, SubareaConhecimento } from '../types';
+import { Period, SimulationInfo, FeatureFlag, ReferenceMaterial, AreaConhecimento, SubareaConhecimento, AcademicUnit } from '../types';
 import { setItemField, removeItemField } from '../utils/configItems';
+import { setFeatureLock } from '../utils/featureLocks';
 
 // Coleção "config": docs únicos (config/periods, config/disciplines, config/featureFlags) —
 // 1 leitura por app em vez de N. Ver PLANO-REESTRUTURACAO.md, item 3.1.
@@ -138,18 +139,22 @@ export const toggleDisciplineStatus = async (disciplineId: string, currentStatus
   await updateDisciplineField(disciplineId, 'status', newStatus as SimulationInfo['status']);
 };
 
-export const toggleDisciplineFeature = async (
+// Escopo 'all' mexe nas duas unidades; N1/N2 preserva a outra (item 6.8). A regra de como isso
+// vira entrada no array vive em utils/featureLocks.ts, testada isoladamente.
+export const setDisciplineFeatureLock = async (
   disciplineId: string,
   featureId: string,
-  isCurrentlyLocked: boolean
+  scope: AcademicUnit | 'all',
+  shouldLock: boolean
 ) => {
   const items = await getDisciplinesArray();
   const target = items.find((d) => d.id === disciplineId);
   if (!target) return;
-  let lockedFeatures = target.lockedFeatures ? [...target.lockedFeatures] : [];
-  if (isCurrentlyLocked) lockedFeatures = lockedFeatures.filter((id) => id !== featureId);
-  else if (!lockedFeatures.includes(featureId)) lockedFeatures.push(featureId);
-  await updateDisciplineField(disciplineId, 'lockedFeatures', lockedFeatures);
+  await updateDisciplineField(
+    disciplineId,
+    'lockedFeatures',
+    setFeatureLock(target.lockedFeatures, featureId, scope, shouldLock)
+  );
 };
 
 const DEFAULT_FLAGS: Record<string, FeatureFlag> = {

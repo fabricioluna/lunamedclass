@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SimulationInfo, AcademicUnit } from '../types';
 import { Lock, Stethoscope, BookOpen, FolderOpen, PenTool, Activity, Microscope, Pill, ClipboardList, ChevronDown, ChevronUp, Milestone, Layers, FileSignature, ShieldAlert } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import { isFeatureLocked } from '../utils/featureLocks';
 
 interface DisciplineViewProps {
   disciplineId: string;
@@ -42,12 +43,15 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
   const isModular = discipline.category === 'HABMED' || discipline.category === 'IESC' || discipline.category === 'UCCG';
   const isUCV = disciplineId.toLowerCase() === 'uc5' || disciplineId.toLowerCase() === 'uc-v' || discipline.title.toLowerCase().includes('uc v');
 
-  // Lógica de travas granulares locais por metadados da disciplina
+  // Travas granulares por metadados da disciplina. Agora avaliadas CONTRA A UNIDADE escolhida
+  // (item 6.8) — em disciplina modular o aluno já passou pela tela de seleção neste ponto, então
+  // `selectedUnit` está definido; em UC ele é null e só a trava global vale.
   const locked = discipline.lockedFeatures || [];
-  const isQuizLocked = locked.includes('quiz') || !isSimuladoTeoricoActive;
-  const isMaterialsLocked = locked.includes('materials') || !isMateriaisActive;
-  const isReferencesLocked = locked.includes('references');
-  const isPracticalLocked = locked.includes('lab_osce') || isModoProvasActive || !isPraticaClinicaActive || (isUC && !isLabActive);
+  const isLockedHere = (featureId: string) => isFeatureLocked(locked, featureId, selectedUnit);
+  const isQuizLocked = isLockedHere('quiz') || !isSimuladoTeoricoActive;
+  const isMaterialsLocked = isLockedHere('materials') || !isMateriaisActive;
+  const isReferencesLocked = isLockedHere('references');
+  const isPracticalLocked = isLockedHere('lab_osce') || isModoProvasActive || !isPraticaClinicaActive || (isUC && !isLabActive);
 
   const handleAction = (featureId: string, action: string) => {
     if (featureId === 'quiz' && !isSimuladoTeoricoActive) {
@@ -58,8 +62,10 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
       alert("A Central de Materiais está desativada para manutenção.");
       return;
     }
-    if (locked.includes(featureId) || (isModoProvasActive && featureId !== 'quiz' && featureId !== 'materials')) {
-      alert("Esta funcionalidade está temporariamente bloqueada pela administração.");
+    if (isLockedHere(featureId) || (isModoProvasActive && featureId !== 'quiz' && featureId !== 'materials')) {
+      alert(selectedUnit
+        ? `Esta funcionalidade está bloqueada na unidade ${selectedUnit} pela administração.`
+        : "Esta funcionalidade está temporariamente bloqueada pela administração.");
       return;
     }
     onSelectOption(action, selectedUnit || undefined);
@@ -74,8 +80,10 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
       alert("O Laboratório Virtual de Microscopia e Peças Anatômicas está inativo.");
       return;
     }
-    if (locked.includes('lab_osce') || isModoProvasActive) {
-      alert("Esta funcionalidade está temporariamente bloqueada pela administração.");
+    if (isLockedHere('lab_osce') || isModoProvasActive) {
+      alert(selectedUnit
+        ? `As práticas estão bloqueadas na unidade ${selectedUnit} pela administração.`
+        : "Esta funcionalidade está temporariamente bloqueada pela administração.");
       return;
     }
 
@@ -201,7 +209,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
             </div>
             <h3 className={`text-xl font-black mb-2 uppercase tracking-tight ${isQuizLocked ? 'text-gray-400' : 'text-[#003366]'}`}>Simulado Teórico</h3>
             <p className={`text-xs font-medium ${isQuizLocked ? 'text-gray-400' : 'text-gray-500'}`}>Avalie seus conhecimentos com questões de múltipla escolha.</p>
-            {locked.includes('quiz') && (
+            {isLockedHere('quiz') && (
               <div className="absolute top-6 right-6 bg-red-500/90 text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1 z-10">
                 <Lock size={12}/> Bloqueado
               </div>
@@ -306,7 +314,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
             </div>
             <h3 className={`text-xl font-black text-[#003366] mb-2 uppercase tracking-tight ${isMaterialsLocked ? 'text-gray-400' : ''}`}>Central de Materiais</h3>
             <p className={`text-xs text-gray-500 font-medium ${isMaterialsLocked ? 'text-gray-400' : ''}`}>Acesse resumos, roteiros de aulas e materiais extras.</p>
-            {locked.includes('materials') && (
+            {isLockedHere('materials') && (
               <div className="absolute top-6 right-6 bg-red-500/90 text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1 z-10">
                 <Lock size={12}/> Bloqueado
               </div>

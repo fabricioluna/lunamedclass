@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag, AnalyticsResult } from '../../types';
+import { Question, OsceStation, LabSimulation, ReferenceMaterial, QuizResult, FeatureFlag, AnalyticsResult, AcademicUnit } from '../../types';
 import { Layers, BarChart3, FileText, ClipboardList, Stethoscope, Microscope, BookOpen, Lock, BrainCircuit, ShieldAlert, UserCheck, CheckCircle, XCircle, ToggleRight, Zap, Tags, Shield } from 'lucide-react';
 
 import { useData } from '../../contexts/DataContext';
@@ -163,8 +163,13 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     await configService.toggleDisciplineStatus(disciplineId, currentStatus);
   };
 
-  const handleToggleFeature = async (disciplineId: string, featureId: string, isCurrentlyLocked: boolean) => {
-    await configService.toggleDisciplineFeature(disciplineId, featureId, isCurrentlyLocked);
+  const handleSetFeatureLock = async (
+    disciplineId: string,
+    featureId: string,
+    scope: AcademicUnit | 'all',
+    shouldLock: boolean
+  ) => {
+    await configService.setDisciplineFeatureLock(disciplineId, featureId, scope, shouldLock);
   };
 
   // =========================================================================
@@ -418,7 +423,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         <AdminDisciplines
           disciplines={disciplines}
           onToggleStatus={handleToggleStatus}
-          onToggleFeature={handleToggleFeature}
+          onSetFeatureLock={handleSetFeatureLock}
         />
       )}
 

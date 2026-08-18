@@ -1,7 +1,8 @@
 import React from 'react';
-import { SimulationInfo } from '../../../types';
+import { SimulationInfo, AcademicUnit } from '../../../types';
 import { Lock, Unlock, ShieldAlert, Layers } from 'lucide-react';
 import { PERIODS } from '../../../data/periods';
+import { isFeatureLocked, getFeatureLockState, ALL_UNITS } from '../../../utils/featureLocks';
 
 /**
  * Interface rigorosa para controle granular de funcionalidades.
@@ -15,7 +16,13 @@ interface AvailableFeature {
 interface AdminDisciplinesProps {
   disciplines: SimulationInfo[];
   onToggleStatus: (disciplineId: string, currentStatus: 'active' | 'locked' | string) => Promise<void> | void;
-  onToggleFeature: (disciplineId: string, featureId: string, isCurrentlyLocked: boolean) => Promise<void> | void;
+  // `scope` = 'all' para disciplina sem unidade (UC) ou para mexer nas duas de uma vez.
+  onSetFeatureLock: (
+    disciplineId: string,
+    featureId: string,
+    scope: AcademicUnit | 'all',
+    shouldLock: boolean
+  ) => Promise<void> | void;
 }
 
 // Constante movida para fora do componente para evitar re-alocação de memória
@@ -27,10 +34,10 @@ const AVAILABLE_FEATURES: AvailableFeature[] = [
   { id: 'ai', label: 'IA (Paciente)' }
 ];
 
-const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({ 
-  disciplines, 
-  onToggleStatus, 
-  onToggleFeature 
+const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
+  disciplines,
+  onToggleStatus,
+  onSetFeatureLock
 }) => {
 
   return (
@@ -109,41 +116,73 @@ const AdminDisciplines: React.FC<AdminDisciplinesProps> = ({
                         <div className={`flex items-center gap-2 mb-3 bg-blue-50/50 p-2 rounded-lg border border-blue-100 transition-opacity ${isLocked ? 'opacity-40 grayscale' : ''}`}>
                           <Layers size={14} className="text-blue-500" />
                           <span className="text-[9px] font-black uppercase text-blue-800 tracking-widest">
-                            Aplica a N1 e N2 Simetricamente
+                            Libere por unidade (N1 / N2)
                           </span>
                         </div>
                       )}
 
                       {/* BASE: CONTROLE GRANULAR DAS FUNCIONALIDADES */}
-                      <div className={`grid grid-cols-2 gap-2 transition-opacity duration-300 ${
+                      <div className={`flex flex-col gap-2 transition-opacity duration-300 ${
                         isLocked ? 'opacity-40 pointer-events-none grayscale' : 'opacity-100'
                       }`}>
-                        <div className="col-span-2 text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                        <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">
                           Funcionalidades do Ecossistema
                         </div>
                         {AVAILABLE_FEATURES.map(feature => {
                           // A funcionalidade de IA (Luna Engine 2.0) é restrita a HM1 e HM2
                           if (feature.id === 'ai' && !['hm1', 'hm2'].includes(disc.id)) return null;
 
-                          const isFeatureLocked = lockedFeatures.includes(feature.id);
+                          // UC não tem unidade: um botão só, escopo global (comportamento de antes).
+                          if (isUC) {
+                            const locked = isFeatureLocked(lockedFeatures, feature.id);
+                            return (
+                              <button
+                                key={feature.id}
+                                onClick={() => onSetFeatureLock(disc.id, feature.id, 'all', !locked)}
+                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                                  locked
+                                    ? 'bg-red-50 border-red-100 text-red-600 hover:bg-red-100'
+                                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                                }`}
+                                title={locked ? 'Desbloquear Recurso' : 'Bloquear Recurso'}
+                              >
+                                <span>{feature.label}</span>
+                                {locked
+                                  ? <Lock size={10} className="text-red-500 animate-pulse" />
+                                  : <Unlock size={10} className="text-emerald-500" />
+                                }
+                              </button>
+                            );
+                          }
 
+                          // Modular: um botão por unidade, mais o rótulo da funcionalidade.
+                          const state = getFeatureLockState(lockedFeatures, feature.id);
                           return (
-                            <button
-                              key={feature.id}
-                              onClick={() => onToggleFeature(disc.id, feature.id, isFeatureLocked)}
-                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                                isFeatureLocked 
-                                  ? 'bg-red-50 border-red-100 text-red-600 hover:bg-red-100' 
-                                  : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                              }`}
-                              title={isFeatureLocked ? 'Desbloquear Recurso' : 'Bloquear Recurso'}
-                            >
-                              <span>{feature.label}</span>
-                              {isFeatureLocked 
-                                ? <Lock size={10} className="text-red-500 animate-pulse" /> 
-                                : <Unlock size={10} className="text-emerald-500" />
-                              }
-                            </button>
+                            <div key={feature.id} className="flex items-center gap-2">
+                              <span className={`flex-1 text-[9px] font-bold uppercase tracking-wider ${
+                                state === 'all' ? 'text-red-500' : state === 'partial' ? 'text-amber-600' : 'text-gray-500'
+                              }`}>
+                                {feature.label}
+                              </span>
+                              {ALL_UNITS.map(unit => {
+                                const locked = isFeatureLocked(lockedFeatures, feature.id, unit);
+                                return (
+                                  <button
+                                    key={unit}
+                                    onClick={() => onSetFeatureLock(disc.id, feature.id, unit, !locked)}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 ${
+                                      locked
+                                        ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                    }`}
+                                    title={`${locked ? 'Liberar' : 'Bloquear'} ${feature.label} na ${unit}`}
+                                  >
+                                    {unit}
+                                    {locked ? <Lock size={9} /> : <Unlock size={9} />}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           );
                         })}
                       </div>
