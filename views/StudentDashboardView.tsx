@@ -1,17 +1,36 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth, UserProfile } from '../contexts/AuthContext';
 import { subscribeToMyResults } from '../services/resultsService';
-import { QuizResult } from '../types';
-import { BrainCircuit, ChevronLeft, Zap, Star, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
+import { fetchAllFlashcardProgressDocs } from '../services/flashcardsService';
+import { fetchLabSimulationById } from '../services/labService';
+import { getWeakestCards } from '../utils/srs';
+import { QuizResult, LabSimulation, AcademicUnit } from '../types';
+import { BrainCircuit, ChevronLeft, Zap, Star, TrendingUp, TrendingDown, CheckCircle, XCircle, Brain, ChevronRight } from 'lucide-react';
 
 interface StudentDashboardProps {
   onBack: () => void;
 }
 
+// "Ponto fraco" de flashcard já enriquecido com o contexto do Lab de origem (título, disciplina,
+// unidade) para virar um link de estudo direto — a recomendação pedida no item 6.3.
+interface WeakLabCard {
+  simulationId: string;
+  simulationTitle: string;
+  disciplineId: string;
+  unit?: AcademicUnit;
+  cardId: string;
+  answerLabel?: string;
+  lapses: number;
+}
+
 const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
   const { userProfile, currentUser } = useAuth();
+  const navigate = useNavigate();
   const [results, setResults] = useState<QuizResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [weakestCards, setWeakestCards] = useState<WeakLabCard[]>([]);
+  const [isLoadingWeakest, setIsLoadingWeakest] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -44,6 +63,69 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
       isMounted = false;
       unsubscribe();
     };
+  }, [currentUser]);
+
+  // "Seus pontos fracos no Laboratório Virtual" (Etapa 6, item 6.3): 1 leitura de coleção pra
+  // pegar TODO o progresso de flashcards do aluno (sem precisar saber os IDs das simulações de
+  // antemão — ver fetchAllFlashcardProgressDocs), rankeia globalmente por lapses/ease, e só
+  // então busca os poucos labs de origem do top 5 pra montar o link de estudo.
+  useEffect(() => {
+    if (!currentUser) {
+      setIsLoadingWeakest(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingWeakest(true);
+
+    fetchAllFlashcardProgressDocs(currentUser.uid)
+      .then(async (docs) => {
+        const globalWeakest = docs
+          .flatMap((docData) =>
+            getWeakestCards(docData.cards, 5).map((card) => ({ ...card, simulationId: docData.simulationId }))
+          )
+          .filter((card) => card.lapses > 0)
+          .sort((a, b) => b.lapses - a.lapses || a.ease - b.ease)
+          .slice(0, 5);
+
+        if (globalWeakest.length === 0) {
+          if (!cancelled) setWeakestCards([]);
+          return;
+        }
+
+        const simulationIds = Array.from(new Set(globalWeakest.map((card) => card.simulationId)));
+        const simulations = await Promise.all(simulationIds.map((id) => fetchLabSimulationById(id)));
+        const simulationById = new Map(
+          simulations
+            .filter((sim): sim is LabSimulation => !!sim)
+            .map((sim) => [sim.firebaseId || sim.id, sim])
+        );
+
+        const enriched = globalWeakest
+          .map((card): WeakLabCard | null => {
+            const sim = simulationById.get(card.simulationId);
+            if (!sim) return null; // Simulação apagada depois do progresso salvo — não linka pra nada.
+            return {
+              simulationId: card.simulationId,
+              simulationTitle: sim.title,
+              disciplineId: sim.disciplineId,
+              unit: sim.unit,
+              cardId: card.cardId,
+              answerLabel: card.answerLabel,
+              lapses: card.lapses,
+            };
+          })
+          .filter((card): card is WeakLabCard => card !== null);
+
+        if (!cancelled) setWeakestCards(enriched);
+      })
+      .catch((error) => {
+        console.error('Erro ao carregar pontos fracos de flashcards:', error);
+        if (!cancelled) setWeakestCards([]);
+      })
+      .finally(() => { if (!cancelled) setIsLoadingWeakest(false); });
+
+    return () => { cancelled = true; };
   }, [currentUser]);
 
   if (isLoading) {
@@ -184,6 +266,33 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
         </div>
 
       </div>
+
+      {/* SEUS PONTOS FRACOS NO LABORATÓRIO VIRTUAL (Etapa 6, item 6.3) */}
+      {!isLoadingWeakest && weakestCards.length > 0 && (
+        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm mb-8">
+          <h3 className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+            <Brain size={14}/> Seus Pontos Fracos no Laboratório Virtual
+          </h3>
+          <div className="space-y-2">
+            {weakestCards.map((card) => (
+              <button
+                key={`${card.simulationId}-${card.cardId}`}
+                onClick={() => navigate(`/disciplina/${card.disciplineId}/lab/simulacao/${card.simulationId}${card.unit ? `?unit=${card.unit}` : ''}`)}
+                className="w-full flex items-center justify-between text-left p-3 rounded-xl bg-gray-50 hover:bg-red-50 border border-transparent hover:border-red-100 transition-all group"
+              >
+                <div className="min-w-0">
+                  <p className="font-bold text-[#003366] text-sm truncate">{card.answerLabel || 'Lâmina sem identificação salva'}</p>
+                  <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider truncate">{card.simulationTitle}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 pl-3">
+                  <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-lg">{card.lapses}x difícil</span>
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-red-500 transition-colors"/>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <h3 className="text-sm font-black text-[#003366] uppercase tracking-widest mb-6 border-b border-gray-200 pb-2">Histórico de Simulados</h3>
       

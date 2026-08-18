@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Microscope, Play, User, Activity, Pill, ClipboardList, FilterX, LayoutGrid, Milestone, Layers } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Microscope, Play, User, Activity, Pill, ClipboardList, FilterX, LayoutGrid, Milestone, Layers, Brain } from 'lucide-react';
 import { LabSimulation, SimulationInfo, AcademicUnit } from '../../types';
 import { fetchLabSimulationsOnce } from '../../services/labService';
+import { fetchFlashcardProgress } from '../../services/flashcardsService';
+import { getSessionCounts } from '../../utils/srs';
 
 interface Props {
   disciplineId: string;
@@ -9,18 +11,20 @@ interface Props {
   disciplines: SimulationInfo[];
   selectedUnit: AcademicUnit;
   categoryFilter?: string | null;
+  userId?: string; // Dono do progresso de flashcards, pro badge "X para revisar" (Etapa 6, item 6.3)
   onStart: (sim: LabSimulation) => void;
 }
 
-const LabListView: React.FC<Props> = ({ 
-  disciplineId, 
-  disciplines, 
+const LabListView: React.FC<Props> = ({
+  disciplineId,
+  disciplines,
   selectedUnit,
-  categoryFilter, 
-  onStart 
+  categoryFilter,
+  userId,
+  onStart
 }) => {
   const discipline = disciplines.find(d => d.id === disciplineId);
-  
+
   // === NOVO: BUSCA SOB DEMANDA (ON-DEMAND FETCHING) ===
   const [localSimulations, setLocalSimulations] = useState<LabSimulation[]>([]);
   const [isFetching, setIsFetching] = useState(true);
@@ -51,17 +55,42 @@ const LabListView: React.FC<Props> = ({
   // ======================================================
 
   // Filtro Híbrido Luna: Usa os dados locais recém-buscados
-  const filtered = localSimulations.filter(s => {
+  const filtered = useMemo(() => localSimulations.filter(s => {
     const matchesDiscipline = s.disciplineId === disciplineId;
-    
+
     // Lógica de Unidade: UCs mostram tudo. Modulares filtram por N1/N2.
     const sUnit = s.unit || 'N1';
     const matchesUnit = isUC ? true : sUnit === selectedUnit;
-    
+
     const matchesCategory = activeTab === 'Todos' ? true : s.category?.toLowerCase() === activeTab.toLowerCase();
-    
+
     return matchesDiscipline && matchesUnit && matchesCategory;
-  });
+  }), [localSimulations, disciplineId, isUC, selectedUnit, activeTab]);
+
+  // Badge "X para revisar" por simulação — só busca progresso das simulações já filtradas na
+  // tela (lista curta), não do laboratório inteiro.
+  const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
+  const filteredIdsKey = filtered.map(s => s.firebaseId).filter(Boolean).join(',');
+
+  useEffect(() => {
+    if (!userId || !filteredIdsKey) {
+      setDueCounts({});
+      return;
+    }
+    let cancelled = false;
+    const simsToCheck = filtered.filter(s => s.firebaseId);
+
+    Promise.all(simsToCheck.map(async (sim) => {
+      const progress = await fetchFlashcardProgress(userId, sim.firebaseId as string);
+      const { dueCount } = getSessionCounts(sim.questions.map(q => q.id), progress, Date.now());
+      return [sim.firebaseId as string, dueCount] as const;
+    }))
+      .then((entries) => { if (!cancelled) setDueCounts(Object.fromEntries(entries)); })
+      .catch((err) => console.error('Erro ao carregar contagem de revisão dos flashcards:', err));
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filteredIdsKey já resume a identidade de `filtered`
+  }, [userId, filteredIdsKey]);
 
   // UI/UX Imersiva: Retorna o ícone correto baseado na categoria
   const getCategoryIcon = (cat: string | null | undefined, size = 20) => {
@@ -169,6 +198,13 @@ const LabListView: React.FC<Props> = ({
                      {!isUC && (
                        <span className="bg-blue-50 text-[#003366] px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-blue-100">
                          {sim.unit || 'N1'}
+                       </span>
+                     )}
+
+                     {/* Badge de flashcards pendentes de revisão (Etapa 6, item 6.3) */}
+                     {sim.firebaseId && (dueCounts[sim.firebaseId] ?? 0) > 0 && (
+                       <span className="flex items-center gap-1 bg-red-50 text-red-600 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-red-100">
+                         <Brain size={12}/> {dueCounts[sim.firebaseId]} para revisar
                        </span>
                      )}
                    </div>

@@ -142,6 +142,36 @@ await check('Aluno A lê o PRÓPRIO perfil', async () => {
   await assertSucceeds(getDoc(doc(asStudentA, 'users', STUDENT_A)));
 });
 
+// === PROGRESSO DE FLASHCARDS (Etapa 6, item 6.3) — subcoleção sob users/{uid}, isolamento
+// pela ROTA do documento. Regras não são recursivas: users/{uid} liberado pro dono não cobre
+// a subcoleção sozinho, por isso este bloco existe. ===
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  const db = ctx.firestore();
+  await setDoc(doc(db, 'users', STUDENT_A, 'flashcardProgress', 'sim1'), {
+    simulationId: 'sim1',
+    cards: { q1: { cardId: 'q1', ease: 2.5, intervalDays: 0, repetitions: 0, lapses: 0, reviews: 0, dueAt: 0 } },
+  });
+});
+await check('Aluno A lê o PRÓPRIO progresso de flashcards', async () => {
+  await assertSucceeds(getDoc(doc(asStudentA, 'users', STUDENT_A, 'flashcardProgress', 'sim1')));
+});
+await check('Aluno A escreve no PRÓPRIO progresso de flashcards', async () => {
+  await assertSucceeds(setDoc(doc(asStudentA, 'users', STUDENT_A, 'flashcardProgress', 'sim1'), {
+    simulationId: 'sim1', cards: {},
+  }));
+});
+await check('Aluno B NÃO lê o progresso de flashcards do Aluno A', async () => {
+  await assertFails(getDoc(doc(asStudentB, 'users', STUDENT_A, 'flashcardProgress', 'sim1')));
+});
+await check('Aluno B NÃO escreve no progresso de flashcards do Aluno A', async () => {
+  await assertFails(setDoc(doc(asStudentB, 'users', STUDENT_A, 'flashcardProgress', 'sim1'), {
+    simulationId: 'sim1', cards: {},
+  }));
+});
+await check('Visitante anônimo NÃO lê progresso de flashcards de ninguém', async () => {
+  await assertFails(getDoc(doc(asAnon, 'users', STUDENT_A, 'flashcardProgress', 'sim1')));
+});
+
 await testEnv.cleanup();
 
 console.log(`\n${failures === 0 ? '✅ Todos os testes passaram' : `❌ ${failures} teste(s) falharam`}`);

@@ -74,10 +74,12 @@ conhecida em aberto. Commit `512db2c` (4º refinamento), **enviado a `origin/mai
 
 **➡️ Sessão de 2026-08-18: itens 6.2, 6.3 e 6.4 planejados e aprovados pelo usuário** (ver
 seção Etapa 6 e decisão D10). Ordem acordada: **6.2 → 6.3 → 6.4** (por risco — o 6.4 é o único
-que pode derrubar tela em produção). **6.2 com código concluído** (não commitado ainda;
-pendente o usuário aplicar em produção pela aba "Períodos" do admin). **Próximo: 6.3
-(flashcards com repetição espaçada no Lab).** Os 4 simuladores futuros
-(Prescrição/Exames/Propedêutica/Evolução) continuam na fila, sem prioridade definida.
+que pode derrubar tela em produção). **6.2 e 6.3 concluídos e commitados** (`9b4af0c` e
+próximo commit desta sessão). 6.2 só falta o usuário aplicar em produção pela aba "Períodos".
+**Próximo: 6.4 (liberação de conteúdo por disciplina/unidade/tipo)** — o maior e mais
+arriscado dos três, envolve índice novo + backfill + rules, ordem de publicação obrigatória.
+Os 4 simuladores futuros (Prescrição/Exames/Propedêutica/Evolução) continuam na fila, sem
+prioridade definida.
 
 **Pendência antiga ainda aberta:** quando o Simulado Teórico voltar a ficar visível em
 `/simulators`, falta o teste ao vivo com a conta admin real (criar Área(s)/Subárea(s), marcar
@@ -1021,8 +1023,8 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   produção pela aba "Períodos" — só isso muda o que o **aluno logado** vê, já que
   `config/periods` no Firestore tem precedência sobre `data/periods.ts`.
 
-- [ ] **6.3 — Flashcards com repetição espaçada (estilo Anki) no Laboratório Virtual**
-  *(planejado em 2026-08-18)*. Hoje o Lab tem autoavaliação binária "Acertei/Errei"
+- [x] **6.3 — Flashcards com repetição espaçada (estilo Anki) no Laboratório Virtual**
+  *(concluído em 2026-08-18)*. Hoje o Lab tem autoavaliação binária "Acertei/Errei"
   (`features/lab/LabQuizView.tsx`) que só alimenta estatística — não muda o que o aluno vê
   depois. Pedido do usuário: 3 botões (Difícil/Médio/Fácil) onde o difícil reaparece mais e o
   fácil menos, **independente por usuário**, e recomendação do que ele mais erra.
@@ -1061,6 +1063,47 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   (aluno A lê/escreve o próprio ✅, lê/escreve o de B ❌, anônimo ❌). Manual com 2 contas
   provando estado independente; persistência ao sair e voltar da rota; `AdminStats` ainda
   contabilizando Lab.
+
+  ✅ **Entregue (2026-08-18):**
+  - `utils/srs.ts` + `utils/srs.test.ts` (27 casos): `createInitialCardState`,
+    `getOrCreateCardState`, `reviewCard`, `formatDueLabel`, `buildSessionQueue`,
+    `getSessionCounts`, `reinsertForRetry`, `getWeakestCards`. Exatamente o desenho planejado
+    (piso de ease 1.3, "Difícil" reinsere ~4 posições à frente na mesma sessão via
+    `reinsertForRetry`, "Fácil" acumula bônus de 1.3× sobre o ease).
+  - `services/flashcardsService.ts`: `fetchFlashcardProgress`, `upsertFlashcardCardState`
+    (escreve só `cards.<cardId>` via `setDoc(..., {merge:true})` — merge recursivo do
+    Firestore, não regrava o mapa inteiro a cada card revisado, evita corrida entre abas) e
+    `fetchAllFlashcardProgressDocs` (lista a subcoleção inteira do aluno numa leitura só, sem
+    precisar saber os IDs das simulações de antemão — é o que alimenta o dashboard).
+  - `firestore.rules`: `match /users/{uid}/flashcardProgress/{simulationId}` com
+    `allow read, write: if isOwner(uid)`. 5 cenários novos em
+    `scripts/test-firestore-rules.mjs` (26/26 no total, emulador local com Java):
+    dono lê/escreve o próprio ✅, outro aluno lê/escreve o de outrem ❌, anônimo ❌.
+  - `features/lab/LabQuizView.tsx`: modo "Flashcards (Revisão Espaçada)" pré-selecionado,
+    convivendo com Sequencial/Aleatório/Intervalo (inalterados). Botões Difícil/Médio/Fácil
+    mostram "volta em Xd" antes do clique (via `formatDueLabel`); tela de fim de sessão com
+    revisados/difíceis; "Difícil" reinsere sem avançar o índice (efeito visual de "reaparecer
+    na mesma sessão"). Extraídos `QuestionMedia`/`AnswerReveal` como subcomponentes locais,
+    reaproveitados pelos dois modos de execução (flashcard e clássico) — a imagem/dicas eram
+    ~80 linhas idênticas duplicadas entre os dois branches. Compatibilidade com o analytics
+    existente preservada: `hard` → 0/1, `medium`/`easy` → 1/1, mesmo `onSaveResult` opcional
+    de antes (hoje sempre `undefined` em produção por D9 — Lab não conta nota).
+  - `features/lab/LabListView.tsx`: badge "N para revisar" por simulação, calculado só sobre a
+    lista já filtrada em tela (não o laboratório inteiro).
+  - `views/StudentDashboardView.tsx`: bloco "Seus Pontos Fracos no Laboratório Virtual" — top 5
+    cards globais por `lapses`/`ease`, cada um linkando direto pra `/disciplina/:id/lab/
+    simulacao/:simId` daquele lab. Enriquecimento (título/disciplina/unidade) via
+    `fetchLabSimulationById`, só para os poucos labs de origem do top 5, não pra tudo.
+  - `routes/AppRoutes.tsx`: `userId` (uid do `currentUser`) passado para `LabQuizView` e
+    `LabListView` — ambas as rotas já vivem sob `<ProtectedRoute>`, então `currentUser` está
+    sempre presente ali.
+  - Verificação: `typecheck` ✅, `vitest` 80/80 ✅, `test:rules` 26/26 ✅ (emulador local),
+    `lint` 22 problemas (os mesmos pré-existentes, nenhum novo) ✅, `build` ✅.
+
+  🟡 **Escopo não coberto nesta rodada:** o link de "pontos fracos" no dashboard leva pro
+  início da sessão daquele lab (flashcard pré-selecionado), não pra um baralho filtrado
+  contendo só aquelas lâminas específicas — construir um "modo revisão de N cards
+  específicos" ficaria para uma iteração futura, se o usuário sentir falta.
 
 - [ ] **6.4 — Liberação de conteúdo por disciplina × unidade × tipo (painel admin)**
   *(planejado em 2026-08-18)*. Pedido do usuário: início de período, todo o conteúdo já

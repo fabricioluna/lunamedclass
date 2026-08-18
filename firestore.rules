@@ -22,6 +22,13 @@ service cloud.firestore {
     // (aprovação de período, correção de cadastro).
     match /users/{uid} {
       allow read, write: if isOwner(uid) || isAdmin();
+
+      // Progresso de flashcards (repetição espaçada, Etapa 6 item 6.3) — dado de estudo
+      // pessoal, sem valor para o admin. Regras NÃO são recursivas: mesmo com o match acima
+      // liberando users/{uid} para o dono, a subcoleção precisa da própria regra.
+      match /flashcardProgress/{simulationId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // Dados estruturais globais: períodos, disciplinas (com temas/referências/status/features

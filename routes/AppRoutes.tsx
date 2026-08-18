@@ -323,6 +323,7 @@ const LabFlow = () => {
   const navigate = useNavigate();
   const cat = new URLSearchParams(search).get('cat');
   const { disciplines } = useData();
+  const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
 
   if (!discipline) return <Navigate to="/" replace />;
@@ -333,6 +334,7 @@ const LabFlow = () => {
       disciplines={disciplines}
       selectedUnit={unit}
       categoryFilter={cat}
+      userId={currentUser?.uid}
       onStart={(sim) => navigate(`/disciplina/${disciplineId}/lab/simulacao/${sim.firebaseId}${unit ? `?unit=${unit}` : ''}`)}
     />
   );
@@ -383,6 +385,7 @@ const LabExecFlow = () => {
     <LabQuizView
       simulation={sim}
       onBack={() => navigate(-1)}
+      userId={currentUser?.uid}
       onSaveResult={isCountedResultType('laboratorio') ? (score, total, time, details) => {
         if (currentUser) saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, date: new Date().toLocaleString(), discipline: sim.disciplineId, unit, quizTitle: sim.title, type: 'laboratorio', timeSpent: time || 0, details: details || [] });
       } : undefined}
