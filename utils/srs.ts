@@ -93,12 +93,14 @@ export function reviewCard(state: SrsCardState, rating: SrsRating, now: number):
   };
 }
 
-// Rótulo curto pro botão mostrar "quando volta" antes do aluno clicar (Difícil · agora / Médio
-// · 3 d / Fácil · 8 d) — é esse feedback que faz a repetição espaçada fazer sentido pra quem usa.
+// Frase pro botão mostrar "quando volta" antes do aluno clicar ("Revisa agora" / "Revisa em 1
+// dia" / "Revisa em 8 dias") — é esse feedback que faz a repetição espaçada fazer sentido pra
+// quem usa. Frase completa (não só o número) porque "revisa em agora" soa errado em português —
+// "agora" não pede o "em".
 export function formatDueLabel(intervalDays: number): string {
-  if (intervalDays <= 0) return 'agora';
-  if (intervalDays === 1) return '1 d';
-  return `${intervalDays} d`;
+  if (intervalDays <= 0) return 'Revisa agora';
+  if (intervalDays === 1) return 'Revisa em 1 dia';
+  return `Revisa em ${intervalDays} dias`;
 }
 
 export function previewInterval(state: SrsCardState, rating: SrsRating, now: number): number {

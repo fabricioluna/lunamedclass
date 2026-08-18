@@ -285,7 +285,7 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
                   <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider truncate">{card.simulationTitle}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 pl-3">
-                  <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-lg">{card.lapses}x difícil</span>
+                  <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-lg">{card.lapses}x não lembrada</span>
                   <ChevronRight size={16} className="text-gray-300 group-hover:text-red-500 transition-colors"/>
                 </div>
               </button>

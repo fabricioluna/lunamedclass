@@ -119,14 +119,14 @@ describe('reviewCard — "Fácil"', () => {
 });
 
 describe('formatDueLabel', () => {
-  it('intervalo 0 vira "agora"', () => {
-    expect(formatDueLabel(0)).toBe('agora');
+  it('intervalo 0 vira "Revisa agora" (sem "em", que soaria errado)', () => {
+    expect(formatDueLabel(0)).toBe('Revisa agora');
   });
   it('1 dia é singular', () => {
-    expect(formatDueLabel(1)).toBe('1 d');
+    expect(formatDueLabel(1)).toBe('Revisa em 1 dia');
   });
-  it('N dias', () => {
-    expect(formatDueLabel(8)).toBe('8 d');
+  it('N dias é plural', () => {
+    expect(formatDueLabel(8)).toBe('Revisa em 8 dias');
   });
 });
 

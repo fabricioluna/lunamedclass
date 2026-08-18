@@ -358,7 +358,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
             <div className="w-px bg-gray-100" />
             <div className="text-center">
               <p className="text-3xl font-black text-red-500">{sessionStats.hard}</p>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Marcados Difícil</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Não Lembradas</p>
             </div>
           </div>
 
@@ -377,10 +377,13 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     const now = Date.now();
     const currentState = getOrCreateCardState(progress, q.id, now, q.answer);
 
+    // Foco na experiência de recall (estilo Anki: "How well did you remember this?"), não num
+    // rótulo de dificuldade abstrata — é o texto que decide o rating, então precisa continuar
+    // descrevendo o que aconteceu na cabeça do aluno, não o efeito (prazo) dessa escolha.
     const ratingButtons: { rating: SrsRating; label: string; icon: React.ReactElement; className: string }[] = [
-      { rating: 'hard', label: 'Difícil', icon: <Flame size={18}/>, className: 'bg-red-500 hover:bg-red-600' },
-      { rating: 'medium', label: 'Médio', icon: <Eye size={18}/>, className: 'bg-amber-500 hover:bg-amber-600' },
-      { rating: 'easy', label: 'Fácil', icon: <PartyPopper size={18}/>, className: 'bg-green-500 hover:bg-green-600' },
+      { rating: 'hard', label: 'Não lembrei', icon: <Flame size={18}/>, className: 'bg-red-500 hover:bg-red-600' },
+      { rating: 'medium', label: 'Lembrei com esforço', icon: <Eye size={18}/>, className: 'bg-amber-500 hover:bg-amber-600' },
+      { rating: 'easy', label: 'Lembrei fácil', icon: <PartyPopper size={18}/>, className: 'bg-green-500 hover:bg-green-600' },
     ];
 
     return (
@@ -412,17 +415,17 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
               <AnswerReveal q={q} />
 
               <div className="mt-8">
-                <p className="text-center text-[10px] font-black uppercase text-gray-500 tracking-widest mb-4">Como foi identificar esta lâmina?</p>
+                <p className="text-center text-[10px] font-black uppercase text-gray-500 tracking-widest mb-4">Você lembrou dessa identificação?</p>
                 <div className="grid grid-cols-3 gap-3">
                   {ratingButtons.map(({ rating, label, icon, className }) => (
                     <button
                       key={rating}
                       onClick={() => handleRateFlashcard(rating)}
-                      className={`${className} text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all shadow-md flex flex-col items-center gap-1.5`}
+                      className={`${className} text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all shadow-md flex flex-col items-center gap-1.5 text-center`}
                     >
                       {icon} {label}
                       <span className="text-[8px] font-bold normal-case opacity-80">
-                        volta em {formatDueLabel(reviewCard(currentState, rating, now).intervalDays)}
+                        {formatDueLabel(reviewCard(currentState, rating, now).intervalDays)}
                       </span>
                     </button>
                   ))}
