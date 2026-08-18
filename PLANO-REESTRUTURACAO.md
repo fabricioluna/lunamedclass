@@ -72,12 +72,24 @@ conhecida em aberto. Commit `512db2c` (4º refinamento), **enviado a `origin/mai
   (decisão consciente, D6-style, mantida do 2º refinamento). Ver seção Etapa 6 para o detalhe
   completo de cada rodada.
 
-**➡️ Sessão de 2026-08-18: itens 6.2, 6.3 e 6.4 planejados e aprovados pelo usuário** (ver
-seção Etapa 6 e decisão D10). Ordem acordada: **6.2 → 6.3 → 6.4** (por risco — o 6.4 é o único
-que pode derrubar tela em produção). **6.2 e 6.3 concluídos e commitados** (`9b4af0c` e
-próximo commit desta sessão). 6.2 só falta o usuário aplicar em produção pela aba "Períodos".
-**Próximo: 6.4 (liberação de conteúdo por disciplina/unidade/tipo)** — o maior e mais
-arriscado dos três, envolve índice novo + backfill + rules, ordem de publicação obrigatória.
+**➡️ Sessão de 2026-08-18: itens 6.2, 6.3, 6.4 e 6.5 planejados e aprovados pelo usuário** (ver
+seção Etapa 6 e decisões D10/D11).
+
+- **6.2 (brasão dos períodos)** — ✅ concluído (`9b4af0c`), **já aplicado em produção** pelo
+  usuário via aba "Períodos" do admin.
+- **6.3 (flashcards)** — ✅ concluído (`a1f512a`) e no ar, mas **parcialmente superado pelo 6.5**
+  depois do teste em produção.
+- **Correção de build (`deb2a85`)** — `tailwind.config.js` nunca escaneou `features/` nem
+  `routes/`. Achado a partir do botão "Médio" que saía branco: `bg-amber-500` só existia em
+  `features/lab/LabQuizView.tsx` e era descartado do CSS. ⚠️ **Vale varrer o app atrás de
+  outras classes fantasma** — qualquer utilitário usado só dentro de `features/`/`routes/` e em
+  nenhum arquivo escaneado esteve sumindo do build esse tempo todo.
+- **6.5 (Lab vira Anki de verdade)** — 🔜 **próximo a implementar**, planejado e com as 3
+  decisões fechadas (1 resultado por sessão / limite de novas configurável com padrão vazio /
+  zerar o progresso existente).
+- **6.4 (liberação de conteúdo)** — na fila depois do 6.5. O mais arriscado de todos (índice
+  novo + backfill + rules, ordem de publicação obrigatória).
+
 Os 4 simuladores futuros (Prescrição/Exames/Propedêutica/Evolução) continuam na fila, sem
 prioridade definida.
 
@@ -294,7 +306,8 @@ fazer backup do RTDB antes).
 | D6 | `/survey` continua pública (write-only); `/survey-report` vira admin | Link aberto para a turma |
 | D7 | Gabarito visível a aluno logado é **limitação aceita** | Quiz client-side sempre expõe resposta no DevTools; corrigir exige correção server-side (Etapa 6) |
 | D8 | Fechar vazamento tem precedência sobre quebrar feature | LGPD > dashboard fora do ar numa turma piloto |
-| D9 | Só **Simulado Teórico** conta resultado/nota "por enquanto" (`utils/resultsPolicy.ts`) | Decisão do usuário em 2026-08-06/07: Lab, OSCE (estático/RPG/IA) ficam de fora até a confiabilidade desses modos ser revisada — reversível numa constante só |
+| D9 | Só **Simulado Teórico** conta resultado/nota "por enquanto" (`utils/resultsPolicy.ts`) | Decisão do usuário em 2026-08-06/07: Lab, OSCE (estático/RPG/IA) ficam de fora até a confiabilidade desses modos ser revisada — reversível numa constante só. **⚠️ Revista em 2026-08-18 (item 6.5): `laboratorio` volta a contar**, mas com 1 resultado por *sessão* de flashcards (não por lâmina). OSCE continua fora |
+| D11 | Flashcards gravam **1 resultado por sessão** com o detalhe por lâmina em `details[]`, nunca 1 documento por lâmina | Decisão do usuário em 2026-08-18, depois de perguntar explicitamente sobre sobrecarga. `subscribeToMyResults` lê todos os `quizResults` do aluno sem limite: 1 doc por lâmina daria ~4.000 leituras por abertura do dashboard num semestre (cota grátis: 50.000/dia), além de afogar a média com "simulados de 1 questão". A granularidade por lâmina não se perde — vive no `details[]` e no estado SRS |
 | D10 | Liberação de conteúdo = **gate central em `config/contentRelease` + `isPublished` denormalizado** em cada doc (item 6.4) | Decisão do usuário em 2026-08-18. Gate puro consultado por `get()` nas rules seria mais elegante, mas quebraria as leituras cross-disciplina do Simulado Teórico por Área (6.1): "rules não são filtros" — a query inteira falha se um único doc do resultado estiver bloqueado. O campo denormalizado é analisável em query; o gate central mantém a liberação em 1 clique por disciplina/unidade |
 
 ---
@@ -1024,7 +1037,10 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   `config/periods` no Firestore tem precedência sobre `data/periods.ts`.
 
 - [x] **6.3 — Flashcards com repetição espaçada (estilo Anki) no Laboratório Virtual**
-  *(concluído em 2026-08-18)*. Hoje o Lab tem autoavaliação binária "Acertei/Errei"
+  *(concluído em 2026-08-18 — ⚠️ **parcialmente superado pelo item 6.5 no mesmo dia**, depois
+  do usuário testar em produção: o modelo entregue aqui só tinha os intervalos em dias, sem os
+  degraus em minutos que fazem o "não lembrei" voltar rápido. Ler o 6.5 antes de mexer neste
+  código)*. Hoje o Lab tem autoavaliação binária "Acertei/Errei"
   (`features/lab/LabQuizView.tsx`) que só alimenta estatística — não muda o que o aluno vê
   depois. Pedido do usuário: 3 botões (Difícil/Médio/Fácil) onde o difícil reaparece mais e o
   fácil menos, **independente por usuário**, e recomendação do que ele mais erra.
@@ -1153,6 +1169,62 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   dessa ordem a turma inteira fica sem conteúdo nenhum. É o único dos três itens que pode
   derrubar tela em produção — fazer por último, em horário de baixo uso, com rollback das rules
   à mão.
+
+- [ ] **6.5 — Laboratório Virtual vira Anki de verdade (retrabalho do 6.3)**
+  *(planejado em 2026-08-18, depois do usuário testar o 6.3 em produção)*. O 6.3 entregou a
+  **metade dos dias** do Anki (intervalos, ease, ranking de pontos fracos) mas **não a metade
+  dos minutos** — que é justamente a que o aluno sente. Três queixas reais do usuário, todas
+  confirmadas no código:
+
+  1. **"O desempenho nos flashcards não está sendo contabilizado no Meu Desempenho."**
+     Causa: **D9**, não bug. `routes/AppRoutes.tsx` passa
+     `onSaveResult={isCountedResultType('laboratorio') ? ... : undefined}` e
+     `COUNTED_RESULT_TYPES = ['teorico']` — ou seja, `onSaveResult` chega `undefined` e o
+     `if (onSaveResult)` do `handleRateFlashcard` nunca dispara. Estava documentado no item 6.3
+     ("hoje sempre undefined em produção por D9") mas **não foi dito em voz alta na entrega** —
+     lição: quando uma decisão antiga silencia uma feature nova, avisar na hora da entrega, não
+     só no plano.
+  2. **"Os flashcards aparecem apenas de forma sequencial e não aleatória."** Bug real:
+     `buildSessionQueue` empilha os inéditos na ordem original de `simulation.questions`, sem
+     nenhuma opção de embaralhar dentro do modo flashcard.
+  3. **"Não entendi como fica a repetição."** O modelo estava simplificado demais (só dias, sem
+     os degraus em minutos). Junto veio um **bug confirmado rodando**: `reinsertForRetry` na
+     **última** lâmina da fila devolve o card na mesma posição — apertar "Não lembrei" ali
+     mostra a mesma lâmina em loop até o aluno apertar outra coisa. `previewInterval` também
+     ficou como código morto (exportado, nunca chamado).
+
+  **Modelo-alvo (o Anki de verdade):** 4 estados por card — `new`, `learning`, `review`,
+  `relearning` — com degraus de aprendizado `[1min, 10min]`, reaprendizado `[10min]`, graduação
+  em 1 dia, "fácil" pulando direto pra 4 dias, ease inicial 2,5 (piso 1,3). Os 3 botões são
+  Again/Good/Easy do Anki (o "Hard", 4º botão, continua deliberadamente fora).
+
+  | Sub-item | O quê |
+  |---|---|
+  | 6.5.1 | Reescrever `utils/srs.ts`: `phase` + `stepIndex`, degraus em minutos, ratings renomeados `hard/medium/easy` → `again/good/easy` |
+  | 6.5.2 | Escalonador de sessão no lugar da fila plana: filas separadas (novas / revisão / aprendendo-por-horário) e `pickNextCard()` — mostra card de aprendizado vencido, senão intercala novas+revisão, senão *learn ahead* de 20 min, senão encerra. Mata o bug da última lâmina |
+  | 6.5.3 | Os 3 modos antigos deixam de ser alternativas ao flashcard e viram **configuração dentro dele**: ordem (sequencial/aleatória), intervalo específico (lâmina X a Y) e limite de lâminas novas por sessão (campo configurável, **padrão vazio = sem limite**, decisão do usuário) |
+  | 6.5.4 | Botões perdem o rótulo "Revisa em X" (pedido do usuário); entram os **3 contadores do Anki** (Novas · Aprendendo · Revisão) no topo da sessão + box "como funciona" no setup — é o que responde "não entendi a repetição" |
+  | 6.5.5 | Desempenho: **1 resultado por sessão** com o detalhe de cada lâmina no array `details: QuizDetail[]` (campo que já existe e já é usado pelo Simulado Teórico) + painel próprio de flashcards no Meu Desempenho vindo do SRS (dominadas / aprendendo / revisar hoje / retenção) |
+  | 6.5.6 | **Zerar** o progresso de flashcards existente (decisão do usuário — era só o teste dele; sem código de compatibilidade a carregar pra sempre) |
+
+  **Por que 1 resultado por sessão e não 1 por lâmina** (o usuário perguntou explicitamente se
+  daria sobrecarga): daria, e do lado da **leitura**. `subscribeToMyResults` carrega todos os
+  `quizResults` do aluno num listener sem limite. Com 1 doc por lâmina, um aluno acumula ~4.000
+  documentos num semestre → ~4.000 leituras **cada vez** que abre o dashboard; a cota gratuita
+  de 50.000 leituras/dia estoura com 12 alunos abrindo a tela uma vez. Também afogaria a média:
+  cada lâmina viraria um "simulado de 1 questão" competindo com os simulados teóricos reais.
+  Com 1 doc por sessão são ~80 documentos por semestre, e o `details[]` preserva a
+  granularidade por lâmina dentro do próprio documento (~5 KB numa sessão de 50, contra o
+  limite de 1 MB). **A repetição espaçada em si nunca dependeu disso** — o estado por lâmina
+  (ease/lapses/dueAt) sempre viveu em `users/{uid}/flashcardProgress`, e é de lá que sai o
+  "não lembrei volta mais rápido".
+
+  **Testes:** `utils/srs.test.ts` reescrito (os 27 casos atuais cobrem o modelo antigo) —
+  degraus de aprendizado e graduação, lapso levando pra reaprendizado, `pickNextCard`
+  respeitando horário e *learn ahead*, **"Não lembrei" na última lâmina da fila** (o bug de hoje
+  vira teste de regressão), ordem aleatória embaralhando de verdade, limite de novas
+  respeitando "vazio = sem limite". Mais `npm run test:rules` e teste manual com 2 contas.
+
 
 ---
 
