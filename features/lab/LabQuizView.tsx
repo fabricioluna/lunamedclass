@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LabSimulation, LabQuestion, QuizDetail } from '../../types';
 import {
   ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal,
-  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Info, RotateCcw, Flame,
+  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Info, RotateCcw, Flame, AlertTriangle, PauseCircle,
 } from 'lucide-react';
 import {
   SrsCardState, SrsRating, SrsSession, PersistedSession, PersistedSessionOptions,
@@ -110,6 +110,15 @@ const CounterTrio: React.FC<{
   );
 };
 
+// Aviso de que o progresso não está sendo gravado. Fica no topo das duas telas (configuração e
+// sessão) porque estudar sem salvar é pior que não estudar — o aluno precisa saber ANTES.
+const SaveErrorBanner: React.FC<{ message: string }> = ({ message }) => (
+  <div className="bg-red-50 border-2 border-red-200 p-4 rounded-2xl mb-6 flex items-start gap-3">
+    <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
+    <p className="text-xs font-bold text-red-800 leading-relaxed">{message}</p>
+  </div>
+);
+
 const RATING_BUTTONS: { rating: SrsRating; label: string; className: string }[] = [
   { rating: 'again', label: 'Não lembrei', className: 'bg-red-500 hover:bg-red-600' },
   { rating: 'good', label: 'Lembrei com esforço', className: 'bg-amber-500 hover:bg-amber-600' },
@@ -135,6 +144,10 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   const [isProgressLoaded, setIsProgressLoaded] = useState(!userId);
   // Sessão interrompida numa visita anterior (item 6.6).
   const [pendingSession, setPendingSession] = useState<PersistedSession | null>(null);
+  // Falha de leitura/gravação do progresso. Antes isso só ia pro console.error e o aluno via a
+  // sessão funcionar normalmente, perdendo tudo ao sair — foi assim que a ausência das Security
+  // Rules em produção passou despercebida por dias (item 6.11).
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -149,7 +162,10 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         setProgress(cards);
         setPendingSession(activeSession ?? null);
       })
-      .catch((err) => console.error('Erro ao carregar progresso de flashcards:', err))
+      .catch((err) => {
+        console.error('Erro ao carregar progresso de flashcards:', err);
+        if (!cancelled) setSaveError('Não foi possível carregar seu progresso salvo. O que você estudar agora pode não ser gravado.');
+      })
       .finally(() => { if (!cancelled) setIsProgressLoaded(true); });
     return () => { cancelled = true; };
   }, [userId, simulationId]);
@@ -278,9 +294,29 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     if (pendingSession) {
       flushSessionResult(pendingSession.answers, pendingSession.startedAt);
       setPendingSession(null);
+      // Sem isso a sessão velha continuava no banco e reaparecia como "interrompida" na
+      // próxima visita, mesmo já tendo sido contabilizada.
+      if (userId) {
+        clearActiveSession(userId, simulationId)
+          .catch(err => console.error('Erro ao limpar sessão de flashcards:', err));
+      }
     }
 
     beginSession(built, options, {}, Date.now());
+  };
+
+  // "Parar por aqui": sai da sessão SEM contabilizá-la e SEM apagar a sessão guardada — ao
+  // voltar, o card "Sessão interrompida" oferece continuar. Diferente de "Encerrar", que fecha
+  // a sessão, grava o resultado no Meu Desempenho e não dá pra retomar.
+  // O progresso de cada card já foi salvo a cada clique; aqui só se decide o destino da SESSÃO.
+  const pauseSession = () => {
+    setIsSetupMode(true);
+    setIsSessionComplete(false);
+    if (userId) {
+      fetchFlashcardProgressDoc(userId, simulationId)
+        .then(({ activeSession }) => setPendingSession(activeSession ?? null))
+        .catch(err => console.error('Erro ao recarregar sessão pausada:', err));
+    }
   };
 
   const finishSession = () => {
@@ -338,7 +374,11 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         answers: nextAnswers,
       };
       upsertFlashcardCardState(userId, simulationId, currentCardId, nextState, persisted)
-        .catch(err => console.error('Erro ao salvar progresso de flashcards:', err));
+        .then(() => setSaveError(null))
+        .catch(err => {
+          console.error('Erro ao salvar progresso de flashcards:', err);
+          setSaveError('Seu progresso NÃO está sendo salvo. Avise a monitoria antes de continuar estudando.');
+        });
     }
   };
 
@@ -359,6 +399,8 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
           <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Flashcards</h2>
           <p className="text-[#D4A017] font-black text-xs uppercase tracking-[0.2em]">{simulation.title} • {simulation.questions.length} cards</p>
         </div>
+
+        {saveError && <SaveErrorBanner message={saveError} />}
 
         {/* SESSÃO INTERROMPIDA — retomar de onde parou (item 6.6) */}
         {canResume && pendingSession && (
@@ -563,7 +605,9 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         {naoMemorizados > 0 && (
           <div className="bg-red-50/60 border-2 border-red-100 p-6 rounded-[2rem] mb-8">
             <p className="text-sm font-bold text-[#003366] mb-1">
-              {naoMemorizados} card{naoMemorizados > 1 ? 's' : ''} ficou{naoMemorizados > 1 ? 'ram' : ''} por memorizar
+              {naoMemorizados > 1
+                ? `${naoMemorizados} cards ficaram por memorizar`
+                : '1 card ficou por memorizar'}
             </p>
             <p className="text-[11px] text-gray-500 font-medium mb-5 leading-relaxed">
               São os que você marcou como "Não lembrei" ou "Lembrei com esforço". Quer rodar essa pilha agora?
@@ -591,9 +635,19 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 animate-in fade-in duration-500 pb-32">
+      {saveError && <SaveErrorBanner message={saveError} />}
+
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div>
-          <button onClick={finishSession} className="text-[10px] font-black uppercase text-gray-400 hover:text-[#003366] transition-colors mb-2 flex items-center gap-1"><ChevronLeft size={12}/> Encerrar sessão</button>
+          <div className="flex items-center gap-3 mb-2">
+            <button onClick={pauseSession} title="Sai e guarda a sessão para você continuar depois" className="text-[10px] font-black uppercase text-[#003366] hover:text-[#D4A017] transition-colors flex items-center gap-1">
+              <PauseCircle size={13}/> Parar por aqui
+            </button>
+            <span className="text-gray-200">|</span>
+            <button onClick={finishSession} title="Fecha a sessão e registra o resultado no Meu Desempenho" className="text-[10px] font-black uppercase text-gray-400 hover:text-[#003366] transition-colors flex items-center gap-1">
+              <ChevronLeft size={12}/> Encerrar sessão
+            </button>
+          </div>
           <h2 className="text-xl font-black text-[#003366]">{simulation.title}</h2>
           <p className="text-[10px] font-black uppercase text-[#D4A017] tracking-[0.2em]">{Object.keys(sessionAnswers).length} estudados nesta sessão</p>
         </div>

@@ -87,6 +87,7 @@ seção Etapa 6 e decisões D10/D11).
 - **6.5 (Lab vira Anki de verdade)** — ✅ concluído, aguardando teste do usuário em produção.
 - **6.6 (retomar sessão de onde parou)** — ✅ concluído junto, mesmo dia.
 - **6.7 (treino focado nas lâminas difíceis)** — ✅ concluído junto, mesmo dia.
+- **6.11 (rules não publicadas + falha silenciosa)** — ✅ código concluído. 🔴 **Pendente do usuário: publicar `firestore.rules` no console do Firebase**, sem isso o progresso continua não salvando.
 - **6.10 (fim do calendário: flashcards viram pilhas)** — ✅ concluído. Última peça baseada em tempo removida do modelo.
 - **6.9 (sessão linear + memorizado = "Lembrei fácil")** — ✅ concluído, corrige o 6.5/6.7 depois do teste do usuário.
 - **6.8 (liberação por unidade N1/N2 na aba "Acessos")** — ✅ concluído. O usuário apontou que a
@@ -1457,6 +1458,43 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   baralho, nada o lembra. Se um dia fizer falta, o meio-termo natural seria espaçar por
   **rodadas** ("volta depois de 3 sessões") em vez de por calendário, mantendo a promessa de
   poder repassar tudo no mesmo dia.
+
+
+- [x] **6.11 — Progresso não persistia em produção: rules não publicadas + falha silenciosa**
+  *(concluído em 2026-08-18)*.
+
+  🔴 **Causa raiz, e é uma falha de processo minha (Claude):** o `match
+  /users/{uid}/flashcardProgress/{simId}` foi escrito no item 6.3 e testado **no emulador
+  local** (`npm run test:rules`) — mas publicar `firestore.rules` em produção é **passo manual
+  no console do Firebase**, e isso **nunca foi pedido ao usuário** na entrega do 6.3. Regras do
+  Firestore não são recursivas: sem esse match publicado, toda leitura e escrita na subcoleção
+  era **negada** em produção. O aluno estudava, a sessão funcionava inteira em memória, e o
+  progresso evaporava ao sair — exatamente o sintoma relatado ("volta como se nunca tivesse
+  usado").
+
+  ⚠️ **O que fez isso durar dias sem ser notado:** os dois pontos de I/O engoliam o erro em
+  `console.error`. A tela nunca reclamou. **Lição registrada: falha de gravação de progresso do
+  aluno tem que ser visível na interface, não só no console.**
+
+  - `features/lab/LabQuizView.tsx`: estado `saveError` + `SaveErrorBanner` no topo da tela de
+    configuração E da sessão. Falha ao carregar avisa antes de começar ("o que você estudar
+    agora pode não ser gravado"); falha ao gravar avisa na hora ("seu progresso NÃO está sendo
+    salvo, avise a monitoria"). Gravação bem-sucedida limpa o aviso.
+  - **Botão "Parar por aqui"** (pedido do usuário): sai da sessão **sem** contabilizá-la e
+    **sem** apagar a sessão guardada — ao voltar, o card "Sessão interrompida" oferece
+    continuar. Fica ao lado de "Encerrar sessão", que fecha, grava o resultado no Meu Desempenho
+    e não dá para retomar. Os dois têm `title` explicando a diferença.
+  - **Bug secundário corrigido:** "Começar sessão nova" contabilizava a sessão pendente mas não
+    a apagava do banco — ela reaparecia como "interrompida" na visita seguinte, já contabilizada.
+  - **Erro de português:** `ficou{n > 1 ? 'ram' : ''}` gerava **"ficouram"**. Plural de verbo não
+    se faz concatenando sufixo — trocado por frase inteira condicional ("ficaram"/"ficou").
+  - Verificação: `typecheck` ✅, `vitest` 118/118 ✅, `test:rules` ✅, `lint` 22 ✅, `build` ✅.
+
+  🟡 **AÇÃO OBRIGATÓRIA DO USUÁRIO, sem a qual nada disso adianta:** publicar `firestore.rules`
+  no console do Firebase (Firestore → Regras → colar o conteúdo do arquivo → Publicar), ou
+  rodar `firebase deploy --only firestore:rules` com a conta dele. **Enquanto isso não for
+  feito, o progresso de flashcards continua sendo negado em produção** — a diferença é que
+  agora a tela avisa em vermelho em vez de fingir que salvou.
 
 
 ---
