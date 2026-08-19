@@ -17,7 +17,7 @@ import {
 interface Props {
   simulation: LabSimulation;
   onBack: () => void;
-  // Grava UM resultado por sessão (não por lâmina — ver D11 no PLANO-REESTRUTURACAO.md).
+  // Grava UM resultado por sessão (não por card — ver D11 no PLANO-REESTRUTURACAO.md).
   onSaveResult?: (score: number, total: number, timeSpent?: number, details?: QuizDetail[]) => void;
   userId?: string;
 }
@@ -155,7 +155,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   }, [userId, simulationId]);
 
   const deckCounts = useMemo(
-    () => getDeckCounts(questionIds, progress, Date.now()),
+    () => getDeckCounts(questionIds, progress),
     [questionIds, progress]
   );
 
@@ -186,7 +186,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   useEffect(() => { setIsRevealed(false); }, [currentCardId]);
 
   // Só oferece retomar enquanto a sessão guardada ainda representa o que há pra estudar
-  // (ver RESUMABLE_SESSION_MAX_AGE_MS): depois disso as lâminas já mudaram de estado.
+  // (ver RESUMABLE_SESSION_MAX_AGE_MS): depois disso ela provavelmente não reflete mais a intenção.
   const canResume = useMemo(
     () => isResumableSession(pendingSession, Date.now()),
     [pendingSession]
@@ -217,7 +217,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
 
   // Contabiliza uma sessão (a atual ou uma abandonada em outra visita) como UM resultado.
   // Sem isso, fechar a aba no meio perdia o estudo do "Meu Desempenho" — o progresso das
-  // lâminas sobrevivia, mas a sessão em si não virava linha no histórico.
+  // cards sobrevivia, mas a sessão em si não virava linha no histórico.
   const flushSessionResult = (answers: Record<string, boolean>, startedAt: number) => {
     const cardIds = Object.keys(answers);
     if (!onSaveResult || cardIds.length === 0) return;
@@ -264,12 +264,12 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
       newLimit: focus === 'unmemorized' ? undefined : parsedNewLimit,
       focus,
     };
-    const built = buildSession(questionIds, progress, Date.now(), options);
+    const built = buildSession(questionIds, progress, options);
 
     if (built.queue.length === 0) {
       alert(focus === 'unmemorized'
         ? 'Nenhum card pendente de memorização neste baralho! Um card sai dessa pilha quando você marca "Lembrei fácil".'
-        : 'Nada para estudar com essa configuração! Ou o baralho está em dia (volte mais tarde), ou o intervalo escolhido não tem cards pendentes.');
+        : 'Nada para estudar com essa configuração! O intervalo escolhido não tem nenhum card.');
       return;
     }
 
@@ -311,7 +311,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     if (!q) return;
 
     const now = Date.now();
-    const prevState = getOrCreateCardState(progress, currentCardId, now, q.answer);
+    const prevState = getOrCreateCardState(progress, currentCardId, q.answer);
     const nextState = answerCard(prevState, rating, now);
 
     // "Memorizado" é só o "Lembrei fácil" — definição dada pelo usuário. O placar é atualizado
@@ -346,7 +346,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   // TELA 1: CONFIGURAÇÃO
   // ==========================================
   if (isSetupMode) {
-    const totalPendente = deckCounts.newCount + deckCounts.unmemorizedCount + deckCounts.dueCount;
+    const totalEstudavel = deckCounts.newCount + deckCounts.unmemorizedCount + deckCounts.memorizedCount;
 
     return (
       <div className="max-w-3xl mx-auto px-4 py-12 animate-in fade-in duration-500 pb-32">
@@ -357,7 +357,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         <div className="text-center mb-10">
           <div className="w-20 h-20 bg-blue-50 text-[#003366] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm"><Brain size={40}/></div>
           <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Flashcards</h2>
-          <p className="text-[#D4A017] font-black text-xs uppercase tracking-[0.2em]">{simulation.title} • {simulation.questions.length} Peças</p>
+          <p className="text-[#D4A017] font-black text-xs uppercase tracking-[0.2em]">{simulation.title} • {simulation.questions.length} cards</p>
         </div>
 
         {/* SESSÃO INTERROMPIDA — retomar de onde parou (item 6.6) */}
@@ -368,7 +368,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
               <h3 className="font-black uppercase tracking-widest text-[10px] text-[#D4A017]">Sessão interrompida</h3>
             </div>
             <p className="text-sm font-medium text-blue-100 mb-6 leading-relaxed">
-              Você parou no meio de uma sessão com <strong className="text-white">{pendingSessionRemaining} lâmina{pendingSessionRemaining > 1 ? 's' : ''}</strong> ainda por estudar
+              Você parou no meio de uma sessão com <strong className="text-white">{pendingSessionRemaining} card{pendingSessionRemaining > 1 ? 's' : ''}</strong> ainda por estudar
               {pendingSessionAnswered > 0 && <> (já respondeu {pendingSessionAnswered})</>}. Quer continuar de onde parou?
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -391,14 +391,14 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
               <CounterTrio items={[
                 { value: deckCounts.newCount, label: 'Inéditos', tone: 'blue' },
                 { value: deckCounts.unmemorizedCount, label: 'Por memorizar', tone: 'red' },
-                { value: deckCounts.dueCount, label: 'Para revisar', tone: 'green' },
+                { value: deckCounts.memorizedCount, label: 'Memorizados', tone: 'green' },
               ]} />
             ) : (
               <div className="w-8 h-8 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin"/>
             )}
-            {isProgressLoaded && totalPendente === 0 && (
+            {isProgressLoaded && totalEstudavel === 0 && (
               <p className="text-xs text-green-600 font-bold text-center">
-                Tudo em dia! Os cards memorizados voltam sozinhos na data certa.
+                Este baralho ainda não tem cards cadastrados.
               </p>
             )}
           </div>
@@ -435,8 +435,8 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
               </div>
               {focus === 'unmemorized' && (
                 <p className="text-[10px] text-red-700 font-bold mt-3 leading-relaxed">
-                  A rodada focada ignora a data de revisão e traz os {unmemorizedCount} de uma vez. As respostas
-                  continuam contando normalmente para o agendamento.
+                  A rodada focada traz os {unmemorizedCount} de uma vez. Cada um sai da pilha assim que
+                  você marcar "Lembrei fácil".
                 </p>
               )}
             </div>
@@ -445,18 +445,18 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
           {/* COMO FUNCIONA */}
           <div className="bg-blue-50/50 border border-blue-100 p-5 rounded-2xl mb-8">
             <p className="flex items-center gap-2 text-[10px] font-black uppercase text-blue-800 tracking-widest mb-3">
-              <Info size={14}/> Como funciona a repetição
+              <Info size={14}/> Como funciona
             </p>
             <ul className="text-xs text-gray-600 font-medium space-y-1.5 leading-relaxed">
-              <li><strong className="text-red-600">Não lembrei</strong> — a lâmina volta ainda nesta sessão, em poucos minutos.</li>
-              <li><strong className="text-amber-600">Lembrei com esforço</strong> — volta mais adiante na sessão e depois no dia seguinte.</li>
-              <li><strong className="text-green-600">Lembrei fácil</strong> — sai da sessão e só volta daqui a alguns dias.</li>
-              <li className="pt-1 text-gray-500">A cada acerto o intervalo cresce (1 dia → 3 → 8 → 20...). Quanto mais você erra, mais a lâmina aparece.</li>
+              <li>A sessão corre do começo ao fim, sem repetir card no meio do caminho.</li>
+              <li><strong className="text-green-600">Lembrei fácil</strong> — o card entra na pilha dos memorizados.</li>
+              <li><strong className="text-red-600">Não lembrei</strong> e <strong className="text-amber-600">Lembrei com esforço</strong> — o card fica (ou volta) na pilha dos que faltam memorizar.</li>
+              <li className="pt-1 text-gray-500">No fim você escolhe se quer rodar essa pilha de novo. Nada trava por data: dá para repassar o baralho quantas vezes quiser, no mesmo dia.</li>
             </ul>
           </div>
 
           {/* ORDEM */}
-          <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-3">Ordem das lâminas</p>
+          <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-3">Ordem dos cards</p>
           <div className="grid grid-cols-2 gap-3 mb-8">
             <button onClick={() => setOrder('sequential')} className={`p-5 rounded-2xl border-2 text-left flex items-center gap-3 transition-all ${order === 'sequential' ? 'border-[#003366] bg-blue-50/30 shadow-md' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
               <div className={`p-2.5 rounded-xl ${order === 'sequential' ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><ListOrdered size={20}/></div>
@@ -479,7 +479,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
             <div className={`p-2.5 rounded-xl ${useRange ? 'bg-[#003366] text-white' : 'bg-gray-100 text-gray-400'}`}><SlidersHorizontal size={20}/></div>
             <div className="flex-1">
               <h4 className="font-black text-[#003366] text-sm">Estudar só um intervalo</h4>
-              <p className="text-[10px] text-gray-500 font-medium">Ex: da lâmina 40 à 100 — útil na véspera da prova</p>
+              <p className="text-[10px] text-gray-500 font-medium">Ex: do card 40 ao 100 — útil na véspera da prova</p>
             </div>
             <span className={`w-11 h-6 rounded-full flex items-center px-1 transition-all shrink-0 ${useRange ? 'bg-[#003366] justify-end' : 'bg-gray-200 justify-start'}`}>
               <span className="w-4 h-4 bg-white rounded-full shadow"/>
@@ -490,7 +490,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-6 animate-in zoom-in duration-300">
                <div className="flex items-center justify-center gap-4">
                   <div className="flex flex-col items-center">
-                    <label className="text-[10px] font-bold text-[#003366] mb-1 uppercase">Da lâmina nº</label>
+                    <label className="text-[10px] font-bold text-[#003366] mb-1 uppercase">Do card nº</label>
                     <input type="number" min={1} max={simulation.questions.length} value={rangeStart} onChange={e => setRangeStart(Number(e.target.value))} className="w-24 p-3 text-center rounded-xl border-2 border-gray-200 font-black text-lg focus:border-[#D4A017] outline-none" />
                   </div>
                   <span className="text-gray-300 font-black text-2xl mt-4">→</span>
@@ -502,11 +502,11 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
             </div>
           )}
 
-          {/* LIMITE DE NOVAS — sem sentido no treino focado, que não traz lâmina inédita */}
+          {/* LIMITE DE INÉDITOS — sem sentido na rodada focada, que só traz card já estudado */}
           {focus === 'all' && (
           <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-8 flex items-center gap-4">
             <div className="flex-1">
-              <h4 className="font-black text-[#003366] text-sm">Limite de lâminas novas</h4>
+              <h4 className="font-black text-[#003366] text-sm">Limite de cards inéditos</h4>
               <p className="text-[10px] text-gray-500 font-medium">Deixe vazio para estudar o baralho inteiro</p>
             </div>
             <input

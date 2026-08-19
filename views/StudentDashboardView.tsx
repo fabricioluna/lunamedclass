@@ -27,9 +27,8 @@ interface WeakLabCard {
 // Visão consolidada do estudo de flashcards, somando todos os baralhos do aluno.
 interface FlashcardOverview {
   studied: number;
-  mastered: number;
+  memorized: number;
   unmemorized: number;
-  dueToday: number;
 }
 
 const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
@@ -96,13 +95,13 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
             allCards[`${docData.simulationId}:${cardId}`] = state;
           }
         }
-        if (!cancelled) setFlashcardOverview(getDeckMastery(allCards, Date.now()));
+        if (!cancelled) setFlashcardOverview(getDeckMastery(allCards));
 
         const globalWeakest = docs
           .flatMap((docData) =>
             getWeakestCards(docData.cards, 5).map((card) => ({ ...card, simulationId: docData.simulationId }))
           )
-          .sort((a, b) => b.againCount - a.againCount || a.ease - b.ease)
+          .sort((a, b) => b.againCount - a.againCount || b.effortCount - a.effortCount)
           .slice(0, 5);
 
         if (globalWeakest.length === 0) {
@@ -292,26 +291,22 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
           <h3 className="text-[10px] font-black text-[#003366] uppercase tracking-widest mb-4 flex items-center gap-1.5">
             <Brain size={14}/> Flashcards do Laboratório Virtual
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 rounded-2xl bg-gray-50">
               <p className="text-2xl font-black text-[#003366]">{flashcardOverview.studied}</p>
               <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mt-1">Em estudo</p>
             </div>
             <div className="text-center p-3 rounded-2xl bg-green-50">
-              <p className="text-2xl font-black text-green-600">{flashcardOverview.mastered}</p>
-              <p className="text-[9px] font-black uppercase text-green-500 tracking-widest mt-1">Dominadas</p>
+              <p className="text-2xl font-black text-green-600">{flashcardOverview.memorized}</p>
+              <p className="text-[9px] font-black uppercase text-green-500 tracking-widest mt-1">Memorizados</p>
             </div>
             <div className="text-center p-3 rounded-2xl bg-red-50">
               <p className="text-2xl font-black text-red-500">{flashcardOverview.unmemorized}</p>
               <p className="text-[9px] font-black uppercase text-red-400 tracking-widest mt-1">Por memorizar</p>
             </div>
-            <div className="text-center p-3 rounded-2xl bg-amber-50">
-              <p className="text-2xl font-black text-[#D4A017]">{flashcardOverview.dueToday}</p>
-              <p className="text-[9px] font-black uppercase text-amber-500 tracking-widest mt-1">Para hoje</p>
-            </div>
           </div>
           <p className="text-[10px] text-gray-400 font-medium mt-4 text-center">
-            "Dominadas" = lâminas cujo intervalo de revisão já passou de 21 dias.
+            Um card entra em "Memorizados" quando você marca "Lembrei fácil".
           </p>
         </div>
       )}
@@ -330,7 +325,7 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
                 className="w-full flex items-center justify-between text-left p-3 rounded-xl bg-gray-50 hover:bg-red-50 border border-transparent hover:border-red-100 transition-all group"
               >
                 <div className="min-w-0">
-                  <p className="font-bold text-[#003366] text-sm truncate">{card.answerLabel || 'Lâmina sem identificação salva'}</p>
+                  <p className="font-bold text-[#003366] text-sm truncate">{card.answerLabel || 'Card sem identificação salva'}</p>
                   <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider truncate">{card.simulationTitle}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 pl-3">

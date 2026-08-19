@@ -3,6 +3,7 @@ import {
   createInitialCardState,
   normalizeCardState,
   normalizeProgress,
+  getOrCreateCardState,
   answerCard,
   isMemorized,
   isUnmemorized,
@@ -21,251 +22,145 @@ import {
   restoreSession,
   RESUMABLE_SESSION_MAX_AGE_MS,
   SRS_SCHEMA_VERSION,
-  LEARNING_STEPS_MIN,
-  RELEARNING_STEPS_MIN,
-  GRADUATING_INTERVAL_DAYS,
-  EASY_INTERVAL_DAYS,
-  MIN_EASE,
   type SrsCardState,
+  type SrsRating,
 } from './srs';
 
 const NOW = new Date('2026-08-18T12:00:00Z').getTime();
-const MIN = 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
 
-// Atalho: leva uma card do zero até a fase de revisão (2 degraus de "good" = gradua em 1 dia).
-const graduate = (cardId = 'c1', now = NOW): SrsCardState => {
-  let state = createInitialCardState(cardId, now, 'Fêmur');
-  state = answerCard(state, 'good', now); // degrau 1min → 10min
-  state = answerCard(state, 'good', now); // último degrau → gradua
-  return state;
-};
+// Atalho: cria um card já respondido com a nota indicada.
+const answered = (cardId: string, rating: SrsRating, now = NOW): SrsCardState =>
+  answerCard(createInitialCardState(cardId, 'Fêmur'), rating, now);
 
 describe('createInitialCardState', () => {
-  it('nasce como card nova, devida agora, com o ease padrão do Anki', () => {
-    const state = createInitialCardState('c1', NOW, 'Fêmur');
-    expect(state.phase).toBe('new');
-    expect(state.ease).toBe(2.5);
+  it('nasce sem nenhuma resposta registrada', () => {
+    const state = createInitialCardState('c1', 'Fêmur');
     expect(state.reviews).toBe(0);
     expect(state.againCount).toBe(0);
-    expect(state.lapses).toBe(0);
-    expect(state.dueAt).toBe(NOW);
+    expect(state.effortCount).toBe(0);
+    expect(state.easyCount).toBe(0);
+    expect(state.lastRating).toBeUndefined();
     expect(state.schemaVersion).toBe(SRS_SCHEMA_VERSION);
   });
-});
 
-describe('normalização do formato antigo (item 6.3 → 6.5)', () => {
-  it('descarta estado sem schemaVersion, devolvendo card nova', () => {
-    const antigo = { cardId: 'c1', ease: 2.3, intervalDays: 5, repetitions: 2, lapses: 1, reviews: 3, dueAt: NOW };
-    const normalizado = normalizeCardState(antigo, 'c1', NOW);
-    expect(normalizado.phase).toBe('new');
-    expect(normalizado.reviews).toBe(0);
-    expect(normalizado.intervalDays).toBe(0);
-  });
-
-  it('preserva estado já no formato novo', () => {
-    const novo = graduate();
-    expect(normalizeCardState(novo, 'c1', NOW).intervalDays).toBe(GRADUATING_INTERVAL_DAYS);
-  });
-
-  it('normalizeProgress filtra o mapa inteiro, mantendo só o formato novo', () => {
-    const progresso = {
-      antiga: { cardId: 'antiga', ease: 2.3, repetitions: 4, reviews: 4, dueAt: NOW },
-      nova: graduate('nova'),
-    };
-    const resultado = normalizeProgress(progresso);
-    expect(Object.keys(resultado)).toEqual(['nova']);
-  });
-
-  it('progresso indefinido vira mapa vazio', () => {
-    expect(normalizeProgress(undefined)).toEqual({});
+  it('não guarda nenhum campo de agendamento (nem dias, nem vencimento)', () => {
+    const state = createInitialCardState('c1');
+    expect(state).not.toHaveProperty('dueAt');
+    expect(state).not.toHaveProperty('intervalDays');
+    expect(state).not.toHaveProperty('ease');
+    expect(state).not.toHaveProperty('phase');
   });
 });
 
-describe('answerCard — card NOVA e em aprendizado (degraus em minutos)', () => {
-  it('"não lembrei" numa card nova agenda o primeiro degrau, em minutos — não em dias', () => {
-    const state = answerCard(createInitialCardState('c1', NOW), 'again', NOW);
-    expect(state.phase).toBe('learning');
-    expect(state.stepIndex).toBe(0);
-    expect(state.dueAt).toBe(NOW + LEARNING_STEPS_MIN[0] * MIN);
-    expect(state.againCount).toBe(1);
-  });
-
-  it('"lembrei" avança um degrau sem graduar', () => {
-    const state = answerCard(createInitialCardState('c1', NOW), 'good', NOW);
-    expect(state.phase).toBe('learning');
-    expect(state.stepIndex).toBe(1);
-    expect(state.dueAt).toBe(NOW + LEARNING_STEPS_MIN[1] * MIN);
-  });
-
-  it('"lembrei" no último degrau gradua a card para revisão em 1 dia', () => {
-    const state = graduate();
-    expect(state.phase).toBe('review');
-    expect(state.intervalDays).toBe(GRADUATING_INTERVAL_DAYS);
-    expect(state.dueAt).toBe(NOW + DAY);
-  });
-
-  it('"lembrei fácil" pula os degraus e gradua direto em 4 dias', () => {
-    const state = answerCard(createInitialCardState('c1', NOW), 'easy', NOW);
-    expect(state.phase).toBe('review');
-    expect(state.intervalDays).toBe(EASY_INTERVAL_DAYS);
-  });
-
-  it('"não lembrei" no meio do aprendizado volta pro primeiro degrau', () => {
-    let state = answerCard(createInitialCardState('c1', NOW), 'good', NOW); // stepIndex 1
+describe('answerCard — só contadores, sem agendamento', () => {
+  it('cada resposta incrementa o contador certo e vira a última nota', () => {
+    let state = createInitialCardState('c1');
     state = answerCard(state, 'again', NOW);
-    expect(state.stepIndex).toBe(0);
-    expect(state.dueAt).toBe(NOW + LEARNING_STEPS_MIN[0] * MIN);
+    expect(state).toMatchObject({ reviews: 1, againCount: 1, effortCount: 0, easyCount: 0, lastRating: 'again' });
+    state = answerCard(state, 'good', NOW);
+    expect(state).toMatchObject({ reviews: 2, againCount: 1, effortCount: 1, easyCount: 0, lastRating: 'good' });
+    state = answerCard(state, 'easy', NOW);
+    expect(state).toMatchObject({ reviews: 3, againCount: 1, effortCount: 1, easyCount: 1, lastRating: 'easy' });
   });
 
-  it('card nova não conta lapso (lapso é só de card já graduada, como no Anki)', () => {
-    const state = answerCard(createInitialCardState('c1', NOW), 'again', NOW);
-    expect(state.lapses).toBe(0);
-    expect(state.againCount).toBe(1); // mas conta pro ranking de pontos fracos
-  });
-});
-
-describe('answerCard — card em REVISÃO (intervalos em dias)', () => {
-  it('"lembrei" multiplica o intervalo pelo ease', () => {
-    const state = answerCard(graduate(), 'good', NOW + DAY);
-    expect(state.intervalDays).toBe(Math.round(GRADUATING_INTERVAL_DAYS * 2.5));
+  it('registra quando o card foi visto, mas isso é informativo — não vira trava', () => {
+    const state = answerCard(createInitialCardState('c1'), 'easy', NOW);
+    expect(state.lastReviewedAt).toBe(NOW);
+    // Estudar de novo no mesmo instante é permitido: o baralho não olha o relógio.
+    expect(buildSession(['c1'], { c1: state }).queue).toEqual(['c1']);
   });
 
-  it('"lembrei fácil" aumenta o ease e aplica o bônus de 1.3', () => {
-    const state = answerCard(graduate(), 'easy', NOW + DAY);
-    expect(state.ease).toBeCloseTo(2.65, 5);
-    expect(state.intervalDays).toBe(Math.round(1 * 2.65 * 1.3));
-  });
-
-  it('"não lembrei" derruba a card para reaprendizado, em minutos', () => {
-    const state = answerCard(graduate(), 'again', NOW + DAY);
-    expect(state.phase).toBe('relearning');
-    expect(state.dueAt).toBe(NOW + DAY + RELEARNING_STEPS_MIN[0] * MIN);
-    expect(state.lapses).toBe(1);
-    expect(state.ease).toBeCloseTo(2.3, 5);
-  });
-
-  it('3 "lembrei" seguidos levam o intervalo à casa de semanas', () => {
-    let state = graduate();
-    let now = state.dueAt;
-    for (let i = 0; i < 3; i++) {
-      state = answerCard(state, 'good', now);
-      now = state.dueAt;
-    }
-    expect(state.intervalDays).toBeGreaterThanOrEqual(14);
-  });
-
-  it('ease nunca cai abaixo do piso de 1.3', () => {
-    let state = graduate();
-    for (let i = 0; i < 20; i++) {
-      state = answerCard(state, 'again', NOW); // derruba
-      state = answerCard(state, 'good', NOW); // regradua pra poder cair de novo
-    }
-    expect(state.ease).toBe(MIN_EASE);
+  it('não muta o estado de entrada', () => {
+    const original = createInitialCardState('c1');
+    answerCard(original, 'again', NOW);
+    expect(original.reviews).toBe(0);
   });
 });
 
-describe('answerCard — REAPRENDIZADO', () => {
-  it('"lembrei" no reaprendizado regradua a card para revisão', () => {
-    const lapsed = answerCard(graduate(), 'again', NOW + DAY);
-    const state = answerCard(lapsed, 'good', NOW + DAY);
-    expect(state.phase).toBe('review');
-    expect(state.intervalDays).toBeGreaterThanOrEqual(1);
-  });
-
-  it('"não lembrei" no reaprendizado mantém a card nos minutos, sem novo lapso', () => {
-    const lapsed = answerCard(graduate(), 'again', NOW + DAY);
-    const state = answerCard(lapsed, 'again', NOW + DAY);
-    expect(state.phase).toBe('relearning');
-    expect(state.lapses).toBe(1); // o lapso já foi contado na queda
-    expect(state.againCount).toBe(2); // mas o "errei de novo" conta
-  });
-});
-
-
-describe('memorizado vs não memorizado (definição do usuário)', () => {
+describe('pilhas: memorizado vs não memorizado', () => {
   it('card só é memorizado quando o aluno clica em "Lembrei fácil"', () => {
-    expect(isMemorized(answerCard(createInitialCardState('c', NOW), 'easy', NOW))).toBe(true);
-    expect(isMemorized(answerCard(createInitialCardState('c', NOW), 'good', NOW))).toBe(false);
-    expect(isMemorized(answerCard(createInitialCardState('c', NOW), 'again', NOW))).toBe(false);
+    expect(isMemorized(answered('c', 'easy'))).toBe(true);
+    expect(isMemorized(answered('c', 'good'))).toBe(false);
+    expect(isMemorized(answered('c', 'again'))).toBe(false);
   });
 
-  it('"lembrei com esforço" devolve o card à pilha de não memorizados', () => {
-    const memorizado = answerCard(createInitialCardState('c', NOW), 'easy', NOW);
+  it('"lembrei com esforço" numa rodada seguinte devolve o card à pilha', () => {
+    const memorizado = answered('c', 'easy');
     expect(isUnmemorized(memorizado)).toBe(false);
-    const numaNovaRodada = answerCard(memorizado, 'good', NOW + 5 * DAY);
-    expect(isUnmemorized(numaNovaRodada)).toBe(true);
+    expect(isUnmemorized(answerCard(memorizado, 'good', NOW + DAY))).toBe(true);
   });
 
   it('"não lembrei" numa rodada seguinte também devolve o card à pilha', () => {
-    const memorizado = answerCard(createInitialCardState('c', NOW), 'easy', NOW);
-    expect(isUnmemorized(answerCard(memorizado, 'again', NOW + 5 * DAY))).toBe(true);
+    const memorizado = answered('c', 'easy');
+    expect(isUnmemorized(answerCard(memorizado, 'again', NOW + DAY))).toBe(true);
   });
 
   it('card nunca estudado não conta como não memorizado', () => {
-    expect(isUnmemorized(createInitialCardState('c', NOW))).toBe(false);
+    expect(isUnmemorized(createInitialCardState('c'))).toBe(false);
     expect(isUnmemorized(undefined)).toBe(false);
   });
 
-  it('countUnmemorizedCards conta só os que faltam memorizar', () => {
-    const states = {
-      a: answerCard(createInitialCardState('a', NOW), 'again', NOW),
-      b: answerCard(createInitialCardState('b', NOW), 'good', NOW),
-      c: answerCard(createInitialCardState('c', NOW), 'easy', NOW),
-    };
-    expect(countUnmemorizedCards(['a', 'b', 'c', 'inedito'], states)).toBe(2);
+  it('lista e conta só os que faltam memorizar', () => {
+    const states = { a: answered('a', 'again'), b: answered('b', 'good'), c: answered('c', 'easy') };
     expect(listUnmemorizedCards(['a', 'b', 'c'], states)).toEqual(['a', 'b']);
+    expect(countUnmemorizedCards(['a', 'b', 'c', 'inedito'], states)).toBe(2);
   });
 });
 
-describe('buildSession — passagem linear', () => {
+describe('buildSession — nada é bloqueado por tempo', () => {
   const deck = ['a', 'b', 'c', 'd', 'e'];
 
   it('baralho zerado entra inteiro, na ordem original', () => {
-    expect(buildSession(deck, {}, NOW).queue).toEqual(deck);
+    expect(buildSession(deck, {}).queue).toEqual(deck);
+  });
+
+  // O ponto do item 6.10: o aluno pode repassar tudo quantas vezes quiser, no mesmo dia.
+  it('card memorizado AGORA continua disponível numa sessão iniciada em seguida', () => {
+    const states = { a: answered('a', 'easy'), b: answered('b', 'easy') };
+    expect(buildSession(['a', 'b'], states).queue).toEqual(['a', 'b']);
+  });
+
+  it('rodar a mesma sessão várias vezes seguidas devolve sempre o mesmo baralho', () => {
+    const states = { a: answered('a', 'easy') };
+    expect(buildSession(['a'], states).queue).toEqual(['a']);
+    expect(buildSession(['a'], states).queue).toEqual(['a']);
   });
 
   it('ordem aleatória embaralha de verdade', () => {
-    const session = buildSession(deck, {}, NOW, { order: 'random', random: () => 0 });
+    const session = buildSession(deck, {}, { order: 'random', random: () => 0 });
     expect([...session.queue].sort()).toEqual([...deck].sort());
     expect(session.queue).not.toEqual(deck);
   });
 
   it('intervalo específico recorta o baralho', () => {
-    expect(buildSession(deck, {}, NOW, { rangeStart: 2, rangeEnd: 4 }).queue).toEqual(['b', 'c', 'd']);
+    expect(buildSession(deck, {}, { rangeStart: 2, rangeEnd: 4 }).queue).toEqual(['b', 'c', 'd']);
   });
 
-  it('limite de novos corta a fila; undefined = sem limite', () => {
-    expect(buildSession(deck, {}, NOW, { newLimit: 2 }).queue).toEqual(['a', 'b']);
-    expect(buildSession(deck, {}, NOW, { newLimit: undefined }).queue).toEqual(deck);
+  it('limite corta só os inéditos; undefined = sem limite', () => {
+    expect(buildSession(deck, {}, { newLimit: 2 }).queue).toEqual(['a', 'b']);
+    expect(buildSession(deck, {}, { newLimit: undefined }).queue).toEqual(deck);
   });
 
-  it('card memorizado e ainda não vencido fica FORA da sessão', () => {
-    const states = { a: { ...answerCard(createInitialCardState('a', NOW), 'easy', NOW), dueAt: NOW + 5 * DAY } };
-    expect(buildSession(['a'], states, NOW).queue).toEqual([]);
+  it('limite de inéditos não corta card já estudado', () => {
+    const states = { a: answered('a', 'good'), b: answered('b', 'good'), c: answered('c', 'good') };
+    const session = buildSession(deck, states, { newLimit: 1 });
+    expect(session.queue).toEqual(['a', 'b', 'c', 'd']); // 3 já vistos + 1 inédito
   });
 
-  it('card por memorizar entra independente do relógio', () => {
-    const states = { a: { ...answerCard(createInitialCardState('a', NOW), 'good', NOW), dueAt: NOW + 5 * DAY } };
-    expect(buildSession(['a'], states, NOW).queue).toEqual(['a']);
+  it('já vistos vêm antes dos inéditos', () => {
+    const states = { e: answered('e', 'again') };
+    expect(buildSession(deck, states).queue[0]).toBe('e');
   });
 
-  it('pendentes vêm antes dos inéditos', () => {
-    const states = { e: answerCard(createInitialCardState('e', NOW), 'again', NOW) };
-    expect(buildSession(deck, states, NOW).queue[0]).toBe('e');
-  });
-
-  it('rodada focada traz só os não memorizados, ignorando data de revisão', () => {
-    const states = {
-      a: { ...answerCard(createInitialCardState('a', NOW), 'good', NOW), dueAt: NOW + 30 * DAY },
-      b: { ...answerCard(createInitialCardState('b', NOW), 'easy', NOW), dueAt: NOW + 30 * DAY },
-    };
-    expect(buildSession(deck, states, NOW, { focus: 'unmemorized' }).queue).toEqual(['a']);
+  it('rodada focada traz só os não memorizados', () => {
+    const states = { a: answered('a', 'good'), b: answered('b', 'easy'), c: answered('c', 'again') };
+    expect(buildSession(deck, states, { focus: 'unmemorized' }).queue).toEqual(['a', 'c']);
   });
 
   it('rodada focada num baralho todo memorizado devolve fila vazia', () => {
-    const states = { a: answerCard(createInitialCardState('a', NOW), 'easy', NOW) };
-    expect(buildSession(['a'], states, NOW, { focus: 'unmemorized' }).queue).toEqual([]);
+    const states = { a: answered('a', 'easy') };
+    expect(buildSession(['a'], states, { focus: 'unmemorized' }).queue).toEqual([]);
   });
 });
 
@@ -282,8 +177,8 @@ describe('pickNextCard e applyAnswerToSession — nada volta no meio da sessão'
     expect(applyAnswerToSession({ queue: ['a', 'b', 'c'] }, 'a').queue).toEqual(['b', 'c']);
   });
 
-  // REGRESSÃO 6.5: "não lembrei" reinseria o card e, quando ele era o último da fila, o
-  // learn-ahead devolvia o MESMO card — a tela não saía do lugar. Agora a sessão sempre anda.
+  // REGRESSÃO 6.5: o learn-ahead devolvia o MESMO card recém-respondido quando ele era o
+  // último da fila, e a tela não saía do lugar.
   it('REGRESSÃO: "não lembrei" no ÚLTIMO card encerra a sessão, não repete o card', () => {
     const depois = applyAnswerToSession({ queue: ['ultimo'] }, 'ultimo');
     expect(depois.queue).toEqual([]);
@@ -296,26 +191,95 @@ describe('pickNextCard e applyAnswerToSession — nada volta no meio da sessão'
   });
 });
 
-describe('getSessionCounts — placar ao vivo', () => {
-  it('conta restantes, memorizados e por memorizar', () => {
-    const counts = getSessionCounts({ queue: ['d', 'e'] }, { a: true, b: false, c: false });
-    expect(counts).toEqual({ remaining: 2, memorized: 1, unmemorized: 2 });
+describe('migração de formato', () => {
+  it('formato 2 (com fase e intervalo em dias) é convertido, preservando o histórico', () => {
+    const v2 = {
+      schemaVersion: 2, cardId: 'c1', answerLabel: 'Fêmur', phase: 'review', stepIndex: 0,
+      ease: 2.3, intervalDays: 8, lapses: 2, againCount: 3, reviews: 7,
+      dueAt: NOW + 8 * DAY, lastRating: 'easy', lastReviewedAt: NOW,
+    };
+    const migrado = normalizeCardState(v2, 'c1');
+    expect(migrado.schemaVersion).toBe(SRS_SCHEMA_VERSION);
+    expect(migrado.reviews).toBe(7);
+    expect(migrado.againCount).toBe(3);
+    expect(migrado.lastRating).toBe('easy');
+    expect(isMemorized(migrado)).toBe(true); // a pilha é preservada
+    expect(migrado).not.toHaveProperty('intervalDays');
+  });
+
+  it('formato 2 com última resposta "good" continua na pilha de não memorizados', () => {
+    const v2 = { schemaVersion: 2, cardId: 'c1', reviews: 4, againCount: 1, lastRating: 'good' };
+    expect(isUnmemorized(normalizeCardState(v2, 'c1'))).toBe(true);
+  });
+
+  it('formato 1 (sem schemaVersion) não tem como ser mapeado — vira card inédito', () => {
+    const v1 = { cardId: 'c1', ease: 2.3, repetitions: 2, reviews: 3 };
+    expect(normalizeCardState(v1, 'c1').reviews).toBe(0);
+  });
+
+  it('normalizeProgress descarta o que virou inédito e mantém o resto', () => {
+    const progresso = {
+      antiga: { cardId: 'antiga', ease: 2.3, repetitions: 4 }, // formato 1
+      migravel: { schemaVersion: 2, cardId: 'migravel', reviews: 2, againCount: 1, lastRating: 'easy' },
+      atual: answered('atual', 'good'),
+    };
+    expect(Object.keys(normalizeProgress(progresso)).sort()).toEqual(['atual', 'migravel']);
+  });
+
+  it('progresso indefinido vira mapa vazio', () => {
+    expect(normalizeProgress(undefined)).toEqual({});
+  });
+
+  it('getOrCreateCardState devolve o estado existente ou cria um novo', () => {
+    const existente = answered('c1', 'good');
+    expect(getOrCreateCardState({ c1: existente }, 'c1')).toBe(existente);
+    expect(getOrCreateCardState({}, 'novo').reviews).toBe(0);
+  });
+});
+
+describe('contadores', () => {
+  it('getSessionCounts é o placar ao vivo da sessão', () => {
+    expect(getSessionCounts({ queue: ['d', 'e'] }, { a: true, b: false, c: false }))
+      .toEqual({ remaining: 2, memorized: 1, unmemorized: 2 });
   });
 
   it('sessão recém-iniciada tem placar zerado', () => {
     expect(getSessionCounts({ queue: ['a'] }, {})).toEqual({ remaining: 1, memorized: 0, unmemorized: 0 });
   });
+
+  it('getDeckCounts classifica o baralho sem nenhuma noção de "hoje"', () => {
+    const states = { a: answered('a', 'good'), b: answered('b', 'easy') };
+    expect(getDeckCounts(['a', 'b', 'inedito'], states))
+      .toEqual({ newCount: 1, unmemorizedCount: 1, memorizedCount: 1 });
+  });
+
+  it('getDeckMastery consolida todos os baralhos do aluno', () => {
+    const states = { a: answered('a', 'again'), b: answered('b', 'easy'), c: createInitialCardState('c') };
+    expect(getDeckMastery(states)).toEqual({ studied: 2, memorized: 1, unmemorized: 1 });
+  });
 });
 
-describe('getDeckCounts', () => {
-  it('classifica o baralho antes da sessão começar', () => {
-    const states = {
-      porMemorizar: answerCard(createInitialCardState('porMemorizar', NOW), 'good', NOW),
-      vencido: { ...answerCard(createInitialCardState('vencido', NOW), 'easy', NOW), dueAt: NOW - DAY },
-      emDia: { ...answerCard(createInitialCardState('emDia', NOW), 'easy', NOW), dueAt: NOW + 10 * DAY },
+describe('getWeakestCards', () => {
+  it('rankeia por número de "não lembrei"', () => {
+    const states: Record<string, SrsCardState> = {
+      a: { ...answered('a', 'good'), againCount: 1 },
+      b: { ...answered('b', 'good'), againCount: 4 },
+      c: { ...answered('c', 'good'), againCount: 2 },
     };
-    expect(getDeckCounts(['porMemorizar', 'vencido', 'emDia', 'inedito'], states, NOW))
-      .toEqual({ newCount: 1, unmemorizedCount: 1, dueCount: 1 });
+    expect(getWeakestCards(states, 2).map(w => w.cardId)).toEqual(['b', 'c']);
+  });
+
+  it('empate desempata por "lembrei com esforço"', () => {
+    const states: Record<string, SrsCardState> = {
+      a: { ...answered('a', 'good'), againCount: 2, effortCount: 1 },
+      b: { ...answered('b', 'good'), againCount: 2, effortCount: 5 },
+    };
+    expect(getWeakestCards(states, 2)[0].cardId).toBe('b');
+  });
+
+  it('ignora card que o aluno nunca errou, mesmo que ainda não esteja memorizado', () => {
+    const states = { perfeito: answered('perfeito', 'easy'), errado: { ...answered('errado', 'good'), againCount: 1 } };
+    expect(getWeakestCards(states, 10).map(w => w.cardId)).toEqual(['errado']);
   });
 });
 
@@ -353,7 +317,6 @@ describe('retomar sessão interrompida (item 6.6)', () => {
     expect(restoreSession(sessaoBase, new Set(['b']))).toEqual({ queue: ['b'] });
   });
 
-  // Sessão gravada antes do 6.9 tinha duas filas; não pode ser perdida.
   it('sessão no formato antigo (mainQueue/learningQueue) ainda é retomável', () => {
     const antiga = {
       startedAt: NOW - 10 * 60 * 1000,
@@ -367,56 +330,12 @@ describe('retomar sessão interrompida (item 6.6)', () => {
     expect(restoreSession(antiga, new Set(['a', 'b', 'c']))).toEqual({ queue: ['b', 'c', 'a'] });
   });
 });
-describe('getDeckMastery', () => {
-  it('conta como dominada só a card com intervalo maduro (21+ dias)', () => {
-    const states: Record<string, SrsCardState> = {
-      madura: { ...graduate('madura'), intervalDays: 30 },
-      verde: { ...graduate('verde'), intervalDays: 3 },
-      intacta: createInitialCardState('intacta', NOW),
-    };
-    const mastery = getDeckMastery(states, NOW);
-    expect(mastery.studied).toBe(2); // a intacta nunca foi revisada
-    expect(mastery.mastered).toBe(1);
-  });
-});
-
-describe('getWeakestCards', () => {
-  it('rankeia por número de "não lembrei"', () => {
-    const states: Record<string, SrsCardState> = {
-      a: { ...graduate('a'), againCount: 1 },
-      b: { ...graduate('b'), againCount: 4 },
-      c: { ...graduate('c'), againCount: 2 },
-    };
-    expect(getWeakestCards(states, 2).map((w) => w.cardId)).toEqual(['b', 'c']);
-  });
-
-  it('empate desempata pelo ease mais baixo', () => {
-    const states: Record<string, SrsCardState> = {
-      a: { ...graduate('a'), againCount: 2, ease: 2.1 },
-      b: { ...graduate('b'), againCount: 2, ease: 1.5 },
-    };
-    expect(getWeakestCards(states, 2)[0].cardId).toBe('b');
-  });
-
-  it('ignora card que o aluno nunca errou', () => {
-    const states: Record<string, SrsCardState> = {
-      perfeita: { ...graduate('perfeita'), againCount: 0 },
-      errada: { ...graduate('errada'), againCount: 1 },
-    };
-    expect(getWeakestCards(states, 10).map((w) => w.cardId)).toEqual(['errada']);
-  });
-});
 
 describe('helpers de fila', () => {
-  it('shuffle preserva todos os itens', () => {
+  it('shuffle preserva todos os itens e não muta a entrada', () => {
     const items = ['a', 'b', 'c', 'd'];
     expect([...shuffle(items, () => 0.5)].sort()).toEqual([...items].sort());
-  });
-
-  it('shuffle não muta a entrada', () => {
-    const items = ['a', 'b', 'c'];
-    shuffle(items, () => 0);
-    expect(items).toEqual(['a', 'b', 'c']);
+    expect(items).toEqual(['a', 'b', 'c', 'd']);
   });
 
   it('applyRange sem limites devolve tudo', () => {

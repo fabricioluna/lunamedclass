@@ -87,6 +87,7 @@ seção Etapa 6 e decisões D10/D11).
 - **6.5 (Lab vira Anki de verdade)** — ✅ concluído, aguardando teste do usuário em produção.
 - **6.6 (retomar sessão de onde parou)** — ✅ concluído junto, mesmo dia.
 - **6.7 (treino focado nas lâminas difíceis)** — ✅ concluído junto, mesmo dia.
+- **6.10 (fim do calendário: flashcards viram pilhas)** — ✅ concluído. Última peça baseada em tempo removida do modelo.
 - **6.9 (sessão linear + memorizado = "Lembrei fácil")** — ✅ concluído, corrige o 6.5/6.7 depois do teste do usuário.
 - **6.8 (liberação por unidade N1/N2 na aba "Acessos")** — ✅ concluído. O usuário apontou que a
   aba "Acessos" já resolvia quase tudo que o 6.4 planejava; só faltava a granularidade de
@@ -1411,6 +1412,51 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   🟡 **Desvio consciente do Anki, decidido pelo usuário:** o Anki reinsere o card errado dentro
   da própria sessão. Aqui não — a sessão é uma passagem só, e a repetição vem da rodada focada
   logo depois. A repetição espaçada **entre dias** continua idêntica.
+
+
+- [x] **6.10 — Fim do calendário: flashcards viram sistema de pilhas**
+  *(concluído em 2026-08-18)*. Pedido do usuário: *"não considere dias como unidade de medida,
+  um usuário pode revisar todos os cards no mesmo dia, inclusive mais de uma vez"*.
+
+  **Consequência que define o item:** o 6.9 já tinha tirado os minutos (degraus intra-sessão).
+  Tirando também os dias, **não sobra relógio nenhum para agendar nada** — e guardar `ease`/
+  `intervalDays`/`dueAt` sem nunca usar seria peso morto mentindo na tela (o dashboard chegava a
+  exibir "Dominadas = intervalo ≥ 21 dias"). Então a repetição espaçada saiu inteira e o modelo
+  virou **pilhas, estilo Leitner** — a outra família clássica de flashcard:
+
+  ```
+  inédito ──estudou──► [ não memorizado ] ──"Lembrei fácil"──► [ memorizado ]
+                              ▲                                      │
+                              └──"Não lembrei" / "Lembrei com esforço"┘
+  ```
+
+  Quem decide quando revisar é o aluno: baralho inteiro ou só a pilha do que falta memorizar,
+  quantas vezes quiser, no mesmo dia ou não. **Nada é excluído de uma sessão por data.**
+
+  - `utils/srs.ts` reescrito. `SrsCardState` agora é só contadores: `reviews`, `againCount`,
+    `effortCount`, `easyCount`, `lastRating`. `lastReviewedAt` permanece, mas **explicitamente
+    informativo** — registrar o tempo é diferente de agendar por ele. Sumiram `phase`,
+    `stepIndex`, `ease`, `intervalDays`, `dueAt`, as constantes de degrau/intervalo e o
+    parâmetro `now` de `buildSession`/`getDeckCounts`/`getDeckMastery`.
+  - **Migração 2→3, não descarte** (diferente do 6.5): `normalizeCardState` converte o formato
+    do 6.5 preservando `reviews`, `againCount` e `lastRating` — ou seja, **a pilha em que o card
+    está sobrevive**. Formato 1 não tem como ser mapeado com honestidade e vira card inédito.
+  - `getDeckCounts` → inéditos / por memorizar / memorizados. `getDeckMastery` idem, sem
+    "dominadas" nem "para hoje". `getWeakestCards` desempata por `effortCount` (o `ease` não
+    existe mais).
+  - Textos da interface auditados: sumiram "volta no dia seguinte", "o intervalo cresce
+    (1 → 3 → 8 dias)", "voltam sozinhos na data certa". O box "Como funciona" agora descreve o
+    modelo real.
+  - Vocabulário "lâmina" → **"card"** em toda a interface, concluindo o pedido do 6.9.
+  - Verificação: `typecheck` ✅, `vitest` **118/118** ✅, `lint` 22 (pré-existentes) ✅,
+    `build` ✅ + classes de cor conferidas no CSS.
+
+  🟡 **O que se perde, dito com todas as letras:** não há mais agendamento automático de longo
+  prazo. Antes o sistema trazia o card de volta sozinho depois de 3, 8, 20 dias — que é o
+  mecanismo com evidência de retenção. Agora a iniciativa é 100% do aluno: se ele não abrir o
+  baralho, nada o lembra. Se um dia fizer falta, o meio-termo natural seria espaçar por
+  **rodadas** ("volta depois de 3 sessões") em vez de por calendário, mantendo a promessa de
+  poder repassar tudo no mesmo dia.
 
 
 ---

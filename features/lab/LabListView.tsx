@@ -82,10 +82,10 @@ const LabListView: React.FC<Props> = ({
 
     Promise.all(simsToCheck.map(async (sim) => {
       const { cards: progress } = await fetchFlashcardProgressDoc(userId, sim.firebaseId as string);
-      // Badge conta só o que precisa VOLTAR (por memorizar + revisão vencida). Card inédito não
-      // é "para revisar" — o baralho novo inteiro apareceria como pendência em toda simulação.
-      const { unmemorizedCount, dueCount } = getDeckCounts(sim.questions.map(q => q.id), progress, Date.now());
-      return [sim.firebaseId as string, unmemorizedCount + dueCount] as const;
+      // Badge conta só o que falta memorizar. Card inédito não entra — senão um baralho novo
+      // inteiro apareceria como pendência em toda simulação.
+      const { unmemorizedCount } = getDeckCounts(sim.questions.map(q => q.id), progress);
+      return [sim.firebaseId as string, unmemorizedCount] as const;
     }))
       .then((entries) => { if (!cancelled) setDueCounts(Object.fromEntries(entries)); })
       .catch((err) => console.error('Erro ao carregar contagem de revisão dos flashcards:', err));
@@ -164,7 +164,7 @@ const LabListView: React.FC<Props> = ({
       {isFetching ? (
         <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[2.5rem] shadow-xl border border-gray-100 mb-8">
            <div className="w-12 h-12 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
-           <h3 className="text-[#003366] font-black uppercase tracking-widest text-xs">Sincronizando Lâminas e Peças...</h3>
+           <h3 className="text-[#003366] font-black uppercase tracking-widest text-xs">Sincronizando cards...</h3>
            <p className="text-gray-400 text-[10px] font-bold mt-2 uppercase">Preparando ambiente laboratorial</p>
         </div>
       ) : (
@@ -206,7 +206,7 @@ const LabListView: React.FC<Props> = ({
                      {/* Badge de flashcards pendentes de revisão (Etapa 6, item 6.3) */}
                      {sim.firebaseId && (dueCounts[sim.firebaseId] ?? 0) > 0 && (
                        <span className="flex items-center gap-1 bg-red-50 text-red-600 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border border-red-100">
-                         <Brain size={12}/> {dueCounts[sim.firebaseId]} para revisar
+                         <Brain size={12}/> {dueCounts[sim.firebaseId]} por memorizar
                        </span>
                      )}
                    </div>
@@ -219,7 +219,7 @@ const LabListView: React.FC<Props> = ({
                        <User size={14}/> {sim.author}
                      </span>
                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                       <Play size={14}/> {sim.questions.length} Lâminas/Peças
+                       <Play size={14}/> {sim.questions.length} cards
                      </span>
                    </div>
                  </div>
