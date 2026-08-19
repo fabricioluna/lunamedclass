@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LabSimulation, LabQuestion, QuizDetail } from '../../types';
 import {
   ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal,
-  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Clock, Info, RotateCcw, Flame,
+  Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Info, RotateCcw, Flame,
 } from 'lucide-react';
 import {
   SrsCardState, SrsRating, SrsSession, PersistedSession, PersistedSessionOptions,
   getOrCreateCardState, answerCard,
-  buildSession, pickNextCard, applyAnswerToSession, getSessionCounts, getDeckCounts,
-  isResumableSession, restoreSession, countDifficultCards, SessionFocus,
+  buildSession, applyAnswerToSession, getSessionCounts, getDeckCounts,
+  isResumableSession, restoreSession, countUnmemorizedCards, SessionFocus,
 } from '../../utils/srs';
 import {
   fetchFlashcardProgressDoc, upsertFlashcardCardState, clearActiveSession,
@@ -87,26 +87,28 @@ const AnswerReveal: React.FC<{ q: LabQuestion }> = ({ q }) => (
   </>
 );
 
-// Os 3 contadores que o Anki mostra o tempo todo. É a resposta visual para "não entendi como
-// fica a repetição": o número de "aprendendo" sobe quando o aluno erra e desce conforme acerta.
-const SessionCounters: React.FC<{ newCount: number; learningCount: number; reviewCount: number }> = ({
-  newCount, learningCount, reviewCount,
-}) => (
-  <div className="flex items-center gap-3">
-    <span className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-100 min-w-[62px]">
-      <span className="text-lg font-black text-blue-700 leading-none">{newCount}</span>
-      <span className="text-[8px] font-black uppercase tracking-widest text-blue-400 mt-1">Novas</span>
-    </span>
-    <span className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-red-50 border border-red-100 min-w-[62px]">
-      <span className="text-lg font-black text-red-600 leading-none">{learningCount}</span>
-      <span className="text-[8px] font-black uppercase tracking-widest text-red-400 mt-1">Aprendendo</span>
-    </span>
-    <span className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-green-50 border border-green-100 min-w-[62px]">
-      <span className="text-lg font-black text-green-700 leading-none">{reviewCount}</span>
-      <span className="text-[8px] font-black uppercase tracking-widest text-green-500 mt-1">Revisão</span>
-    </span>
-  </div>
-);
+// Widget genérico de 3 números. Usado tanto pro placar AO VIVO da sessão (restantes /
+// memorizados / não memorizados) quanto pra situação do baralho na tela de configuração.
+const CounterTrio: React.FC<{
+  items: { value: number; label: string; tone: 'blue' | 'green' | 'red' | 'amber' }[];
+}> = ({ items }) => {
+  const tones = {
+    blue: 'bg-blue-50 border-blue-100 text-blue-700',
+    green: 'bg-green-50 border-green-100 text-green-700',
+    red: 'bg-red-50 border-red-100 text-red-600',
+    amber: 'bg-amber-50 border-amber-100 text-[#D4A017]',
+  };
+  return (
+    <div className="flex items-center gap-3">
+      {items.map(({ value, label, tone }) => (
+        <span key={label} className={`flex flex-col items-center px-3 py-1.5 rounded-xl border min-w-[70px] ${tones[tone]}`}>
+          <span className="text-lg font-black leading-none">{value}</span>
+          <span className="text-[8px] font-black uppercase tracking-widest opacity-70 mt-1">{label}</span>
+        </span>
+      ))}
+    </div>
+  );
+};
 
 const RATING_BUTTONS: { rating: SrsRating; label: string; className: string }[] = [
   { rating: 'again', label: 'Não lembrei', className: 'bg-red-500 hover:bg-red-600' },
@@ -126,7 +128,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   const [rangeStart, setRangeStart] = useState(1);
   const [rangeEnd, setRangeEnd] = useState(simulation.questions.length);
   const [newLimitText, setNewLimitText] = useState(''); // vazio = sem limite (padrão do usuário)
-  const [focus, setFocus] = useState<SessionFocus>('all'); // 'difficult' = treino só do que erra (item 6.7)
+  const [focus, setFocus] = useState<SessionFocus>('all'); // 'unmemorized' = rodada só do que falta memorizar
 
   // === PROGRESSO PERSISTIDO (por aluno) ===
   const [progress, setProgress] = useState<Record<string, SrsCardState>>({});
@@ -157,54 +159,29 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     [questionIds, progress]
   );
 
-  const difficultCount = useMemo(
-    () => countDifficultCards(questionIds, progress),
+  const unmemorizedCount = useMemo(
+    () => countUnmemorizedCards(questionIds, progress),
     [questionIds, progress]
   );
 
   // === SESSÃO EM ANDAMENTO ===
-  const [session, setSession] = useState<SrsSession>({ mainQueue: [], learningQueue: [] });
-  const [currentCardId, setCurrentCardId] = useState<string | null>(null);
-  const [waitingUntil, setWaitingUntil] = useState<number | null>(null);
+  const [session, setSession] = useState<SrsSession>({ queue: [] });
   const [isRevealed, setIsRevealed] = useState(false);
   const [isSessionComplete, setIsSessionComplete] = useState(false);
 
-  // Acertos por lâmina DISTINTA, pela PRIMEIRA resposta dada na sessão — é a métrica de
-  // retenção do Anki. Uma lâmina errada e depois acertada na mesma sessão conta como erro:
-  // senão bastaria insistir até acertar para a nota ficar perfeita.
+  // cardId → memorizou (clicou "Lembrei fácil"). Guardado em ESTADO, não em ref, porque o
+  // placar precisa aparecer ao vivo durante a sessão — pedido do usuário depois do teste.
+  const [sessionAnswers, setSessionAnswers] = useState<Record<string, boolean>>({});
   const sessionAnswersRef = useRef<Record<string, boolean>>({});
   const sessionStartRef = useRef<number>(Date.now());
   const sessionOptionsRef = useRef<PersistedSessionOptions>({ order: 'sequential' });
-  const [answeredCount, setAnsweredCount] = useState(0);
 
-  const counts = useMemo(() => getSessionCounts(session, progress), [session, progress]);
+  const counts = useMemo(() => getSessionCounts(session, sessionAnswers), [session, sessionAnswers]);
 
-  // Escolhe a próxima lâmina sempre que a sessão muda. Fica num efeito (e não no clique) porque
-  // o "learn ahead" depende do relógio: uma lâmina que ainda não venceu pode virar a próxima
-  // alguns segundos depois, sem nenhuma ação do aluno.
-  useEffect(() => {
-    if (isSetupMode || isSessionComplete) return;
-
-    const advance = () => {
-      const next = pickNextCard(session, progress, Date.now());
-      if (next.kind === 'card') {
-        setCurrentCardId(prev => (prev === next.cardId ? prev : next.cardId));
-        setWaitingUntil(null);
-      } else if (next.kind === 'waiting') {
-        setCurrentCardId(null);
-        setWaitingUntil(next.dueAt);
-      } else {
-        setCurrentCardId(null);
-        setWaitingUntil(null);
-        setIsSessionComplete(true);
-      }
-    };
-
-    advance();
-    // Só precisa de relógio enquanto houver lâmina esperando o degrau vencer.
-    const timer = window.setInterval(advance, 1000);
-    return () => window.clearInterval(timer);
-  }, [session, progress, isSetupMode, isSessionComplete]);
+  // Passagem linear: o card atual é simplesmente o primeiro da fila. Sem relógio, sem
+  // reinserção — era o `setInterval` de "learn ahead" que fazia o card recém-respondido
+  // reaparecer no lugar quando ele era o último da fila.
+  const currentCardId = session.queue.length > 0 ? session.queue[0] : null;
 
   useEffect(() => { setIsRevealed(false); }, [currentCardId]);
 
@@ -215,7 +192,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     [pendingSession]
   );
   const pendingSessionRemaining = pendingSession
-    ? pendingSession.mainQueue.length + pendingSession.learningQueue.length
+    ? restoreSession(pendingSession, new Set(questionIds)).queue.length
     : 0;
   const pendingSessionAnswered = pendingSession ? Object.keys(pendingSession.answers).length : 0;
 
@@ -259,7 +236,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     sessionAnswersRef.current = answers;
     sessionStartRef.current = startedAt;
     sessionOptionsRef.current = options;
-    setAnsweredCount(Object.keys(answers).length);
+    setSessionAnswers(answers);
     setSession(built);
     setIsSessionComplete(false);
     setIsRevealed(false);
@@ -283,16 +260,16 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
       order,
       rangeStart: useRange ? rangeStart : undefined,
       rangeEnd: useRange ? rangeEnd : undefined,
-      // Limite de novas não se aplica ao treino focado: lá não entra lâmina inédita.
-      newLimit: focus === 'difficult' ? undefined : parsedNewLimit,
+      // Limite de novas não se aplica à rodada focada: lá não entra card inédito.
+      newLimit: focus === 'unmemorized' ? undefined : parsedNewLimit,
       focus,
     };
     const built = buildSession(questionIds, progress, Date.now(), options);
 
-    if (built.mainQueue.length === 0 && built.learningQueue.length === 0) {
-      alert(focus === 'difficult'
-        ? 'Nenhuma lâmina difícil neste baralho ainda! O treino focado só reúne as que você já marcou como "Não lembrei".'
-        : 'Nada para estudar com essa configuração! Ou o baralho está em dia (volte mais tarde), ou o intervalo escolhido não tem lâminas pendentes.');
+    if (built.queue.length === 0) {
+      alert(focus === 'unmemorized'
+        ? 'Nenhum card pendente de memorização neste baralho! Um card sai dessa pilha quando você marca "Lembrei fácil".'
+        : 'Nada para estudar com essa configuração! Ou o baralho está em dia (volte mais tarde), ou o intervalo escolhido não tem cards pendentes.');
       return;
     }
 
@@ -313,8 +290,19 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         .catch(err => console.error('Erro ao limpar sessão de flashcards:', err));
     }
     sessionAnswersRef.current = {};
-    setAnsweredCount(0);
+    setSessionAnswers({});
     setIsSetupMode(true);
+  };
+
+  // "Estudar esses N agora": encerra a sessão atual (gravando o resultado dela) e abre uma
+  // rodada nova só com o que ficou por memorizar. Duas sessões distintas no histórico, que é o
+  // que elas são de fato.
+  const handleStudyUnmemorizedNow = () => {
+    const pendentes = Object.keys(sessionAnswersRef.current).filter(id => !sessionAnswersRef.current[id]);
+    flushSessionResult(sessionAnswersRef.current, sessionStartRef.current);
+
+    const options: PersistedSessionOptions = { order, focus: 'unmemorized' };
+    beginSession({ queue: pendentes }, options, {}, Date.now());
   };
 
   const handleRate = (rating: SrsRating) => {
@@ -326,16 +314,18 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     const prevState = getOrCreateCardState(progress, currentCardId, now, q.answer);
     const nextState = answerCard(prevState, rating, now);
 
-    // Só a PRIMEIRA resposta da lâmina nesta sessão entra na nota.
-    if (!(currentCardId in sessionAnswersRef.current)) {
-      sessionAnswersRef.current = { ...sessionAnswersRef.current, [currentCardId]: rating !== 'again' };
-      setAnsweredCount(Object.keys(sessionAnswersRef.current).length);
-    }
+    // "Memorizado" é só o "Lembrei fácil" — definição dada pelo usuário. O placar é atualizado
+    // na hora (estado, não ref) para o contador de não memorizados andar em tempo real.
+    const memorized = rating === 'easy';
+    const nextAnswers = { ...sessionAnswersRef.current, [currentCardId]: memorized };
+    sessionAnswersRef.current = nextAnswers;
+    setSessionAnswers(nextAnswers);
 
     const nextProgress = { ...progress, [currentCardId]: nextState };
-    const nextSession = applyAnswerToSession(session, currentCardId, nextState, nextProgress);
+    const nextSession = applyAnswerToSession(session, currentCardId);
     setProgress(nextProgress);
     setSession(nextSession);
+    if (nextSession.queue.length === 0) setIsSessionComplete(true);
 
     if (userId) {
       // A sessão pega carona na MESMA escrita do card: retomar depois não custa nenhuma
@@ -344,9 +334,8 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         startedAt: sessionStartRef.current,
         updatedAt: now,
         options: sessionOptionsRef.current,
-        mainQueue: nextSession.mainQueue,
-        learningQueue: nextSession.learningQueue,
-        answers: sessionAnswersRef.current,
+        queue: nextSession.queue,
+        answers: nextAnswers,
       };
       upsertFlashcardCardState(userId, simulationId, currentCardId, nextState, persisted)
         .catch(err => console.error('Erro ao salvar progresso de flashcards:', err));
@@ -357,7 +346,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   // TELA 1: CONFIGURAÇÃO
   // ==========================================
   if (isSetupMode) {
-    const totalPendente = deckCounts.newCount + deckCounts.learningCount + deckCounts.reviewCount;
+    const totalPendente = deckCounts.newCount + deckCounts.unmemorizedCount + deckCounts.dueCount;
 
     return (
       <div className="max-w-3xl mx-auto px-4 py-12 animate-in fade-in duration-500 pb-32">
@@ -399,30 +388,34 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
           <div className="flex flex-col items-center gap-4 pb-8 border-b mb-8">
             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Situação do baralho hoje</p>
             {isProgressLoaded ? (
-              <SessionCounters {...deckCounts} />
+              <CounterTrio items={[
+                { value: deckCounts.newCount, label: 'Inéditos', tone: 'blue' },
+                { value: deckCounts.unmemorizedCount, label: 'Por memorizar', tone: 'red' },
+                { value: deckCounts.dueCount, label: 'Para revisar', tone: 'green' },
+              ]} />
             ) : (
               <div className="w-8 h-8 border-4 border-[#003366]/10 border-t-[#D4A017] rounded-full animate-spin"/>
             )}
             {isProgressLoaded && totalPendente === 0 && (
               <p className="text-xs text-green-600 font-bold text-center">
-                Tudo em dia! As lâminas já estudadas voltam sozinhas na data certa.
+                Tudo em dia! Os cards memorizados voltam sozinhos na data certa.
               </p>
             )}
           </div>
 
-          {/* TREINO FOCADO NAS LÂMINAS DIFÍCEIS (item 6.7) */}
-          {isProgressLoaded && difficultCount > 0 && (
-            <div className={`p-5 rounded-2xl border-2 mb-8 transition-all ${focus === 'difficult' ? 'border-red-300 bg-red-50/50' : 'border-gray-100 bg-gray-50'}`}>
+          {/* RODADA FOCADA NOS CARDS NÃO MEMORIZADOS */}
+          {isProgressLoaded && unmemorizedCount > 0 && (
+            <div className={`p-5 rounded-2xl border-2 mb-8 transition-all ${focus === 'unmemorized' ? 'border-red-300 bg-red-50/50' : 'border-gray-100 bg-gray-50'}`}>
               <div className="flex items-start gap-3 mb-4">
-                <div className={`p-2.5 rounded-xl shrink-0 ${focus === 'difficult' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-500'}`}>
+                <div className={`p-2.5 rounded-xl shrink-0 ${focus === 'unmemorized' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-500'}`}>
                   <Flame size={20}/>
                 </div>
                 <div className="flex-1">
                   <h4 className="font-black text-[#003366] text-sm">
-                    Você tem {difficultCount} lâmina{difficultCount > 1 ? 's' : ''} que ainda não memorizou
+                    Você tem {unmemorizedCount} card{unmemorizedCount > 1 ? 's' : ''} que ainda não memorizou
                   </h4>
                   <p className="text-[10px] text-gray-500 font-medium mt-0.5">
-                    São as que você já marcou como "Não lembrei" pelo menos uma vez.
+                    Um card sai dessa pilha quando você marca "Lembrei fácil".
                   </p>
                 </div>
               </div>
@@ -434,16 +427,16 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
                   Sessão normal
                 </button>
                 <button
-                  onClick={() => setFocus('difficult')}
-                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${focus === 'difficult' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400 hover:text-red-500'}`}
+                  onClick={() => setFocus('unmemorized')}
+                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${focus === 'unmemorized' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400 hover:text-red-500'}`}
                 >
-                  Treinar só essas {difficultCount}
+                  Estudar só esses {unmemorizedCount}
                 </button>
               </div>
-              {focus === 'difficult' && (
+              {focus === 'unmemorized' && (
                 <p className="text-[10px] text-red-700 font-bold mt-3 leading-relaxed">
-                  O treino focado ignora a data de revisão e traz as {difficultCount} de uma vez. As respostas
-                  continuam contando: acertar aqui empurra a lâmina pra frente normalmente.
+                  A rodada focada ignora a data de revisão e traz os {unmemorizedCount} de uma vez. As respostas
+                  continuam contando normalmente para o agendamento.
                 </p>
               )}
             </div>
@@ -528,7 +521,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
           )}
 
           <button onClick={handleStart} disabled={!isProgressLoaded} className="w-full bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-sm tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#003366] disabled:hover:text-white">
-            {focus === 'difficult' ? `Treinar as ${difficultCount} difíceis 🔥` : 'Começar a estudar 🧠'}
+            {focus === 'unmemorized' ? `Estudar os ${unmemorizedCount} não memorizados 🔥` : 'Começar a estudar 🧠'}
           </button>
         </div>
       </div>
@@ -536,12 +529,12 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   }
 
   // ==========================================
-  // TELA 2: FIM DE SESSÃO
+  // TELA 2: FIM DE SESSÃO — com a pilha do que não foi memorizado
   // ==========================================
   if (isSessionComplete) {
-    const respostas = Object.values(sessionAnswersRef.current);
-    const acertos = respostas.filter(Boolean).length;
-    const total = respostas.length;
+    const respostas = Object.values(sessionAnswers);
+    const memorizados = respostas.filter(Boolean).length;
+    const naoMemorizados = respostas.length - memorizados;
 
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 animate-in zoom-in duration-500 pb-32 text-center">
@@ -549,49 +542,40 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Sessão Concluída!</h2>
         <p className="text-gray-500 text-sm mb-10">{simulation.title}</p>
 
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100 flex justify-center gap-10 mb-6">
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100 flex justify-center gap-10 mb-8">
           <div className="text-center">
-            <p className="text-3xl font-black text-[#003366]">{total}</p>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Lâminas</p>
+            <p className="text-3xl font-black text-[#003366]">{respostas.length}</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Cards</p>
           </div>
           <div className="w-px bg-gray-100" />
           <div className="text-center">
-            <p className="text-3xl font-black text-green-600">{acertos}</p>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">De primeira</p>
+            <p className="text-3xl font-black text-green-600">{memorizados}</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Memorizados</p>
           </div>
           <div className="w-px bg-gray-100" />
           <div className="text-center">
-            <p className="text-3xl font-black text-red-500">{total - acertos}</p>
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Não lembradas</p>
+            <p className="text-3xl font-black text-red-500">{naoMemorizados}</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">Por memorizar</p>
           </div>
         </div>
 
-        <p className="text-xs text-gray-400 font-medium mb-10 max-w-md mx-auto">
-          As lâminas que você não lembrou voltam antes das outras na próxima sessão.
-        </p>
+        {/* Pilha do que ficou por memorizar — o aluno decide se roda de novo agora. */}
+        {naoMemorizados > 0 && (
+          <div className="bg-red-50/60 border-2 border-red-100 p-6 rounded-[2rem] mb-8">
+            <p className="text-sm font-bold text-[#003366] mb-1">
+              {naoMemorizados} card{naoMemorizados > 1 ? 's' : ''} ficou{naoMemorizados > 1 ? 'ram' : ''} por memorizar
+            </p>
+            <p className="text-[11px] text-gray-500 font-medium mb-5 leading-relaxed">
+              São os que você marcou como "Não lembrei" ou "Lembrei com esforço". Quer rodar essa pilha agora?
+            </p>
+            <button onClick={handleStudyUnmemorizedNow} className="w-full bg-red-500 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-red-600 transition-all shadow-lg">
+              Estudar esses {naoMemorizados} agora 🔥
+            </button>
+          </div>
+        )}
 
         <button onClick={finishSession} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all">
           Salvar e Voltar
-        </button>
-      </div>
-    );
-  }
-
-  // ==========================================
-  // TELA 3: ESPERANDO O DEGRAU VENCER
-  // ==========================================
-  if (waitingUntil !== null) {
-    const minutosRestantes = Math.max(1, Math.ceil((waitingUntil - Date.now()) / 60000));
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-12 animate-in fade-in duration-500 pb-32 text-center">
-        <div className="w-20 h-20 bg-blue-50 text-[#003366] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm"><Clock size={40}/></div>
-        <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tighter mb-3">Tudo revisado por enquanto</h2>
-        <p className="text-gray-500 text-sm mb-10 max-w-md mx-auto">
-          Ainda há lâminas em aprendizado, mas a próxima só volta em cerca de {minutosRestantes} minuto{minutosRestantes > 1 ? 's' : ''}.
-          Você pode esperar aqui ou encerrar a sessão.
-        </p>
-        <button onClick={finishSession} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-[#D4A017] hover:text-[#003366] transition-all">
-          Encerrar e Salvar
         </button>
       </div>
     );
@@ -611,9 +595,13 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         <div>
           <button onClick={finishSession} className="text-[10px] font-black uppercase text-gray-400 hover:text-[#003366] transition-colors mb-2 flex items-center gap-1"><ChevronLeft size={12}/> Encerrar sessão</button>
           <h2 className="text-xl font-black text-[#003366]">{simulation.title}</h2>
-          <p className="text-[10px] font-black uppercase text-[#D4A017] tracking-[0.2em]">{answeredCount} estudadas nesta sessão</p>
+          <p className="text-[10px] font-black uppercase text-[#D4A017] tracking-[0.2em]">{Object.keys(sessionAnswers).length} estudados nesta sessão</p>
         </div>
-        <SessionCounters {...counts} />
+        <CounterTrio items={[
+          { value: counts.remaining, label: 'Restantes', tone: 'blue' },
+          { value: counts.memorized, label: 'Memorizados', tone: 'green' },
+          { value: counts.unmemorized, label: 'Por memorizar', tone: 'red' },
+        ]} />
       </div>
 
       <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-xl border border-gray-100">

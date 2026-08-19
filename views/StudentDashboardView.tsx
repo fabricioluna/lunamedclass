@@ -28,7 +28,7 @@ interface WeakLabCard {
 interface FlashcardOverview {
   studied: number;
   mastered: number;
-  learning: number;
+  unmemorized: number;
   dueToday: number;
 }
 
@@ -302,8 +302,8 @@ const StudentDashboardView: React.FC<StudentDashboardProps> = ({ onBack }) => {
               <p className="text-[9px] font-black uppercase text-green-500 tracking-widest mt-1">Dominadas</p>
             </div>
             <div className="text-center p-3 rounded-2xl bg-red-50">
-              <p className="text-2xl font-black text-red-500">{flashcardOverview.learning}</p>
-              <p className="text-[9px] font-black uppercase text-red-400 tracking-widest mt-1">Aprendendo</p>
+              <p className="text-2xl font-black text-red-500">{flashcardOverview.unmemorized}</p>
+              <p className="text-[9px] font-black uppercase text-red-400 tracking-widest mt-1">Por memorizar</p>
             </div>
             <div className="text-center p-3 rounded-2xl bg-amber-50">
               <p className="text-2xl font-black text-[#D4A017]">{flashcardOverview.dueToday}</p>

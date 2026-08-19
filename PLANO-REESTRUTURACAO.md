@@ -87,6 +87,7 @@ seção Etapa 6 e decisões D10/D11).
 - **6.5 (Lab vira Anki de verdade)** — ✅ concluído, aguardando teste do usuário em produção.
 - **6.6 (retomar sessão de onde parou)** — ✅ concluído junto, mesmo dia.
 - **6.7 (treino focado nas lâminas difíceis)** — ✅ concluído junto, mesmo dia.
+- **6.9 (sessão linear + memorizado = "Lembrei fácil")** — ✅ concluído, corrige o 6.5/6.7 depois do teste do usuário.
 - **6.8 (liberação por unidade N1/N2 na aba "Acessos")** — ✅ concluído. O usuário apontou que a
   aba "Acessos" já resolvia quase tudo que o 6.4 planejava; só faltava a granularidade de
   unidade, que é o que este item entregou.
@@ -1367,6 +1368,49 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   direto do Firestore. Para a turma piloto isso é aceitável (o objetivo é dosar o conteúdo, não
   proteger segredo), mas **não deve ser confundido com autorização**. Fechar essa fresta é o
   que sobrou do item 6.4 original.
+
+
+- [x] **6.9 — Sessão linear + "memorizado" com definição explícita (correção do 6.5/6.7)**
+  *(concluído em 2026-08-18, depois de o usuário testar o 6.5 em produção)*.
+
+  **Três achados do teste, todos procedentes:**
+  1. **Bug confirmado:** "às vezes clico em Não lembrei e o card não sai do lugar". Causa exata:
+     o *learn ahead* do Anki em `pickNextCard` — com a fila principal vazia, ele adiantava o
+     card de aprendizado que estava por vencer, que era **o card recém-respondido**. Acontecia
+     sempre que o aluno errava o último card da fila.
+  2. **Não memorizados só apareciam no fim da sessão**, não em tempo real.
+  3. **O modelo intra-sessão do Anki confundia.** O usuário propôs outro, mais simples: a
+     sessão corre **linearmente até o fim**, e o que não foi memorizado fica numa pilha que ele
+     escolhe rodar depois.
+
+  **Modelo novo, com a definição que o usuário deu:** *"o card é memorizado a partir de quando
+  o usuário clica que lembrou com facilidade"*. Então `isMemorized(state) = lastRating ===
+  'easy'` — e qualquer outra resposta, **inclusive "Lembrei com esforço"**, devolve o card à
+  pilha de não memorizados, exatamente como ele descreveu.
+
+  - `utils/srs.ts`: `SrsSession` virou **fila única** (`queue`), sem `learningQueue`.
+    `pickNextCard` é o primeiro da fila ou fim; `applyAnswerToSession` só remove. Saíram o
+    learn-ahead e a constante `LEARN_AHEAD_LIMIT_MIN`. Entraram `isMemorized`, `isUnmemorized`,
+    `countUnmemorizedCards`, `listUnmemorizedCards`; `SessionFocus` passou de `'difficult'`
+    (histórico: já errou alguma vez) para `'unmemorized'` (estado atual), que é o que o usuário
+    descreveu. **O agendamento entre DIAS não mudou** — `answerCard` está intacto, com os
+    degraus, ease e intervalos do Anki.
+  - `getSessionCounts` virou placar **ao vivo** (restantes / memorizados / por memorizar),
+    alimentado por estado React em vez de ref — era o que faltava para a contagem andar em
+    tempo real.
+  - `features/lab/LabQuizView.tsx`: sumiu o `setInterval` que reavaliava a fila a cada segundo
+    (existia só por causa do learn-ahead) e a tela de espera que ele exigia. A tela final ganhou
+    a pilha "N cards ficaram por memorizar" com botão **"Estudar esses N agora"**, que fecha a
+    sessão atual (gravando o resultado) e abre uma rodada só com eles.
+  - `PersistedSession.queue` é opcional e `queueOf()` lê o formato antigo
+    (`mainQueue`/`learningQueue`) — sessão em voo no momento do deploy não se perde.
+  - Vocabulário: "lâmina" → **"card"** na interface, a pedido do usuário.
+  - Verificação: `typecheck` ✅, `vitest` **125/125** ✅, `lint` 22 (pré-existentes) ✅,
+    `build` ✅ + 9 classes de cor conferidas no CSS de produção.
+
+  🟡 **Desvio consciente do Anki, decidido pelo usuário:** o Anki reinsere o card errado dentro
+  da própria sessão. Aqui não — a sessão é uma passagem só, e a repetição vem da rodada focada
+  logo depois. A repetição espaçada **entre dias** continua idêntica.
 
 
 ---

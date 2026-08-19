@@ -10,6 +10,10 @@
 //                              ▲                                        │
 //                              └──────── reaprendendo (10min) ◄──"não lembrei"
 //
+// ⚠️ A dinâmica DENTRO da sessão foi revista no item 6.9 (ver seção SESSÃO, mais abaixo): a
+// sessão virou uma passagem linear, sem reinserção no meio do caminho. O agendamento entre
+// dias — tudo que está nesta primeira metade do arquivo — continua igual.
+//
 // Puro e sem Firebase de propósito: quem persiste é services/flashcardsService.ts.
 //
 // São 3 botões, não os 4 do Anki: `again`/`good`/`easy` (o "Hard" do Anki fica deliberadamente
@@ -55,10 +59,6 @@ export const EASE_PENALTY_AGAIN = 0.2;
 export const EASE_BONUS_EASY = 0.15;
 export const EASY_BONUS = 1.3;
 export const MINIMUM_INTERVAL_DAYS = 1;
-// Se só sobram cards de aprendizado e nenhuma venceu ainda, o Anki adianta as que vencem
-// dentro desta janela em vez de encerrar a sessão. Sem isso, o aluno que erra a última lâmina
-// ficaria olhando pra uma tela de "acabou" com card pendente.
-export const LEARN_AHEAD_LIMIT_MIN = 20;
 
 const ONE_MINUTE_MS = 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -207,23 +207,52 @@ export function answerCard(state: SrsCardState, rating: SrsRating, now: number):
 }
 
 // === SESSÃO ===
+//
+// ⚠️ Modelo revisto no item 6.9, depois do usuário testar em produção. O 6.5 reinseria o card
+// errado no meio da própria sessão (learning steps + "learn ahead" do Anki). Na prática isso
+// (a) travava o card na tela quando ele era o último da fila — pickNextCard devolvia o MESMO
+// card recém-respondido — e (b) confundia, porque a sessão nunca "andava" de forma previsível.
+//
+// O modelo agora é o que o usuário descreveu: **a sessão é uma passagem linear até o fim**.
+// Nada volta no meio do caminho. O que o aluno não memorizou fica registrado numa pilha, e ao
+// terminar ele escolhe se quer rodar essa pilha de novo. O agendamento entre DIAS continua
+// idêntico ao Anki (answerCard não mudou) — só a dinâmica dentro da sessão ficou linear.
 
 export interface SrsSession {
-  // Novas + revisões devidas, já na ordem escolhida pelo aluno. Consumida da frente pro fim.
-  mainQueue: string[];
-  // Cards nos degraus curtos, esperando a hora de voltar. Ordenada por dueAt.
-  learningQueue: string[];
+  // Fila única, consumida da frente pro fim. Card respondido sai e não volta nesta sessão.
+  queue: string[];
 }
 
-// 'all' = sessão normal de repetição espaçada. 'difficult' = treino focado só nas lâminas que
-// o aluno já errou, ignorando a data de revisão — é o "Custom Study"/baralho filtrado do Anki,
-// para quem quer martelar o ponto fraco antes da prova (item 6.7).
-export type SessionFocus = 'all' | 'difficult';
+// "Memorizado" tem definição única e explícita, dada pelo usuário: o card só conta como
+// memorizado quando ele clica em "Lembrei fácil". Qualquer outra resposta — inclusive
+// "Lembrei com esforço" — devolve o card para a pilha de não memorizados.
+export function isMemorized(state: SrsCardState | undefined): boolean {
+  return state?.lastRating === 'easy';
+}
 
-// Uma lâmina é "difícil" quando o aluno já marcou "Não lembrei" nela. Deliberadamente NÃO
-// inclui "Lembrei com esforço": esse botão é o caminho normal de quem acertou (o "Good" do
-// Anki), então usá-lo como sinal de dificuldade jogaria o baralho inteiro no filtro.
-export const DEFAULT_MIN_AGAIN_COUNT = 1;
+// Card já estudado que ainda não foi memorizado. Card nunca visto não entra: não dá para
+// "não memorizar" o que ainda não foi apresentado.
+export function isUnmemorized(state: SrsCardState | undefined): boolean {
+  return !!state && state.reviews > 0 && !isMemorized(state);
+}
+
+export function countUnmemorizedCards(
+  cardIds: string[],
+  states: Record<string, SrsCardState>,
+): number {
+  return cardIds.filter((id) => isUnmemorized(states[id])).length;
+}
+
+export function listUnmemorizedCards(
+  cardIds: string[],
+  states: Record<string, SrsCardState>,
+): string[] {
+  return cardIds.filter((id) => isUnmemorized(states[id]));
+}
+
+// 'all' = sessão normal (revisões vencidas + novas). 'unmemorized' = rodada focada só nos cards
+// que o aluno ainda não memorizou, ignorando data de revisão.
+export type SessionFocus = 'all' | 'unmemorized';
 
 export interface SessionOptions {
   order?: 'sequential' | 'random';
@@ -231,44 +260,33 @@ export interface SessionOptions {
   rangeEnd?: number; // 1-based, inclusive
   newLimit?: number; // undefined = sem limite (padrão escolhido pelo usuário)
   focus?: SessionFocus;
-  minAgainCount?: number; // só com focus 'difficult'; default DEFAULT_MIN_AGAIN_COUNT
   random?: () => number; // injetável para teste determinístico
-}
-
-export function isDifficultCard(state: SrsCardState | undefined, minAgainCount = DEFAULT_MIN_AGAIN_COUNT): boolean {
-  return !!state && state.reviews > 0 && state.againCount >= minAgainCount;
-}
-
-// Quantas lâminas do baralho o aluno já errou — o "você tem N lâminas que não memorizou" que
-// aparece na tela de configuração.
-export function countDifficultCards(
-  cardIds: string[],
-  states: Record<string, SrsCardState>,
-  minAgainCount = DEFAULT_MIN_AGAIN_COUNT,
-): number {
-  return cardIds.filter((id) => isDifficultCard(states[id], minAgainCount)).length;
 }
 
 // Configuração da sessão sem a função `random` — é o que dá pra gravar no Firestore.
 export type PersistedSessionOptions = Omit<SessionOptions, 'random'>;
 
 // Sessão interrompida, guardada junto do progresso do aluno para ele retomar depois (item 6.6).
-// O progresso de cada lâmina já era salvo a cada clique; o que faltava era a SESSÃO em si — a
-// configuração, a posição na fila e o placar parcial, que sumiam se o aluno fechasse a aba.
 export interface PersistedSession {
   startedAt: number;
   updatedAt: number;
   options: PersistedSessionOptions;
-  mainQueue: string[];
-  learningQueue: string[];
-  // cardId → acertou de primeira nesta sessão. Vira o `details[]` do resultado ao encerrar.
+  // Opcional porque sessão gravada antes do 6.9 usava mainQueue/learningQueue. queueOf resolve.
+  queue?: string[];
+  // cardId → memorizou (clicou "Lembrei fácil") na PRIMEIRA resposta desta sessão.
   answers: Record<string, boolean>;
+  // Formato do item 6.6, antes da fila virar única (6.9). Lido para não perder sessão em voo.
+  mainQueue?: string[];
+  learningQueue?: string[];
 }
 
-// Depois disso, retomar deixa de fazer sentido: as lâminas mudaram de estado, outras venceram,
-// e a fila guardada não representa mais o que o aluno tem pra estudar. A sessão velha é
-// contabilizada e uma nova é montada do zero.
+// Depois disso, retomar deixa de fazer sentido: os cards mudaram de estado, outros venceram, e
+// a fila guardada não representa mais o que o aluno tem pra estudar.
 export const RESUMABLE_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+// Sessão gravada antes do 6.9 tinha duas filas; junta as duas para não perder o que faltava.
+const queueOf = (session: PersistedSession): string[] =>
+  session.queue ?? [...(session.mainQueue ?? []), ...(session.learningQueue ?? [])];
 
 export function isResumableSession(
   session: PersistedSession | undefined | null,
@@ -277,16 +295,13 @@ export function isResumableSession(
 ): boolean {
   if (!session) return false;
   if (now - session.updatedAt > maxAgeMs) return false;
-  return session.mainQueue.length + session.learningQueue.length > 0;
+  return queueOf(session).length > 0;
 }
 
-// Ao retomar, descarta id que não existe mais no baralho (lâmina apagada pela monitoria depois
+// Ao retomar, descarta id que não existe mais no baralho (card apagado pela monitoria depois
 // que o aluno parou) — sem isso a sessão retomada travaria num card sem imagem.
 export function restoreSession(session: PersistedSession, validCardIds: Set<string>): SrsSession {
-  return {
-    mainQueue: session.mainQueue.filter((id) => validCardIds.has(id)),
-    learningQueue: session.learningQueue.filter((id) => validCardIds.has(id)),
-  };
+  return { queue: queueOf(session).filter((id) => validCardIds.has(id)) };
 }
 
 export function shuffle<T>(items: T[], random: () => number = Math.random): T[] {
@@ -312,158 +327,105 @@ export function buildSession(
   now: number,
   options: SessionOptions = {},
 ): SrsSession {
-  const {
-    order = 'sequential', rangeStart, rangeEnd, newLimit,
-    focus = 'all', minAgainCount = DEFAULT_MIN_AGAIN_COUNT, random = Math.random,
-  } = options;
+  const { order = 'sequential', rangeStart, rangeEnd, newLimit, focus = 'all', random = Math.random } = options;
   const pool = applyRange(cardIds, rangeStart, rangeEnd);
+  const ordered = <T>(items: T[]) => (order === 'random' ? shuffle(items, random) : items);
 
-  // Treino focado: ignora data de vencimento de propósito. O aluno pediu pra praticar AGORA o
-  // que ele erra, mesmo que a repetição espaçada só fosse cobrar aquilo semana que vem.
-  if (focus === 'difficult') {
-    const difficult = pool.filter((id) => isDifficultCard(states[id], minAgainCount));
-    return {
-      mainQueue: order === 'random' ? shuffle(difficult, random) : difficult,
-      learningQueue: [],
-    };
+  // Rodada focada: ignora data de vencimento de propósito. O aluno pediu pra praticar AGORA o
+  // que ainda não memorizou, mesmo que a repetição espaçada só fosse cobrar aquilo depois.
+  if (focus === 'unmemorized') {
+    return { queue: ordered(listUnmemorizedCards(pool, states)) };
   }
 
   const newCards: string[] = [];
-  const dueReviews: string[] = [];
-  const learning: string[] = [];
+  const pending: string[] = [];
 
   for (const id of pool) {
     const state = states[id];
     if (!state || state.phase === 'new') {
       newCards.push(id);
     } else if (state.phase === 'learning' || state.phase === 'relearning') {
-      // Ficou pela metade numa sessão anterior — volta pros degraus, na hora marcada.
-      learning.push(id);
+      // Ficou por memorizar numa sessão anterior — volta independente do relógio.
+      pending.push(id);
     } else if (state.dueAt <= now) {
-      dueReviews.push(id);
+      pending.push(id);
     }
-    // Card de revisão ainda não vencida fica de fora: é o ponto da repetição espaçada.
+    // Card memorizado e ainda não vencido fica de fora: é o ponto da repetição espaçada.
   }
 
-  const orderedNew = order === 'random' ? shuffle(newCards, random) : newCards;
-  const limitedNew = newLimit === undefined ? orderedNew : orderedNew.slice(0, Math.max(0, newLimit));
-  const orderedReviews = order === 'random' ? shuffle(dueReviews, random) : dueReviews;
+  const limitedNew = newLimit === undefined ? ordered(newCards) : ordered(newCards).slice(0, Math.max(0, newLimit));
 
-  // Revisões antes das novas: card já vista e vencida é prioridade sobre conteúdo inédito
-  // (mesma lógica do Anki, que trata a revisão como dívida acumulada).
-  const mainQueue = [...orderedReviews, ...limitedNew];
-
-  return {
-    mainQueue,
-    learningQueue: sortLearningQueue(learning, states),
-  };
+  // Pendentes antes das novas: card já visto é dívida acumulada, conteúdo inédito pode esperar.
+  return { queue: [...ordered(pending), ...limitedNew] };
 }
-
-const sortLearningQueue = (queue: string[], states: Record<string, SrsCardState>): string[] =>
-  [...queue].sort((a, b) => (states[a]?.dueAt ?? 0) - (states[b]?.dueAt ?? 0));
 
 export type NextCardResult =
   | { kind: 'card'; cardId: string }
-  // Só restam cards de aprendizado, e a próxima só vence depois da janela de learn ahead.
-  | { kind: 'waiting'; cardId: string; dueAt: number }
   | { kind: 'done' };
 
-// Escolhe o próximo card da sessão, na mesma ordem de prioridade do Anki.
-export function pickNextCard(
-  session: SrsSession,
-  states: Record<string, SrsCardState>,
-  now: number,
-): NextCardResult {
-  const nextLearning = session.learningQueue[0];
-  const nextLearningDue = nextLearning ? (states[nextLearning]?.dueAt ?? 0) : undefined;
-
-  // 1. Card de aprendizado que já venceu tem precedência sobre tudo.
-  if (nextLearning && nextLearningDue !== undefined && nextLearningDue <= now) {
-    return { kind: 'card', cardId: nextLearning };
-  }
-
-  // 2. Fila principal (revisões vencidas + novas).
-  if (session.mainQueue.length > 0) {
-    return { kind: 'card', cardId: session.mainQueue[0] };
-  }
-
-  // 3. Learn ahead: nada mais a fazer, então adianta a card de aprendizado que está por vencer.
-  if (nextLearning && nextLearningDue !== undefined) {
-    if (nextLearningDue - now <= minutesToMs(LEARN_AHEAD_LIMIT_MIN)) {
-      return { kind: 'card', cardId: nextLearning };
-    }
-    return { kind: 'waiting', cardId: nextLearning, dueAt: nextLearningDue };
-  }
-
-  return { kind: 'done' };
+// Passagem linear: o próximo é simplesmente o próximo. Sem reinserção, sem learn ahead — foi
+// exatamente isso que fazia o card "não sair do lugar" ao marcar "Não lembrei" no fim da fila.
+export function pickNextCard(session: SrsSession): NextCardResult {
+  return session.queue.length > 0
+    ? { kind: 'card', cardId: session.queue[0] }
+    : { kind: 'done' };
 }
 
-// Recoloca o card na sessão conforme a fase em que ficou depois da resposta.
-export function applyAnswerToSession(
-  session: SrsSession,
-  cardId: string,
-  newState: SrsCardState,
-  states: Record<string, SrsCardState>,
-): SrsSession {
-  const mainQueue = session.mainQueue.filter((id) => id !== cardId);
-  const learningQueue = session.learningQueue.filter((id) => id !== cardId);
-
-  const stillLearning = newState.phase === 'learning' || newState.phase === 'relearning';
-  if (!stillLearning) {
-    // Graduou: sai da sessão e volta só daqui a dias.
-    return { mainQueue, learningQueue };
-  }
-
-  return {
-    mainQueue,
-    learningQueue: sortLearningQueue([...learningQueue, cardId], { ...states, [cardId]: newState }),
-  };
+// Card respondido sai da sessão, qualquer que tenha sido a resposta. Se não foi memorizado, ele
+// reaparece na rodada focada (que o aluno escolhe no fim) ou numa sessão futura.
+export function applyAnswerToSession(session: SrsSession, cardId: string): SrsSession {
+  return { queue: session.queue.filter((id) => id !== cardId) };
 }
 
 export interface SessionCounts {
-  newCount: number;
-  learningCount: number;
-  reviewCount: number;
+  remaining: number;
+  memorized: number;
+  unmemorized: number;
 }
 
-// Os 3 contadores que o Anki mostra o tempo todo (novas / aprendendo / revisão) — é a resposta
-// visual pra "não entendi como fica a repetição".
+// Placar ao vivo da sessão — o usuário pediu que os não memorizados fossem contabilizados em
+// tempo real, não só na tela final.
 export function getSessionCounts(
   session: SrsSession,
-  states: Record<string, SrsCardState>,
+  answers: Record<string, boolean>,
 ): SessionCounts {
-  let newCount = 0;
-  let reviewCount = 0;
-  for (const id of session.mainQueue) {
-    const state = states[id];
-    if (!state || state.phase === 'new') newCount++;
-    else reviewCount++;
-  }
-  return { newCount, learningCount: session.learningQueue.length, reviewCount };
+  const values = Object.values(answers);
+  return {
+    remaining: session.queue.length,
+    memorized: values.filter(Boolean).length,
+    unmemorized: values.filter((v) => !v).length,
+  };
 }
 
-// Contagem para a tela de configuração e para o badge da lista, ANTES de montar a sessão.
+export interface DeckCounts {
+  newCount: number;
+  unmemorizedCount: number;
+  dueCount: number;
+}
+
+// Situação do baralho ANTES da sessão começar: quantos inéditos, quantos por memorizar e
+// quantos memorizados já venceram e voltam hoje.
 export function getDeckCounts(
   cardIds: string[],
   states: Record<string, SrsCardState>,
   now: number,
-): SessionCounts {
+): DeckCounts {
   let newCount = 0;
-  let learningCount = 0;
-  let reviewCount = 0;
+  let unmemorizedCount = 0;
+  let dueCount = 0;
   for (const id of cardIds) {
     const state = states[id];
-    if (!state || state.phase === 'new') newCount++;
-    else if (state.phase === 'learning' || state.phase === 'relearning') learningCount++;
-    else if (state.dueAt <= now) reviewCount++;
+    if (!state || state.reviews === 0) newCount++;
+    else if (isUnmemorized(state)) unmemorizedCount++;
+    else if (state.dueAt <= now) dueCount++;
   }
-  return { newCount, learningCount, reviewCount };
+  return { newCount, unmemorizedCount, dueCount };
 }
 
 export interface DeckMastery {
   studied: number;
   mastered: number; // "mature" no Anki: intervalo >= 21 dias
-  learning: number;
+  unmemorized: number;
   dueToday: number;
 }
 
@@ -475,18 +437,18 @@ export function getDeckMastery(
 ): DeckMastery {
   let studied = 0;
   let mastered = 0;
-  let learning = 0;
+  let unmemorized = 0;
   let dueToday = 0;
 
   for (const state of Object.values(states)) {
     if (state.reviews === 0) continue;
     studied++;
     if (state.phase === 'review' && state.intervalDays >= MATURE_INTERVAL_DAYS) mastered++;
-    if (state.phase === 'learning' || state.phase === 'relearning') learning++;
+    if (isUnmemorized(state)) unmemorized++;
     if (state.dueAt <= now) dueToday++;
   }
 
-  return { studied, mastered, learning, dueToday };
+  return { studied, mastered, unmemorized, dueToday };
 }
 
 export interface WeakCardSummary {
@@ -498,8 +460,9 @@ export interface WeakCardSummary {
   reviews: number;
 }
 
-// Ranking de pontos fracos: mais "não lembrei" primeiro; empate desempata pelo ease mais baixo
-// (facilidade menor = card que vem penalizando ao longo do tempo, mesmo com poucos erros).
+// Ranking de pontos fracos do dashboard: mais "não lembrei" primeiro; empate desempata pelo
+// ease mais baixo. É histórico de propósito (o card que você errou muito e hoje acerta ainda
+// merece atenção), diferente de isUnmemorized, que é o estado atual.
 export function getWeakestCards(states: Record<string, SrsCardState>, limit: number): WeakCardSummary[] {
   return Object.values(states)
     .filter((s) => s.reviews > 0 && s.againCount > 0)

@@ -82,10 +82,10 @@ const LabListView: React.FC<Props> = ({
 
     Promise.all(simsToCheck.map(async (sim) => {
       const { cards: progress } = await fetchFlashcardProgressDoc(userId, sim.firebaseId as string);
-      // Badge conta só o que precisa VOLTAR (aprendendo + revisão vencida). Lâmina inédita não
+      // Badge conta só o que precisa VOLTAR (por memorizar + revisão vencida). Card inédito não
       // é "para revisar" — o baralho novo inteiro apareceria como pendência em toda simulação.
-      const { learningCount, reviewCount } = getDeckCounts(sim.questions.map(q => q.id), progress, Date.now());
-      return [sim.firebaseId as string, learningCount + reviewCount] as const;
+      const { unmemorizedCount, dueCount } = getDeckCounts(sim.questions.map(q => q.id), progress, Date.now());
+      return [sim.firebaseId as string, unmemorizedCount + dueCount] as const;
     }))
       .then((entries) => { if (!cancelled) setDueCounts(Object.fromEntries(entries)); })
       .catch((err) => console.error('Erro ao carregar contagem de revisão dos flashcards:', err));
