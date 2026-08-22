@@ -27,8 +27,9 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
   const [matDisc, setMatDisc] = useState('');
   
   // === NOVO: ESTADO DA UNIDADE ===
-  const [matUnit, setMatUnit] = useState<AcademicUnit>('N1'); 
-  
+  const [matUnit, setMatUnit] = useState<AcademicUnit>('N1');
+  const [matTheme, setMatTheme] = useState('');
+
   const [matType, setMatType] = useState<'summary' | 'script' | 'other'>('summary');
   const [matTitle, setMatTitle] = useState('');
   const [matAuthor, setMatAuthor] = useState('');
@@ -39,8 +40,9 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
   const [isMatUploading, setIsMatUploading] = useState(false);
   
   // FILTROS DA LISTA
-  const [discFilterMat, setDiscFilterMat] = useState(''); 
+  const [discFilterMat, setDiscFilterMat] = useState('');
   const [unitFilterMat, setUnitFilterMat] = useState<AcademicUnit | ''>(''); // NOVO: Filtro de Unidade na lista
+  const [themeFilterMat, setThemeFilterMat] = useState('');
   const [liveMaterials, setLiveMaterials] = useState<Summary[]>([]);
 
   // BUSCAR MATERIAIS EM TEMPO REAL
@@ -82,7 +84,8 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
         type: matType,
         disciplineId: matDisc,
         unit: targetUnit as AcademicUnit, // <-- INJETADO
-        isVerified: matIsVerified
+        isVerified: matIsVerified,
+        ...(matTheme ? { theme: matTheme } : {}), // Opcional: Firestore rejeita campo com valor undefined
       };
 
       if (matUploadMode === 'file') {
@@ -102,10 +105,11 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
         await addMaterialLink(meta, matUrl);
       }
 
-      setMatTitle(''); 
+      setMatTitle('');
       setMatAuthor('');
-      setMatUrl(''); 
+      setMatUrl('');
       setMatFile(null);
+      setMatTheme('');
       alert(`Material ${matIsVerified ? 'Oficial ' : ''}publicado com sucesso${!isUC ? ` na unidade ${targetUnit}` : ''}!`);
       const fileInput = document.getElementById('adminFileInput') as HTMLInputElement;
       if(fileInput) fileInput.value = '';
@@ -150,9 +154,10 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
     return liveMaterials.filter(s => {
       const matchDisc = !discFilterMat || s.disciplineId === discFilterMat;
       const matchUnit = !unitFilterMat || (s.unit || 'N1') === unitFilterMat;
-      return matchDisc && matchUnit;
+      const matchTheme = !themeFilterMat || s.theme === themeFilterMat;
+      return matchDisc && matchUnit && matchTheme;
     });
-  }, [liveMaterials, discFilterMat, unitFilterMat]);
+  }, [liveMaterials, discFilterMat, unitFilterMat, themeFilterMat]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
@@ -165,12 +170,20 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
             {PERIODS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
 
-          <select value={matDisc} onChange={e => setMatDisc(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading || !matPeriod}>
+          <select value={matDisc} onChange={e => { setMatDisc(e.target.value); setMatTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" required disabled={isMatUploading || !matPeriod}>
             <option value="">Disciplina...</option>
             {disciplines
               .filter(d => !matPeriod || d.periodId === matPeriod)
               .map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
           </select>
+
+          {/* SELETOR DE TEMA (mesma lista cadastrada em "Temas/Eixos" pra essa disciplina; opcional) */}
+          {matDisc && (selectedDisciplineObj?.themes?.length ?? 0) > 0 && (
+            <select value={matTheme} onChange={e => setMatTheme(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#D4A017]" disabled={isMatUploading}>
+              <option value="">Tema (opcional)...</option>
+              {selectedDisciplineObj?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          )}
 
           {/* SELETOR DE UNIDADE (Oculto se for UC, pois não precisa dividir) */}
           {!isUC && matDisc && (
@@ -232,7 +245,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-                <select value={discFilterMat} onChange={e => { setDiscFilterMat(e.target.value); setUnitFilterMat(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                <select value={discFilterMat} onChange={e => { setDiscFilterMat(e.target.value); setUnitFilterMat(''); setThemeFilterMat(''); }} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
                   <option value="">Todas Disciplinas</option>
                   {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
                 </select>
@@ -243,6 +256,14 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
                     <option value="">Ambas Unidades</option>
                     <option value="N1">Unidade N1</option>
                     <option value="N2">Unidade N2</option>
+                  </select>
+                )}
+
+                {/* FILTRO POR TEMA (só quando a disciplina selecionada tem temas cadastrados) */}
+                {discFilterMat && (disciplines.find(d => d.id === discFilterMat)?.themes?.length ?? 0) > 0 && (
+                  <select value={themeFilterMat} onChange={e => setThemeFilterMat(e.target.value)} className="p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase outline-none border-2 border-transparent focus:border-[#003366]">
+                    <option value="">Todos os Temas</option>
+                    {disciplines.find(d => d.id === discFilterMat)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 )}
             </div>
@@ -259,7 +280,7 @@ const AdminMaterials: React.FC<AdminMaterialsProps> = ({ disciplines }) => {
                         {s.isVerified && <span title="Material Verificado"><BadgeCheck size={14} className="text-emerald-500" /></span>}
                       </div>
                       <p className="text-[9px] font-black uppercase text-gray-400 mt-1">
-                        {s.disciplineId} • {s.unit ? `[${s.unit}]` : '[N1]'} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date} {s.author ? `• por ${s.author}` : ''}
+                        {s.disciplineId} • {s.unit ? `[${s.unit}]` : '[N1]'} • {s.type === 'summary' ? 'Resumo' : s.type === 'script' ? 'Roteiro' : 'Outro'} • {s.date} {s.author ? `• por ${s.author}` : ''} {s.theme ? `• ${s.theme}` : ''}
                       </p>
                    </div>
                 </div>

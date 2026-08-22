@@ -188,6 +188,7 @@ export interface Summary {
   firebaseId?: string;
   disciplineId: string;
   unit?: AcademicUnit; // Suporte à separação N1/N2
+  theme?: string; // Tema da disciplina (mesma lista de SimulationInfo.themes usada por Question.theme) — opcional, Etapa 6.14
   label: string;
   url: string;
   type: 'summary' | 'script' | 'other';

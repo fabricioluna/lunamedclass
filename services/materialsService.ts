@@ -36,6 +36,7 @@ interface NewMaterialMeta {
   type: 'summary' | 'script' | 'other';
   disciplineId: string;
   unit: AcademicUnit;
+  theme?: string;
   isVerified: boolean;
 }
 

@@ -1556,6 +1556,40 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   Verificação: `typecheck` ✅, `vitest` **122/122** (10 arquivos) ✅, `lint` 22 ✅.
 
 
+- [x] **6.14 — Classificação de Materiais por Tema**
+  *(concluído em 2026-08-22)*. Veio de o usuário abrir a aba "Temas/Eixos" e perguntar se a
+  classificação seria tema+subtema ou 2 temas — na verdade a dúvida era sobre 6.1 (Área/Subárea
+  de Conhecimento, dois eixos independentes sem cascata, só em `Question`). Ao investigar, achado
+  o problema real: **Materiais (`materials`, tipado como `Summary`) não tinha nenhuma
+  classificação temática** — só `disciplineId` + `unit` (N1/N2) + `type`, sem jeito de achar um
+  material específico numa disciplina com muito conteúdo.
+
+  **Decisão (com exemplos concretos antes de escolher):** só **Tema por disciplina** agora —
+  reaproveita a mesma lista de `SimulationInfo.themes` que `Question.theme` já usa, gerenciada em
+  "Temas/Eixos". **Área/Subárea de Conhecimento (transversal) ficou de fora deliberadamente**:
+  hoje não existe nenhuma tela que busca *nada* por Área/Subárea fora do Simulado Teórico — pra
+  Materiais esse eixo só valeria a pena junto de uma futura busca cross-disciplina, que não foi
+  pedida. Reavaliar se um dia existir essa tela.
+
+  **Modelo**: `Summary.theme?: string` (opcional — várias disciplinas ainda têm `themes: []`
+  vazio, então exigir travaria a publicação). `NewMaterialMeta.theme?: string` em
+  `materialsService.ts`; os campos `theme` só entram no objeto gravado quando preenchidos
+  (`...(theme ? { theme } : {})`) porque o SDK do Firestore rejeita valor `undefined` explícito.
+
+  **Admin** (`AdminMaterials.tsx`): dropdown de Tema no formulário de publicação (só aparece se a
+  disciplina escolhida tem `themes` cadastrados; reseta ao trocar de disciplina) + filtro por Tema
+  na listagem (só aparece com disciplina filtrada) + Tema exibido em cada item.
+
+  **Aluno** (`SummariesListView.tsx`): mesmo dropdown opcional no formulário "Contribuir" +
+  filtro por Tema ao lado da busca + badge do Tema em cada material da lista.
+
+  Sem mudança em `firestore.rules` — a regra de `materials/{id}` já era `create: if isSignedIn()`
+  sem validação de campo, então um campo opcional a mais não muda a superfície de acesso.
+
+  Verificação: `typecheck` ✅, `vitest` **122/122** ✅, `lint` 22 ✅ (mesmos pré-existentes),
+  `build` ✅.
+
+
 ---
 
 ## 📋 Referência rápida

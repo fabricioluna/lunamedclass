@@ -33,6 +33,7 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
   const discipline = disciplines.find(d => d.id === disciplineId);
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [themeFilter, setThemeFilter] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   
@@ -44,7 +45,8 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
     author: '',
     description: '',
     type: 'summary' as 'summary' | 'script' | 'other',
-    linkUrl: ''
+    linkUrl: '',
+    theme: ''
   });
 
   useEffect(() => {
@@ -80,7 +82,8 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
         type: formData.type,
         disciplineId,
         unit: selectedUnit, // Vínculo estrito com a unidade atual
-        isVerified: false
+        isVerified: false,
+        ...(formData.theme ? { theme: formData.theme } : {}), // Opcional: Firestore rejeita campo com valor undefined
       };
 
       if (uploadMode === 'file') {
@@ -104,10 +107,10 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
       }
 
       alert(`Material compartilhado com sucesso na Unidade ${selectedUnit}!`);
-      setShowForm(false); 
+      setShowForm(false);
       setSelectedFile(null);
       setUploadMode('file');
-      setFormData({ title: '', author: '', description: '', type: 'summary', linkUrl: '' });
+      setFormData({ title: '', author: '', description: '', type: 'summary', linkUrl: '', theme: '' });
     } catch (e) { 
       alert("Erro ao compartilhar o material."); 
       console.error(e);
@@ -172,6 +175,12 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
                  <option value="summary">Resumo / Teórico</option><option value="script">Roteiro / Prática</option><option value="other">Outro / Pasta</option>
                </select>
              </div>
+             {(discipline.themes?.length ?? 0) > 0 && (
+               <select className="w-full bg-white p-4 rounded-xl mb-4 font-bold text-sm border border-transparent outline-none focus:border-[#D4A017] transition-colors text-gray-700" value={formData.theme} onChange={e => setFormData({...formData, theme: e.target.value})}>
+                 <option value="">Tema (opcional)...</option>
+                 {discipline.themes?.map(t => <option key={t} value={t}>{t}</option>)}
+               </select>
+             )}
              <textarea placeholder="Descrição breve (Opcional)" className="w-full bg-white p-4 rounded-xl mb-6 min-h-[80px] font-bold text-sm border border-transparent outline-none focus:border-[#D4A017] resize-none transition-colors" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
              
              {uploadMode === 'file' ? (
@@ -219,19 +228,30 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
          )}
       </div>
 
-      <div className="mb-8 relative text-left">
-        <Search className="absolute inset-y-0 left-6 flex items-center text-gray-400" size={20} />
-        <input 
-          type="text" 
-          placeholder={`Pesquisar na Unidade ${selectedUnit}...`} 
-          className="w-full bg-white pl-14 pr-6 py-5 rounded-2xl border-2 border-transparent focus:border-[#D4A017] outline-none font-bold shadow-sm transition-colors duration-500" 
-          value={searchTerm} 
-          onChange={e => setSearchTerm(e.target.value)} 
-        />
+      <div className="mb-8 flex flex-col md:flex-row gap-3 text-left">
+        <div className="relative flex-1">
+          <Search className="absolute inset-y-0 left-6 flex items-center text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder={`Pesquisar na Unidade ${selectedUnit}...`}
+            className="w-full bg-white pl-14 pr-6 py-5 rounded-2xl border-2 border-transparent focus:border-[#D4A017] outline-none font-bold shadow-sm transition-colors duration-500"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+        {(discipline.themes?.length ?? 0) > 0 && (
+          <select value={themeFilter} onChange={e => setThemeFilter(e.target.value)} className="bg-white px-6 py-5 rounded-2xl border-2 border-transparent focus:border-[#D4A017] outline-none font-bold shadow-sm text-sm text-gray-700 md:w-64">
+            <option value="">Todos os Temas</option>
+            {discipline.themes?.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        )}
       </div>
 
       <div className="space-y-4 text-left">
-        {summaries.filter(s => s.title?.toLowerCase().includes(searchTerm.toLowerCase())).map((s) => (
+        {summaries
+          .filter(s => s.title?.toLowerCase().includes(searchTerm.toLowerCase()))
+          .filter(s => !themeFilter || s.theme === themeFilter)
+          .map((s) => (
           <div key={s.id} className={`bg-white p-6 rounded-[2.5rem] border flex items-start justify-between group transition-all shadow-sm ${s.isVerified ? 'border-emerald-200 bg-emerald-50/10' : 'border-gray-100 hover:border-[#D4A017]'}`}>
             <div className="flex items-start gap-5">
               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${s.isVerified ? 'bg-emerald-100 text-emerald-700' : 'bg-[#003366]/5 text-[#003366] group-hover:bg-[#003366] group-hover:text-white'}`}>
@@ -254,6 +274,11 @@ const SummariesListView: React.FC<SummariesListViewProps> = ({
                   <span className={`px-2 py-0.5 rounded text-[9px] font-black ${s.label === 'LINK' ? 'bg-[#003366]/10 text-[#003366]' : 'bg-gray-100 text-gray-500'}`}>
                     {s.label}
                   </span>
+                  {s.theme && (
+                    <span className="px-2 py-0.5 rounded text-[9px] font-black bg-[#D4A017]/10 text-[#D4A017] uppercase">
+                      {s.theme}
+                    </span>
+                  )}
                 </div>
                 {s.description && <div className="bg-gray-50 p-3 rounded-xl text-xs text-gray-500 italic">"{s.description}"</div>}
               </div>
