@@ -87,7 +87,8 @@ seção Etapa 6 e decisões D10/D11).
 - **6.5 (Lab vira Anki de verdade)** — ✅ concluído, aguardando teste do usuário em produção.
 - **6.6 (retomar sessão de onde parou)** — ✅ concluído junto, mesmo dia.
 - **6.7 (treino focado nas lâminas difíceis)** — ✅ concluído junto, mesmo dia.
-- **6.11 (rules não publicadas + falha silenciosa)** — ✅ código concluído. 🔴 **Pendente do usuário: publicar `firestore.rules` no console do Firebase**, sem isso o progresso continua não salvando.
+- **6.11 (rules não publicadas + falha silenciosa)** — ✅ **resolvido em 2026-08-22**: o usuário publicou `firestore.rules` no console e confirmou que o progresso passou a persistir. O banner de erro visível fica como rede de proteção permanente.
+- **6.12 (viés na ordem da fila)** — ✅ concluído em 2026-08-22, a partir da pergunta do usuário sobre o modo aleatório.
 - **6.10 (fim do calendário: flashcards viram pilhas)** — ✅ concluído. Última peça baseada em tempo removida do modelo.
 - **6.9 (sessão linear + memorizado = "Lembrei fácil")** — ✅ concluído, corrige o 6.5/6.7 depois do teste do usuário.
 - **6.8 (liberação por unidade N1/N2 na aba "Acessos")** — ✅ concluído. O usuário apontou que a
@@ -1490,11 +1491,36 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     se faz concatenando sufixo — trocado por frase inteira condicional ("ficaram"/"ficou").
   - Verificação: `typecheck` ✅, `vitest` 118/118 ✅, `test:rules` ✅, `lint` 22 ✅, `build` ✅.
 
-  🟡 **AÇÃO OBRIGATÓRIA DO USUÁRIO, sem a qual nada disso adianta:** publicar `firestore.rules`
-  no console do Firebase (Firestore → Regras → colar o conteúdo do arquivo → Publicar), ou
-  rodar `firebase deploy --only firestore:rules` com a conta dele. **Enquanto isso não for
-  feito, o progresso de flashcards continua sendo negado em produção** — a diferença é que
-  agora a tela avisa em vermelho em vez de fingir que salvou.
+  ✅ **Resolvido em 2026-08-22:** o usuário publicou `firestore.rules` no console do Firebase e
+  confirmou que o progresso passou a persistir. O banner de erro fica como rede de proteção
+  permanente — se as regras divergirem de novo, a tela avisa em vez de fingir que salvou.
+
+  📌 **Regra de processo que fica deste episódio:** toda alteração em `firestore.rules` só vale
+  depois de **publicada no console** (ou `firebase deploy --only firestore:rules`). O
+  `npm run test:rules` valida no emulador local e **não** publica nada. Quem entregar uma
+  feature que dependa de regra nova tem que dizer isso em voz alta na entrega.
+
+
+- [x] **6.12 — Viés na ordem da fila (modo Aleatória e Sequencial não cumpriam o rótulo)**
+  *(concluído em 2026-08-22)*. Veio de uma pergunta do usuário: *"o aleatório é realmente
+  aleatório ou tende a repetir?"*.
+
+  **O `shuffle` estava correto** — Fisher-Yates sem viés, comprovado por teste novo: 12.000
+  rodadas com PRNG determinístico, desvio máximo de 4,37% (3σ ≈ 4,7%). *(Vale registrar que o
+  código anterior ao 6.5 usava `sort(() => Math.random() - 0.5)`, que é enviesado de verdade —
+  se a percepção do usuário vinha de antes, procedia.)*
+
+  **O viés estava na montagem da fila:** `buildSession` embaralhava já vistos e inéditos em
+  grupos **separados** e concatenava. Consequências, as duas contrariando o rótulo na tela:
+  - "Aleatória" sempre começava por card já visto — a ordem variava dentro de cada bloco, mas a
+    estrutura era fixa, que é justamente o que se percebe como "repete".
+  - "Sequencial" promete *"ordem cadastrada"* e jogava os já vistos para a frente.
+
+  A separação em grupos agora serve **só** para aplicar o limite de inéditos; a ordem final é
+  decidida sobre o conjunto inteiro. Dois testes novos: distribuição do Fisher-Yates e prova de
+  que o modo aleatório não separa em blocos.
+
+  Verificação: `typecheck` ✅, `vitest` **120/120** ✅, `lint` 22 ✅, `build` ✅.
 
 
 ---
