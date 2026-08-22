@@ -49,8 +49,10 @@ export default async function handler(req: ChatRequest, res: ChatResponse) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-    // RESTAURADO PARA O GEMINI 2.5 ORIGINAL DO SEU CÓDIGO
-    const targetModel = isFinalEvaluation ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+    // gemini-2.5-flash/pro foram descontinuados pelo Google em 2026-08 (API passou a
+    // responder 404 "no longer available to new users"); nomes atuais confirmados pela
+    // própria mensagem de erro da API.
+    const targetModel = isFinalEvaluation ? 'gemini-3.1-pro-preview' : 'gemini-3.6-flash';
 
     const fullPrompt = `CONTEXTO ATUAL: ${context}\n\nCONDUTA DO ALUNO: ${prompt}`;
 
