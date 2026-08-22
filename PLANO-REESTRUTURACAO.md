@@ -89,6 +89,10 @@ seção Etapa 6 e decisões D10/D11).
 - **6.7 (treino focado nas lâminas difíceis)** — ✅ concluído junto, mesmo dia.
 - **6.11 (rules não publicadas + falha silenciosa)** — ✅ **resolvido em 2026-08-22**: o usuário publicou `firestore.rules` no console e confirmou que o progresso passou a persistir. O banner de erro visível fica como rede de proteção permanente.
 - **6.12 (viés na ordem da fila)** — ✅ concluído em 2026-08-22, a partir da pergunta do usuário sobre o modo aleatório.
+- **6.13 (trava de regressão do Tailwind)** — ✅ concluído em 2026-08-22.
+- **6.4 (liberação via Security Rules)** — ⏹️ **encerrado sem executar**, decisão do usuário: a trava de interface basta por ora.
+
+**➡️ Etapa 6 sem itens abertos em 2026-08-22.** Lab testado e aprovado pelo usuário em produção.
 - **6.10 (fim do calendário: flashcards viram pilhas)** — ✅ concluído. Última peça baseada em tempo removida do modelo.
 - **6.9 (sessão linear + memorizado = "Lembrei fácil")** — ✅ concluído, corrige o 6.5/6.7 depois do teste do usuário.
 - **6.8 (liberação por unidade N1/N2 na aba "Acessos")** — ✅ concluído. O usuário apontou que a
@@ -1129,7 +1133,16 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   contendo só aquelas lâminas específicas — construir um "modo revisão de N cards
   específicos" ficaria para uma iteração futura, se o usuário sentir falta.
 
-- [ ] **6.4 — Liberação de conteúdo por disciplina × unidade × tipo (painel admin)**
+- [~] **6.4 — Liberação de conteúdo por disciplina × unidade × tipo (painel admin)** — ⏹️
+  **ENCERRADO SEM EXECUTAR, por decisão do usuário em 2026-08-22:** *"já funciona bem, acho que
+  por enquanto não precisa se esforçar tanto nessa proteção"*. A aba "Acessos" + o item 6.8
+  cobrem a necessidade real (dosar conteúdo ao longo do semestre). A camada de Security Rules
+  fica **conscientemente** de fora: a trava é de interface e um aluno com o SDK do Firebase
+  ainda lê conteúdo de unidade bloqueada. **Não é autorização — é curadoria pedagógica.**
+  Reabrir só se o conteúdo passar a ter valor que justifique proteção real (prova, gabarito
+  antes da aplicação).
+
+  *Descrição original do item, preservada caso seja reaberto:*
   *(planejado em 2026-08-18; ⚠️ **em grande parte SUPERADO pelo item 6.8**, ver adiante — a aba
   "Acessos" já fazia o essencial e ganhou granularidade de unidade. O que resta deste item é
   só a camada de Security Rules, que é problema de segurança, não de pedagogia. Reavaliar com
@@ -1521,6 +1534,25 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   que o modo aleatório não separa em blocos.
 
   Verificação: `typecheck` ✅, `vitest` **120/120** ✅, `lint` 22 ✅, `build` ✅.
+
+
+- [x] **6.13 — Trava de regressão para o `content` do Tailwind**
+  *(concluído em 2026-08-22; decisão delegada pelo usuário: "a decisão é sua")*.
+
+  **Varredura visual descartada, com motivo:** corrigir o `content` no commit `deb2a85` já
+  regenerou *todas* as classes de `features/` e `routes/` — não sobrou nada quebrado para
+  procurar. Uma varredura só acharia gambiarras feitas para contornar cor sumida, e não há sinal
+  disso. Verificação feita no lugar: **nenhum arquivo com `className` está fora dos globs
+  escaneados hoje**.
+
+  **O que foi feito, porque o risco é futuro:** `tailwind.config.test.ts` percorre o repositório
+  atrás de arquivos com `className` e falha se algum estiver fora do `content` — criar uma pasta
+  nova de componentes e esquecer de declará-la reintroduziria o mesmo bug silencioso.
+  A trava foi **verificada falhando**: removendo `features/**` do config, o teste quebra e lista
+  os 20+ arquivos afetados. Um segundo caso garante que o teste não passa por não ter varrido
+  nada.
+
+  Verificação: `typecheck` ✅, `vitest` **122/122** (10 arquivos) ✅, `lint` 22 ✅.
 
 
 ---
