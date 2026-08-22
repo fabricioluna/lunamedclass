@@ -319,6 +319,7 @@ fazer backup do RTDB antes).
 | D7 | Gabarito visível a aluno logado é **limitação aceita** | Quiz client-side sempre expõe resposta no DevTools; corrigir exige correção server-side (Etapa 6) |
 | D8 | Fechar vazamento tem precedência sobre quebrar feature | LGPD > dashboard fora do ar numa turma piloto |
 | D9 | Só **Simulado Teórico** conta resultado/nota "por enquanto" (`utils/resultsPolicy.ts`) | Decisão do usuário em 2026-08-06/07: Lab, OSCE (estático/RPG/IA) ficam de fora até a confiabilidade desses modos ser revisada — reversível numa constante só. **⚠️ Revista em 2026-08-18 (item 6.5): `laboratorio` volta a contar**, mas com 1 resultado por *sessão* de flashcards (não por lâmina). OSCE continua fora |
+| D12 | **Não existe agendamento automático de estudo, e isso é definitivo** — nada puxa o aluno de volta ao baralho | Decisão do usuário em 2026-08-22: *"não precisa agendamento automático, cada um é responsável pelo seu desenvolvimento"*. Fecha a discussão aberta nos itens 6.10/6.13. **Não propor de novo** repetição espaçada por dias, por rodadas, notificação ou lembrete: é escolha pedagógica do dono do produto, não lacuna técnica. A iniciativa é 100% do aluno; o portal oferece as pilhas e a rodada focada, ele decide quando usar |
 | D11 | Flashcards gravam **1 resultado por sessão** com o detalhe por lâmina em `details[]`, nunca 1 documento por lâmina | Decisão do usuário em 2026-08-18, depois de perguntar explicitamente sobre sobrecarga. `subscribeToMyResults` lê todos os `quizResults` do aluno sem limite: 1 doc por lâmina daria ~4.000 leituras por abertura do dashboard num semestre (cota grátis: 50.000/dia), além de afogar a média com "simulados de 1 questão". A granularidade por lâmina não se perde — vive no `details[]` e no estado SRS |
 | D10 | Liberação de conteúdo = **gate central em `config/contentRelease` + `isPublished` denormalizado** em cada doc (item 6.4) | Decisão do usuário em 2026-08-18. Gate puro consultado por `get()` nas rules seria mais elegante, mas quebraria as leituras cross-disciplina do Simulado Teórico por Área (6.1): "rules não são filtros" — a query inteira falha se um único doc do resultado estiver bloqueado. O campo denormalizado é analisável em query; o gate central mantém a liberação em 1 clique por disciplina/unidade |
 
@@ -1466,12 +1467,12 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   - Verificação: `typecheck` ✅, `vitest` **118/118** ✅, `lint` 22 (pré-existentes) ✅,
     `build` ✅ + classes de cor conferidas no CSS.
 
-  🟡 **O que se perde, dito com todas as letras:** não há mais agendamento automático de longo
-  prazo. Antes o sistema trazia o card de volta sozinho depois de 3, 8, 20 dias — que é o
-  mecanismo com evidência de retenção. Agora a iniciativa é 100% do aluno: se ele não abrir o
-  baralho, nada o lembra. Se um dia fizer falta, o meio-termo natural seria espaçar por
-  **rodadas** ("volta depois de 3 sessões") em vez de por calendário, mantendo a promessa de
-  poder repassar tudo no mesmo dia.
+  🟢 **O que se perde, e por que está tudo bem:** não há mais agendamento automático de longo
+  prazo. Antes o sistema trazia o card de volta sozinho depois de 3, 8, 20 dias — o mecanismo
+  com evidência de retenção. Agora a iniciativa é 100% do aluno: se ele não abrir o baralho,
+  nada o lembra. Isso foi levantado com o usuário duas vezes e **decidido em definitivo**
+  (D12): *"cada um é responsável pelo seu desenvolvimento"*. Não é lacuna a preencher — é o
+  desenho pretendido. Não reabrir.
 
 
 - [x] **6.11 — Progresso não persistia em produção: rules não publicadas + falha silenciosa**
