@@ -222,11 +222,21 @@ export function buildSession(
     else jaVistos.push(id);
   }
 
-  const limitados = newLimit === undefined ? ordered(novos) : ordered(novos).slice(0, Math.max(0, newLimit));
+  // A separação em dois grupos serve SÓ para aplicar o limite de inéditos. A ordem final é
+  // decidida depois, sobre o conjunto inteiro — versões anteriores embaralhavam cada grupo
+  // separadamente e concatenavam, o que fazia os já vistos caírem sempre antes dos inéditos
+  // mesmo no modo "Aleatória", e o modo "Sequencial" não seguir a ordem cadastrada que promete.
+  const novosSelecionados = newLimit === undefined
+    ? novos
+    : ordered(novos).slice(0, Math.max(0, newLimit));
 
-  // Já vistos antes dos inéditos: o que o aluno começou a estudar tem prioridade sobre conteúdo
-  // que ele ainda nem abriu.
-  return { queue: [...ordered(jaVistos), ...limitados] };
+  const selecionados = new Set([...jaVistos, ...novosSelecionados]);
+
+  return {
+    queue: order === 'random'
+      ? shuffle([...selecionados], random)
+      : pool.filter((id) => selecionados.has(id)), // ordem cadastrada, de verdade
+  };
 }
 
 export type NextCardResult =

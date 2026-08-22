@@ -148,9 +148,11 @@ describe('buildSession — nada é bloqueado por tempo', () => {
     expect(session.queue).toEqual(['a', 'b', 'c', 'd']); // 3 já vistos + 1 inédito
   });
 
-  it('já vistos vêm antes dos inéditos', () => {
-    const states = { e: answered('e', 'again') };
-    expect(buildSession(deck, states).queue[0]).toBe('e');
+  // "Sequencial" promete "ordem cadastrada" na tela: tem que ser a ordem do baralho mesmo,
+  // sem jogar os já estudados para a frente.
+  it('sequencial segue a ordem cadastrada, misturando já vistos e inéditos', () => {
+    const states = { e: answered('e', 'again'), b: answered('b', 'good') };
+    expect(buildSession(deck, states).queue).toEqual(['a', 'b', 'c', 'd', 'e']);
   });
 
   it('rodada focada traz só os não memorizados', () => {
@@ -161,6 +163,53 @@ describe('buildSession — nada é bloqueado por tempo', () => {
   it('rodada focada num baralho todo memorizado devolve fila vazia', () => {
     const states = { a: answered('a', 'easy') };
     expect(buildSession(['a'], states, { focus: 'unmemorized' }).queue).toEqual([]);
+  });
+});
+
+
+describe('qualidade do embaralhamento', () => {
+  // PRNG determinístico: o teste mede distribuição sem depender de Math.random, então não
+  // pode ficar intermitente.
+  const seeded = (seed: number) => () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+
+  it('cada card cai em cada posição com a mesma frequência (Fisher-Yates sem viés)', () => {
+    const rnd = seeded(42);
+    const deck = ['a', 'b', 'c', 'd'];
+    const RODADAS = 12000;
+    const esperado = RODADAS / deck.length;
+    const freq: Record<string, number[]> = {
+      a: [0, 0, 0, 0], b: [0, 0, 0, 0], c: [0, 0, 0, 0], d: [0, 0, 0, 0],
+    };
+
+    for (let n = 0; n < RODADAS; n++) {
+      shuffle(deck, rnd).forEach((card, pos) => { freq[card][pos]++; });
+    }
+
+    // 3σ para n=12000, p=0,25 fica em ~4,7%. Uma implementação enviesada (o clássico
+    // `sort(() => Math.random() - 0.5)`, que este projeto usava antes do item 6.5) estoura
+    // isso com folga.
+    for (const card of deck) {
+      for (const pos of [0, 1, 2, 3]) {
+        expect(Math.abs(freq[card][pos] - esperado) / esperado).toBeLessThan(0.06);
+      }
+    }
+  });
+
+  it('modo aleatório mistura já vistos com inéditos, sem separar em blocos', () => {
+    const rnd = seeded(7);
+    const deck = ['v1', 'v2', 'n1', 'n2'];
+    const states = { v1: answered('v1', 'good'), v2: answered('v2', 'good') };
+
+    // Se os grupos fossem embaralhados separadamente e concatenados, TODA rodada começaria
+    // por um card já visto. Basta uma rodada começando por inédito para provar a mistura.
+    const comecouPorInedito = Array.from({ length: 50 }, () =>
+      buildSession(deck, states, { order: 'random', random: rnd }).queue[0]
+    ).some((primeiro) => primeiro.startsWith('n'));
+
+    expect(comecouPorInedito).toBe(true);
   });
 });
 
