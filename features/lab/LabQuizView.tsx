@@ -110,6 +110,16 @@ const CounterTrio: React.FC<{
   );
 };
 
+// O Firestore devolve `code: 'permission-denied'` quando as Security Rules não liberam o
+// caminho. Vale distinguir esse caso dos demais: ele NÃO se resolve tentando de novo nem
+// trocando de rede — é configuração do banco (regra não publicada no console), e a mensagem
+// precisa dizer isso para não mandar o aluno bater cabeça. Ver item 6.11 do PLANO.
+const isPermissionDenied = (err: unknown): boolean =>
+  typeof err === 'object' && err !== null && (err as { code?: string }).code === 'permission-denied';
+
+const PERMISSION_MESSAGE =
+  'Seu progresso não está sendo salvo: o banco de dados não autorizou o acesso. Isso é configuração do sistema, não erro seu — avise a coordenação (as regras do Firestore precisam ser publicadas).';
+
 // Aviso de que o progresso não está sendo gravado. Fica no topo das duas telas (configuração e
 // sessão) porque estudar sem salvar é pior que não estudar — o aluno precisa saber ANTES.
 const SaveErrorBanner: React.FC<{ message: string }> = ({ message }) => (
@@ -164,7 +174,10 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
       })
       .catch((err) => {
         console.error('Erro ao carregar progresso de flashcards:', err);
-        if (!cancelled) setSaveError('Não foi possível carregar seu progresso salvo. O que você estudar agora pode não ser gravado.');
+        if (cancelled) return;
+        setSaveError(isPermissionDenied(err)
+          ? PERMISSION_MESSAGE
+          : 'Não foi possível carregar seu progresso salvo. O que você estudar agora pode não ser gravado.');
       })
       .finally(() => { if (!cancelled) setIsProgressLoaded(true); });
     return () => { cancelled = true; };
@@ -377,7 +390,9 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
         .then(() => setSaveError(null))
         .catch(err => {
           console.error('Erro ao salvar progresso de flashcards:', err);
-          setSaveError('Seu progresso NÃO está sendo salvo. Avise a monitoria antes de continuar estudando.');
+          setSaveError(isPermissionDenied(err)
+            ? PERMISSION_MESSAGE
+            : 'Seu progresso NÃO está sendo salvo. Avise a monitoria antes de continuar estudando.');
         });
     }
   };
