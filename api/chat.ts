@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, type ModelParams } from '@google/generative-ai';
 import { ClinicalState, PhaseRules } from '../types';
-import { getClientIp, isRateLimited } from './_lib/rateLimit';
+import { getClientIp, isRateLimited } from './_lib/rateLimit.js';
 
 interface ChatRequestBody {
   prompt: string;
