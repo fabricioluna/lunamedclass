@@ -47,4 +47,39 @@ describe('parseExplanation', () => {
     expect(result.intro).toEqual(['Resposta certa e a A.']);
     expect(result.options).toEqual([{ letter: 'B', text: 'Errada porque sim.' }]);
   });
+
+  // Segundo template de CSV em uso: rótulo "ALTERNATIVA X - " no início, quebras "\n\n"
+  // literais entre parágrafos, e lista de erradas em "Alternativa x) texto" (parêntese,
+  // minúscula, sem "?" retórico antes). Caso real reportado (arquivo "Morfofisiologia 1.csv").
+  it('trata o template "ALTERNATIVA X - " com marcadores em parêntese e quebras \\n\\n literais', () => {
+    const raw =
+      'ALTERNATIVA A - Na ausência de hCG (que seria produzido pelo blastocisto após a implantação), ' +
+      'o corpo lúteo atrofia, provocando queda nos níveis de progesterona e estradiol. \\n\\n ' +
+      'Essa privação hormonal causa vasoespasmo das artérias espiraladas do endométrio, levando à isquemia, ' +
+      'necrose tecidual e liberação de prostaglandinas (PGF2a), culminando na descamação endometrial e fluxo menstrual. \\n\\n ' +
+      'Por que as outras estão ERRADAS: Alternativa b) O hCG é secretado na gravidez para manter o corpo lúteo, ' +
+      'na sua ausência o corpo lúteo degrada-se. Alternativa c) O pico de LH ocorre na metade do ciclo para induzir ' +
+      'a ovulação, e não no final do ciclo. Alternativa d) A progesterona não se converte em prolactina, e a ' +
+      'desestruturação endometrial gera o sangramento menstrual, não a sua absorção.';
+
+    const result = parseExplanation(raw);
+
+    expect(result.intro).toEqual([
+      'Na ausência de hCG (que seria produzido pelo blastocisto após a implantação), o corpo lúteo atrofia, provocando queda nos níveis de progesterona e estradiol.',
+      'Essa privação hormonal causa vasoespasmo das artérias espiraladas do endométrio, levando à isquemia, necrose tecidual e liberação de prostaglandinas (PGF2a), culminando na descamação endometrial e fluxo menstrual.',
+    ]);
+    expect(result.optionsHeading).toBe('Por que as outras estão ERRADAS:');
+    expect(result.options).toEqual([
+      { letter: 'B', text: 'O hCG é secretado na gravidez para manter o corpo lúteo, na sua ausência o corpo lúteo degrada-se.' },
+      { letter: 'C', text: 'O pico de LH ocorre na metade do ciclo para induzir a ovulação, e não no final do ciclo.' },
+      { letter: 'D', text: 'A progesterona não se converte em prolactina, e a desestruturação endometrial gera o sangramento menstrual, não a sua absorção.' },
+    ]);
+  });
+
+  it('normaliza quebras de linha reais (não só "\\n" literal) dentro do texto', () => {
+    const raw = 'ALTERNATIVA C)\nPrimeira parte.\n\nSegunda parte. Alternativa a) Texto errado.';
+    const result = parseExplanation(raw);
+    expect(result.intro).toEqual(['Primeira parte.', 'Segunda parte.']);
+    expect(result.options).toEqual([{ letter: 'A', text: 'Texto errado.' }]);
+  });
 });
