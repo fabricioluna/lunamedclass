@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Question } from '../types';
 import { ArrowLeft, ArrowRight, Scissors, SkipForward, LayoutGrid, X } from 'lucide-react';
+import { parseExplanation } from '../utils/explanationParser';
 
 export interface QuizProgressState {
   currentIndex: number;
@@ -346,17 +347,40 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
                   </div>
                 </div>
                 
-                <div className="space-y-3 mt-4 border-t pt-4 border-black/5">
-                  {q.explanation.split('. ').map((frase, idx) => {
-                    if (!frase.trim()) return null;
-                    const texto = frase.trim() + (frase.trim().endsWith('.') ? '' : '.');
-                    return (
-                      <p key={idx} className="text-xs md:text-sm leading-relaxed font-medium opacity-90">
-                        {texto}
-                      </p>
-                    );
-                  })}
-                </div>
+                {(() => {
+                  const { intro, optionsHeading, options } = parseExplanation(q.explanation);
+                  return (
+                    <div className="mt-4 border-t pt-4 border-black/5">
+                      <div className="space-y-3">
+                        {intro.map((frase, idx) => (
+                          <p key={idx} className="text-xs md:text-sm leading-relaxed font-medium opacity-90">
+                            {frase}
+                          </p>
+                        ))}
+                      </div>
+
+                      {options.length > 0 && (
+                        <div className="mt-5 pt-4 border-t border-dashed border-black/10">
+                          <p className="text-[10px] md:text-[11px] font-black uppercase tracking-widest opacity-60 mb-3">
+                            {optionsHeading || 'Análise das demais alternativas'}
+                          </p>
+                          <div className="space-y-2.5">
+                            {options.map(opt => (
+                              <div key={opt.letter} className="flex items-start gap-3 bg-black/[0.03] rounded-xl p-3">
+                                <span className="shrink-0 w-6 h-6 rounded-full bg-white border border-current/20 flex items-center justify-center font-black text-[11px] opacity-80">
+                                  {opt.letter}
+                                </span>
+                                <p className="text-xs md:text-sm leading-relaxed font-medium opacity-90 pt-0.5">
+                                  {opt.text}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
