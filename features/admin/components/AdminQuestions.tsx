@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Question, SimulationInfo, AcademicUnit, AreaConhecimento, SubareaConhecimento } from '../../../types';
+import { Question, SimulationInfo, AcademicUnit, AreaConhecimento, SubareaConhecimento, Period } from '../../../types';
 import { Trash2, Edit3, X } from 'lucide-react';
 import { parseResilientCSV } from '../../../utils/csvHelper'; // <-- Importação do Parser CSV
 
 interface AdminQuestionsProps {
   questions: Question[];
   disciplines: SimulationInfo[];
+  periods: Period[];
   areasConhecimento: AreaConhecimento[];
   subareasConhecimento: SubareaConhecimento[];
   onAddQuestions: (qs: Question[]) => void;
@@ -18,6 +19,7 @@ interface AdminQuestionsProps {
 const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   questions,
   disciplines,
+  periods,
   areasConhecimento,
   subareasConhecimento,
   onAddQuestions,
@@ -27,20 +29,24 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
   onRemoveQuiz
 }) => {
   // ESTADOS DE FILTRO
-  const [discFilter, setDiscFilter] = useState(''); 
-  const [unitFilter, setUnitFilter] = useState<AcademicUnit | ''>(''); 
+  const [discFilter, setDiscFilter] = useState('');
+  const [unitFilter, setUnitFilter] = useState<AcademicUnit | ''>('');
   const [themeFilter, setThemeFilter] = useState('');
-  const [quizFilter, setQuizFilter] = useState(''); 
+  const [quizFilter, setQuizFilter] = useState('');
 
   // ESTADOS DE IMPORTAÇÃO CSV (Refatorado)
+  const [qPeriod, setQPeriod] = useState('');
   const [qDiscipline, setQDiscipline] = useState('');
   const [qTheme, setQTheme] = useState('');
-  const [qAreaConhecimento, setQAreaConhecimento] = useState('');
-  const [qSubareaConhecimento, setQSubareaConhecimento] = useState('');
   const [qUnit, setQUnit] = useState<AcademicUnit>('N1');
   const [qTitle, setQTitle] = useState('');
   const [qAuthor, setQAuthor] = useState('');
   const [qFile, setQFile] = useState<File | null>(null);
+
+  const filteredDisciplinesForImport = useMemo(() => {
+    if (!qPeriod) return [];
+    return disciplines.filter(d => d.periodId === qPeriod);
+  }, [disciplines, qPeriod]);
 
   // ESTADOS DO MODAL DE EDIÇÃO / ADIÇÃO MANUAL
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
@@ -126,16 +132,11 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
           }
 
           // Mapper: Traduz o CSV para a tipagem estrita do sistema (types.ts)
-          // Área/Subárea opcionais: omite a chave em vez de gravar undefined (Firestore
-          // rejeita valor de campo undefined em addDoc/setDoc — mesma causa do bug de `id`
-          // ausente corrigido nesta sessão, ver questionsService.ts).
           return {
             id: `q_${Date.now()}_${idx}`,
             disciplineId: qDiscipline,
             unit: targetUnit,
             theme: qTheme,
-            ...(qAreaConhecimento ? { areaConhecimentoId: qAreaConhecimento } : {}),
-            ...(qSubareaConhecimento ? { subareaConhecimentoId: qSubareaConhecimento } : {}),
             q: pergunta,
             options: opts,
             answer: answerIdx,
@@ -272,11 +273,16 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
         <div className="lg:col-span-4 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
           <h3 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tighter">Importar CSV Teórico</h3>
           <form onSubmit={handleQuestionImport} className="space-y-4">
-            <select value={qDiscipline} onChange={e => { setQDiscipline(e.target.value); setQTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
-              <option value="">Disciplina...</option>
-              {disciplines.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+            <select value={qPeriod} onChange={e => { setQPeriod(e.target.value); setQDiscipline(''); setQTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
+              <option value="">Período...</option>
+              {periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            
+
+            <select value={qDiscipline} onChange={e => { setQDiscipline(e.target.value); setQTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50 disabled:cursor-not-allowed" required disabled={!qPeriod}>
+              <option value="">Disciplina...</option>
+              {filteredDisciplinesForImport.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+            </select>
+
             {/* SELETOR DE UNIDADE NO IMPORT (Oculto se for UC) */}
             {qDiscipline && disciplines.find(d => d.id === qDiscipline)?.category !== 'UC' && (
               <select value={qUnit} onChange={e => setQUnit(e.target.value as AcademicUnit)} className="w-full p-4 bg-blue-50 text-blue-900 rounded-xl font-black text-sm outline-none border-2 border-blue-200 focus:border-[#003366]" required>
@@ -286,18 +292,8 @@ const AdminQuestions: React.FC<AdminQuestionsProps> = ({
             )}
 
             <select value={qTheme} onChange={e => setQTheme(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required disabled={!qDiscipline}>
-              <option value="">Eixo Temático...</option>
+              <option value="">Tema...</option>
               {qDiscipline && disciplines.find(d => d.id === qDiscipline)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-
-            <select value={qAreaConhecimento} onChange={e => setQAreaConhecimento(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]">
-              <option value="">Área de Conhecimento (opcional)...</option>
-              {areasConhecimento.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
-            </select>
-
-            <select value={qSubareaConhecimento} onChange={e => setQSubareaConhecimento(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]">
-              <option value="">Subárea de Conhecimento (opcional)...</option>
-              {subareasConhecimento.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
 
             <input type="text" placeholder="Nome do Simulado (Ex: P1 Cárdio Fafá)" value={qTitle} onChange={e => setQTitle(e.target.value)} maxLength={50} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required />

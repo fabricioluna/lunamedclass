@@ -31,7 +31,13 @@ export const subscribeToDisciplines = (
 ) => {
   return onSnapshot(
     disciplinesDocRef,
-    (snap) => onData((snap.data()?.items as SimulationInfo[]) || []),
+    (snap) => {
+      const items = (snap.data()?.items as SimulationInfo[]) || [];
+      // Documentos gravados antes do campo `themes` existir (ou criados fora do seed)
+      // podem não ter o array — normaliza aqui para evitar `undefined` propagando para
+      // todo consumidor (`[...disc.themes]`, `disc.themes.map`, etc.).
+      onData(items.map(d => ({ ...d, themes: d.themes || [] })));
+    },
     onError
   );
 };

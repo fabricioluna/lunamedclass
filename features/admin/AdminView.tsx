@@ -147,12 +147,12 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
   const handleAddTheme = async (disciplineId: string, themeName: string) => {
     const disc = disciplines.find(d => d.id === disciplineId);
-    if (disc) await configService.updateDisciplineThemes(disciplineId, Array.from(new Set([...disc.themes, themeName])));
+    if (disc) await configService.updateDisciplineThemes(disciplineId, Array.from(new Set([...(disc.themes || []), themeName])));
   };
 
   const handleRemoveTheme = async (disciplineId: string, themeName: string) => {
     const disc = disciplines.find(d => d.id === disciplineId);
-    if (disc) await configService.updateDisciplineThemes(disciplineId, disc.themes.filter(t => t !== themeName));
+    if (disc) await configService.updateDisciplineThemes(disciplineId, (disc.themes || []).filter(t => t !== themeName));
   };
 
   const handleUpdateReferences = async (disciplineId: string, refsList: ReferenceMaterial[]) => {
@@ -435,6 +435,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         <AdminQuestions
           questions={adminQuestions}
           disciplines={disciplines}
+          periods={periods}
           areasConhecimento={areasConhecimento}
           subareasConhecimento={subareasConhecimento}
           onAddQuestions={async (qs) => {
