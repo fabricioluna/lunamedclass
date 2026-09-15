@@ -15,7 +15,7 @@ export interface QuizProgressState {
 interface InteractiveQuizProps {
   questions: Question[];
   onFinish: (score: number, answers: Record<string, number>) => void;
-  onAnswerQuestion?: (questionId: string, isCorrect: boolean, theme: string) => void;
+  onAnswerQuestion?: (questionId: string, optionIndex: number, isCorrect: boolean, theme: string) => void;
   storageKey: string;
   resumeState?: QuizProgressState | null;
 }
@@ -206,7 +206,7 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onFinish, 
     const isCorrect = selectedOpt === correctIndex;
 
     if (onAnswerQuestion) {
-      onAnswerQuestion(questionId, isCorrect, q.theme);
+      onAnswerQuestion(questionId, selectedOpt, isCorrect, q.theme);
     }
   };
 

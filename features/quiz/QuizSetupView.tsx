@@ -4,20 +4,32 @@ import { Milestone, Layers } from 'lucide-react';
 import { fetchQuestionsOnce } from '../../services/questionsService';
 import { INITIAL_QUESTIONS } from '../../data/questions';
 import { matchesDisciplineAndUnit } from '../../utils/questionFilters';
+import {
+  buildAttemptKey,
+  fetchQuizAttempt,
+  startQuizAttempt,
+  clearQuizAttempt,
+  fetchQuizQuestionStatus,
+  resetQuizQuestionStatus,
+  QuizAttemptProgressDoc,
+} from '../../services/quizProgressService';
+import { reconstructAttemptQuestions, filterOutRecentlyCorrect, resolveQuizTitle } from '../../utils/quizAttempt';
 
 interface QuizSetupViewProps {
   discipline: SimulationInfo;
   availableQuestions?: Question[]; // Tornamos opcional pois não usaremos mais do Contexto Global
   selectedUnit: AcademicUnit; // Resolvendo contrato com App.tsx
+  userId?: string;
   onStart: (filteredQuestions: Question[]) => void;
   onBack: () => void;
 }
 
-const QuizSetupView: React.FC<QuizSetupViewProps> = ({ 
-  discipline, 
-  selectedUnit, 
-  onStart, 
-  onBack 
+const QuizSetupView: React.FC<QuizSetupViewProps> = ({
+  discipline,
+  selectedUnit,
+  userId,
+  onStart,
+  onBack
 }) => {
   // === NOVO: BUSCA SOB DEMANDA (ON-DEMAND FETCHING) ===
   const [localQuestions, setLocalQuestions] = useState<Question[]>(INITIAL_QUESTIONS);
@@ -46,39 +58,67 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
   const [quantity, setQuantity] = useState(10);
   const [orderMode, setOrderMode] = useState<'random' | 'sequential'>('random'); 
 
-  // ESTADOS DO AUTO-SAVE (Injetando a Unidade na chave para evitar conflito N1 vs N2)
-  const storageKey = `quiz_progress_${discipline.id}_${selectedUnit}`;
+  // Chave da "ponte" local para QuizExecFlow (não é mais quem decide se há progresso pendente
+  // — isso agora vem do Firestore, ver pendingAttempt abaixo).
   const questionsKey = `quiz_questions_${discipline.id}_${selectedUnit}`;
-  const [showPrompt, setShowPrompt] = useState(false);
+  const attemptKey = buildAttemptKey(discipline.id, selectedUnit);
 
   // Verifica se é disciplina UC (bloco unificado)
   const isUC = discipline.category === 'UC';
-  
+
   // LUNA ENGINE: Trava de Escopo Restrito para a N2 (Não permite simulados mistos)
   const isStrictN2 = !isUC && selectedUnit === 'N2';
   const showThematicMode = !isStrictN2;
 
-  // Verifica se há um simulado pendente mal a tela abre
+  // TENTATIVA EM ANDAMENTO (Firestore) — permite retomar de qualquer dispositivo.
+  const [pendingAttempt, setPendingAttempt] = useState<QuizAttemptProgressDoc | null>(null);
+
   useEffect(() => {
-    const savedProgress = localStorage.getItem(storageKey);
-    const savedQuestions = localStorage.getItem(questionsKey);
-    if (savedProgress && savedQuestions) {
-      setShowPrompt(true);
-    }
-  }, [storageKey, questionsKey]);
+    if (!userId) return;
+    let cancelled = false;
+    fetchQuizAttempt(userId, attemptKey)
+      .then(attempt => { if (!cancelled) setPendingAttempt(attempt); })
+      .catch(err => console.error('Erro ao verificar simulado em andamento:', err));
+    return () => { cancelled = true; };
+  }, [userId, attemptKey]);
 
   const handleContinueSaved = () => {
-    const savedQs = localStorage.getItem(questionsKey);
-    if (savedQs) {
-      onStart(JSON.parse(savedQs));
-    }
-    setShowPrompt(false);
+    if (!pendingAttempt) return;
+    const reconstructed = reconstructAttemptQuestions(pendingAttempt.questionIds, localQuestions);
+    localStorage.setItem(questionsKey, JSON.stringify(reconstructed));
+    onStart(reconstructed);
+    setPendingAttempt(null);
   };
 
   const handleRestartSaved = () => {
-    localStorage.removeItem(storageKey);
-    localStorage.removeItem(questionsKey);
-    setShowPrompt(false);
+    if (userId) {
+      clearQuizAttempt(userId, attemptKey).catch(err => console.error('Erro ao descartar simulado em andamento:', err));
+    }
+    setPendingAttempt(null);
+  };
+
+  // STATUS DE ACERTO POR QUESTÃO (para o filtro "apenas não respondidas" e o botão de reset).
+  // Escopo por disciplina (não por unidade): acertar em N1 conta para não repetir em N2.
+  const [questionStatus, setQuestionStatus] = useState<Record<string, boolean>>({});
+  const [excludeRecentlyCorrect, setExcludeRecentlyCorrect] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    fetchQuizQuestionStatus(userId, discipline.id)
+      .then(setQuestionStatus)
+      .catch(err => console.error('Erro ao carregar questões já respondidas:', err));
+  }, [userId, discipline.id]);
+
+  const hasQuestionStatus = Object.keys(questionStatus).length > 0;
+
+  const handleResetQuestionStatus = () => {
+    if (!userId) return;
+    if (!window.confirm('Isso faz as questões já respondidas corretamente nesta disciplina voltarem a aparecer no simulado. Continuar?')) {
+      return;
+    }
+    resetQuizQuestionStatus(userId, discipline.id)
+      .then(() => setQuestionStatus({}))
+      .catch(err => console.error('Erro ao zerar questões já respondidas:', err));
   };
 
   // Identifica todos os títulos de simulados únicos nesta disciplina e UNIDADE
@@ -91,20 +131,22 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
 
   // Conta quantas questões estão disponíveis com os filtros atuais (Disciplina + Unidade + Temas)
   const totalAvailableInSelectedThemes = useMemo(() => {
-    return localQuestions.filter(q => {
+    let matched = localQuestions.filter(q => {
       if (!matchesDisciplineAndUnit(q, { disciplineId: discipline.id, isUC, selectedUnit })) return false;
 
       if (selectedQuizTitles.length > 0 && q.quizTitle && !selectedQuizTitles.includes(q.quizTitle)) {
         return false;
       }
-      
+
       if (selectedQuizTitles.length === 0 && !selectedThemes.includes(q.theme)) {
         return false;
       }
 
       return true;
-    }).length;
-  }, [localQuestions, discipline.id, isUC, selectedThemes, selectedQuizTitles, selectedUnit]);
+    });
+    if (excludeRecentlyCorrect) matched = filterOutRecentlyCorrect(matched, questionStatus);
+    return matched.length;
+  }, [localQuestions, discipline.id, isUC, selectedThemes, selectedQuizTitles, selectedUnit, excludeRecentlyCorrect, questionStatus]);
 
   const toggleTheme = (theme: string) => {
     setSelectedQuizTitles([]);
@@ -145,7 +187,9 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
       }
       return selectedThemes.includes(q.theme);
     });
-    
+
+    if (excludeRecentlyCorrect) filtered = filterOutRecentlyCorrect(filtered, questionStatus);
+
     // ORDENAÇÃO
     if (orderMode === 'random') {
       filtered = [...filtered].sort(() => Math.random() - 0.5);
@@ -155,11 +199,20 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
 
     // Corta a quantidade desejada
     filtered = filtered.slice(0, quantity);
-    
+
     // Guarda a seleção oficial das questões deste simulado para poder ser recuperado!
     localStorage.setItem(questionsKey, JSON.stringify(filtered));
-    localStorage.removeItem(storageKey); // Limpa o progresso antigo
-    
+
+    if (userId) {
+      startQuizAttempt(userId, attemptKey, {
+        disciplineId: discipline.id,
+        unit: selectedUnit,
+        quizTitle: resolveQuizTitle(filtered),
+        questionIds: filtered.map(q => q.id),
+        startedAt: Date.now(),
+      }).catch(err => console.error('Erro ao registrar novo simulado:', err));
+    }
+
     onStart(filtered);
   };
 
@@ -181,8 +234,8 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
         </div>
       )}
       
-      {/* MODAL DE AVISO (Simulado Pendente) */}
-      {showPrompt && !isFetching && (
+      {/* MODAL DE AVISO (Simulado Pendente) — vem do Firestore, funciona entre dispositivos */}
+      {pendingAttempt && !isFetching && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#003366]/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl max-w-lg w-full animate-in zoom-in duration-300">
             <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-4xl mb-6 mx-auto">💾</div>
@@ -190,8 +243,11 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
             <p className="text-gray-500 mb-2 leading-relaxed text-center font-medium">
               Detectamos um simulado não finalizado na <b>Unidade {selectedUnit}</b>.
             </p>
-            <p className="text-gray-400 text-xs mb-8 text-center uppercase tracking-widest font-black">
-              {discipline.title}
+            <p className="text-gray-400 text-xs mb-2 text-center uppercase tracking-widest font-black">
+              {pendingAttempt.quizTitle || discipline.title}
+            </p>
+            <p className="text-gray-400 text-[10px] mb-8 text-center uppercase tracking-widest font-bold">
+              {Object.keys(pendingAttempt.answers).length} de {pendingAttempt.questionIds.length} respondidas
             </p>
             <div className="flex flex-col gap-3">
               <button onClick={handleContinueSaved} className="w-full bg-[#003366] text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-[#D4A017] hover:text-[#003366] transition-all shadow-xl">
@@ -207,7 +263,7 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
 
       {/* SÓ MOSTRA O CONTEÚDO SE JÁ TERMINOU DE BAIXAR AS QUESTÕES */}
       {!isFetching && (
-        <div className={`bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl border border-gray-100 mb-20 ${showPrompt ? 'opacity-30 pointer-events-none' : ''}`}>
+        <div className={`bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl border border-gray-100 mb-20 ${pendingAttempt ? 'opacity-30 pointer-events-none' : ''}`}>
           <div className="text-center mb-10">
             <div className="text-5xl mb-4">{discipline.icon}</div>
             <div className="flex flex-col items-center gap-2 mb-4">
@@ -297,6 +353,29 @@ const QuizSetupView: React.FC<QuizSetupViewProps> = ({
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* FILTRO/RESET DE QUESTÕES JÁ RESPONDIDAS (só aparece se há histórico nesta disciplina) */}
+          {hasQuestionStatus && (
+            <div className="mb-10 p-6 bg-gray-50 rounded-3xl border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={excludeRecentlyCorrect}
+                  onChange={(e) => setExcludeRecentlyCorrect(e.target.checked)}
+                  className="w-5 h-5 rounded border-gray-300 text-[#003366] focus:ring-[#D4A017]"
+                />
+                <span className="text-xs font-black uppercase tracking-widest text-[#003366]">
+                  Apenas questões não respondidas
+                </span>
+              </label>
+              <button
+                onClick={handleResetQuestionStatus}
+                className="text-[9px] font-bold text-red-500 uppercase underline hover:text-red-700 transition-colors whitespace-nowrap"
+              >
+                Zerar questões já respondidas
+              </button>
             </div>
           )}
 

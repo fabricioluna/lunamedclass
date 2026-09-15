@@ -110,6 +110,40 @@ prioridade definida.
 questões de disciplinas diferentes, confirmar que o filtro cruza disciplinas de verdade e salva
 certo no dashboard).
 
+**➡️ Sessão de 2026-09-15: Etapa 6, novo item — retomar Simulado Teórico entre dispositivos +
+filtro/reset de questões já respondidas.** Código completo, `typecheck`/`lint` (22 problemas
+pré-existentes, nenhum novo)/`test` (137/137)/`test:rules`/`build` todos verdes.
+
+- **Achado pré-existente, corrigido de graça**: o modal "Simulado em Andamento" nunca funcionava
+  — `QuizSetupView` usava a chave `discipline.id_unit`, mas `QuizView`/`InteractiveQuiz` usavam
+  `discipline.title` normalizado. Unificado em `discipline.id_unit` em todo o fluxo.
+- **Duas estruturas novas no Firestore**, mesmo padrão de isolamento por rota que
+  `flashcardProgress` (item 6.6) já usa: `users/{uid}/quizAttempts/{disciplineId_unit}` (tentativa
+  em andamento, sem expiração — diferente das 24h do Lab) e
+  `users/{uid}/quizQuestionStatus/{disciplineId}` (último resultado por questão, escopo por
+  disciplina — decisão do usuário via `AskUserQuestion`: erro mais recente sobrescreve acerto
+  antigo). Serviço novo `services/quizProgressService.ts`, util puro
+  `utils/quizAttempt.ts` (+ teste).
+- `firestore.rules` ganhou os 2 `match` novos (`allow read, write: if isOwner(uid)`) +
+  casos correspondentes em `scripts/test-firestore-rules.mjs` — todos passando no emulador.
+- **Verificado com Playwright ad-hoc contra produção** (conta `qa.claude.quizprogress.*`,
+  disciplina real `hm1`, banco "Sinais Vitais"): gerar simulado → responder → sair sem terminar
+  → reabrir a tela de configuração, fluxo completo sem crash. Confirmado também o comportamento
+  esperado: como as regras novas só existem no `firestore.rules` local (não publicadas no
+  console ainda), toda leitura/escrita das 2 estruturas novas falha com
+  `permission-denied` — e falha **graciosamente** (`console.error`, sem travar a tela nem afetar
+  o fluxo de resultado existente em `quizResults`), então não há regressão em produção com o
+  código atual no ar.
+- **Pendência que só o usuário fecha**: publicar o `firestore.rules` atualizado no console do
+  Firebase (mesma exigência de sempre, `npm run test:rules` já validado) — só depois disso a
+  retomada entre dispositivos e o filtro/reset de questões já respondidas passam a funcionar de
+  fato em produção; o resto do simulado continua funcionando normalmente enquanto isso não
+  acontece.
+- **Fora de escopo desta v1** (avisado ao usuário, sem objeção esperada): o fluxo de "Simulador
+  por Área" (`/simulators/teorico`, hoje fora da lista principal) não ganhou retomada nem filtro
+  — `QuizView` aceita `unit`/`userId` opcionais e cai no comportamento local de sempre quando
+  ausentes, sem alteração nesse fluxo.
+
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
 Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.

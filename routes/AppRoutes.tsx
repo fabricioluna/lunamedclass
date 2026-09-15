@@ -140,6 +140,7 @@ const QuizFlow = () => {
   const unit = useAcademicUnit();
   const navigate = useNavigate();
   const { disciplines } = useData();
+  const { currentUser } = useAuth();
   const discipline = disciplines.find(d => d.id === disciplineId);
 
   if (!discipline) return <Navigate to="/" replace />;
@@ -148,6 +149,7 @@ const QuizFlow = () => {
     <QuizSetupView
       discipline={discipline}
       selectedUnit={unit}
+      userId={currentUser?.uid}
       onBack={() => navigate(-1)}
       onStart={() => navigate(`/disciplina/${disciplineId}/simulado/executar${unit ? `?unit=${unit}` : ''}`)}
     />
@@ -186,6 +188,8 @@ const QuizExecFlow = () => {
     <QuizView
       questions={questions}
       discipline={discipline}
+      unit={unit}
+      userId={currentUser?.uid}
       onBack={() => navigate(-1)}
       onSaveResult={(score, total, title, type, time, details) => {
         if (currentUser) saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, date: new Date().toLocaleString(), discipline: discipline.id, unit, quizTitle: title || 'Misto', type: type || 'teorico', timeSpent: time || 0, details: details || [] });

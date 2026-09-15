@@ -29,6 +29,18 @@ service cloud.firestore {
       match /flashcardProgress/{simulationId} {
         allow read, write: if isOwner(uid);
       }
+
+      // Tentativa de simulado teórico em andamento (retomar entre dispositivos) — mesmo
+      // isolamento por ROTA que flashcardProgress: dado de estudo pessoal, sem valor pro admin.
+      match /quizAttempts/{attemptKey} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Último resultado conhecido por questão, por disciplina — alimenta o filtro "só não
+      // respondidas" e o botão de reset em QuizSetupView.
+      match /quizQuestionStatus/{disciplineId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // Dados estruturais globais: períodos, disciplinas (com temas/referências/status/features

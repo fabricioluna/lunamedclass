@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import InteractiveQuiz, { QuizProgressState } from '../../components/InteractiveQuiz';
-import { Question, SimulationInfo, QuizDetail } from '../../types';
+import { Question, SimulationInfo, QuizDetail, AcademicUnit } from '../../types';
+import { buildAttemptKey, fetchQuizAttempt, startQuizAttempt, recordQuizAnswer, clearQuizAttempt } from '../../services/quizProgressService';
+import { resolveResumeIndex, resolveQuizTitle } from '../../utils/quizAttempt';
 
 // ============================================================================
 // MICRO-COMPONENTES DE UI (CLEAN CODE)
@@ -112,48 +114,91 @@ const QuizActionButtons = ({ onBack, onRetakeAll, onRetakeWrong, wrongCount }: Q
 interface QuizViewProps {
   questions: Question[];
   discipline: SimulationInfo;
+  // Opcional: o fluxo de Simulador por Área (AreaExecFlow) reaproveita QuizView sem conceito de
+  // unidade N1/N2 e sem retomada remota (userId também fica de fora ali) — fora do escopo da v1
+  // de retomada entre dispositivos, ver PLANO-REESTRUTURACAO.md Etapa 6.
+  unit?: AcademicUnit;
+  userId?: string;
   onBack: () => void;
   onSaveResult: (score: number, total: number, quizTitle?: string, type?: 'teorico' | 'laboratorio' | 'osce', timeSpent?: number, details?: QuizDetail[]) => void;
 }
 
-const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSaveResult }) => {
-  // Chaves do localStorage
-  const storageKey = `quiz_progress_${discipline.title.replace(/\s+/g, '_')}`;
-  const questionsKey = `quiz_questions_${discipline.title.replace(/\s+/g, '_')}`;
+const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, unit = 'N1', userId, onBack, onSaveResult }) => {
+  // Chaves do localStorage — baseadas em discipline.id (não .title, que descasava da chave que
+  // QuizSetupView/QuizExecFlow já usam, deixando o "Simulado em Andamento" morto).
+  const storageKey = `quiz_progress_${discipline.id}_${unit}`;
+  const questionsKey = `quiz_questions_${discipline.id}_${unit}`;
+  const attemptKey = buildAttemptKey(discipline.id, unit);
 
   const [activeQuestions, setActiveQuestions] = useState<Question[]>(questions);
-  const [quizKey, setQuizKey] = useState(0); 
+  const [quizKey, setQuizKey] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
 
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [themeStats, setThemeStats] = useState<{theme: string, correct: number, total: number}[]>([]);
-  
-  // FIX BUG-UI-004: Validação de Cache Rígida.
+
+  // FIX BUG-UI-004: Validação de Cache Rígida (fallback quando não há usuário logado ou a
+  // tentativa remota não bate com o simulado atual).
   const [savedState, setSavedState] = useState<QuizProgressState | null>(() => {
     const saved = localStorage.getItem(storageKey);
     if (!saved) return null;
     try {
       const parsed = JSON.parse(saved);
       const currentSignature = questions.map(q => q.id).join(',');
-      
+
       // Se a assinatura for diferente (ou seja, é um simulado diferente!), DESTRÓI o cache.
       if (parsed.quizSignature && parsed.quizSignature !== currentSignature) {
         localStorage.removeItem(storageKey);
         return null;
       }
-      
+
       // Proteção extra para caches antigos (legados)
       if (!parsed.quizSignature && parsed.currentIndex >= questions.length) {
         localStorage.removeItem(storageKey);
         return null;
       }
-      
+
       return parsed;
     } catch(e) {
       return null;
     }
   });
+
+  // TENTATIVA REMOTA (Firestore) — retomar entre dispositivos. Tem prioridade sobre o
+  // localStorage quando as duas existirem, por ser a fonte cross-device. Enquanto carrega, o
+  // <InteractiveQuiz> não é montado ainda: seu estado inicial só é lido uma vez, no mount.
+  const [isAttemptLoaded, setIsAttemptLoaded] = useState(!userId);
+
+  useEffect(() => {
+    if (!userId) {
+      setIsAttemptLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setIsAttemptLoaded(false);
+    fetchQuizAttempt(userId, attemptKey)
+      .then((attempt) => {
+        if (cancelled || !attempt) return;
+        const currentSignature = questions.map(q => q.id).join(',');
+        const attemptSignature = attempt.questionIds.join(',');
+        if (attemptSignature !== currentSignature) return;
+
+        const score = questions.filter(q => attempt.answers[q.id] === q.answer).length;
+        setSavedState({
+          currentIndex: resolveResumeIndex(attempt.questionIds, attempt.answers),
+          answers: attempt.answers,
+          score,
+          draftAnswers: {},
+          eliminatedOptions: {},
+          quizSignature: currentSignature,
+        });
+      })
+      .catch((err) => console.error('Erro ao carregar simulado em andamento:', err))
+      .finally(() => { if (!cancelled) setIsAttemptLoaded(true); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, attemptKey]);
 
   // IDENTIFICADORES ANALÍTICOS
   const [sessionId] = useState(() => `sess_${Date.now()}_${Math.random().toString(36).substring(2,9)}`);
@@ -163,26 +208,30 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     setActiveQuestions(questions);
   }, [questions]);
 
-  // GRAVAÇÃO PARCIAL (GOTA A GOTA COM ANALYTICS)
-  const handlePartialAnswer = (questionId: string, isCorrect: boolean, theme: string) => {
+  // GRAVAÇÃO PARCIAL (GOTA A GOTA COM ANALYTICS + TENTATIVA REMOTA)
+  const handlePartialAnswer = (questionId: string, optionIndex: number, isCorrect: boolean, theme: string) => {
     const now = Date.now();
     let timeSpentSecs = Math.floor((now - lastQuestionTimeRef.current) / 1000);
-    
+
     // Teto de segurança para tempo ocioso
-    if (timeSpentSecs > 600) timeSpentSecs = 180; 
+    if (timeSpentSecs > 600) timeSpentSecs = 180;
     lastQuestionTimeRef.current = now;
 
-    const uniqueTitles = Array.from(new Set(activeQuestions.map(q => q.quizTitle).filter(Boolean)));
-    const quizName = uniqueTitles.length === 1 ? uniqueTitles[0] : 'Simulado Misto';
+    const quizName = resolveQuizTitle(activeQuestions);
 
     onSaveResult(
-      isCorrect ? 1 : 0, 
-      1,                 
-      quizName, 
-      'teorico', 
-      timeSpentSecs, 
+      isCorrect ? 1 : 0,
+      1,
+      quizName,
+      'teorico',
+      timeSpentSecs,
       [{ questionId, isCorrect, theme, sessionId } as QuizDetail]
     );
+
+    if (userId) {
+      recordQuizAnswer(userId, attemptKey, discipline.id, questionId, isCorrect, optionIndex)
+        .catch(err => console.error('Erro ao salvar progresso do simulado:', err));
+    }
   };
 
   const handleFinish = (score: number, answers: Record<string, number>) => {
@@ -198,19 +247,31 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     
     setThemeStats(stats);
     setIsFinished(true);
-    
+
     localStorage.removeItem(storageKey);
     localStorage.removeItem(questionsKey);
+    if (userId) {
+      clearQuizAttempt(userId, attemptKey).catch(err => console.error('Erro ao limpar tentativa do simulado:', err));
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRetakeAll = () => {
-    localStorage.setItem(questionsKey, JSON.stringify(questions)); 
-    setSavedState(null); 
+    localStorage.setItem(questionsKey, JSON.stringify(questions));
+    setSavedState(null);
     localStorage.removeItem(storageKey);
-    
+    if (userId) {
+      startQuizAttempt(userId, attemptKey, {
+        disciplineId: discipline.id,
+        unit,
+        quizTitle: resolveQuizTitle(questions),
+        questionIds: questions.map(q => q.id),
+        startedAt: Date.now(),
+      }).catch(err => console.error('Erro ao reiniciar tentativa do simulado:', err));
+    }
+
     setActiveQuestions(questions);
-    setQuizKey(k => k + 1); 
+    setQuizKey(k => k + 1);
     setIsFinished(false);
     setFinalScore(0);
     lastQuestionTimeRef.current = Date.now();
@@ -221,10 +282,19 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
     const wrongQ = activeQuestions.filter(q => userAnswers[q.id] !== q.answer);
     if (wrongQ.length === 0) return;
 
-    localStorage.setItem(questionsKey, JSON.stringify(wrongQ)); 
+    localStorage.setItem(questionsKey, JSON.stringify(wrongQ));
     setSavedState(null);
     localStorage.removeItem(storageKey);
-    
+    if (userId) {
+      startQuizAttempt(userId, attemptKey, {
+        disciplineId: discipline.id,
+        unit,
+        quizTitle: resolveQuizTitle(wrongQ),
+        questionIds: wrongQ.map(q => q.id),
+        startedAt: Date.now(),
+      }).catch(err => console.error('Erro ao reiniciar tentativa do simulado:', err));
+    }
+
     setActiveQuestions(wrongQ);
     setQuizKey(k => k + 1);
     setIsFinished(false);
@@ -257,14 +327,21 @@ const QuizView: React.FC<QuizViewProps> = ({ questions, discipline, onBack, onSa
       </div>
 
       {!isFinished ? (
-        <InteractiveQuiz 
-          key={quizKey}
-          questions={activeQuestions} 
-          onFinish={(score, ans) => handleFinish(score, ans)} 
-          onAnswerQuestion={handlePartialAnswer}
-          storageKey={storageKey}
-          resumeState={savedState}
-        />
+        isAttemptLoaded ? (
+          <InteractiveQuiz
+            key={quizKey}
+            questions={activeQuestions}
+            onFinish={(score, ans) => handleFinish(score, ans)}
+            onAnswerQuestion={handlePartialAnswer}
+            storageKey={storageKey}
+            resumeState={savedState}
+          />
+        ) : (
+          <div className="py-32 flex flex-col items-center justify-center">
+            <div className="w-10 h-10 border-4 border-[#003366]/20 border-t-[#D4A017] rounded-full animate-spin mb-4"></div>
+            <h3 className="text-[#003366] font-black uppercase tracking-widest text-xs">Verificando Simulado em Andamento...</h3>
+          </div>
+        )
       ) : (
         <div className="space-y-8 animate-in zoom-in duration-500 pb-20">
           <ScoreDashboard finalScore={finalScore} total={activeQuestions.length} />

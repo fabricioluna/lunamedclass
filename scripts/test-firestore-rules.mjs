@@ -172,6 +172,49 @@ await check('Visitante anônimo NÃO lê progresso de flashcards de ninguém', a
   await assertFails(getDoc(doc(asAnon, 'users', STUDENT_A, 'flashcardProgress', 'sim1')));
 });
 
+// === TENTATIVA DE SIMULADO EM ANDAMENTO + STATUS DE ACERTO POR QUESTÃO (retomar entre
+// dispositivos) — mesmo padrão de subcoleção/isolamento por rota que flashcardProgress. ===
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  const db = ctx.firestore();
+  await setDoc(doc(db, 'users', STUDENT_A, 'quizAttempts', 'hm1_N1'), {
+    disciplineId: 'hm1', unit: 'N1', questionIds: ['q1', 'q2'], answers: {}, startedAt: 0, updatedAt: 0,
+  });
+  await setDoc(doc(db, 'users', STUDENT_A, 'quizQuestionStatus', 'hm1'), {
+    disciplineId: 'hm1', results: { q1: true }, updatedAt: 0,
+  });
+});
+await check('Aluno A lê a PRÓPRIA tentativa de simulado em andamento', async () => {
+  await assertSucceeds(getDoc(doc(asStudentA, 'users', STUDENT_A, 'quizAttempts', 'hm1_N1')));
+});
+await check('Aluno A escreve na PRÓPRIA tentativa de simulado em andamento', async () => {
+  await assertSucceeds(setDoc(doc(asStudentA, 'users', STUDENT_A, 'quizAttempts', 'hm1_N1'), {
+    disciplineId: 'hm1', unit: 'N1', questionIds: ['q1'], answers: {}, startedAt: 0, updatedAt: 0,
+  }));
+});
+await check('Aluno B NÃO lê a tentativa de simulado em andamento do Aluno A', async () => {
+  await assertFails(getDoc(doc(asStudentB, 'users', STUDENT_A, 'quizAttempts', 'hm1_N1')));
+});
+await check('Aluno B NÃO escreve na tentativa de simulado em andamento do Aluno A', async () => {
+  await assertFails(setDoc(doc(asStudentB, 'users', STUDENT_A, 'quizAttempts', 'hm1_N1'), {
+    disciplineId: 'hm1', unit: 'N1', questionIds: [], answers: {}, startedAt: 0, updatedAt: 0,
+  }));
+});
+await check('Visitante anônimo NÃO lê tentativa de simulado de ninguém', async () => {
+  await assertFails(getDoc(doc(asAnon, 'users', STUDENT_A, 'quizAttempts', 'hm1_N1')));
+});
+await check('Aluno A lê o PRÓPRIO status de questões respondidas', async () => {
+  await assertSucceeds(getDoc(doc(asStudentA, 'users', STUDENT_A, 'quizQuestionStatus', 'hm1')));
+});
+await check('Aluno A zera o PRÓPRIO status de questões respondidas', async () => {
+  await assertSucceeds(deleteDoc(doc(asStudentA, 'users', STUDENT_A, 'quizQuestionStatus', 'hm1')));
+});
+await check('Aluno B NÃO lê o status de questões respondidas do Aluno A', async () => {
+  await assertFails(getDoc(doc(asStudentB, 'users', STUDENT_A, 'quizQuestionStatus', 'hm1')));
+});
+await check('Aluno B NÃO zera o status de questões respondidas do Aluno A', async () => {
+  await assertFails(deleteDoc(doc(asStudentB, 'users', STUDENT_A, 'quizQuestionStatus', 'hm1')));
+});
+
 await testEnv.cleanup();
 
 console.log(`\n${failures === 0 ? '✅ Todos os testes passaram' : `❌ ${failures} teste(s) falharam`}`);
