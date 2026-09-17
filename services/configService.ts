@@ -1,6 +1,6 @@
 import { firestoreDB } from '../firebase';
 import { doc, getDoc, setDoc, onSnapshot, updateDoc, deleteField } from 'firebase/firestore';
-import { Period, SimulationInfo, FeatureFlag, ReferenceMaterial, AreaConhecimento, SubareaConhecimento, AcademicUnit } from '../types';
+import { Period, SimulationInfo, FeatureFlag, ReferenceMaterial, AreaConhecimento, SubareaConhecimento, AcademicUnit, SimulatorLocks } from '../types';
 import { setItemField, removeItemField } from '../utils/configItems';
 import { setFeatureLock } from '../utils/featureLocks';
 
@@ -13,6 +13,9 @@ const featureFlagsDocRef = doc(firestoreDB, 'config', 'featureFlags');
 // Rules (Etapa 6) — as demais acima exigem login. Ver firestore.rules.
 const areasConhecimentoDocRef = doc(firestoreDB, 'config', 'areasConhecimento');
 const subareasConhecimentoDocRef = doc(firestoreDB, 'config', 'subareasConhecimento');
+// Mesma exceção de leitura pública, pro slug de cada tipo de simulador (AVAILABLE_SIMULATOR_TYPES)
+// aparecer travado/liberado em /simulators sem exigir login. Ver firestore.rules.
+const simulatorAccessDocRef = doc(firestoreDB, 'config', 'simulatorAccess');
 
 export const subscribeToPeriods = (
   onData: (periods: Period[]) => void,
@@ -79,6 +82,19 @@ export const subscribeToSubareasConhecimento = (
   onData: (subareas: SubareaConhecimento[]) => void,
   onError?: (error: unknown) => void
 ) => subscribeToTagList<SubareaConhecimento>(subareasConhecimentoDocRef, onData, onError);
+
+// Doc é o próprio mapa slug → travado (sem `items`, ao contrário das listas acima) — não há
+// metadado por entrada além do booleano, então um wrapper só complicaria a leitura no admin.
+export const subscribeToSimulatorAccess = (
+  onData: (locks: SimulatorLocks) => void,
+  onError?: (error: unknown) => void
+) => {
+  return onSnapshot(
+    simulatorAccessDocRef,
+    (snap) => onData((snap.data() as SimulatorLocks) || {}),
+    (error) => onError?.(error)
+  );
+};
 
 // === ESCRITA (ADMIN) ===
 
@@ -230,6 +246,10 @@ const deleteTagListEntry = async <T extends { id: string; label: string }>(
   const items = await getTagListArray<T>(docRef);
   await setDoc(docRef, { items: items.filter((item) => item.id !== id) });
 };
+
+// setDoc com merge: o doc pode ainda não existir na primeira vez que o admin trava um tipo.
+export const setSimulatorLocked = (slug: string, isLocked: boolean) =>
+  setDoc(simulatorAccessDocRef, { [slug]: isLocked }, { merge: true });
 
 export const createAreaConhecimento = (label: string) =>
   createTagListEntry<AreaConhecimento>(areasConhecimentoDocRef, 'area', label);

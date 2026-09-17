@@ -13,6 +13,7 @@ interface FilteredDisciplineListViewProps {
   isFetching: boolean;
   onBack: () => void;
   onSelectDiscipline: (disciplineId: string) => void;
+  emptyMessage?: string;
 }
 
 // Nível 2 de um tipo de simulador em /simulators: dentro do tipo escolhido (ex. "Laboratório de
@@ -26,6 +27,7 @@ const FilteredDisciplineListView: React.FC<FilteredDisciplineListViewProps> = ({
   isFetching,
   onBack,
   onSelectDiscipline,
+  emptyMessage = 'Nenhuma disciplina com esse conteúdo cadastrado ainda.',
 }) => {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
@@ -54,7 +56,7 @@ const FilteredDisciplineListView: React.FC<FilteredDisciplineListViewProps> = ({
           </div>
         ) : disciplines.length === 0 ? (
           <div className="text-center py-16 text-gray-400 font-bold uppercase tracking-widest text-xs border-2 border-dashed border-gray-200 rounded-3xl max-w-xl mx-auto">
-            Nenhuma disciplina com esse conteúdo cadastrado ainda.
+            {emptyMessage}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

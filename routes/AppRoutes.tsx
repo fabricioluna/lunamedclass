@@ -494,12 +494,16 @@ type TypeDisciplineListState =
 const TypeDisciplineListFlow = () => {
   const { typeSlug } = useParams();
   const navigate = useNavigate();
-  const { disciplines } = useData();
+  const { disciplines, simulatorLocks } = useData();
   const config = AVAILABLE_SIMULATOR_TYPES.find((t) => t.slug === typeSlug);
+  const isLocked = !!config && simulatorLocks[config.slug] === true;
   const [state, setState] = useState<TypeDisciplineListState>({ status: 'loading' });
 
   useEffect(() => {
-    if (!config) return;
+    // Trava travada pelo admin: nem busca disciplina/estação — o acesso direto por URL (aluno
+    // logado digitando a rota, já que /simulators só esconde o card) não deve funcionar mesmo
+    // que a navegação até aqui não tenha passado pelo menu.
+    if (!config || isLocked) return;
     let cancelled = false;
     setState({ status: 'loading' });
 
@@ -523,7 +527,7 @@ const TypeDisciplineListFlow = () => {
       });
 
     return () => { cancelled = true; };
-  }, [config, disciplines]);
+  }, [config, disciplines, isLocked]);
 
   if (!config) return <Navigate to="/simulators" replace />;
 
@@ -531,10 +535,11 @@ const TypeDisciplineListFlow = () => {
     <FilteredDisciplineListView
       title={config.title}
       description={config.description}
-      disciplines={state.status === 'ready' ? state.disciplines : []}
-      isFetching={state.status === 'loading'}
+      disciplines={isLocked ? [] : state.status === 'ready' ? state.disciplines : []}
+      isFetching={!isLocked && state.status === 'loading'}
       onBack={() => navigate('/simulators')}
       onSelectDiscipline={(disciplineId) => navigate(config.buildPath(disciplineId))}
+      emptyMessage={isLocked ? 'Este simulador está temporariamente bloqueado pela monitoria.' : undefined}
     />
   );
 };

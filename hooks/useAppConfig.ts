@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { PERIODS } from '../data/periods.ts';
 import { SIMULATIONS } from '../data/disciplines.ts';
-import { Period, SimulationInfo, FeatureFlag, AreaConhecimento, SubareaConhecimento } from '../types.ts';
-import { subscribeToPeriods, subscribeToDisciplines, subscribeToFeatureFlags, subscribeToAreasConhecimento, subscribeToSubareasConhecimento } from '../services/configService.ts';
+import { Period, SimulationInfo, FeatureFlag, AreaConhecimento, SubareaConhecimento, SimulatorLocks } from '../types.ts';
+import { subscribeToPeriods, subscribeToDisciplines, subscribeToFeatureFlags, subscribeToAreasConhecimento, subscribeToSubareasConhecimento, subscribeToSimulatorAccess } from '../services/configService.ts';
 
 export const useAppConfig = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -14,6 +14,7 @@ export const useAppConfig = () => {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
   const [areasConhecimento, setAreasConhecimento] = useState<AreaConhecimento[]>([]);
   const [subareasConhecimento, setSubareasConhecimento] = useState<SubareaConhecimento[]>([]);
+  const [simulatorLocks, setSimulatorLocks] = useState<SimulatorLocks>({});
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -77,6 +78,7 @@ export const useAppConfig = () => {
     // visitante deslogado, mas mantém o mesmo formato defensivo por consistência.
     const unsubAreas = subscribeToAreasConhecimento(setAreasConhecimento, () => {});
     const unsubSubareas = subscribeToSubareasConhecimento(setSubareasConhecimento, () => {});
+    const unsubSimulatorLocks = subscribeToSimulatorAccess(setSimulatorLocks, () => {});
 
     return () => {
       unsubPeriods();
@@ -84,8 +86,9 @@ export const useAppConfig = () => {
       unsubFlags();
       unsubAreas();
       unsubSubareas();
+      unsubSimulatorLocks();
     };
   }, []);
 
-  return { isLoading, isOnline, periods, disciplines, featureFlags, areasConhecimento, subareasConhecimento };
+  return { isLoading, isOnline, periods, disciplines, featureFlags, areasConhecimento, subareasConhecimento, simulatorLocks };
 };

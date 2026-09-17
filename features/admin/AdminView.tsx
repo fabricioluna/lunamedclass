@@ -23,6 +23,7 @@ import AdminOsce from './components/AdminOsce';
 import AdminThemes from './components/AdminThemes';
 import AdminReferences from './components/AdminReferences';
 import AdminDisciplines from './components/AdminDisciplines';
+import AdminSimulatorAccess from './components/AdminSimulatorAccess';
 import AdminAnalytics from './components/AdminAnalytics';
 import AdminTagList from './components/AdminTagList';
 import AdminPeriods from './components/AdminPeriods';
@@ -34,7 +35,7 @@ interface AdminViewProps {
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
-  const { periods, disciplines, areasConhecimento, subareasConhecimento } = useData();
+  const { periods, disciplines, areasConhecimento, subareasConhecimento, simulatorLocks } = useData();
   const { isAdmin, isLoadingAuth } = useAuth();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('requests');
@@ -161,6 +162,10 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
   const handleToggleStatus = async (disciplineId: string, currentStatus: string) => {
     await configService.toggleDisciplineStatus(disciplineId, currentStatus);
+  };
+
+  const handleToggleSimulatorLock = async (slug: string, isLocked: boolean) => {
+    await configService.setSimulatorLocked(slug, isLocked);
   };
 
   const handleSetFeatureLock = async (
@@ -420,11 +425,17 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
       )}
 
       {activeTab === 'access' && (
-        <AdminDisciplines
-          disciplines={disciplines}
-          onToggleStatus={handleToggleStatus}
-          onSetFeatureLock={handleSetFeatureLock}
-        />
+        <>
+          <AdminSimulatorAccess
+            simulatorLocks={simulatorLocks}
+            onToggleSimulatorLock={handleToggleSimulatorLock}
+          />
+          <AdminDisciplines
+            disciplines={disciplines}
+            onToggleStatus={handleToggleStatus}
+            onSetFeatureLock={handleSetFeatureLock}
+          />
+        </>
       )}
 
       {activeTab === 'materials' && (

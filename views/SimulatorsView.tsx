@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock } from 'lucide-react';
+import { Clock, Lock } from 'lucide-react';
 import { AVAILABLE_SIMULATOR_TYPES, COMING_SOON_SIMULATOR_TYPES } from '../features/simulators/simulatorTypesConfig';
+import { useData } from '../contexts/DataContext';
 
 // Nível 1 da navegação de Simuladores: escolher o TIPO primeiro (Lab, OSCE...), só depois a
 // disciplina que tem esse conteúdo. Simulado Teórico fica de fora desta lista por decisão do
@@ -13,6 +14,7 @@ import { AVAILABLE_SIMULATOR_TYPES, COMING_SOON_SIMULATOR_TYPES } from '../featu
 // (fonte única, compartilhada com o seletor de disciplina em routes/AppRoutes.tsx).
 const SimulatorsView: React.FC = () => {
   const navigate = useNavigate();
+  const { simulatorLocks } = useData();
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
@@ -28,28 +30,42 @@ const SimulatorsView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {AVAILABLE_SIMULATOR_TYPES.map((type) => (
-            <div
-              key={type.slug}
-              onClick={() => navigate(`/simulators/${type.slug}`)}
-              className="relative bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between group transform transition-all hover:shadow-xl hover:border-[#D4A017] cursor-pointer hover:-translate-y-1"
-            >
-              <div>
-                <div className="p-3 bg-[#003366]/5 rounded-xl group-hover:bg-[#003366]/10 transition-colors w-fit mb-4">
-                  {type.icon}
+          {AVAILABLE_SIMULATOR_TYPES.map((type) => {
+            const isLocked = simulatorLocks[type.slug] === true;
+            return (
+              <div
+                key={type.slug}
+                onClick={isLocked ? undefined : () => navigate(`/simulators/${type.slug}`)}
+                className={`relative bg-white border rounded-2xl p-6 shadow-sm flex flex-col justify-between group transform transition-all ${
+                  isLocked
+                    ? 'border-gray-100 opacity-70 grayscale cursor-not-allowed'
+                    : 'border-gray-200 cursor-pointer hover:shadow-xl hover:border-[#D4A017] hover:-translate-y-1'
+                }`}
+              >
+                {isLocked && (
+                  <div className="absolute top-4 right-4 bg-gray-400/90 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1 z-10">
+                    <Lock size={11} /> Bloqueado
+                  </div>
+                )}
+                <div>
+                  <div className="p-3 bg-[#003366]/5 rounded-xl group-hover:bg-[#003366]/10 transition-colors w-fit mb-4">
+                    {type.icon}
+                  </div>
+                  <h3 className="text-lg font-bold text-[#003366] group-hover:text-[#D4A017] transition-colors">
+                    {type.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+                    {type.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-[#003366] group-hover:text-[#D4A017] transition-colors">
-                  {type.title}
-                </h3>
-                <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                  {type.description}
-                </p>
+                {!isLocked && (
+                  <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-end text-xs font-black tracking-wider uppercase text-[#003366] group-hover:text-[#D4A017] transition-colors">
+                    Acessar &rarr;
+                  </div>
+                )}
               </div>
-              <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-end text-xs font-black tracking-wider uppercase text-[#003366] group-hover:text-[#D4A017] transition-colors">
-                Acessar &rarr;
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           {COMING_SOON_SIMULATOR_TYPES.map((type) => (
             <div

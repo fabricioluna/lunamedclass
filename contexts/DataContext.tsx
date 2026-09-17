@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig.ts';
-import { SimulationInfo, Period, FeatureFlag, AreaConhecimento, SubareaConhecimento } from '../types.ts';
+import { SimulationInfo, Period, FeatureFlag, AreaConhecimento, SubareaConhecimento, SimulatorLocks } from '../types.ts';
 
 // Dados estruturais globais (períodos, disciplinas, feature flags, áreas de conhecimento) —
 // não confundir com dados de domínio (questões, resultados, materiais...), que cada view busca
@@ -15,6 +15,7 @@ interface DataContextType {
   featureFlags: FeatureFlag[];
   areasConhecimento: AreaConhecimento[];
   subareasConhecimento: SubareaConhecimento[];
+  simulatorLocks: SimulatorLocks;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);

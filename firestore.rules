@@ -67,6 +67,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Mesma exceção: quais tipos de simulador (Lab/OSCE) o admin travou, pra /simulators
+    // mostrar o card já bloqueado/desabilitado a visitante deslogado, sem esperar login pra
+    // saber. Só booleanos por slug (ver types.ts SimulatorLocks) — nenhum dado sensível.
+    match /config/simulatorAccess {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Bancos de conteúdo: só admin publica; alunos autenticados leem.
     match /questions/{id} {
       allow read: if isSignedIn();

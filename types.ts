@@ -68,6 +68,13 @@ export interface SubareaConhecimento {
   label: string;
 }
 
+// Bloqueio de tipo de simulador (item novo, Etapa 6): chave = slug de
+// features/simulators/simulatorTypesConfig.tsx (ex.: "osce-rpg"), valor = true quando travado
+// pelo admin. Ausência de chave = liberado (mesmo padrão "ausente = destravado" de
+// utils/featureLocks.ts). Vive em config/simulatorAccess, leitura pública (precisa aparecer
+// bloqueado/liberado em /simulators para visitante deslogado, D6-style), escrita só admin.
+export type SimulatorLocks = Record<string, boolean>;
+
 // === INTERFACES COMPARTILHADAS ===
 export interface ClinicalState {
   hr: number;       // Heart Rate (Frequência Cardíaca)

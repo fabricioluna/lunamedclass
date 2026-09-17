@@ -1624,6 +1624,60 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   `build` ✅.
 
 
+- [x] **6.15 — Trava por tipo de simulador em `/simulators` (aba "Acessos")**
+  *(concluído em 2026-09-17)*. Pedido do usuário: controlar o acesso aos simuladores acessados
+  independente de login. Investigação mostrou que `/simulators` e `/simulators/teorico` já são só
+  telas de **navegação** (menu de tipos/áreas, D6) — configurar/executar de fato já cai em
+  `<ProtectedRoute>`. Perguntado ao usuário o que "controlar acesso" deveria significar: opção
+  escolhida foi **manter o menu público, mas travar tipos específicos** (Paciente Virtual, OSCE
+  RPG, OSCE Estático, os 4 Labs) via toggle no admin — não fechar o D6 inteiro.
+
+  **Desenho (mesmo padrão D6-style de `config/areasConhecimento`/`subareasConhecimento`):**
+  `config/simulatorAccess` = `{ [slug]: boolean }`, leitura pública (precisa aparecer
+  bloqueado/liberado pra visitante deslogado em `/simulators`), escrita só admin. Chave = `slug`
+  de `AVAILABLE_SIMULATOR_TYPES` (`features/simulators/simulatorTypesConfig.tsx`). Ausência de
+  chave = liberado, mesmo padrão "ausente = destravado" de `utils/featureLocks.ts`.
+
+  - `types.ts`: `SimulatorLocks = Record<string, boolean>`.
+  - `firestore.rules`: `match /config/simulatorAccess { allow read: if true; allow write: if
+    isAdmin(); }` — mesma exceção pública das duas de cima, mesmo motivo (nenhum dado sensível,
+    só booleano por slug).
+  - `services/configService.ts`: `subscribeToSimulatorAccess`, `setSimulatorLocked` (`setDoc`
+    com `merge: true` — doc pode não existir ainda no primeiro toggle).
+  - `hooks/useAppConfig.ts` / `contexts/DataContext.tsx`: `simulatorLocks` exposto igual aos
+    outros dados estruturais públicos, mesmo padrão defensivo de erro (visitante lê de qualquer
+    forma, mas o `onError` não derruba a tela caso algo mude).
+  - `views/SimulatorsView.tsx`: card do tipo travado vira cinza/grayscale com badge "Bloqueado"
+    (mesmo visual dos "Em breve") e para de navegar ao clicar.
+  - `routes/AppRoutes.tsx` (`TypeDisciplineListFlow`): a trava também vale pra **acesso direto por
+    URL** — aluno logado que digite `/simulators/osce-rpg` de cabeça cai na mesma tela vazia
+    ("Este simulador está temporariamente bloqueado pela monitoria"), sem disparar a busca de
+    disciplinas/estações. Sem isso a trava do menu seria só cosmética pra quem já sabe a rota.
+  - `features/simulators/FilteredDisciplineListView.tsx`: ganhou `emptyMessage?: string` opcional
+    (antes o texto do estado vazio era fixo) — reaproveitado pro aviso de bloqueio em vez de criar
+    um componente novo só pra isso.
+  - `features/admin/components/AdminSimulatorAccess.tsx` (novo): grade de toggles, um por tipo de
+    `AVAILABLE_SIMULATOR_TYPES`, renderizado no topo da aba "Acessos" do admin (`AdminView.tsx`),
+    antes de `AdminDisciplines` — mesma aba, mas granularidade diferente (por tipo global, não por
+    disciplina).
+  - `scripts/test-firestore-rules.mjs`: 4 casos novos (visitante lê ✅, visitante escreve ❌, aluno
+    escreve ❌, admin escreve ✅), mesmo formato dos casos de área/subárea.
+
+  ⚠️ **Mesma ressalva de sempre (herdada, não nova):** é trava de **curadoria de UI**, igual ao
+  6.8 — não é Security Rule de conteúdo. Um aluno logado com o SDK do Firebase ainda lê
+  `osceStations`/`labSimulations` da disciplina por trás de um tipo "bloqueado" direto do
+  Firestore; o que a trava garante é que a navegação normal do app (menu e URL direta da rota de
+  simulador) não chega lá. Suficiente pro objetivo (curar o que a turma piloto vê agora), não deve
+  ser tratado como controle de acesso real caso o conteúdo vire sensível (prova, gabarito).
+
+  🔴 **Pendência de sempre para regra nova em `firestore.rules`:** publicar a regra atualizada no
+  Firebase Console → Firestore Database → Regras antes que o toggle tenha efeito em produção —
+  `npm run test:rules` já validou a lógica no emulador (39/39), mas não substitui a publicação.
+
+  Verificação: `typecheck` ✅, `vitest` **137/137** ✅, `lint` 22 ✅ (mesmos pré-existentes,
+  nenhum novo), `test:rules` **39/39** ✅ (emulador), `build` ✅.
+
+
 ---
 
 ## 📋 Referência rápida

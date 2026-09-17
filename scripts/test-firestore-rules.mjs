@@ -59,6 +59,7 @@ await testEnv.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(db, 'config', 'periods'), { items: [{ id: 'p1', name: 'Período 1' }] });
   await setDoc(doc(db, 'config', 'areasConhecimento'), { items: [{ id: 'a1', label: 'Anatomia' }] });
   await setDoc(doc(db, 'config', 'subareasConhecimento'), { items: [{ id: 's1', label: 'Sistema Reprodutor Feminino' }] });
+  await setDoc(doc(db, 'config', 'simulatorAccess'), { 'osce-rpg': true });
   await setDoc(doc(db, 'materials', 'mat1'), { title: 'Original', disciplineId: 'hm1', unit: 'N1' });
 });
 
@@ -114,6 +115,20 @@ await check('Visitante anônimo NÃO escreve em config/subareasConhecimento', as
 });
 await check('Admin escreve em config/subareasConhecimento', async () => {
   await assertSucceeds(setDoc(doc(asAdmin, 'config', 'subareasConhecimento'), { items: [] }));
+});
+
+// === TRAVA DE TIPO DE SIMULADOR — mesma exceção pública (item novo, Etapa 6) ===
+await check('Visitante anônimo LÊ config/simulatorAccess (pública por design)', async () => {
+  await assertSucceeds(getDoc(doc(asAnon, 'config', 'simulatorAccess')));
+});
+await check('Visitante anônimo NÃO escreve em config/simulatorAccess', async () => {
+  await assertFails(setDoc(doc(asAnon, 'config', 'simulatorAccess'), { 'osce-rpg': false }));
+});
+await check('Aluno NÃO escreve em config/simulatorAccess', async () => {
+  await assertFails(setDoc(doc(asStudentA, 'config', 'simulatorAccess'), { 'osce-rpg': false }));
+});
+await check('Admin escreve em config/simulatorAccess', async () => {
+  await assertSucceeds(setDoc(doc(asAdmin, 'config', 'simulatorAccess'), { 'osce-rpg': false }));
 });
 
 // === MATERIALS — aluno cria, não edita nem apaga o de outro (fix desta sessão) ===
