@@ -484,9 +484,13 @@ const AreaExecFlow = () => {
 // --- SIMULADORES › TIPO → DISCIPLINA (Etapa 6) ---
 // Cada tipo em AVAILABLE_SIMULATOR_TYPES já aponta pra uma rota de disciplina que EXISTE e já
 // funciona (LabListView já entende ?cat=, OsceSetupView já entende /configurar/:mode) — só
-// falta saber em quais disciplinas aquele tipo de conteúdo existe de verdade. Precisa de login
-// (diferente de /simulators e /simulators/teorico) porque lê labSimulations/osceStations, que
-// não são públicas — ao contrário de config/areasConhecimento.
+// falta saber em quais disciplinas aquele tipo de conteúdo existe de verdade.
+//
+// Login exigido só pra tipos de Lab (labSimulations não é público). OSCE (estático/rpg/ai) é
+// público de propósito desde o item 6.16 — decisão explícita do usuário: esses 3 simuladores
+// devem funcionar de ponta a ponta (listar disciplina → configurar → executar) sem login, igual
+// a /survey. A trava fica dentro do componente (`config.source === 'lab'`), não na <Route>,
+// porque o mesmo path serve os dois grupos de tipos.
 type TypeDisciplineListState =
   | { status: 'loading' }
   | { status: 'ready'; disciplines: { id: string; title: string; count: number }[] };
@@ -531,7 +535,7 @@ const TypeDisciplineListFlow = () => {
 
   if (!config) return <Navigate to="/simulators" replace />;
 
-  return (
+  const content = (
     <FilteredDisciplineListView
       title={config.title}
       description={config.description}
@@ -542,6 +546,10 @@ const TypeDisciplineListFlow = () => {
       emptyMessage={isLocked ? 'Este simulador está temporariamente bloqueado pela monitoria.' : undefined}
     />
   );
+
+  // Só os tipos de Laboratório continuam exigindo login aqui (labSimulations não é público).
+  // OSCE (estático/rpg/ai) é público de propósito (item 6.16) — ver comentário acima do tipo.
+  return config.source === 'lab' ? <ProtectedRoute>{content}</ProtectedRoute> : content;
 };
 
 const MaterialsFlow = () => {
@@ -593,9 +601,12 @@ const AppRoutes: React.FC = () => {
             <Route path="/disciplina/:disciplineId/simulado" element={<ProtectedRoute><QuizFlow /></ProtectedRoute>} />
             <Route path="/disciplina/:disciplineId/simulado/executar" element={<ProtectedRoute><QuizExecFlow /></ProtectedRoute>} />
 
-            <Route path="/disciplina/:disciplineId/osce" element={<ProtectedRoute><OsceModeFlow /></ProtectedRoute>} />
-            <Route path="/disciplina/:disciplineId/osce/configurar/:mode" element={<ProtectedRoute><OsceSetupFlow /></ProtectedRoute>} />
-            <Route path="/disciplina/:disciplineId/osce/estacao/:stationId" element={<ProtectedRoute><OsceExecFlow /></ProtectedRoute>} />
+            {/* OSCE (Estático/RPG/Paciente Virtual) público de propósito, D6-style — ver
+                PLANO-REESTRUTURACAO.md item 6.16. Vale pra QUALQUER entrada nessas rotas, não só
+                via /simulators: a URL é a mesma independente de como o visitante chegou nela. */}
+            <Route path="/disciplina/:disciplineId/osce" element={<OsceModeFlow />} />
+            <Route path="/disciplina/:disciplineId/osce/configurar/:mode" element={<OsceSetupFlow />} />
+            <Route path="/disciplina/:disciplineId/osce/estacao/:stationId" element={<OsceExecFlow />} />
 
             <Route path="/disciplina/:disciplineId/lab" element={<ProtectedRoute><LabFlow /></ProtectedRoute>} />
             <Route path="/disciplina/:disciplineId/lab/simulacao/:simId" element={<ProtectedRoute><LabExecFlow /></ProtectedRoute>} />
@@ -628,7 +639,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/simulators/teorico" element={<TeoricoAreaListView />} />
             <Route path="/simulators/teorico/:areaId" element={<ProtectedRoute><AreaSetupFlow /></ProtectedRoute>} />
             <Route path="/simulators/teorico/:areaId/executar" element={<ProtectedRoute><AreaExecFlow /></ProtectedRoute>} />
-            <Route path="/simulators/:typeSlug" element={<ProtectedRoute><TypeDisciplineListFlow /></ProtectedRoute>} />
+            <Route path="/simulators/:typeSlug" element={<TypeDisciplineListFlow />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

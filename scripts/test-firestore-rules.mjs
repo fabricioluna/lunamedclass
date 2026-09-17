@@ -57,6 +57,9 @@ await testEnv.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(db, 'quizResults', 'result_a'), { userId: STUDENT_A, score: 8, total: 10 });
   await setDoc(doc(db, 'quizResults', 'result_b'), { userId: STUDENT_B, score: 5, total: 10 });
   await setDoc(doc(db, 'config', 'periods'), { items: [{ id: 'p1', name: 'Período 1' }] });
+  await setDoc(doc(db, 'config', 'disciplines'), { items: [{ id: 'hm1', title: 'HM1', periodId: 'p1' }] });
+  await setDoc(doc(db, 'osceStations', 'osce1'), { disciplineId: 'hm1', mode: 'clinical', title: 'Estação 1' });
+  await setDoc(doc(db, 'questions', 'q1'), { disciplineId: 'hm1', q: 'Pergunta?' });
   await setDoc(doc(db, 'config', 'areasConhecimento'), { items: [{ id: 'a1', label: 'Anatomia' }] });
   await setDoc(doc(db, 'config', 'subareasConhecimento'), { items: [{ id: 's1', label: 'Sistema Reprodutor Feminino' }] });
   await setDoc(doc(db, 'config', 'simulatorAccess'), { 'osce-rpg': true });
@@ -95,6 +98,40 @@ await check('Aluno NÃO escreve em config/periods', async () => {
 });
 await check('Admin escreve em config/periods', async () => {
   await assertSucceeds(setDoc(doc(asAdmin, 'config', 'periods'), { items: [] }));
+});
+
+// === DISCIPLINES — exceção pública (item 6.16: OSCE público precisa achar título/categoria
+// da disciplina sem depender de login) ===
+await check('Visitante anônimo LÊ config/disciplines (pública por design, item 6.16)', async () => {
+  await assertSucceeds(getDoc(doc(asAnon, 'config', 'disciplines')));
+});
+await check('Visitante anônimo NÃO escreve em config/disciplines', async () => {
+  await assertFails(setDoc(doc(asAnon, 'config', 'disciplines'), { items: [] }));
+});
+await check('Admin escreve em config/disciplines', async () => {
+  await assertSucceeds(setDoc(doc(asAdmin, 'config', 'disciplines'), { items: [] }));
+});
+
+// === OSCE STATIONS — público de propósito (item 6.16): os 3 modos rodam sem login ===
+await check('Visitante anônimo LÊ osceStations (pública por design, item 6.16)', async () => {
+  await assertSucceeds(getDoc(doc(asAnon, 'osceStations', 'osce1')));
+});
+await check('Visitante anônimo NÃO escreve em osceStations', async () => {
+  await assertFails(setDoc(doc(asAnon, 'osceStations', 'osce1'), { title: 'Hackeado' }));
+});
+await check('Aluno NÃO escreve em osceStations (só admin publica conteúdo)', async () => {
+  await assertFails(setDoc(doc(asStudentA, 'osceStations', 'osce1'), { title: 'Hackeado' }));
+});
+await check('Admin escreve em osceStations', async () => {
+  await assertSucceeds(setDoc(doc(asAdmin, 'osceStations', 'osce1'), { title: 'Editado' }, { merge: true }));
+});
+
+// === QUESTIONS — continua exigindo login (Simulado Teórico não mudou) ===
+await check('Visitante anônimo NÃO lê questions', async () => {
+  await assertFails(getDoc(doc(asAnon, 'questions', 'q1')));
+});
+await check('Aluno autenticado lê questions', async () => {
+  await assertSucceeds(getDoc(doc(asStudentA, 'questions', 'q1')));
 });
 
 // === ÁREAS DE CONHECIMENTO — única leitura pública de config/* (Etapa 6, D6-style) ===

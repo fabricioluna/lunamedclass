@@ -1678,6 +1678,65 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   nenhum novo), `test:rules` **39/39** ✅ (emulador), `build` ✅.
 
 
+- [x] **6.16 — OSCE (Estático/RPG/Paciente Virtual) roda sem login, de ponta a ponta**
+  *(concluído em 2026-09-17, mesma sessão do 6.15)*. Pedido do usuário logo depois do 6.15: ao
+  testar em aba anônima, o clique num card de OSCE em `/simulators` pedia login — comportamento
+  esperado até então (D6: só o *menu* era público, configurar/executar sempre exigiu conta).
+  Perguntado explicitamente: **os 3 modos de OSCE devem ficar 100% públicos** (sem login em
+  nenhuma etapa), pra qualquer disciplina, mesmo sabendo que isso tira o rastro de quem rodou o
+  caso (D9 já tornava isso irrelevante pra nota — OSCE nunca contou resultado). Confirmado.
+
+  **Diferente do 6.15**: aquele item travava/destrava por tipo, mantendo o D6 original intacto
+  (menu público, execução sempre logada). Este item **reabre o D6 pros 3 modos de OSCE**
+  especificamente — Lab continua exigindo login normalmente, sem mudança.
+
+  - `routes/AppRoutes.tsx`: `<ProtectedRoute>` removido de `/disciplina/:id/osce`,
+    `/disciplina/:id/osce/configurar/:mode` e `/disciplina/:id/osce/estacao/:stationId` — vale
+    pra QUALQUER entrada nessas URLs, não só via `/simulators` (a rota não sabe como o visitante
+    chegou nela). `/simulators/:typeSlug` deixou de ter `<ProtectedRoute>` na `<Route>`; a trava
+    agora mora **dentro** de `TypeDisciplineListFlow` (`config.source === 'lab' ?
+    <ProtectedRoute>... : ...`), porque o mesmo path serve tipos OSCE (públicos) e Lab
+    (continuam logados) — não dá pra decidir isso só pelo padrão da URL.
+  - `firestore.rules`: `osceStations` virou `allow read: if true` (era `isSignedIn()`).
+    `config/disciplines` ganhou a mesma exceção pública de `areasConhecimento`/
+    `subareasConhecimento`/`simulatorAccess` — **necessário**, não cosmético: sem isso,
+    `OsceModeFlow`/`OsceSetupFlow` (que fazem `disciplines.find(d => d.id === disciplineId)`)
+    cairiam no fallback estático de `data/disciplines.ts` pra visitante deslogado, e uma
+    disciplina cadastrada depois desse seed simplesmente não apareceria — bug silencioso, não
+    crash. `questions` **não mudou** (Simulado Teórico continua exigindo login).
+  - Nenhuma mudança nos componentes de OSCE (`OsceView`/`DynamicOsceView`/`OsceAIView`): já não
+    usam `currentUser` diretamente, e o único ponto que usava (`onSaveResult` em
+    `OsceExecFlow`) já era condicionado a `if (currentUser)` — anônimo simplesmente não salva
+    nada, sem crashar (mesmo efeito prático que D9 já garantia pra aluno logado).
+  - `features/simulators/simulatorTypesConfig.tsx`: comentário novo deixando explícito que
+    `source: 'osce'` = sem login e `source: 'lab'` = login obrigatório, e que mudar o `source`
+    de um tipo muda essa exigência automaticamente (não é só metadado visual).
+  - `scripts/test-firestore-rules.mjs`: casos novos para `config/disciplines` e `osceStations`
+    (visitante lê ✅ os dois / escreve ❌; aluno não escreve; admin escreve) + 2 casos novos
+    confirmando que `questions` **continua** exigindo login (regressão do que não devia mudar).
+
+  ⚠️ **Nota de risco aceita, não escondida:** `/api/chat` (usado pelo Paciente Virtual) já não
+  tinha verificação de autenticação nenhuma antes desta mudança — só rate limit por IP (ver
+  seção "Lições que já custaram um incidente" do `CLAUDE.md`). Abrir o frontend não piora a
+  exposição real da API Gemini, só alinha a UI com o que já era verdade no backend. Continua
+  valendo o alerta de sempre: rate limiting por IP é mitigação de custo, não controle de acesso.
+
+  **Verificado em navegador anônimo (Playwright, `npm run dev` local contra o Firebase de
+  produção, rules ainda não publicadas nesta sessão):** `/simulators`, `/simulators/osce-estatico`
+  e `/disciplina/hm1/osce/configurar/static` abrem sem tela de login (com a permissão ainda
+  negada em produção, caem no estado vazio "nenhuma disciplina/estação", nunca em crash ou tela
+  de login — confirma que o `.catch()` de sempre segura o golpe até a regra ser publicada).
+  `/simulators/lab-anatomia` continua pedindo login normalmente, sem regressão.
+
+  🔴 **Mesma pendência do 6.15, agora crítica pro conteúdo aparecer de verdade:** publicar
+  `firestore.rules` no Firebase Console antes que o teste acima passe a mostrar disciplinas/
+  estações reais em vez do estado vazio.
+
+  Verificação: `typecheck` ✅, `vitest` **137/137** ✅, `lint` 22 ✅ (mesmos pré-existentes,
+  nenhum novo), `test:rules` **49/49** ✅ (emulador), `build` ✅, smoke test Playwright anônimo ✅
+  (ver acima).
+
+
 ---
 
 ## 📋 Referência rápida

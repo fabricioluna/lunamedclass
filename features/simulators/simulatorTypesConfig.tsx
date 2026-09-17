@@ -26,6 +26,11 @@ export interface ComingSoonSimulatorType {
 // `buildPath` sempre aponta pra uma rota que JÁ EXISTE e já funciona (LabListView já entende
 // `?cat=`, OsceSetupView já entende `/configurar/:mode`); esta tela só resolve "em qual
 // disciplina esse tipo de conteúdo existe", que antes não tinha atalho nenhum.
+//
+// `source: 'osce'` roda sem login (item 6.16, decisão explícita do usuário) — as rotas
+// `/disciplina/:id/osce/*` não têm <ProtectedRoute>. `source: 'lab'` continua exigindo conta
+// (`labSimulations` não é público). Mudar o `source` de um tipo muda essa exigência de login
+// automaticamente em routes/AppRoutes.tsx (TypeDisciplineListFlow) — não é só cosmético.
 export const AVAILABLE_SIMULATOR_TYPES: SimulatorTypeConfig[] = [
   {
     slug: 'lab-anatomia',

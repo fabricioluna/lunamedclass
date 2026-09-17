@@ -75,13 +75,27 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Bancos de conteúdo: só admin publica; alunos autenticados leem.
+    // Exceção nova (item 6.16): OSCE (estático/rpg/paciente virtual) roda de ponta a ponta sem
+    // login — decisão explícita do usuário, mesmo molde do /survey. Pra rota funcionar direito
+    // pra visitante deslogado, config/disciplines (usado só pra achar título/categoria da
+    // disciplina, ver routes/AppRoutes.tsx) também precisa ser público — sem isso o app cairia
+    // no fallback estático de data/disciplines.ts, que pode estar desatualizado (disciplina nova
+    // cadastrada pelo admin não apareceria pro visitante). Nenhum campo sensível aqui: título,
+    // categoria, temas, referências — não é dado de aluno (Regra 3 do CLAUDE.md é sobre isso).
+    match /config/disciplines {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Bancos de conteúdo: só admin publica. `questions` continua exigindo login (usado só pelo
+    // Simulado Teórico, que sempre exigiu conta). `osceStations` ficou público (item 6.16) —
+    // os 3 modos de OSCE (estático/rpg/ai) rodam sem login, por decisão do usuário.
     match /questions/{id} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
     match /osceStations/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
     match /labSimulations/{id} {
