@@ -9,6 +9,7 @@ import { User as FirebaseUser } from 'firebase/auth';
 import {
   UserProfile, UserRole, subscribeToProfile, createProfile, stampLastLogin, updateUserPeriod as updateUserPeriodService,
 } from '../services/authService';
+import { withClaimRole } from '../utils/effectiveProfile';
 
 export type { UserRole, UserProfile };
 
@@ -47,13 +48,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // (decorativo — ver D5 / scripts/set-admin-claim.mjs). Claims só refletem depois de
         // um novo login, então isso é lido uma vez por sessão, não em tempo real.
         const tokenResult = await user.getIdTokenResult();
-        setIsAdmin(tokenResult.claims.admin === true);
+        const isAdminClaim = tokenResult.claims.admin === true;
+        setIsAdmin(isAdminClaim);
 
         let hasStampedLoginThisSession = false;
 
         unsubscribeProfile = subscribeToProfile(user.uid, (profile) => {
           if (profile) {
-            setUserProfile(profile);
+            setUserProfile(withClaimRole(profile, isAdminClaim));
           } else {
             const newProfile: UserProfile = {
               uid: user.uid,
@@ -65,7 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               lastLogin: new Date().toISOString()
             };
             createProfile(newProfile);
-            setUserProfile(newProfile);
+            setUserProfile(withClaimRole(newProfile, isAdminClaim));
           }
           setIsLoadingAuth(false);
 
