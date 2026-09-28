@@ -13,6 +13,10 @@ export interface UserProfile {
   photoURL: string | null;
   role: UserRole;
   periodId?: string;
+  // Períodos extras liberados por um admin (ex.: monitor do período 1 que também é aluno do
+  // período 2) — não muda o período "de casa" (periodId), só amplia o que a trava de rota em
+  // AppRoutes.tsx deixa passar. Ver utils/periodAccess.ts.
+  extraPeriodIds?: string[];
   createdAt: string;
   lastLogin: string;
 }
@@ -52,6 +56,10 @@ export const stampLastLogin = async (uid: string) => {
 
 export const updateUserPeriod = async (uid: string, periodId: string) => {
   await updateDoc(profileRef(uid), { periodId });
+};
+
+export const updateUserExtraPeriods = async (uid: string, periodIds: string[]) => {
+  await updateDoc(profileRef(uid), { extraPeriodIds: periodIds });
 };
 
 export const getProfileOnce = async (uid: string): Promise<UserProfile | null> => {

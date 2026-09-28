@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import ProtectedRoute from '../features/auth/ProtectedRoute';
+import { canAccessPeriod } from '../utils/periodAccess';
 
 // ============================================================================
 // CODE SPLITTING (LAZY LOADING) - PADRÃO BIG TECH
@@ -76,7 +77,10 @@ const PeriodFlow = () => {
 
   if (isLoadingAuth || !userProfile) return null;
 
-  if (userProfile.role === 'student' && userProfile.periodId) {
+  // Só pula direto pro período de casa quando não há período extra pra escolher — com
+  // extraPeriodIds preenchido (ex.: monitor de outro período, liberado pelo admin em
+  // AdminUserAccess), o aluno precisa ver esta tela pra navegar entre os períodos liberados.
+  if (userProfile.role === 'student' && userProfile.periodId && !userProfile.extraPeriodIds?.length) {
     return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
   }
 
@@ -84,7 +88,13 @@ const PeriodFlow = () => {
     navigate(`/periodo/${periodId}`);
   };
 
-  return <PeriodSelectionView periods={periods} onSelectPeriod={handleSelectPeriod} />;
+  // Com período de casa definido, mostra só o que o aluno pode acessar (próprio + extras) —
+  // sem isso, a lista completa deixaria clicável um período que a rota vai barrar de volta.
+  const visiblePeriods = userProfile.role === 'student' && userProfile.periodId
+    ? periods.filter(p => canAccessPeriod(userProfile, p.id))
+    : periods;
+
+  return <PeriodSelectionView periods={visiblePeriods} onSelectPeriod={handleSelectPeriod} />;
 };
 
 const HomeFlow = () => {
@@ -96,8 +106,8 @@ const HomeFlow = () => {
   const period = PERIODS.find(p => p.id === periodId);
   if (!period) return <Navigate to="/" replace />;
 
-  if (userProfile?.role === 'student' && userProfile.periodId && userProfile.periodId !== periodId) {
-    return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
+  if (periodId && !canAccessPeriod(userProfile, periodId)) {
+    return <Navigate to={`/periodo/${userProfile?.periodId}`} replace />;
   }
 
   const periodDiscs = disciplines.filter(d => d.periodId === periodId);
@@ -113,8 +123,8 @@ const DisciplineFlow = () => {
   const discipline = disciplines.find(d => d.id === disciplineId);
   if (!discipline) return <Navigate to="/" replace />;
 
-  if (userProfile?.role === 'student' && userProfile.periodId && discipline.periodId !== userProfile.periodId) {
-    return <Navigate to={`/periodo/${userProfile.periodId}`} replace />;
+  if (!canAccessPeriod(userProfile, discipline.periodId)) {
+    return <Navigate to={`/periodo/${userProfile?.periodId}`} replace />;
   }
 
   const handleSelectOption = (type: string, unit?: AcademicUnit) => {
