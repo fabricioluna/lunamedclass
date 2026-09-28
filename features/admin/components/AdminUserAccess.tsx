@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Period } from '../../../types';
 import { UserProfile } from '../../../services/authService';
 import * as adminService from '../../../services/adminService';
+import type { UserEmailSuggestion } from '../../../services/adminService';
 import { updateUserExtraPeriods } from '../../../services/authService';
 import { Search, Loader2, Save, UserX, ShieldCheck } from 'lucide-react';
 
 interface AdminUserAccessProps {
   periods: Period[];
 }
+
+const EMAIL_DATALIST_ID = 'admin-user-access-emails';
 
 // Libera período extra por e-mail (ex.: aluno do período 2 que também monitora o período 1).
 // Não altera periodId (o "período de casa" do aluno, usado em matrícula/estatística) — só
@@ -20,6 +23,15 @@ const AdminUserAccess: React.FC<AdminUserAccessProps> = ({ periods }) => {
   const [foundUser, setFoundUser] = useState<UserProfile | null>(null);
   const [draftExtra, setDraftExtra] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [emailSuggestions, setEmailSuggestions] = useState<UserEmailSuggestion[]>([]);
+
+  // Carrega a lista de e-mails uma vez, só pra alimentar o <datalist> (autocompletar) — não é
+  // tempo real porque a lista de usuários não muda durante a sessão de um admin no painel.
+  useEffect(() => {
+    adminService.listUserEmails()
+      .then(setEmailSuggestions)
+      .catch((error) => console.error('Erro ao carregar e-mails pro autocompletar:', error));
+  }, []);
 
   const handleSearch = async () => {
     const trimmed = emailInput.trim();
@@ -83,9 +95,18 @@ const AdminUserAccess: React.FC<AdminUserAccessProps> = ({ periods }) => {
           onChange={e => setEmailInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
           placeholder="email@exemplo.com"
+          list={EMAIL_DATALIST_ID}
+          autoComplete="off"
           className="flex-1 p-4 bg-gray-50 rounded-xl outline-none border-2 border-gray-200 focus:border-[#D4A017] transition-all font-bold text-[#003366]"
           disabled={isSearching}
         />
+        <datalist id={EMAIL_DATALIST_ID}>
+          {emailSuggestions.map(({ email, displayName }) => (
+            <option key={email} value={email}>
+              {displayName || email}
+            </option>
+          ))}
+        </datalist>
         <button
           onClick={handleSearch}
           disabled={!emailInput.trim() || isSearching}

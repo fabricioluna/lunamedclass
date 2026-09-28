@@ -59,6 +59,22 @@ export const findUserByEmail = async (email: string): Promise<UserProfile | null
   return found ? (found.data() as UserProfile) : null;
 };
 
+export interface UserEmailSuggestion {
+  email: string;
+  displayName: string | null;
+}
+
+// Alimenta o autocompletar do campo de e-mail em AdminUserAccess — mesmo raciocínio do
+// fallback acima (turma piloto pequena, ação só alcançável por admin): trazer a coleção
+// inteira de uma vez é aceitável aqui.
+export const listUserEmails = async (): Promise<UserEmailSuggestion[]> => {
+  const snap = await getDocs(usersCollection);
+  return snap.docs
+    .map((d) => d.data() as UserProfile)
+    .filter((u): u is UserProfile & { email: string } => !!u.email)
+    .map((u) => ({ email: u.email, displayName: u.displayName }));
+};
+
 // Reset total: mesmo escopo do antigo handleGlobalReset (RTDB) — questões, OSCE, lab,
 // analytics, estrutura base (períodos/disciplinas/flags) e fila de solicitações. Não inclui
 // `materials` nem `quizResults`, que sempre tiveram botões de limpeza separados.
