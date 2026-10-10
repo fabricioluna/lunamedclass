@@ -1863,8 +1863,14 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     arquivo com o mesmo `parseOsceImport` da tela; `features/osce/OsceView.test.tsx` roda D1 e
     B01 do lote no player (nota 10 com as 3 higienizações; distrator com o porquê).
   - `eslint.config.js`: `conteudo/**/*.mjs` ganhou globals de Node (como `scripts/`).
-  - **Pendência do usuário:** importar `lote-1.json` em Admin → OSCE (modo Estático, 1º
-    período, HM1, N1) — escrita exige o Custom Claim de admin, não dá para automatizar daqui.
+  - ✅ **Importado pelo usuário em 2026-10-10** via Admin → OSCE (importação pela tela, não
+    por script: escrita exige o Custom Claim de admin). Conferido via REST: as 13 estações
+    `hm1-n1-*` no banco com modo/disciplina/unidade/tema/contagens certos. Smoke test anônimo
+    em produção: a tela de configuração mostra Sinais Vitais (5) e Biossegurança e Controle
+    de IRAS (8) e o Caso Surpresa sorteia entre as 13; a estação D1 feita na ordem do roteiro
+    dá nota 10, sem erro de JS. ⚠️ Depois da importação o banco ficou só com essas 13 — as 3
+    estações antigas (incl. "Técnica de Aferição da PA", tema "Testes") não existem mais;
+    perguntado ao usuário se a exclusão foi intencional.
 
   **Fase 2 — RPG de técnica:** gabarito e nota vindos da estação (IA só comenta; nota =
   fases cumpridas − erros críticos); `feedbackText`/`isFatalError` passam a valer; monitor
