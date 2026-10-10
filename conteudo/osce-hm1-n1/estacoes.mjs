@@ -2,6 +2,16 @@
 // origem: 'R' = texto do roteiro (literal ou quase literal); 'D' = derivado do roteiro (recorte,
 // junção ou negação de uma afirmação do roteiro) — precisa de validação docente.
 
+// `pendente: true` = item que depende de resposta das professoras (perguntas do documento de
+// revisão); fica fora dos lotes publicados até ser validado.
+
+// Nomes EXATOS dos temas da HM1 em produção (config/disciplines) — a importação recusa tema
+// que não exista na disciplina.
+export const TEMAS = {
+  biosseguranca: 'Biossegurança e Controle de IRAS',
+  sinaisVitais: 'Sinais Vitais',
+};
+
 const BIO = 'Roteiro de Biossegurança (Profª Ingrid Cordeiro)';
 const SV = 'Roteiro de Sinais Vitais (Prof. Michel Melo)';
 
@@ -108,7 +118,12 @@ const paramVariant = (code, touca, mascara, luva) => {
       : { action: 'Calçar as luvas cirúrgicas (estéreis)', why: 'O procedimento não é estéril: luva de procedimento.', origem: 'D' },
     DIST.propé,
   ];
-  return { code, ctx, seq, distractors };
+  const label = [
+    touca ? 'com touca' : 'sem touca',
+    mascara === 'pff2' ? 'PFF2/N95' : 'máscara cirúrgica',
+    luva === 'est' ? 'luva estéril' : 'luva de procedimento',
+  ].join(' · ');
+  return { code, label, ctx, seq, distractors };
 };
 
 const PARAM = {
@@ -144,7 +159,8 @@ const despVariant = (code, touca, mascara) => {
     { action: `Retirar a ${mascaraNome}` },
     { ...hig, why: 'Higienização final das mãos (p. 8–9).' },
   ];
-  return { code, ctx: `Você está usando: ${uso}.`, seq, distractors: [] };
+  const label = `${touca ? 'com touca' : 'sem touca'} · ${mascara === 'pff2' ? 'PFF2/N95' : 'máscara cirúrgica'}`;
+  return { code, label, ctx: `Você está usando: ${uso}.`, seq, distractors: [] };
 };
 
 const DESP = {
@@ -356,7 +372,7 @@ const S04 = {
   task: 'Afira a pressão arterial pelo método indireto, na posição preferencial para gestantes.',
   steps: paSteps({ action: 'Posicionar a gestante em decúbito lateral esquerdo ou decúbito dorsal', why: 'No caso de gestantes, preferir o decúbito lateral esquerdo ou o decúbito dorsal (p. 3).', critical: true, origem: 'R' }),
   distractors: [
-    { action: 'Posicionar a gestante em decúbito lateral direito', why: 'O roteiro indica decúbito lateral esquerdo ou dorsal para gestantes (p. 3).', origem: 'D' },
+    { action: 'Posicionar a gestante em decúbito lateral direito', why: 'O roteiro indica decúbito lateral esquerdo ou dorsal para gestantes (p. 3).', origem: 'D', pendente: true },
     ...PA_DISTRACTORS,
   ],
   tip: 'Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).',
