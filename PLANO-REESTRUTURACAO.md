@@ -144,6 +144,13 @@ pré-existentes, nenhum novo)/`test` (137/137)/`test:rules`/`build` todos verdes
   — `QuizView` aceita `unit`/`userId` opcionais e cai no comportamento local de sempre quando
   ausentes, sem alteração nesse fluxo.
 
+**➡️ Sessão de 2026-10-10: item 6.17 planejado e aprovado — estações OSCE da HM1/N1
+(Biossegurança + Sinais Vitais) e melhorias no motor/cadastro de OSCE.** Nada executado ainda.
+Ordem aprovada: **Fase 1** (cadastro + motor estático) → conteúdo estático → **Fase 2** (RPG de
+técnica) → conteúdo RPG → **Fase 3** (opcional). Fonte única do conteúdo: os 2 roteiros da
+disciplina (Biossegurança — Profª Ingrid Cordeiro; Sinais Vitais — Prof. Michel Melo). Ver
+seção 6.17 na Etapa 6 para decisões, diagnóstico e especificação.
+
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
 Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.
@@ -1735,6 +1742,124 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   Verificação: `typecheck` ✅, `vitest` **137/137** ✅, `lint` 22 ✅ (mesmos pré-existentes,
   nenhum novo), `test:rules` **49/49** ✅ (emulador), `build` ✅, smoke test Playwright anônimo ✅
   (ver acima).
+
+- [ ] **6.17 — Estações OSCE da HM1/N1 (Biossegurança + Sinais Vitais) e melhorias no motor**
+  *(planejado e aprovado em 2026-10-10; nada executado ainda)*. Ponto de partida: os 2 roteiros
+  de aula prática da N1 enviados pelo usuário (Biossegurança/Prevenção de IRAS/EPI e Sinais
+  Vitais). Objetivo: estações **estáticas** e **RPG** no Luna MedClass.
+
+  **Decisões do usuário (fechadas, não reabrir):**
+  - **Avalia-se só a técnica.** Nesta unidade o aluno não toma decisão clínica sobre o caso.
+  - **O caso se apresenta como OSCE e diz qual ação realizar** (ex.: "paciente em precaução
+    para aerossóis — realize a paramentação para entrar no quarto"). O contexto do caso
+    define o EPI: com ou sem touca, luva de procedimento ou cirúrgica, máscara cirúrgica ou
+    PFF2/N95. O aluno precisa saber os itens certos e a ordem.
+  - **Ordem: exatamente a do roteiro.** Em contato/gotículas/aerossóis, a sequência é a ordem
+    geral do roteiro aplicada aos EPIs que o próprio roteiro lista para cada precaução.
+  - **Conteúdo exclusivamente e detalhadamente como está no roteiro.** Nada de fonte externa.
+    Ficam de fora (não estão no roteiro): paramentação cirúrgica completa (degermação, capote
+    estéril), passo a passo de aferição de temperatura, sequência de posições na hipotensão
+    postural, local de retirada da PFF2.
+  - **Os momentos de higienização das mãos entram na paramentação e na desparamentação** como
+    passos da sequência (como o roteiro já faz: antes de paramentar; após retirar luvas; após
+    retirar avental; higienização final). Os "5 momentos" não viram estação estática própria
+    (dizem *quando* higienizar, não uma sequência de execução).
+  - **Ordem de execução:** Fase 1 → conteúdo estático → Fase 2 → conteúdo RPG → Fase 3.
+  - Unidade dos dois temas: **N1** (informado pelo usuário; o seed antigo de
+    `data/disciplines.ts` tinha Sinais Vitais em N2 — vale o que o usuário disse).
+
+  **Diagnóstico do motor atual (lido no código em 2026-10-10):**
+  - Estático (`features/osce/OsceView.tsx`): a nuvem de ações aparece **na ordem do JSON, sem
+    embaralhar** — quem cadastra precisa embaralhar e calcular `correctOrderIndices` à mão.
+  - Pontuação (`utils/osceScoring.ts`): bônus só para **posição exata** — um passo esquecido
+    joga todos os seguintes para "fora de sequência".
+  - Resultado não aponta **passos omitidos** nem explica **por que** um passo está errado.
+  - `tip` e `setting` são cadastrados mas **nenhuma tela os mostra**.
+  - RPG (`DynamicOsceView.tsx` + `services/aiService.ts:generateFinalFeedback`): o avaliador
+    final recebe só histórico + título — **"passos esperados" e nota são inventados pela IA**,
+    podendo contradizer o roteiro. `feedbackText` e `isFatalError` das transições **nunca são
+    usados**. Monitor de sinais vitais sempre presente e auto-conecta quando o aluno digita
+    "pressão" — numa estação de SSVV **revelaria os valores a aferir**. Tela final com "óbito".
+  - Cadastro (`features/admin/components/AdminOsce.tsx`): prévia mostra só a contagem, sem
+    validação; **sem edição** (apagar + reimportar, e reimportar duplica porque o id é
+    `osce_${Date.now()}`); tema/unidade/modo fixos por arquivo.
+
+  **Fase 1 — cadastro + motor estático** (pré-requisito do conteúdo):
+  1. Formato de autoria sem índices: `steps` (ordem certa, cada um com `why` e `critical`
+     opcional) + `distractors` (cada um com `why`). O sistema monta a nuvem e **embaralha a cada
+     tentativa**. Formato antigo (`actionCloud`/`correctOrderIndices`) continua aceito.
+  2. **Passo repetido** (ex.: "Higienizar as mãos" 3× na desparamentação): a ação pode ser
+     escolhida mais de uma vez e a correção compara pelo passo, não pelo índice do botão.
+  3. `slug` por estação → reimportar **atualiza** em vez de duplicar.
+  4. Prévia real com validação por estação; `theme`/`unit` opcionais por estação no JSON.
+  5. Pontuação por **ordem relativa** (um esquecimento não derruba os seguintes) + **passos
+     críticos** destacados. Regra pura em `utils/osceScoring.ts` com teste. **Decisão do
+     usuário (2026-10-10): passo crítico esquecido só é destacado em vermelho, sem limitar nem
+     zerar a nota** (vale como qualquer outro passo na conta).
+  6. Resultado didático: passos omitidos, "por quê" de cada acerto/erro, `setting` e `tip`
+     visíveis.
+  Impacto: a nova pontuação vale também para estações estáticas já cadastradas (baixo
+  impacto — D9, OSCE não grava resultado).
+
+  ✅ **Fase 1 implementada em 2026-10-10** (branch `feat/osce-fase1-cadastro-estatico`):
+  - `types.ts`: `StaticOsceStep`/`StaticOsceDistractor`; `steps`/`distractors`/`slug` em
+    `StaticOsceStation` (`actionCloud`/`correctOrderIndices` viraram opcionais, só lidos no
+    formato antigo); `slug` também em `DynamicOsceStation`.
+  - `utils/osceScoring.ts` reescrito: compara por texto do passo, ordem relativa por LCS,
+    devolve status de cada ação (`in-order`/`out-of-order`/`wrong`) e posições omitidas. No
+    empate, a **primeira** vez que o aluno faz um passo é a que conta; a repetição vira erro.
+  - `utils/osceStation.ts` (novo): `normalizeStaticStation` (converte o formato antigo),
+    `buildActionCloud` (um botão por ação distinta, embaralhado), `explanationFor`.
+  - `utils/osceImport.ts` (novo): leitura + validação do JSON que antes vivia como closure em
+    `AdminOsce.tsx` — slug (formato e repetição no arquivo), tema/unidade por estação,
+    passo × distrator duplicado, índice fora da nuvem (formato antigo), fase inicial/transições
+    (RPG/IA), marca "vai atualizar" quando o slug já existe no banco.
+  - `services/osceService.ts`: `addOsceStations` → `saveOsceStations` (com slug, `setDoc` com o
+    slug como id do documento — reimportar atualiza e a URL da estação não muda).
+  - `AdminOsce.tsx`: prévia por estação (erros em vermelho, avisos em âmbar, gabarito
+    expansível, selo Nova/Atualiza), confirmar bloqueado se houver erro, tema da tela virou
+    "tema padrão" opcional, botão "Baixar modelo de estação estática", erro de gravação agora
+    aparece para o admin (antes era engolido e o alerta dizia "sucesso" mesmo assim).
+  - `OsceView.tsx`: nuvem embaralhada; botões nunca desabilitam (passo repetível sem entregar
+    quais se repetem; contador ×N no botão); remoção por posição; `setting` no painel do caso;
+    resultado com "por quê" de cada ação, "repetição desnecessária", passos esquecidos,
+    bloco vermelho de passos críticos esquecidos (sem mexer na nota), `tip` e gabarito com
+    "por quê" e selo "crítico".
+  - Verificado: `typecheck` ✅, `vitest` **177/177** ✅ (35 novos/reescritos em
+    `osceScoring`/`osceStation`/`osceImport`), `lint` 22 ✅ (nenhum novo), `build` ✅. Smoke test
+    Playwright local contra a estação antiga real `osce_1775182655551_0` (hm1, "Técnica de
+    Aferição da PA", formato antigo): abre, nuvem embaralhada, repetição/distrator/fora de
+    ordem/omissões classificados certo, nota conferida à mão (2,7), sem erro de JS.
+  - Não testado ao vivo: a importação em si (exige conta admin) — coberta pelos testes de
+    `osceImport` e pelo tipo; validar no primeiro upload real do conteúdo.
+
+  **Fase 2 — RPG de técnica:** gabarito e nota vindos da estação (IA só comenta; nota =
+  fases cumpridas − erros críticos); `feedbackText`/`isFatalError` passam a valer; monitor
+  opcional por estação (em SSVV os valores aparecem pela narrativa só quando a técnica está
+  certa — ex.: desinsuflou rápido demais → não identifica a PAS); tela final sem "óbito" em
+  estações de técnica.
+
+  **Fase 3 — opcional:** modo treino (retorno a cada clique) × modo prova; imagem de
+  referência no gabarito (só com autorização de uso das figuras); tempo limite por estação.
+
+  **Conteúdo estático planejado (detalhar estação a estação na etapa de conteúdo):**
+  - Biossegurança: higiene das mãos com água e sabão (passos 0–11); fricção com preparação
+    alcoólica (1a/1b–8, 20–30 s); paramentação sem touca (roteiro p. 8) e com touca (p. 9),
+    variando máscara (cirúrgica/PFF2) e luva (procedimento/cirúrgica); desparamentação sem e
+    com touca; precaução de contato, gotículas e aerossóis (EPIs do card de cada uma, na ordem
+    geral); calçar e retirar luva de procedimento; calçar luva cirúrgica (6 passos).
+    Distratores só de itens/erros presentes no roteiro (ex.: propé, máscara errada para o
+    caso, reencapar agulha).
+  - Sinais Vitais: preparo e desinfecção do material + apresentação/consentimento; pulso
+    (30 s × 2 se sem alteração de ritmo/amplitude nos primeiros 30 s; senão 1 min); respiração
+    (logo após o pulso, mantendo a palpação, sem avisar o paciente, 1 min); PA método indireto
+    (palpatório → auscultatório, com todos os detalhes do roteiro); PA em gestante (decúbito
+    lateral esquerdo ou dorsal); sequência completa de SSVV terminando em informar os achados.
+
+  **Conteúdo RPG planejado (depois da Fase 2):** narrar a técnica num ambiente realista —
+  entrar/sair de quarto com precaução (paramentação → ação simples → desparamentação); SSVV
+  completo com valores revelados pela narrativa; hiato auscultatório (pular o palpatório
+  subestima a PAS — Imagem 1 do roteiro); pulso com alteração de ritmo contado em 30 s.
 
 
 ---

@@ -1,21 +1,98 @@
 import React, { useState, useMemo } from 'react';
-import { OsceStation, SimulationInfo, Period, StaticOsceStation, DynamicOsceStation, AcademicUnit } from '../../../types'; 
-import { Trash2, ClipboardList, Gamepad2, Bot, UploadCloud } from 'lucide-react';
+import { OsceStation, SimulationInfo, Period, AcademicUnit } from '../../../types';
+import { Trash2, ClipboardList, Gamepad2, Bot, UploadCloud, Download, AlertTriangle, XCircle } from 'lucide-react';
+import { parseOsceImport, ParsedOsceItem } from '../../../utils/osceImport';
+import { normalizeStaticStation } from '../../../utils/osceStation';
 
 interface AdminOsceProps {
-  periods?: Period[]; 
+  periods?: Period[];
   disciplines: SimulationInfo[];
   osceStations: OsceStation[];
-  onAddOsceStations: (os: OsceStation[]) => void;
+  onSaveOsceStations: (os: OsceStation[]) => Promise<void>;
   onRemoveOsceStation: (id: string) => void;
   onClearOsce: (disciplineId?: string) => void;
 }
+
+// Modelo baixável do formato de autoria (item 6.17) — quem cadastra parte daqui em vez de
+// montar actionCloud/correctOrderIndices à mão.
+const STATIC_TEMPLATE = [
+  {
+    slug: 'hm1-exemplo-paramentacao',
+    title: 'Título da estação',
+    theme: '(opcional) tema da disciplina — se omitido, usa o tema escolhido na tela',
+    unit: 'N1',
+    setting: 'Onde a cena acontece (ex.: corredor da enfermaria, placa na porta do quarto)',
+    scenario: 'Caso apresentado ao aluno',
+    task: 'Ação que o aluno deve realizar',
+    tip: '(opcional) dica exibida no resultado',
+    steps: [
+      { action: 'Primeiro passo, na ordem certa', why: 'Por que este passo vem aqui', critical: true },
+      { action: 'Segundo passo', why: 'Por que' },
+    ],
+    distractors: [{ action: 'Ação errada plausível', why: 'Por que está errada' }],
+    checklist: ['(opcional) critério de avaliação exibido no resultado'],
+  },
+];
+
+const downloadTemplate = () => {
+  const blob = new Blob([JSON.stringify(STATIC_TEMPLATE, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'modelo-estacao-estatica.json';
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const ImportPreviewItem = ({ item }: { item: ParsedOsceItem }) => {
+  const { station, errors, warnings, isUpdate } = item;
+  const steps = station?.mode === 'clinical' ? normalizeStaticStation(station) : null;
+
+  return (
+    <div className={`rounded-2xl p-4 text-left ${errors.length > 0 ? 'bg-red-500/20 border border-red-300/40' : 'bg-white/10 border border-white/10'}`}>
+      <div className="flex justify-between items-start gap-2">
+        <p className="font-black text-sm leading-tight">{station?.title || 'Item inválido'}</p>
+        {station && (
+          <span className={`shrink-0 text-[8px] font-black uppercase px-2 py-1 rounded ${isUpdate ? 'bg-[#D4A017] text-[#003366]' : 'bg-green-400 text-[#003366]'}`}>
+            {isUpdate ? 'Atualiza' : 'Nova'}
+          </span>
+        )}
+      </div>
+      {station && (
+        <p className="text-[9px] font-bold uppercase tracking-widest opacity-70 mt-1">
+          {station.unit} • {station.theme}
+          {steps && ` • ${steps.steps.length} passos • ${steps.distractors.length} distratores`}
+          {station.mode !== 'clinical' && ` • ${Object.keys(station.phases).length} fases`}
+        </p>
+      )}
+      {errors.map((e, i) => (
+        <p key={`e${i}`} className="text-[10px] font-bold text-red-100 mt-2 flex gap-1"><XCircle size={12} className="shrink-0 mt-0.5" /> {e}</p>
+      ))}
+      {warnings.map((w, i) => (
+        <p key={`w${i}`} className="text-[10px] font-bold text-amber-200 mt-2 flex gap-1"><AlertTriangle size={12} className="shrink-0 mt-0.5" /> {w}</p>
+      ))}
+      {steps && steps.steps.length > 0 && (
+        <details className="mt-2">
+          <summary className="text-[9px] font-black uppercase tracking-widest cursor-pointer opacity-80">Ver gabarito</summary>
+          <ol className="mt-2 space-y-1 list-decimal list-inside text-[11px]">
+            {steps.steps.map((s, i) => (
+              <li key={i}>{s.action}{s.critical && <span className="text-red-200 font-black"> (crítico)</span>}</li>
+            ))}
+          </ol>
+          {steps.distractors.length > 0 && (
+            <p className="mt-2 text-[11px] opacity-80">Distratores: {steps.distractors.map(d => d.action).join(' • ')}</p>
+          )}
+        </details>
+      )}
+    </div>
+  );
+};
 
 const AdminOsce: React.FC<AdminOsceProps> = ({
   periods = [],
   disciplines = [],
   osceStations = [],
-  onAddOsceStations,
+  onSaveOsceStations,
   onRemoveOsceStation,
   onClearOsce
 }) => {
@@ -36,7 +113,8 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
   
   const [osceTheme, setOsceTheme] = useState('');
   const [osceFile, setOsceFile] = useState<File | null>(null);
-  const [oscePreview, setOscePreview] = useState<OsceStation[] | null>(null);
+  const [oscePreview, setOscePreview] = useState<ParsedOsceItem[] | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const filteredImportDisciplines = useMemo(() => {
     if (!oscePeriod) return [];
@@ -50,96 +128,58 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
 
   const handleOsceReadPreview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!osceFile || !osceDiscipline || !osceTheme) return;
+    if (!osceFile || !osceDiscipline) return;
 
     const selectedDiscObj = disciplines.find(d => d.id === osceDiscipline);
-    const isUC = selectedDiscObj?.category === 'UC';
-    const targetUnit = isUC ? 'N1' : osceUnit;
-    
+
     const reader = new FileReader();
     reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        const parsedData = JSON.parse(text);
+      const parsed = parseOsceImport(String(event.target?.result ?? ''), {
+        mode: importMode,
+        disciplineId: osceDiscipline,
+        defaultUnit: osceUnit,
+        forceUnitN1: selectedDiscObj?.category === 'UC',
+        defaultTheme: osceTheme,
+        allowedThemes: selectedDiscObj?.themes ?? [],
+        existingIds: osceStations.map(s => s.firebaseId ?? s.id),
+        now: Date.now(),
+      });
 
-        if (!Array.isArray(parsedData)) {
-          alert('Erro: O JSON deve ser um Array [ ].');
-          return;
-        }
-        
-        const newStations: OsceStation[] = parsedData.map((item: Record<string, unknown>, idx: number) => {
-          // BASE COMUM A TODOS
-          const base = {
-            id: `osce_${Date.now()}_${idx}`,
-            disciplineId: osceDiscipline,
-            unit: targetUnit, // <-- INJETADO: Grava a unidade vinculada
-            theme: osceTheme,
-            title: item.title || item.tema || 'Estação sem título',
-            scenario: item.scenario || item.cenario_inicial || '',
-            task: item.task || '',
-            tip: item.tip || '',
-          };
-
-          // APLICAÇÃO RÍGIDA DO MODO SELECIONADO PELO ADMIN
-          
-          // MODO 1: PACIENTE VIRTUAL (IA)
-          if (importMode === 'ai') {
-            const s = item;
-            return { 
-              ...base, 
-              mode: 'ai',
-              initialPhaseId: s.initialPhaseId || s.no_inicial || 'fase_1',
-              phases: s.phases || {},
-              checklist: Array.isArray(s.checklist) ? s.checklist : [],
-              initialVitals: s.initialVitals,
-              inventory: s.inventory,
-              setting: s.setting || 'Consultório para anamnese.'
-            } as DynamicOsceStation; 
-          } 
-          
-          // MODO 2: RPG DINÂMICO (LUNA ENGINE)
-          if (importMode === 'rpg') {
-            const s = item;
-            return {
-              ...base,
-              mode: 'rpg',
-              initialPhaseId: s.initialPhaseId || s.no_inicial || 'fase_1',
-              phases: s.phases || {},
-              initialVitals: s.initialVitals,
-              inventory: s.inventory,
-              setting: s.setting || 'Cenário de emergência.'
-            } as DynamicOsceStation;
-          } 
-
-          // MODO 3: CLINICAL (ESTÁTICO / NUVEM DE AÇÕES)
-          return {
-            ...base,
-            mode: 'clinical',
-            setting: item.setting || 'Consultório médico padrão.',
-            checklist: Array.isArray(item.checklist) ? item.checklist : [],
-            actionCloud: Array.isArray(item.actionCloud) ? item.actionCloud : [],
-            correctOrderIndices: Array.isArray(item.correctOrderIndices) ? item.correctOrderIndices : []
-          } as StaticOsceStation;
-        });
-        
-        setOscePreview(newStations);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        alert('Erro ao ler JSON: ' + message);
+      if (parsed.fileError) {
+        alert(`Erro: ${parsed.fileError}`);
+        return;
       }
+      if (parsed.items.length === 0) {
+        alert('O arquivo não tem nenhuma estação.');
+        return;
+      }
+      setOscePreview(parsed.items);
     };
     reader.readAsText(osceFile);
   };
 
-  const confirmOsceImport = () => {
-    if (!oscePreview) return;
-    const firebaseSafePayload = JSON.parse(JSON.stringify(oscePreview));
-    onAddOsceStations(firebaseSafePayload);
-    alert(`✅ Sucesso! ${firebaseSafePayload.length} estações enviadas.`);
-    setOscePreview(null);
-    setOsceFile(null);
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    if(fileInput) fileInput.value = '';
+  const previewErrorCount = oscePreview?.filter(item => item.errors.length > 0).length ?? 0;
+
+  const confirmOsceImport = async () => {
+    if (!oscePreview || previewErrorCount > 0) return;
+    const stations = oscePreview.flatMap(item => (item.station ? [item.station] : []));
+    const updates = oscePreview.filter(item => item.isUpdate).length;
+
+    setIsSaving(true);
+    try {
+      // Firestore rejeita campos `undefined` — o round-trip por JSON os remove.
+      await onSaveOsceStations(JSON.parse(JSON.stringify(stations)));
+      alert(`✅ ${stations.length} estações salvas (${stations.length - updates} novas, ${updates} atualizadas).`);
+      setOscePreview(null);
+      setOsceFile(null);
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      console.error('Erro ao salvar estações OSCE:', error);
+      alert('Erro ao salvar. Verifique a conexão e se sua conta tem o Custom Claim de admin.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -197,8 +237,8 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                 </select>
               )}
 
-              <select value={osceTheme} onChange={e => setOsceTheme(e.target.value)} disabled={!osceDiscipline} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50" required>
-                <option value="">Eixo Temático...</option>
+              <select value={osceTheme} onChange={e => setOsceTheme(e.target.value)} disabled={!osceDiscipline} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366] disabled:opacity-50">
+                <option value="">Tema padrão (opcional se o JSON informar "theme")</option>
                 {disciplines.find(d => d.id === osceDiscipline)?.themes?.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
               <input type="file" accept=".json" onChange={e => setOsceFile(e.target.files ? e.target.files[0] : null)} className="w-full text-[10px] text-gray-400 font-black uppercase p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200" required />
@@ -206,16 +246,28 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                 Visualizar como {importMode.toUpperCase()} 👁️
               </button>
             </form>
+
+            {importMode === 'clinical' && (
+              <button onClick={downloadTemplate} className="w-full mt-3 flex items-center justify-center gap-2 text-[#003366] bg-blue-50 border border-blue-100 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-blue-100 transition-all">
+                <Download size={14} /> Baixar modelo de estação estática
+              </button>
+            )}
           </div>
         ) : (
           <div className="bg-[#003366] p-8 rounded-[2.5rem] border shadow-xl text-white animate-in zoom-in">
             <h3 className="text-xl font-black text-[#D4A017] mb-2 uppercase tracking-tighter">Pré-visualização</h3>
-            <p className="text-xs mb-6 opacity-80 font-medium">Detectamos <b>{oscePreview.length}</b> estações no formato <b>{importMode.toUpperCase()}</b>.</p>
+            <p className="text-xs mb-4 opacity-80 font-medium">
+              <b>{oscePreview.length}</b> estações no formato <b>{importMode.toUpperCase()}</b>.
+              {previewErrorCount > 0 && <> <b className="text-red-200">{previewErrorCount} com erro</b> — corrija o arquivo e leia de novo.</>}
+            </p>
+            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1 mb-6 custom-scrollbar-white">
+              {oscePreview.map((item, i) => <ImportPreviewItem key={i} item={item} />)}
+            </div>
             <div className="space-y-3">
-              <button onClick={confirmOsceImport} className="w-full bg-[#D4A017] text-[#003366] py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:scale-105 transition-transform">
-                Confirmar e Salvar 🚀
+              <button onClick={confirmOsceImport} disabled={previewErrorCount > 0 || isSaving} className="w-full bg-[#D4A017] text-[#003366] py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:scale-105 transition-transform disabled:opacity-40 disabled:hover:scale-100">
+                {isSaving ? 'Salvando...' : 'Confirmar e Salvar 🚀'}
               </button>
-              <button onClick={() => setOscePreview(null)} className="w-full bg-white/10 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white/20 transition-colors">
+              <button onClick={() => setOscePreview(null)} disabled={isSaving} className="w-full bg-white/10 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white/20 transition-colors">
                 Cancelar
               </button>
             </div>
@@ -285,8 +337,8 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
             const matchTheme = !themeFilterOsce || s.theme === themeFilterOsce;
             
             return matchDisc && matchUnit && matchTheme && matchType;
-          }).map((station, idx) => (
-            <div key={idx} className={`p-4 rounded-[1.5rem] border flex justify-between items-center transition-all hover:shadow-md ${
+          }).map((station) => (
+            <div key={station.firebaseId ?? station.id} className={`p-4 rounded-[1.5rem] border flex justify-between items-center transition-all hover:shadow-md ${
               station.mode === 'rpg' ? 'bg-purple-50/40 border-purple-100' : 
               station.mode === 'ai' ? 'bg-green-50/40 border-green-100' : 
               'bg-gray-50 border-gray-100'

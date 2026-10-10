@@ -116,10 +116,26 @@ export interface AIChatResponse {
 }
 
 // === INTERFACE 1: OSCE ESTÁTICO (Clássico - HM1) ===
+
+// Formato de autoria (item 6.17): quem cadastra escreve os passos na ordem certa e os
+// distratores, cada um com o "por quê" — sem calcular índice nem embaralhar à mão. A nuvem é
+// montada e embaralhada pelo player (utils/osceStation.ts).
+export interface StaticOsceStep {
+  action: string;
+  why?: string;
+  critical?: boolean; // Só destaca em vermelho se esquecido — não limita a nota (decisão 6.17)
+}
+
+export interface StaticOsceDistractor {
+  action: string;
+  why?: string;
+}
+
 export interface StaticOsceStation {
   mode: 'clinical'; // Identificador estrito para TypeScript
   id: string;
   firebaseId?: string;
+  slug?: string; // Vira o id do documento: reimportar com o mesmo slug atualiza em vez de duplicar
   disciplineId: string;
   unit?: AcademicUnit; // Suporte à separação N1/N2
   theme: string;
@@ -129,8 +145,11 @@ export interface StaticOsceStation {
   task: string;
   tip?: string;
   checklist: string[];
-  actionCloud: string[];
-  correctOrderIndices: number[];
+  steps?: StaticOsceStep[];
+  distractors?: StaticOsceDistractor[];
+  // Formato antigo (estações cadastradas antes do 6.17) — só lido quando `steps` não existe.
+  actionCloud?: string[];
+  correctOrderIndices?: number[];
 }
 
 // === INTERFACE 2: OSCE DINÂMICO (RPG / IA - Luna Engine 2.0 - HM2) ===
@@ -153,9 +172,10 @@ export interface RPGNode {
 }
 
 export interface DynamicOsceStation {
-  mode: 'rpg' | 'ai'; 
+  mode: 'rpg' | 'ai';
   id: string;
   firebaseId?: string;
+  slug?: string;
   disciplineId: string;
   unit?: AcademicUnit; // Suporte à separação N1/N2
   theme: string;
