@@ -2,7 +2,7 @@
 // Uso (o pacote docx não é dependência do projeto — mesmo padrão dos scripts/ com firebase-admin):
 //   npm install --no-save docx
 //   node conteudo/osce-hm1-n1/gerar-word.mjs "C:/Users/Luna/Documents/Estacoes OSCE HM1 N1 - revisao"
-// Cada arquivo diz se a estação já está publicada (slug presente em lote-1.json) e lista só os
+// Cada arquivo diz se a estação já está no ar (slug presente em publicadas.json) e lista só os
 // pontos de revisão que se aplicam a ela.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,7 +16,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = process.argv[2];
 if (!OUT) throw new Error('Informe a pasta de saída: node conteudo/osce-hm1-n1/gerar-word.mjs <pasta>');
 const { default: E, TEMAS } = await import(pathToFileURL(path.join(HERE, 'estacoes.mjs')).href);
-const LOTE_1 = JSON.parse(fs.readFileSync(path.join(HERE, 'lote-1.json'), 'utf8')).map((s) => s.slug);
+// Slugs que JÁ estão no banco de produção (atualizar publicadas.json a cada importação). A versão
+// do conteúdo pode ser mais nova que a publicada: o status do Word deixa isso explícito.
+const NO_AR = JSON.parse(fs.readFileSync(path.join(HERE, 'publicadas.json'), 'utf8'));
 
 const NAVY = '003366';
 const GOLD = 'D4A017';
@@ -75,20 +77,32 @@ const pontosDa = (s) => {
   if (['P2', 'P4', 'P6', 'P8', 'L2'].includes(s.code)) pts.push(['Quando usar luva estéril. ', 'O roteiro ensina a técnica, mas não diz quando usá-la. O gatilho usado no caso é "o procedimento exige técnica estéril". Está adequado?']);
   if (['C1', 'C2', 'C3'].includes(s.code)) pts.push(['Desparamentação derivada. ', 'O roteiro dá a ordem completa de desparamentação (p. 8). Aqui ela foi aplicada só aos EPIs desta precaução (passos com origem D). Em C1, a higienização após o avental e a final viraram uma só. Está correto?']);
   if (s.distractors.length === 0) pts.push(['Sem distratores. ', 'O roteiro não traz erros típicos desta técnica; o desafio é só a ordem. Quer sugerir algum?']);
-  if (s.code === 'S02') pts.push(['Pulso com ritmo regular. ', 'Sem alteração nos primeiros 30 s o roteiro diz que se "pode" multiplicar por 2 (opcional), então não foi criada uma estação de ritmo regular — o atalho aparece só na dica. Concorda?']);
-  if (s.code === 'S05') pts.push(['Higiene das mãos ao final. ', 'O roteiro de Sinais Vitais não menciona higienização ao final, então ela não entrou. Deve entrar?']);
+  if (s.code === 'S02') pts.push(['Contagem com alteração de ritmo. ', 'O roteiro é taxativo: com alteração de ritmo ou amplitude nos primeiros 30 s, a contagem vai até 1 minuto. A variação sem alteração é a estação S06.']);
+  if (s.code === 'S06') pts.push(['Passo de contagem aceita as duas formas. ', 'Sem alteração nos primeiros 30 s, o roteiro diz que se "pode" multiplicar por 2 — é opcional. O passo foi escrito para aceitar 1 minuto ou 30 s × 2, para não punir quem contar o minuto inteiro. Concorda?']);
+  if (s.code === 'S05' || s.code === 'S11') pts.push(['Higiene das mãos ao final. ', 'O roteiro de Sinais Vitais não menciona higienização ao final, então ela não entrou. Deve entrar?']);
+  if (s.code === 'S07') pts.push(['Onde entra a conduta para os ruídos. ', 'O roteiro cita o aumento do ângulo entre o braço e o tórax logo depois de "soltar o ar", antes da determinação da pressão. O passo foi colocado nessa posição. Está adequado?']);
+  if (['S08', 'S09', 'S10'].includes(s.code)) {
+    pts.push(['Ordem das posições (origem D). ', 'O roteiro manda medir "nas várias posições" (sentada, deitada ou em pé) em idosos, no controle de terapêutica, na suspeita de hipotensão postural e na primeira avaliação, mas não define a ordem. Foi usada a sequência sentado → em pé. Confirmar ou indicar a ordem da disciplina.']);
+    pts.push(['O que o roteiro não traz. ', 'Tempos de espera em cada posição, número de medidas e valores de queda que definem hipotensão ortostática NÃO constam no roteiro e por isso não entraram. Se a disciplina cobra isso, envie o material.']);
+    pts.push(['Posição deitada. ', 'O roteiro também cita a posição deitada; esta estação cobra sentado e em pé. Deseja uma variação com deitado?']);
+  }
+  if (s.code === 'S11') {
+    pts.push(['Mesma técnica no paciente inconsciente. ', 'O roteiro diz que a técnica é a mesma independente do estado de consciência. Por isso a sequência é igual à de S05, inclusive apresentar-se, explicar o procedimento e informar os achados. Está correto, ou algum passo muda?']);
+    pts.push(['Artéria do pulso. ', 'O roteiro lista radial, carotídea e femoral como principais artérias, sem dizer qual usar no paciente inconsciente. A estação não especifica a artéria. Deseja especificar?']);
+  }
+  pts.push(['Enunciado do caso. ', 'Nomes, idades e contexto são fictícios e não alteram a técnica. Ajuste o texto ao estilo das suas provas de OSCE.']);
   if (s.distractors.some((d) => d.pendente)) pts.push(['Distrator não publicado. ', 'O distrator marcado como "não publicado" ficou fora do ar porque o roteiro só diz "preferir" o decúbito lateral esquerdo ou dorsal. Manter como erro?']);
   return pts;
 };
 
 const doc = (s) => {
   const slug = `hm1-n1-${s.code.toLowerCase()}`;
-  const publicada = LOTE_1.includes(slug);
+  const publicada = NO_AR.includes(slug);
   const anyCritical = s.steps.some((x) => x.critical);
   const pontos = pontosDa(s);
   const statusText = publicada
-    ? 'PUBLICADA — já disponível para os alunos (lote 1, 10/10/2026).'
-    : 'AINDA NÃO PUBLICADA — aguarda revisão.';
+    ? 'JÁ NO AR (versão anterior). Este documento é a versão REVISADA: ao reimportar, ela substitui a que os alunos veem hoje.'
+    : 'AINDA NÃO PUBLICADA — aguarda a sua revisão.';
   const statusFill = publicada ? 'E6F4EA' : 'FFF4E0';
 
   const children = [
@@ -109,7 +123,7 @@ const doc = (s) => {
     h3('Sequência correta (gabarito)'),
     table(
       [550, 3900, 3588, 800, 800],
-      ['Nº', 'Ação (como aparece na nuvem)', 'Por quê (exibido no resultado)', anyCritical && publicada ? 'Crítico*' : 'Crítico', 'Origem'],
+      ['Nº', 'Ação (como aparece na nuvem)', 'Por quê (exibido no resultado)', anyCritical ? 'Crítico*' : 'Crítico', 'Origem'],
       s.steps.map((x, i) => [
         cell(String(i + 1), 550, { align: AlignmentType.CENTER }),
         x.action,
@@ -118,7 +132,7 @@ const doc = (s) => {
         cell(x.origem || 'R', 800, { align: AlignmentType.CENTER }),
       ])
     ),
-    ...(anyCritical && publicada ? [small('* Marca de crítico é proposta: ainda não aparece para os alunos.')] : []),
+    ...(anyCritical ? [small('* Marca de crítico é proposta: ainda não aparece para os alunos.')] : []),
 
     h3('Distratores (ações erradas na nuvem)'),
     s.distractors.length === 0
@@ -181,7 +195,7 @@ for (const s of ORDEM) {
   porPasta[s.pasta] = (porPasta[s.pasta] ?? 0) + 1;
   const nome = `${String(porPasta[s.pasta]).padStart(2, '0')} - ${s.code} - ${safe(s.title)}.docx`;
   fs.writeFileSync(path.join(dir, nome), await Packer.toBuffer(doc(s)));
-  console.log(`${LOTE_1.includes(`hm1-n1-${s.code.toLowerCase()}`) ? 'PUBLICADA ' : 'pendente  '} ${s.pasta}/${nome}`);
+  console.log(`${NO_AR.includes(`hm1-n1-${s.code.toLowerCase()}`) ? 'NO AR  ' : 'novo   '} ${s.pasta}/${nome}`);
   n++;
 }
 console.log(`${n} arquivos`);

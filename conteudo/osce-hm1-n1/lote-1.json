@@ -4,9 +4,9 @@
     "title": "Higiene das mãos com água e sabão",
     "theme": "Biossegurança e Controle de IRAS",
     "unit": "N1",
-    "setting": "Pia do posto de enfermagem, com sabão líquido e papel-toalha.",
-    "scenario": "Você acabou de chegar ao plantão e suas mãos estão visivelmente sujas.",
-    "task": "Realize a higiene das mãos com água e sabão.",
+    "setting": "Posto de enfermagem da enfermaria de clínica médica. Pia com torneira de acionamento manual, dispensador de sabonete líquido e dispensador de papel-toalha. Sobre o balcão, um frasco de preparação alcoólica.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria. Há pouco você manuseou caixas de material e prontuários no posto de enfermagem e percebeu sujidade visível nas suas mãos. O próximo paciente a ser atendido, no leito 4, já aguarda você.",
+    "task": "Realize a higiene das mãos com água e sabão, executando todas as etapas na sequência correta, até o fechamento da torneira. Nesta estação você não precisa atender o paciente.",
     "tip": "Higienize as mãos com água e sabonete quando estiverem visivelmente sujas; nas demais situações, prefira a fricção com preparação alcoólica (p. 4).",
     "steps": [
       {
@@ -51,6 +51,22 @@
       {
         "action": "Friccionar as mãos até secarem, sem enxaguar",
         "why": "Este é o final da fricção com preparação alcoólica (p. 4), não da lavagem com água e sabão."
+      },
+      {
+        "action": "Aplicar preparação alcoólica nas mãos visivelmente sujas",
+        "why": "Com as mãos visivelmente sujas, a higienização é com água e sabonete (p. 4); a fricção alcoólica é para mãos sem sujidade visível (p. 5)."
+      },
+      {
+        "action": "Aplicar uma pequena quantidade de sabão, apenas nas pontas dos dedos",
+        "why": "O sabão deve ser aplicado em quantidade suficiente para cobrir toda a palma (passo 1, p. 3)."
+      },
+      {
+        "action": "Esfregar apenas as palmas das mãos, dispensando o dorso, os dedos e os polegares",
+        "why": "A sequência inclui palma contra palma, dorso das mãos, costas dos dedos, polegares e pontas dos dedos (passos 2 a 7, p. 3)."
+      },
+      {
+        "action": "Aplicar a preparação alcoólica depois de enxaguar as mãos",
+        "why": "A preparação alcoólica pertence a outra técnica (p. 4); na lavagem com água e sabão, após enxaguar, as mãos são secas com papel-toalha (p. 3)."
       }
     ]
   },
@@ -59,9 +75,9 @@
     "title": "Fricção antisséptica com preparação alcoólica",
     "theme": "Biossegurança e Controle de IRAS",
     "unit": "N1",
-    "setting": "Beira do leito, com dispensador de preparação alcoólica.",
-    "scenario": "Você vai tocar o paciente. Suas mãos não estão visivelmente sujas e há preparação alcoólica disponível.",
-    "task": "Realize a fricção antisséptica das mãos com preparação alcoólica (duração de 20 a 30 segundos).",
+    "setting": "Beira do leito, na enfermaria de clínica médica. Dispensador de preparação alcoólica fixado na parede, ao lado da cama. A pia fica a alguns metros.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai examinar a Sra. M.S., 67 anos, internada para acompanhamento clínico. Suas mãos não têm sujidade visível e você ainda não tocou na paciente nem no leito.",
+    "task": "Realize a fricção antisséptica das mãos com preparação alcoólica, na sequência correta e pelo tempo adequado (de 20 a 30 segundos). Nesta estação você não precisa examinar a paciente.",
     "tip": "Duração de todo o procedimento: 20 a 30 segundos. Higienize com água e sabonete apenas quando as mãos estiverem visivelmente sujas (p. 4).",
     "steps": [
       {
@@ -97,6 +113,22 @@
       {
         "action": "Secar as mãos com papel-toalha",
         "why": "Na fricção alcoólica as mãos secam sozinhas: \"quando estiverem secas, suas mãos estarão seguras\" (p. 4)."
+      },
+      {
+        "action": "Aplicar uma pequena quantidade de preparação alcoólica, apenas na palma de uma das mãos",
+        "why": "A quantidade deve ser suficiente para cobrir todas as superfícies das mãos (passo 1a/1b, p. 4)."
+      },
+      {
+        "action": "Encerrar a fricção após 5 segundos",
+        "why": "A duração de todo o procedimento é de 20 a 30 segundos (p. 4)."
+      },
+      {
+        "action": "Aplicar sabonete líquido nas mãos",
+        "why": "O sabonete pertence à lavagem com água e sabão (p. 3); aqui a técnica é a fricção com preparação alcoólica (p. 4)."
+      },
+      {
+        "action": "Friccionar somente as palmas das mãos",
+        "why": "A fricção inclui dorso das mãos, espaços interdigitais, dedos, polegares e polpas digitais (passos 2 a 7, p. 4)."
       }
     ]
   },
@@ -105,9 +137,9 @@
     "title": "Desparamentação — sem touca · máscara cirúrgica",
     "theme": "Biossegurança e Controle de IRAS",
     "unit": "N1",
-    "setting": "Saída do quarto, logo após o atendimento.",
-    "scenario": "Você terminou o atendimento. Você está usando: avental, máscara cirúrgica, óculos ou face shield, luvas.",
-    "task": "Realize a desparamentação na ordem correta — é a fase de maior risco.",
+    "setting": "Saída do quarto de isolamento. Há dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e participou do atendimento do Sr. J.R., 58 anos, internado neste quarto. O procedimento acaba de terminar e é preciso sair sem se contaminar e sem contaminar o ambiente. Você está usando: avental, máscara cirúrgica, óculos ou face shield, luvas de procedimento.",
+    "task": "Realize a desparamentação na ordem correta, com a higienização das mãos nos momentos adequados — esta é a fase de maior risco.",
     "steps": [
       {
         "action": "Retirar as luvas"
@@ -134,16 +166,37 @@
         "why": "Higienização final das mãos (p. 8–9)."
       }
     ],
-    "distractors": []
+    "distractors": [
+      {
+        "action": "Retirar a touca",
+        "why": "O caso informa que você não está usando touca."
+      },
+      {
+        "action": "Retirar a máscara PFF2/N95",
+        "why": "Você está usando máscara cirúrgica; a PFF2/N95 é da precaução para aerossóis (p. 6)."
+      },
+      {
+        "action": "Retirar o propé",
+        "why": "O propé não é recomendado rotineiramente (p. 8) e o caso não informa que você o esteja usando."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8–9)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      }
+    ]
   },
   {
     "slug": "hm1-n1-d2",
     "title": "Desparamentação — sem touca · PFF2/N95",
     "theme": "Biossegurança e Controle de IRAS",
     "unit": "N1",
-    "setting": "Saída do quarto, logo após o atendimento.",
-    "scenario": "Você terminou o atendimento. Você está usando: avental, máscara PFF2/N95, óculos ou face shield, luvas.",
-    "task": "Realize a desparamentação na ordem correta — é a fase de maior risco.",
+    "setting": "Saída do quarto de isolamento. Há dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e participou do atendimento do Sr. J.R., 58 anos, internado neste quarto. O procedimento acaba de terminar e é preciso sair sem se contaminar e sem contaminar o ambiente. Você está usando: avental, máscara PFF2/N95, óculos ou face shield, luvas de procedimento.",
+    "task": "Realize a desparamentação na ordem correta, com a higienização das mãos nos momentos adequados — esta é a fase de maior risco.",
     "steps": [
       {
         "action": "Retirar as luvas"
@@ -170,16 +223,37 @@
         "why": "Higienização final das mãos (p. 8–9)."
       }
     ],
-    "distractors": []
+    "distractors": [
+      {
+        "action": "Retirar a touca",
+        "why": "O caso informa que você não está usando touca."
+      },
+      {
+        "action": "Retirar a máscara cirúrgica",
+        "why": "Você está usando a máscara PFF2/N95 (precaução para aerossóis)."
+      },
+      {
+        "action": "Retirar o propé",
+        "why": "O propé não é recomendado rotineiramente (p. 8) e o caso não informa que você o esteja usando."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8–9)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      }
+    ]
   },
   {
     "slug": "hm1-n1-d3",
     "title": "Desparamentação — com touca · máscara cirúrgica",
     "theme": "Biossegurança e Controle de IRAS",
     "unit": "N1",
-    "setting": "Saída do quarto, logo após o atendimento.",
-    "scenario": "Você terminou o atendimento. Você está usando: avental, máscara cirúrgica, óculos ou face shield, luvas, touca.",
-    "task": "Realize a desparamentação na ordem correta — é a fase de maior risco.",
+    "setting": "Saída do quarto de isolamento. Há dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e participou do atendimento do Sr. J.R., 58 anos, internado neste quarto. O procedimento acaba de terminar e é preciso sair sem se contaminar e sem contaminar o ambiente. Você está usando: avental, máscara cirúrgica, óculos ou face shield, luvas de procedimento, touca.",
+    "task": "Realize a desparamentação na ordem correta, com a higienização das mãos nos momentos adequados — esta é a fase de maior risco.",
     "steps": [
       {
         "action": "Retirar as luvas"
@@ -209,16 +283,33 @@
         "why": "Higienização final das mãos (p. 8–9)."
       }
     ],
-    "distractors": []
+    "distractors": [
+      {
+        "action": "Retirar a máscara PFF2/N95",
+        "why": "Você está usando máscara cirúrgica; a PFF2/N95 é da precaução para aerossóis (p. 6)."
+      },
+      {
+        "action": "Retirar o propé",
+        "why": "O propé não é recomendado rotineiramente (p. 8) e o caso não informa que você o esteja usando."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8–9)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      }
+    ]
   },
   {
     "slug": "hm1-n1-d4",
     "title": "Desparamentação — com touca · PFF2/N95",
     "theme": "Biossegurança e Controle de IRAS",
     "unit": "N1",
-    "setting": "Saída do quarto, logo após o atendimento.",
-    "scenario": "Você terminou o atendimento. Você está usando: avental, máscara PFF2/N95, óculos ou face shield, luvas, touca.",
-    "task": "Realize a desparamentação na ordem correta — é a fase de maior risco.",
+    "setting": "Saída do quarto de isolamento. Há dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e participou do atendimento do Sr. J.R., 58 anos, internado neste quarto. O procedimento acaba de terminar e é preciso sair sem se contaminar e sem contaminar o ambiente. Você está usando: avental, máscara PFF2/N95, óculos ou face shield, luvas de procedimento, touca.",
+    "task": "Realize a desparamentação na ordem correta, com a higienização das mãos nos momentos adequados — esta é a fase de maior risco.",
     "steps": [
       {
         "action": "Retirar as luvas"
@@ -248,16 +339,33 @@
         "why": "Higienização final das mãos (p. 8–9)."
       }
     ],
-    "distractors": []
+    "distractors": [
+      {
+        "action": "Retirar a máscara cirúrgica",
+        "why": "Você está usando a máscara PFF2/N95 (precaução para aerossóis)."
+      },
+      {
+        "action": "Retirar o propé",
+        "why": "O propé não é recomendado rotineiramente (p. 8) e o caso não informa que você o esteja usando."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8–9)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      }
+    ]
   },
   {
     "slug": "hm1-n1-l1",
     "title": "Calçar e retirar luvas de procedimento",
     "theme": "Biossegurança e Controle de IRAS",
     "unit": "N1",
-    "setting": "Beira do leito. Caixa de luvas de procedimento e lixo infectante ao lado.",
-    "scenario": "Você vai realizar um procedimento não estéril com risco de contato com secreções.",
-    "task": "Calce as luvas de procedimento e, ao final, retire-as corretamente.",
+    "setting": "Beira do leito, na enfermaria. Caixa de luvas de procedimento sobre a mesa auxiliar e recipiente para lixo infectante ao lado da cama.",
+    "scenario": "Você é acadêmico(a) de Medicina e fará, no paciente S.T., 45 anos, um procedimento de assistência não estéril, com risco de contato com secreções. Você usa um relógio e uma pulseira no punho e acaba de higienizar as mãos.",
+    "task": "Calce as luvas de procedimento e, ao final do procedimento, retire-as corretamente e finalize a técnica. Nesta estação você não precisa realizar o procedimento no paciente.",
     "tip": "Calce as luvas imediatamente antes do contato com o paciente e retire-as logo após o uso (p. 5).",
     "steps": [
       {
@@ -294,6 +402,22 @@
       {
         "action": "Descartar as luvas no lixo comum",
         "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      },
+      {
+        "action": "Calçar as luvas mantendo o relógio e a pulseira",
+        "why": "Antes de calçar as luvas, remova joias e outros artefatos das mãos e pulsos (p. 9)."
+      },
+      {
+        "action": "Retirar a primeira luva puxando-a pela ponta dos dedos",
+        "why": "A luva é segurada pela parte externa, na altura do punho, e puxada em direção à ponta dos dedos (p. 10)."
+      },
+      {
+        "action": "Sair da sala sem higienizar as mãos depois de descartar as luvas",
+        "why": "Descarte as luvas em lixo infectante e higienize as mãos (p. 10)."
+      },
+      {
+        "action": "Manter as luvas calçadas para atender o próximo paciente",
+        "why": "As luvas são retiradas logo após o uso, higienizando as mãos em seguida (p. 5)."
       }
     ]
   },
@@ -302,9 +426,9 @@
     "title": "Calçar luvas cirúrgicas (estéreis)",
     "theme": "Biossegurança e Controle de IRAS",
     "unit": "N1",
-    "setting": "Sala de procedimentos. Pacote de luvas estéreis aberto sobre a mesa.",
-    "scenario": "Você vai realizar um procedimento que exige técnica estéril.",
-    "task": "Calce as luvas cirúrgicas na sequência correta.",
+    "setting": "Sala de procedimentos do ambulatório. O pacote de luvas cirúrgicas estéreis está aberto sobre a mesa auxiliar. Ao lado, caixa de luvas de procedimento.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai auxiliar um procedimento que exige técnica estéril, em paciente do ambulatório. Você precisa calçar as luvas cirúrgicas antes de começar. Você ainda não tocou nas luvas.",
+    "task": "Calce as luvas cirúrgicas, na sequência correta. Nesta estação você não precisa realizar o procedimento.",
     "steps": [
       {
         "action": "Pegar uma luva com o polegar e o indicador"
@@ -322,19 +446,42 @@
         "action": "Deslizar os dedos da mão completamente enluvada sob a borda da primeira luva e puxá-la até o pulso"
       }
     ],
-    "distractors": []
+    "distractors": [
+      {
+        "action": "Pegar a luva com a palma da mão aberta",
+        "why": "A primeira luva é pega com o polegar e o indicador (passo 1, p. 10)."
+      },
+      {
+        "action": "Pegar a segunda luva pela parte externa com a mão ainda sem luva",
+        "why": "A segunda luva é puxada pelo lado de dentro, deslizando a mão parcialmente enluvada sob a borda dela (passos 3 e 4, p. 10)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "O procedimento exige técnica estéril: luva cirúrgica (estéril)."
+      },
+      {
+        "action": "Puxar a luva apenas até a metade da mão",
+        "why": "As luvas são puxadas até o pulso (passos 4 e 5, p. 10)."
+      },
+      {
+        "action": "Calçar as duas luvas ao mesmo tempo",
+        "why": "A técnica é sequencial: uma mão primeiro, depois a outra com a mão parcialmente enluvada (passos 1 a 5, p. 10)."
+      }
+    ]
   },
   {
     "slug": "hm1-n1-s01",
     "title": "Preparo do material e abordagem do paciente",
     "theme": "Sinais Vitais",
     "unit": "N1",
-    "setting": "Consultório. Bandeja vazia e materiais no armário.",
-    "scenario": "Você vai avaliar os sinais vitais de um paciente adulto que aguarda no consultório.",
-    "task": "Prepare o material e aborde o paciente antes de iniciar a avaliação.",
+    "setting": "Consultório de uma Unidade Básica de Saúde, silencioso. Sobre a mesa há uma bandeja vazia; no armário estão: estetoscópio, esfigmomanômetro, termômetro, relógio ou cronômetro, bloco de anotações, caneta, luvas de procedimento, álcool 70% e algodão.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na UBS. O Sr. G.M., 52 anos, aguarda na sala ao lado para ter os sinais vitais avaliados antes da consulta. Você ainda não iniciou nenhum preparo.",
+    "task": "Prepare o material e aborde o paciente, na ordem correta, antes de iniciar a avaliação. Nesta estação você não precisa aferir nenhum sinal vital.",
+    "tip": "Todo o material é higienizado com algodão embebido em álcool 70% (p. 1).",
     "steps": [
       {
-        "action": "Higienizar as mãos"
+        "action": "Higienizar as mãos",
+        "why": "O roteiro inicia a prática com a lavagem das mãos (p. 1)."
       },
       {
         "action": "Organizar na bandeja: estetoscópio, esfigmomanômetro, termômetro, relógio, bloco, caneta, luvas de procedimento, álcool 70% e algodão"
@@ -370,17 +517,33 @@
       {
         "action": "Higienizar o diafragma do estetoscópio em movimentos unidirecionais",
         "why": "O diafragma é higienizado em movimentos circulares (p. 1)."
+      },
+      {
+        "action": "Higienizar o material com água e sabão",
+        "why": "Todo o material é higienizado com algodão embebido em álcool 70% (p. 1)."
+      },
+      {
+        "action": "Limpar o termômetro com algodão seco",
+        "why": "O algodão deve estar embebido em álcool 70% (p. 1)."
+      },
+      {
+        "action": "Iniciar a aferição sem pedir o consentimento do paciente",
+        "why": "O discente deve se apresentar, explicar o procedimento e pedir o consentimento do paciente (p. 1)."
+      },
+      {
+        "action": "Levar o material solto nas mãos, sem organizá-lo na bandeja",
+        "why": "O material é organizado na bandeja antes de iniciar a avaliação (p. 1)."
       }
     ]
   },
   {
     "slug": "hm1-n1-s02",
-    "title": "Pulso e respiração",
+    "title": "Pulso e respiração — alteração de ritmo nos primeiros 30 segundos",
     "theme": "Sinais Vitais",
     "unit": "N1",
-    "setting": "Consultório. Paciente sentado, já orientado sobre a avaliação.",
-    "scenario": "Ao palpar o pulso radial, você percebe alteração do ritmo nos primeiros 30 segundos.",
-    "task": "Avalie o pulso e, em seguida, a respiração.",
+    "setting": "Consultório da UBS. O Sr. G.M. está sentado, com o antebraço apoiado sobre a mesa. Você já preparou o material e abordou o paciente, que consentiu. Sobre a mesa: relógio ou cronômetro e bloco de anotações.",
+    "scenario": "Você é acadêmico(a) de Medicina e avaliará o pulso e a respiração do Sr. G.M., 52 anos. Ao palpar o pulso radial, você percebe, nos primeiros 30 segundos, que o ritmo está alterado.",
+    "task": "Avalie o pulso e, em seguida, a respiração, na ordem correta. Nesta estação você não precisa classificar os achados.",
     "tip": "Sem alteração de ritmo ou amplitude nos primeiros 30 s, pode-se multiplicar o valor por 2. Principais artérias: radial, carotídea e femoral (p. 2).",
     "steps": [
       {
@@ -417,6 +580,22 @@
       {
         "action": "Soltar o pulso para observar o tórax",
         "why": "Continue palpando o pulso enquanto observa discretamente o tórax (p. 3)."
+      },
+      {
+        "action": "Contar as pulsações por apenas 15 segundos e multiplicar por 4",
+        "why": "A avaliação do pulso é feita em 1 minuto (ou 30 segundos multiplicado por 2, se não houver alteração) (p. 2)."
+      },
+      {
+        "action": "Contar a respiração por 15 segundos e multiplicar por 4",
+        "why": "A respiração é avaliada em um intervalo de 1 minuto (p. 2)."
+      },
+      {
+        "action": "Pedir ao paciente que respire profundamente enquanto você conta",
+        "why": "O paciente não deve ser informado, para não ocorrer controle voluntário do padrão respiratório (p. 2)."
+      },
+      {
+        "action": "Avaliar apenas a frequência do pulso, sem observar o ritmo",
+        "why": "No pulso devem ser avaliados a frequência e o ritmo (p. 2)."
       }
     ]
   },
@@ -425,9 +604,9 @@
     "title": "Pressão arterial — método indireto (paciente sentado)",
     "theme": "Sinais Vitais",
     "unit": "N1",
-    "setting": "Consultório silencioso. Paciente adulto sentado.",
-    "scenario": "O paciente acabou de chegar ao consultório para avaliação dos sinais vitais.",
-    "task": "Afira a pressão arterial pelo método indireto.",
+    "setting": "Consultório da UBS, silencioso. A Sra. L.A. está sentada em uma cadeira com apoio para o braço. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial da Sra. L.A., 49 anos, que veio a uma consulta de rotina. Ela já foi abordada, entendeu o procedimento e consentiu. Acabou de chegar à sala e ainda não está em repouso.",
+    "task": "Realize a medida da pressão arterial pelo método indireto, desde a preparação do paciente até o registro dos valores. Nesta estação você não precisa classificar o resultado.",
     "tip": "Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).",
     "steps": [
       {
@@ -487,6 +666,30 @@
       {
         "action": "Baixar a cabeça para auscultar melhor",
         "why": "O observador deve evitar baixar a cabeça: a congestão dos vasos do ouvido prejudica a ausculta (p. 3)."
+      },
+      {
+        "action": "Inflar o manguito até um valor fixo, sem palpar o pulso radial antes",
+        "why": "Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4)."
+      },
+      {
+        "action": "Registrar a sistólica no desaparecimento dos sons (fase V de Korotkoff)",
+        "why": "A sistólica é o aparecimento do primeiro ruído, fase I; o desaparecimento dos sons marca a diastólica (p. 4)."
+      },
+      {
+        "action": "Posicionar o braço do paciente abaixo do nível do coração",
+        "why": "A artéria braquial deve ficar ao nível do coração, no 4º espaço intercostal (p. 3)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria radial",
+        "why": "Na ausculta, o estetoscópio vai sobre a artéria braquial (p. 4); a radial é usada no método palpatório."
+      },
+      {
+        "action": "Insuflar o manguito apenas 10 mmHg acima da sistólica palpatória",
+        "why": "A insuflação vai cerca de 30 mmHg acima do valor encontrado pelo método palpatório (p. 4)."
+      },
+      {
+        "action": "Aferir a pressão arterial logo que o paciente chega, sem repouso",
+        "why": "O paciente deve ter repouso mínimo de 3 a 5 minutos, em local tranquilo (p. 3)."
       }
     ]
   },
@@ -495,9 +698,9 @@
     "title": "Pressão arterial — método indireto (gestante)",
     "theme": "Sinais Vitais",
     "unit": "N1",
-    "setting": "Consultório de pré-natal.",
-    "scenario": "Você vai aferir a pressão arterial de uma gestante.",
-    "task": "Afira a pressão arterial pelo método indireto, na posição preferencial para gestantes.",
+    "setting": "Consultório de pré-natal da UBS. A paciente está em uma maca com apoio para o braço. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial da Sra. C.B., 28 anos, gestante, em consulta de pré-natal. Ela já foi abordada, entendeu o procedimento e consentiu. Acabou de chegar à sala e ainda não está em repouso.",
+    "task": "Realize a medida da pressão arterial pelo método indireto, na posição preferencial para gestantes, até o registro dos valores. Nesta estação você não precisa classificar o resultado.",
     "tip": "Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).",
     "steps": [
       {
@@ -558,6 +761,30 @@
       {
         "action": "Baixar a cabeça para auscultar melhor",
         "why": "O observador deve evitar baixar a cabeça: a congestão dos vasos do ouvido prejudica a ausculta (p. 3)."
+      },
+      {
+        "action": "Inflar o manguito até um valor fixo, sem palpar o pulso radial antes",
+        "why": "Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4)."
+      },
+      {
+        "action": "Registrar a sistólica no desaparecimento dos sons (fase V de Korotkoff)",
+        "why": "A sistólica é o aparecimento do primeiro ruído, fase I; o desaparecimento dos sons marca a diastólica (p. 4)."
+      },
+      {
+        "action": "Posicionar o braço do paciente abaixo do nível do coração",
+        "why": "A artéria braquial deve ficar ao nível do coração, no 4º espaço intercostal (p. 3)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria radial",
+        "why": "Na ausculta, o estetoscópio vai sobre a artéria braquial (p. 4); a radial é usada no método palpatório."
+      },
+      {
+        "action": "Insuflar o manguito apenas 10 mmHg acima da sistólica palpatória",
+        "why": "A insuflação vai cerca de 30 mmHg acima do valor encontrado pelo método palpatório (p. 4)."
+      },
+      {
+        "action": "Aferir a pressão arterial logo que o paciente chega, sem repouso",
+        "why": "O paciente deve ter repouso mínimo de 3 a 5 minutos, em local tranquilo (p. 3)."
       }
     ]
   },
@@ -566,9 +793,9 @@
     "title": "Sequência completa de sinais vitais",
     "theme": "Sinais Vitais",
     "unit": "N1",
-    "setting": "Consultório. Bandeja com o material.",
-    "scenario": "Um paciente adulto aguarda a avaliação dos sinais vitais.",
-    "task": "Realize a avaliação completa dos sinais vitais, do preparo à comunicação dos achados.",
+    "setting": "Consultório da UBS. Sobre a mesa: bandeja, estetoscópio, esfigmomanômetro, termômetro, relógio, bloco de anotações, caneta, luvas de procedimento, álcool 70% e algodão.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na UBS. O Sr. A.P., 60 anos, aguarda na sala ao lado para a avaliação dos sinais vitais antes da consulta. Ele está consciente e colaborativo. Você ainda não iniciou nenhum preparo.",
+    "task": "Realize a avaliação completa dos sinais vitais, do preparo à comunicação dos achados, na ordem correta. Nesta estação você não precisa detalhar a técnica de cada sinal vital.",
     "tip": "A técnica de avaliação dos sinais vitais é a mesma, independente do estado de consciência do paciente (p. 1).",
     "steps": [
       {
@@ -600,6 +827,26 @@
       {
         "action": "Avisar o paciente de que a respiração será observada",
         "why": "O observador não deve informar o paciente sobre a coleta, para evitar controle voluntário da respiração (p. 2)."
+      },
+      {
+        "action": "Higienizar o material com água e sabão",
+        "why": "Todo o material é higienizado com algodão embebido em álcool 70% (p. 1)."
+      },
+      {
+        "action": "Iniciar a avaliação sem pedir o consentimento do paciente",
+        "why": "O discente deve se apresentar, explicar o procedimento e pedir o consentimento (p. 1)."
+      },
+      {
+        "action": "Registrar os achados sem informá-los ao paciente",
+        "why": "Ao final da avaliação, informar os achados ao paciente e perguntar se ele tem alguma dúvida (p. 6)."
+      },
+      {
+        "action": "Aferir a pressão arterial sem repouso prévio",
+        "why": "A pressão arterial exige repouso mínimo de 3 a 5 minutos (p. 3)."
+      },
+      {
+        "action": "Contar o pulso por 15 segundos e multiplicar por 4",
+        "why": "O pulso é avaliado em 1 minuto (ou 30 segundos multiplicado por 2, se não houver alteração de ritmo ou amplitude) (p. 2)."
       }
     ]
   }

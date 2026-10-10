@@ -9,6 +9,8 @@
 //   - C1–C3 (precauções): a desparamentação de cada precaução foi derivada da ordem geral
 //     (pergunta 6).
 // Em todas as estações do lote: sem a marca de "crítico" (pergunta 1) e sem itens `pendente`.
+// A revisão 2 (2026-10-10) reescreveu casos e distratores destas mesmas 13 estações; os slugs
+// são os mesmos, então importar o arquivo de novo ATUALIZA as que já estão no ar.
 // Distratores de origem D entram quando negam diretamente uma frase do roteiro.
 
 import { writeFileSync } from 'node:fs';
@@ -60,6 +62,13 @@ const lote = LOTE_1.map((code) => {
   return paraImportacao(station);
 });
 
-const saida = join(dirname(fileURLToPath(import.meta.url)), 'lote-1.json');
-writeFileSync(saida, `${JSON.stringify(lote, null, 2)}\n`);
-console.log(`${lote.length} estações → ${saida}`);
+const pasta = dirname(fileURLToPath(import.meta.url));
+writeFileSync(join(pasta, 'lote-1.json'), `${JSON.stringify(lote, null, 2)}\n`);
+console.log(`${lote.length} estações → lote-1.json`);
+
+// Todas as estações (inclusive as ainda não aprovadas): NÃO é para importar como está — serve
+// para validar o conteúdo inteiro com o mesmo parser da tela de importação (todas.test.ts) e,
+// depois da aprovação, para extrair o lote seguinte.
+const tudo = todas.map(paraImportacao);
+writeFileSync(join(pasta, 'todas.json'), `${JSON.stringify(tudo, null, 2)}\n`);
+console.log(`${tudo.length} estações → todas.json (só validação)`);
