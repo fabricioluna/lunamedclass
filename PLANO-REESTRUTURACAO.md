@@ -1833,6 +1833,39 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   - Não testado ao vivo: a importação em si (exige conta admin) — coberta pelos testes de
     `osceImport` e pelo tipo; validar no primeiro upload real do conteúdo.
 
+  🟡 **Conteúdo estático em revisão docente (2026-10-10).** Fonte única do conteúdo:
+  `conteudo/osce-hm1-n1/estacoes.mjs` (cada passo/distrator com origem `R` = roteiro ou
+  `D` = derivado, a validar). Gerado a partir dela o Word
+  `Documents/Estacoes-OSCE-HM1-N1-revisao-docente.docx` (fora do repo), enviado pelo usuário
+  às professoras. 24 estações: B01–B02 (higiene das mãos), P1–P8 (paramentação: touca ×
+  máscara × luva), D1–D4 (desparamentação: touca × máscara), C1–C3 (contato/gotículas/
+  aerossóis, entrar e sair), L1–L2 (luvas), S01–S05 (preparo, pulso+respiração, PA sentado,
+  PA gestante, sequência completa). 9 perguntas abertas às professoras na seção "Pontos para
+  decisão" do documento. **Ajuste de desenho:** não há estação de pulso com ritmo regular —
+  multiplicar 30 s × 2 é opcional no roteiro ("pode-se"), e uma sequência fixa puniria quem
+  contasse o minuto inteiro; ficou só a variação com alteração de ritmo (1 minuto obrigatório).
+  Próximo passo: incorporar o retorno das professoras em `estacoes.mjs` e gerar os JSON de
+  importação no formato da Fase 1.
+
+  🚀 **Lote 1 publicado antes da revisão (pedido do usuário, 2026-10-10):** "deixar já
+  disponível o que estiver de acordo com os roteiros". Critério (documentado em
+  `conteudo/osce-hm1-n1/gerar-json.mjs`): só estações com a sequência inteira do roteiro e que
+  não dependem de pergunta aberta → **13 estações**: B01, B02, D1–D4, L1, L2, S01–S05. Fora
+  até a resposta: P1–P8 (perguntas 3–5) e C1–C3 (pergunta 6). No lote, sem marca de "crítico"
+  (pergunta 1) e sem itens `pendente` (único: distrator "decúbito lateral direito" em S04).
+  Distratores D entram quando negam diretamente uma frase do roteiro.
+  - Temas usados: **nomes de produção** da HM1 — "Biossegurança e Controle de IRAS" e "Sinais
+    Vitais" (o seed de `data/disciplines.ts` tem outros nomes; a importação valida contra a
+    config ao vivo). N1 da HM1 está liberada (travas só em N2) e nenhum tipo de OSCE está
+    travado em `config/simulatorAccess` — conferido via REST público em 2026-10-10.
+  - `node conteudo/osce-hm1-n1/gerar-json.mjs` gera `lote-1.json` (slugs `hm1-n1-<código>`:
+    reimportar depois da revisão **atualiza** as mesmas estações). `lote-1.test.ts` valida o
+    arquivo com o mesmo `parseOsceImport` da tela; `features/osce/OsceView.test.tsx` roda D1 e
+    B01 do lote no player (nota 10 com as 3 higienizações; distrator com o porquê).
+  - `eslint.config.js`: `conteudo/**/*.mjs` ganhou globals de Node (como `scripts/`).
+  - **Pendência do usuário:** importar `lote-1.json` em Admin → OSCE (modo Estático, 1º
+    período, HM1, N1) — escrita exige o Custom Claim de admin, não dá para automatizar daqui.
+
   **Fase 2 — RPG de técnica:** gabarito e nota vindos da estação (IA só comenta; nota =
   fases cumpridas − erros críticos); `feedbackText`/`isFatalError` passam a valer; monitor
   opcional por estação (em SSVV os valores aparecem pela narrativa só quando a técnica está
