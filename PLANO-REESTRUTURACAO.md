@@ -1923,6 +1923,21 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     `lote-1.test.ts` foram removidos; agora há **um único `todas.json` (30 estações)**, gerado
     por `gerar-json.mjs`, a importar só depois da revisão dele. `publicadas.json` = `[]`.
     O teste do player (`OsceView.test.tsx`) passou a ler `todas.json`.
+  - ✅ **Pronto para importar (2026-10-10, pedido "deixe tudo pronto"):** pasta
+    `Documents/OSCE-HM1-N1-PARA-IMPORTAR/` com `1-IMPORTAR-ESTE-todas-as-30-estacoes.json`,
+    `alternativa-por-tema/` (Biossegurança 19 + Sinais Vitais 11) e `LEIA-ME.txt` (passo a passo
+    do Admin → OSCE → Estático → 1º período → HM1 → N1). Verificado: (a) os 3 arquivos passam no
+    `parseOsceImport` **contra os temas reais lidos do Firestore de produção** (0 erros, 0
+    avisos); (b) HM1/N1 liberada (travas só na N2) e nenhum simulador de OSCE trancado em
+    `config/simulatorAccess`; (c) **as 30 estações rodam no player** — fazer o gabarito na ordem
+    dá 10 e nenhum passo esquecido (`OsceView.test.tsx`, 32 testes; pega também botão duplicado
+    na nuvem). `gerar-json.mjs` agora também grava `biosseguranca.json` e `sinais-vitais.json`.
+    Total: 217 testes. **Pendência única:** o usuário importar (escrita exige Custom Claim de
+    admin) e testar uma estação de cada tema como aluno.
+  - ⚠️ **Armadilha de leitura já pisada:** Python no Windows lê `sys.stdin` em cp1252 — ao
+    consultar o Firestore por REST, gravar a resposta com `curl -o` e abrir com
+    `encoding='utf-8'`. Lendo do stdin, o "ç" vira "Ã§" e o tema parece "não existir" (alarme
+    falso que apareceu nesta etapa).
   - Word da revisão 3 em `Documents/Estacoes OSCE HM1 N1 - revisao v3/` (30). As pastas v1 e v2
     ficaram como estavam. O JSON a importar depois está em
     `Documents/OSCE-HM1-N1-todas-para-importar-APOS-REVISAO.json`; o antigo

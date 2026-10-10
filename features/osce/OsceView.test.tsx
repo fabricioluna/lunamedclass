@@ -29,6 +29,29 @@ beforeAll(() => {
   window.scrollTo = () => {};
 });
 
+// Garantia de prontidão: em CADA estação do arquivo de importação, fazer o gabarito na ordem
+// dá 10 e nenhum passo esquecido. Também pega botão duplicado na nuvem (getByRole falharia se
+// duas ações tivessem o mesmo texto) e passo cujo texto some do player.
+const todasAsEstacoes = (): StaticOsceStation[] => {
+  const text = readFileSync(join(__dirname, '../../conteudo/osce-hm1-n1/todas.json'), 'utf8');
+  return parseOsceImport(text, {
+    mode: 'clinical', disciplineId: 'hm1', defaultUnit: 'N1', forceUnitN1: false, defaultTheme: '',
+    allowedThemes: ['Biossegurança e Controle de IRAS', 'Sinais Vitais'], existingIds: [], now: 0,
+  }).items.map((i) => i.station as StaticOsceStation);
+};
+
+describe('as estações do arquivo de importação no player', () => {
+  it.each(todasAsEstacoes().map((s) => [s.slug, s] as const))('%s: o gabarito na ordem dá nota 10', (_slug, station) => {
+    render(<OsceView station={station} onBack={() => {}} />);
+
+    station.steps!.forEach((step) => clickAction(step.action));
+    fireEvent.click(screen.getByRole('button', { name: /Encerrar Simulação/ }));
+
+    expect(screen.getByText('10.0')).toBeInTheDocument();
+    expect(screen.queryByText('Passos que você esqueceu')).not.toBeInTheDocument();
+  });
+});
+
 describe('OsceView com estação no formato de autoria', () => {
   it('desparamentação feita na ordem do roteiro, com as 3 higienizações, dá nota 10', () => {
     const station = loadStation('hm1-n1-d1');
