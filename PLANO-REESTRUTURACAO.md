@@ -1870,7 +1870,18 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     de IRAS (8) e o Caso Surpresa sorteia entre as 13; a estação D1 feita na ordem do roteiro
     dá nota 10, sem erro de JS. ⚠️ Depois da importação o banco ficou só com essas 13 — as 3
     estações antigas (incl. "Técnica de Aferição da PA", tema "Testes") não existem mais;
-    perguntado ao usuário se a exclusão foi intencional.
+    perguntado ao usuário se a exclusão foi intencional. **Confirmado: foi o próprio usuário
+    que apagou as 3 antigas.**
+
+  📝 **Fluxo de revisão mudou (2026-10-10):** o usuário **revisa primeiro, estação por
+  estação, sem esperar as professoras** ("não posso ficar esperando o professor"), e só
+  depois envia a elas. Gerado **um .docx por estação** (24, em
+  `Documents/Estacoes OSCE HM1 N1 - revisao/`, pastas por tema): cada arquivo traz status
+  (publicada/aguardando), o que o aluno lê, gabarito com porquê e origem, distratores (os
+  `pendente` marcados "não publicado"), dica, só os pontos de revisão que valem para ela e
+  campo de parecer. Gerador: `conteudo/osce-hm1-n1/gerar-word.mjs` (`npm install --no-save
+  docx` antes). Próximo passo: ler as correções do usuário nos .docx, aplicar em
+  `estacoes.mjs`, regenerar o JSON e liberar o lote 2 com o que ele aprovar.
 
   **Fase 2 — RPG de técnica:** gabarito e nota vindos da estação (IA só comenta; nota =
   fases cumpridas − erros críticos); `feedbackText`/`isFatalError` passam a valer; monitor
