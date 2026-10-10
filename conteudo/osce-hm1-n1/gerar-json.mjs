@@ -53,5 +53,13 @@ const paraImportacao = (s) =>
 const ordem = (a, b) => a.slug.localeCompare(b.slug, 'pt', { numeric: true });
 const tudo = todas.map(paraImportacao).sort(ordem);
 
-writeFileSync(join(dirname(fileURLToPath(import.meta.url)), 'todas.json'), `${JSON.stringify(tudo, null, 2)}\n`);
-console.log(`${tudo.length} estações → todas.json`);
+const pasta = dirname(fileURLToPath(import.meta.url));
+const grava = (nome, lista) => {
+  writeFileSync(join(pasta, nome), `${JSON.stringify(lista, null, 2)}\n`);
+  console.log(`${lista.length} estações → ${nome}`);
+};
+
+grava('todas.json', tudo);
+// Os mesmos dados repartidos por tema, para quem preferir importar em dois passos.
+grava('biosseguranca.json', tudo.filter((s) => s.theme === TEMAS.biosseguranca));
+grava('sinais-vitais.json', tudo.filter((s) => s.theme === TEMAS.sinaisVitais));

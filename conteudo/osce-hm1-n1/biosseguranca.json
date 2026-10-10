@@ -1,0 +1,1074 @@
+[
+  {
+    "slug": "hm1-n1-b01",
+    "title": "Higiene das mãos com água e sabão",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Posto de enfermagem da enfermaria de clínica médica. Pia com torneira de acionamento manual, dispensador de sabonete líquido e dispensador de papel-toalha. Sobre o balcão, um frasco de preparação alcoólica.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria. Há pouco você manuseou caixas de material e prontuários no posto de enfermagem e percebeu sujidade visível nas suas mãos. O próximo paciente a ser atendido, no leito 4, já aguarda você.",
+    "task": "Realize a higiene das mãos com água e sabão, executando todas as etapas na sequência correta, até o fechamento da torneira. Nesta estação você não precisa atender o paciente.",
+    "tip": "Higienize as mãos com água e sabonete quando estiverem visivelmente sujas; nas demais situações, prefira a fricção com preparação alcoólica (p. 4).",
+    "steps": [
+      {
+        "action": "Molhar as mãos"
+      },
+      {
+        "action": "Aplicar sabão em quantidade suficiente para cobrir toda a palma"
+      },
+      {
+        "action": "Esfregar uma palma contra a outra"
+      },
+      {
+        "action": "Palma direita sobre o dorso esquerdo, com os dedos entrelaçados; depois inverter"
+      },
+      {
+        "action": "Palma contra palma, com os dedos entrelaçados"
+      },
+      {
+        "action": "Esfregar as costas dos dedos, uma mão contra a outra"
+      },
+      {
+        "action": "Esfregar o polegar de cada mão de forma rotacional"
+      },
+      {
+        "action": "Esfregar as palmas das mãos com as pontas dos dedos, em forma circular"
+      },
+      {
+        "action": "Enxaguar as mãos com água"
+      },
+      {
+        "action": "Secar bem as mãos"
+      },
+      {
+        "action": "Usar o papel-toalha para fechar a torneira"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Fechar a torneira com as mãos",
+        "why": "O roteiro orienta usar o papel-toalha para fechar a torneira (passo 10, p. 3)."
+      },
+      {
+        "action": "Friccionar as mãos até secarem, sem enxaguar",
+        "why": "Este é o final da fricção com preparação alcoólica (p. 4), não da lavagem com água e sabão."
+      },
+      {
+        "action": "Aplicar preparação alcoólica nas mãos visivelmente sujas",
+        "why": "Com as mãos visivelmente sujas, a higienização é com água e sabonete (p. 4); a fricção alcoólica é para mãos sem sujidade visível (p. 5)."
+      },
+      {
+        "action": "Aplicar uma pequena quantidade de sabão, apenas nas pontas dos dedos",
+        "why": "O sabão deve ser aplicado em quantidade suficiente para cobrir toda a palma (passo 1, p. 3)."
+      },
+      {
+        "action": "Esfregar apenas as palmas das mãos, dispensando o dorso, os dedos e os polegares",
+        "why": "A sequência inclui palma contra palma, dorso das mãos, costas dos dedos, polegares e pontas dos dedos (passos 2 a 7, p. 3)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-b02",
+    "title": "Fricção antisséptica com preparação alcoólica",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Beira do leito, na enfermaria de clínica médica. Dispensador de preparação alcoólica fixado na parede, ao lado da cama. A pia fica a alguns metros.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai examinar a Sra. M.S., 67 anos, internada para acompanhamento clínico. Suas mãos não têm sujidade visível e você ainda não tocou na paciente nem no leito.",
+    "task": "Realize a fricção antisséptica das mãos com preparação alcoólica, na sequência correta e pelo tempo adequado (de 20 a 30 segundos). Nesta estação você não precisa examinar a paciente.",
+    "tip": "Duração de todo o procedimento: 20 a 30 segundos. Higienize com água e sabonete apenas quando as mãos estiverem visivelmente sujas (p. 4).",
+    "steps": [
+      {
+        "action": "Aplicar quantidade suficiente de preparação alcoólica em uma mão em forma de concha, para cobrir todas as superfícies das mãos"
+      },
+      {
+        "action": "Friccionar as palmas das mãos entre si"
+      },
+      {
+        "action": "Friccionar a palma direita contra o dorso da mão esquerda, entrelaçando os dedos, e vice-versa"
+      },
+      {
+        "action": "Friccionar a palma das mãos entre si, com os dedos entrelaçados"
+      },
+      {
+        "action": "Friccionar o dorso dos dedos de uma mão com a palma da mão oposta, segurando os dedos, com movimento de vai-e-vem, e vice-versa"
+      },
+      {
+        "action": "Friccionar o polegar esquerdo com o auxílio da palma da mão direita, em movimento circular, e vice-versa"
+      },
+      {
+        "action": "Friccionar as polpas digitais e unhas da mão direita contra a palma da mão esquerda, em movimento circular, e vice-versa"
+      },
+      {
+        "action": "Aguardar as mãos secarem"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Enxaguar as mãos com água",
+        "why": "Enxágue faz parte da lavagem com água e sabão (p. 3), não da fricção alcoólica."
+      },
+      {
+        "action": "Secar as mãos com papel-toalha",
+        "why": "Na fricção alcoólica as mãos secam sozinhas: \"quando estiverem secas, suas mãos estarão seguras\" (p. 4)."
+      },
+      {
+        "action": "Aplicar uma pequena quantidade de preparação alcoólica, apenas na palma de uma das mãos",
+        "why": "A quantidade deve ser suficiente para cobrir todas as superfícies das mãos (passo 1a/1b, p. 4)."
+      },
+      {
+        "action": "Encerrar a fricção após 5 segundos",
+        "why": "A duração de todo o procedimento é de 20 a 30 segundos (p. 4)."
+      },
+      {
+        "action": "Friccionar somente as palmas das mãos",
+        "why": "A fricção inclui dorso das mãos, espaços interdigitais, dedos, polegares e polpas digitais (passos 2 a 7, p. 4)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-c1",
+    "title": "Precaução de contato — entrar e sair do quarto",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Corredor da enfermaria, em frente ao quarto de isolamento. Na bancada ao lado da porta há EPIs e um dispensador de preparação alcoólica; na saída do quarto, lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e acompanhará a visita ao Sr. A.L., 71 anos, internado há 4 dias com infecção por microrganismo multirresistente. Na porta do quarto está a placa: PRECAUÇÃO DE CONTATO. Você fará o exame físico do paciente, sem risco de respingos de sangue ou secreções. Você ainda não entrou no quarto.",
+    "task": "Realize, na ordem correta, a paramentação para entrar no quarto e, ao final do exame, a desparamentação. Nesta estação você não precisa realizar o exame.",
+    "tip": "Na precaução de contato, termômetro, esfigmomanômetro e estetoscópio devem ser de uso exclusivo do paciente (p. 6).",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Precaução de contato: avental e luvas durante toda a manipulação do paciente, colocados imediatamente antes do contato (p. 6)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "Precaução de contato: luvas (p. 6)."
+      },
+      {
+        "action": "Retirar as luvas"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar o avental"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Retirar luvas e avental logo após o uso, higienizando as mãos em seguida (p. 6)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "PFF2/N95 é da precaução para aerossóis (p. 6)."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Não faz parte da precaução de contato (p. 6–7) e o caso não tem risco de respingos."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Óculos/face shield são indicados quando há risco de respingos (p. 7); o caso informa que não há."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Manter o avental e as luvas calçados depois de sair do quarto",
+        "why": "Avental e luvas são retirados logo após o uso, higienizando as mãos em seguida (p. 6)."
+      },
+      {
+        "action": "Examinar o paciente com o estetoscópio de uso coletivo da enfermaria",
+        "why": "Na precaução de contato, termômetro, esfigmomanômetro e estetoscópio devem ser de uso exclusivo do paciente (p. 6)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-c2",
+    "title": "Precaução para gotículas — entrar e sair do quarto",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Corredor da enfermaria, em frente ao quarto privativo. Na bancada ao lado da porta há EPIs e um dispensador de preparação alcoólica.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai conversar com a Sra. M.F., 34 anos, internada com suspeita de influenza, para colher a história clínica. Na porta do quarto está a placa: PRECAUÇÃO PARA GOTÍCULAS. Você ficará a mais de um braço de distância da paciente e não haverá contato com sangue ou secreções. Você ainda não entrou no quarto.",
+    "task": "Realize, na ordem correta, a paramentação para entrar no quarto e, ao sair, a desparamentação. Nesta estação você não precisa realizar a entrevista.",
+    "tip": "Na falta de quarto privativo, distância mínima de 1 metro entre os leitos; no transporte, o paciente usa máscara cirúrgica (p. 6–7).",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Gotículas: máscara cirúrgica para o profissional (p. 6–7)."
+      },
+      {
+        "action": "Retirar a máscara cirúrgica"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Higienização final das mãos (p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "PFF2/N95 é a máscara da precaução para aerossóis; em gotículas o profissional usa máscara cirúrgica (p. 6–7)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Não faz parte da precaução para gotículas (p. 6–7) e não haverá contato com sangue ou secreções."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "Luvas só quando há risco de contato com sangue, secreções ou mucosas (p. 5)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Óculos/máscara/avental são indicados quando há risco de contato com sangue ou secreções (p. 5); o caso informa que não haverá."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-c3",
+    "title": "Precaução para aerossóis — entrar e sair do quarto",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Corredor da enfermaria, em frente ao quarto privativo. Na bancada ao lado da porta há EPIs e um dispensador de preparação alcoólica.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai conversar com o Sr. R.C., 47 anos, internado com suspeita de tuberculose, para colher a história clínica. Na porta do quarto está a placa: PRECAUÇÃO PARA AEROSSÓIS. Não haverá contato com sangue ou secreções. Você ainda não entrou no quarto.",
+    "task": "Realize, na ordem correta, a paramentação para entrar no quarto e, ao sair, a desparamentação. Nesta estação você não precisa realizar a entrevista.",
+    "tip": "Na falta de quarto privativo, o paciente pode ficar com outros infectados pelo mesmo microrganismo; suspeita de tuberculose resistente não divide quarto (p. 6).",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara PFF2/N95 antes de entrar no quarto",
+        "why": "Coloque a máscara antes de entrar no quarto (p. 6); PFF2/N95: filtração ≥ 94–95% (p. 8)."
+      },
+      {
+        "action": "Entrar e manter a porta do quarto fechada",
+        "why": "Mantenha a porta do quarto SEMPRE fechada (p. 6)."
+      },
+      {
+        "action": "Retirar a máscara PFF2/N95"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Higienização final das mãos (p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Em aerossóis a máscara cirúrgica é do paciente durante o transporte; o profissional usa PFF2/N95 (p. 6)."
+      },
+      {
+        "action": "Deixar a porta do quarto aberta",
+        "why": "A porta deve ficar SEMPRE fechada (p. 6)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Não faz parte da precaução para aerossóis (p. 6–7) e não haverá contato com sangue ou secreções."
+      },
+      {
+        "action": "Entrar no quarto e só depois colocar a máscara PFF2/N95",
+        "why": "Coloque a máscara antes de entrar no quarto (p. 6)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "Luvas só quando há risco de contato com sangue, secreções ou mucosas (p. 5)."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-d1",
+    "title": "Desparamentação — sem touca · máscara cirúrgica",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Saída do quarto de isolamento. Há dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e participou do atendimento do Sr. J.R., 58 anos, internado neste quarto. O procedimento acaba de terminar e é preciso sair sem se contaminar e sem contaminar o ambiente. Você está usando: avental, máscara cirúrgica, óculos ou face shield, luvas de procedimento.",
+    "task": "Realize a desparamentação na ordem correta, com a higienização das mãos nos momentos adequados — esta é a fase de maior risco.",
+    "steps": [
+      {
+        "action": "Retirar as luvas"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar o avental"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar os óculos ou o face shield"
+      },
+      {
+        "action": "Retirar a máscara cirúrgica"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Higienização final das mãos (p. 8–9)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Retirar a touca",
+        "why": "O caso informa que você não está usando touca."
+      },
+      {
+        "action": "Retirar a máscara PFF2/N95",
+        "why": "Você está usando máscara cirúrgica; a PFF2/N95 é da precaução para aerossóis (p. 6)."
+      },
+      {
+        "action": "Retirar o propé",
+        "why": "O propé não é recomendado rotineiramente (p. 8) e o caso não informa que você o esteja usando."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8–9)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-d2",
+    "title": "Desparamentação — sem touca · PFF2/N95",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Saída do quarto de isolamento. Há dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e participou do atendimento do Sr. J.R., 58 anos, internado neste quarto. O procedimento acaba de terminar e é preciso sair sem se contaminar e sem contaminar o ambiente. Você está usando: avental, máscara PFF2/N95, óculos ou face shield, luvas de procedimento.",
+    "task": "Realize a desparamentação na ordem correta, com a higienização das mãos nos momentos adequados — esta é a fase de maior risco.",
+    "steps": [
+      {
+        "action": "Retirar as luvas"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar o avental"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar os óculos ou o face shield"
+      },
+      {
+        "action": "Retirar a máscara PFF2/N95"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Higienização final das mãos (p. 8–9)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Retirar a touca",
+        "why": "O caso informa que você não está usando touca."
+      },
+      {
+        "action": "Retirar a máscara cirúrgica",
+        "why": "Você está usando a máscara PFF2/N95 (precaução para aerossóis)."
+      },
+      {
+        "action": "Retirar o propé",
+        "why": "O propé não é recomendado rotineiramente (p. 8) e o caso não informa que você o esteja usando."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8–9)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-d3",
+    "title": "Desparamentação — com touca · máscara cirúrgica",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Saída do quarto de isolamento. Há dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e participou do atendimento do Sr. J.R., 58 anos, internado neste quarto. O procedimento acaba de terminar e é preciso sair sem se contaminar e sem contaminar o ambiente. Você está usando: avental, máscara cirúrgica, óculos ou face shield, luvas de procedimento, touca.",
+    "task": "Realize a desparamentação na ordem correta, com a higienização das mãos nos momentos adequados — esta é a fase de maior risco.",
+    "steps": [
+      {
+        "action": "Retirar as luvas"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar o avental"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar os óculos ou o face shield"
+      },
+      {
+        "action": "Retirar a touca"
+      },
+      {
+        "action": "Retirar a máscara cirúrgica"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Higienização final das mãos (p. 8–9)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Retirar a máscara PFF2/N95",
+        "why": "Você está usando máscara cirúrgica; a PFF2/N95 é da precaução para aerossóis (p. 6)."
+      },
+      {
+        "action": "Retirar o propé",
+        "why": "O propé não é recomendado rotineiramente (p. 8) e o caso não informa que você o esteja usando."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8–9)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-d4",
+    "title": "Desparamentação — com touca · PFF2/N95",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Saída do quarto de isolamento. Há dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e participou do atendimento do Sr. J.R., 58 anos, internado neste quarto. O procedimento acaba de terminar e é preciso sair sem se contaminar e sem contaminar o ambiente. Você está usando: avental, máscara PFF2/N95, óculos ou face shield, luvas de procedimento, touca.",
+    "task": "Realize a desparamentação na ordem correta, com a higienização das mãos nos momentos adequados — esta é a fase de maior risco.",
+    "steps": [
+      {
+        "action": "Retirar as luvas"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar o avental"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar os óculos ou o face shield"
+      },
+      {
+        "action": "Retirar a touca"
+      },
+      {
+        "action": "Retirar a máscara PFF2/N95"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Higienização final das mãos (p. 8–9)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Retirar a máscara cirúrgica",
+        "why": "Você está usando a máscara PFF2/N95 (precaução para aerossóis)."
+      },
+      {
+        "action": "Retirar o propé",
+        "why": "O propé não é recomendado rotineiramente (p. 8) e o caso não informa que você o esteja usando."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8–9)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-l1",
+    "title": "Calçar e retirar luvas de procedimento",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Beira do leito, na enfermaria. Caixa de luvas de procedimento sobre a mesa auxiliar e recipiente para lixo infectante ao lado da cama.",
+    "scenario": "Você é acadêmico(a) de Medicina e fará, no paciente S.T., 45 anos, um procedimento de assistência não estéril, com risco de contato com secreções. Você usa um relógio e uma pulseira no punho e acaba de higienizar as mãos.",
+    "task": "Calce as luvas de procedimento e, ao final do procedimento, retire-as corretamente e finalize a técnica. Nesta estação você não precisa realizar o procedimento no paciente.",
+    "tip": "Calce as luvas imediatamente antes do contato com o paciente e retire-as logo após o uso (p. 5).",
+    "steps": [
+      {
+        "action": "Remover joias e outros artefatos das mãos e pulsos"
+      },
+      {
+        "action": "Calçar a luva cuidadosamente, ajustando-a até o pulso"
+      },
+      {
+        "action": "Segurar uma luva pela parte externa, na altura do punho, e puxar em direção à ponta dos dedos (a luva sai do avesso)"
+      },
+      {
+        "action": "Segurar a luva removida com a outra mão enluvada"
+      },
+      {
+        "action": "Colocar os dedos da mão sem luva na parte interna da segunda luva, entre a luva e o punho"
+      },
+      {
+        "action": "Remover a segunda luva, arrastando-a em direção à ponta dos dedos e da outra luva"
+      },
+      {
+        "action": "Descartar as luvas em lixo infectante"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Retire as luvas logo após o uso, higienizando as mãos em seguida (p. 5)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Segurar a segunda luva pela parte externa com a mão sem luva",
+        "why": "A mão sem luva entra pela parte interna da segunda luva, entre a luva e o punho (p. 10)."
+      },
+      {
+        "action": "Descartar as luvas no lixo comum",
+        "why": "Luvas são descartadas em lixo infectante (p. 10)."
+      },
+      {
+        "action": "Calçar as luvas mantendo o relógio e a pulseira",
+        "why": "Antes de calçar as luvas, remova joias e outros artefatos das mãos e pulsos (p. 9)."
+      },
+      {
+        "action": "Retirar a primeira luva puxando-a pela ponta dos dedos",
+        "why": "A luva é segurada pela parte externa, na altura do punho, e puxada em direção à ponta dos dedos (p. 10)."
+      },
+      {
+        "action": "Sair da sala sem higienizar as mãos depois de descartar as luvas",
+        "why": "Descarte as luvas em lixo infectante e higienize as mãos (p. 10)."
+      },
+      {
+        "action": "Manter as luvas calçadas para atender o próximo paciente",
+        "why": "As luvas são retiradas logo após o uso, higienizando as mãos em seguida (p. 5)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-l2",
+    "title": "Calçar luvas cirúrgicas (estéreis)",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Sala de procedimentos do ambulatório. O pacote de luvas cirúrgicas estéreis está aberto sobre a mesa auxiliar. Ao lado, caixa de luvas de procedimento.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai auxiliar um procedimento que exige técnica estéril, em paciente do ambulatório. Você precisa calçar as luvas cirúrgicas antes de começar. Você ainda não tocou nas luvas.",
+    "task": "Calce as luvas cirúrgicas, na sequência correta. Nesta estação você não precisa realizar o procedimento.",
+    "steps": [
+      {
+        "action": "Pegar uma luva com o polegar e o indicador"
+      },
+      {
+        "action": "Puxar a luva na mão"
+      },
+      {
+        "action": "Deslizar a mão parcialmente enluvada sob a borda da segunda luva"
+      },
+      {
+        "action": "Puxar a outra luva pelo lado de dentro e puxá-la até o pulso"
+      },
+      {
+        "action": "Deslizar os dedos da mão completamente enluvada sob a borda da primeira luva e puxá-la até o pulso"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Pegar a luva com a palma da mão aberta",
+        "why": "A primeira luva é pega com o polegar e o indicador (passo 1, p. 10)."
+      },
+      {
+        "action": "Pegar a segunda luva pela parte externa com a mão ainda sem luva",
+        "why": "A segunda luva é puxada pelo lado de dentro, deslizando a mão parcialmente enluvada sob a borda dela (passos 3 e 4, p. 10)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "O procedimento exige técnica estéril: luva cirúrgica (estéril)."
+      },
+      {
+        "action": "Puxar a luva apenas até a metade da mão",
+        "why": "As luvas são puxadas até o pulso (passos 4 e 5, p. 10)."
+      },
+      {
+        "action": "Calçar as duas luvas ao mesmo tempo",
+        "why": "A técnica é sequencial: uma mão primeiro, depois a outra com a mão parcialmente enluvada (passos 1 a 5, p. 10)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-p1",
+    "title": "Paramentação — sem touca · máscara cirúrgica · luva de procedimento",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antessala do quarto de isolamento, na enfermaria. Na bancada estão disponíveis: touca, avental, máscara cirúrgica, máscara PFF2/N95, óculos, face shield, luvas de procedimento, luvas cirúrgicas estéreis e propés. Dispensador de preparação alcoólica na parede.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição não exige o uso de touca. Na porta do quarto não há placa de precaução por via aérea, mas durante o atendimento haverá risco de respingos de sangue ou secreções. O procedimento que será realizado não é estéril. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação completa, na ordem correta, antes de entrar no quarto. Nesta estação você não precisa realizar o atendimento.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Proteção respiratória básica; obrigatória em gotículas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a touca",
+        "why": "O caso informa que o protocolo da instituição não exige touca."
+      },
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "PFF2/N95 é a máscara obrigatória em aerossóis (p. 8); este caso não é de aerossóis."
+      },
+      {
+        "action": "Calçar as luvas cirúrgicas (estéreis)",
+        "why": "O procedimento não é estéril: luva de procedimento."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos depois de calçar as luvas",
+        "why": "A higienização das mãos é o primeiro passo da paramentação, antes de tocar em qualquer EPI (p. 8)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-p2",
+    "title": "Paramentação — sem touca · máscara cirúrgica · luva estéril",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antessala do quarto de isolamento, na enfermaria. Na bancada estão disponíveis: touca, avental, máscara cirúrgica, máscara PFF2/N95, óculos, face shield, luvas de procedimento, luvas cirúrgicas estéreis e propés. Dispensador de preparação alcoólica na parede.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição não exige o uso de touca. Na porta do quarto não há placa de precaução por via aérea, mas durante o atendimento haverá risco de respingos de sangue ou secreções. O procedimento que será realizado exige técnica estéril. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação completa, na ordem correta, antes de entrar no quarto. Nesta estação você não precisa realizar o atendimento.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Proteção respiratória básica; obrigatória em gotículas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas cirúrgicas (estéreis)",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a touca",
+        "why": "O caso informa que o protocolo da instituição não exige touca."
+      },
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "PFF2/N95 é a máscara obrigatória em aerossóis (p. 8); este caso não é de aerossóis."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "O caso exige técnica estéril: luva cirúrgica (estéril)."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos depois de calçar as luvas",
+        "why": "A higienização das mãos é o primeiro passo da paramentação, antes de tocar em qualquer EPI (p. 8)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-p3",
+    "title": "Paramentação — sem touca · PFF2/N95 · luva de procedimento",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antessala do quarto de isolamento, na enfermaria. Na bancada estão disponíveis: touca, avental, máscara cirúrgica, máscara PFF2/N95, óculos, face shield, luvas de procedimento, luvas cirúrgicas estéreis e propés. Dispensador de preparação alcoólica na parede.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição não exige o uso de touca. Na porta do quarto há uma placa: PRECAUÇÃO PARA AEROSSÓIS. Durante o atendimento haverá risco de respingos de sangue ou secreções. O procedimento que será realizado não é estéril. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação completa, na ordem correta, antes de entrar no quarto. Nesta estação você não precisa realizar o atendimento.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "Filtração ≥ 94–95% de partículas; obrigatória em aerossóis (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a touca",
+        "why": "O caso informa que o protocolo da instituição não exige touca."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Em aerossóis o profissional usa PFF2/N95; a máscara cirúrgica é do paciente durante o transporte (p. 6)."
+      },
+      {
+        "action": "Calçar as luvas cirúrgicas (estéreis)",
+        "why": "O procedimento não é estéril: luva de procedimento."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos depois de calçar as luvas",
+        "why": "A higienização das mãos é o primeiro passo da paramentação, antes de tocar em qualquer EPI (p. 8)."
+      },
+      {
+        "action": "Entrar no quarto e só depois colocar a máscara PFF2/N95",
+        "why": "A máscara deve ser colocada antes de entrar no quarto, mantendo a porta sempre fechada (p. 6)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-p4",
+    "title": "Paramentação — sem touca · PFF2/N95 · luva estéril",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antessala do quarto de isolamento, na enfermaria. Na bancada estão disponíveis: touca, avental, máscara cirúrgica, máscara PFF2/N95, óculos, face shield, luvas de procedimento, luvas cirúrgicas estéreis e propés. Dispensador de preparação alcoólica na parede.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição não exige o uso de touca. Na porta do quarto há uma placa: PRECAUÇÃO PARA AEROSSÓIS. Durante o atendimento haverá risco de respingos de sangue ou secreções. O procedimento que será realizado exige técnica estéril. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação completa, na ordem correta, antes de entrar no quarto. Nesta estação você não precisa realizar o atendimento.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "Filtração ≥ 94–95% de partículas; obrigatória em aerossóis (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas cirúrgicas (estéreis)",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a touca",
+        "why": "O caso informa que o protocolo da instituição não exige touca."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Em aerossóis o profissional usa PFF2/N95; a máscara cirúrgica é do paciente durante o transporte (p. 6)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "O caso exige técnica estéril: luva cirúrgica (estéril)."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos depois de calçar as luvas",
+        "why": "A higienização das mãos é o primeiro passo da paramentação, antes de tocar em qualquer EPI (p. 8)."
+      },
+      {
+        "action": "Entrar no quarto e só depois colocar a máscara PFF2/N95",
+        "why": "A máscara deve ser colocada antes de entrar no quarto, mantendo a porta sempre fechada (p. 6)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-p5",
+    "title": "Paramentação — com touca · máscara cirúrgica · luva de procedimento",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antessala do quarto de isolamento, na enfermaria. Na bancada estão disponíveis: touca, avental, máscara cirúrgica, máscara PFF2/N95, óculos, face shield, luvas de procedimento, luvas cirúrgicas estéreis e propés. Dispensador de preparação alcoólica na parede.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição exige o uso de touca para entrar no quarto. Na porta do quarto não há placa de precaução por via aérea, mas durante o atendimento haverá risco de respingos de sangue ou secreções. O procedimento que será realizado não é estéril. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação completa, na ordem correta, antes de entrar no quarto. Nesta estação você não precisa realizar o atendimento.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a touca",
+        "why": "Não listada como obrigatória pela ANVISA; frequentemente exigida por protocolos hospitalares — cultura institucional / controle adicional de respingos (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Proteção respiratória básica; obrigatória em gotículas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "PFF2/N95 é a máscara obrigatória em aerossóis (p. 8); este caso não é de aerossóis."
+      },
+      {
+        "action": "Calçar as luvas cirúrgicas (estéreis)",
+        "why": "O procedimento não é estéril: luva de procedimento."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos depois de calçar as luvas",
+        "why": "A higienização das mãos é o primeiro passo da paramentação, antes de tocar em qualquer EPI (p. 8)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-p6",
+    "title": "Paramentação — com touca · máscara cirúrgica · luva estéril",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antessala do quarto de isolamento, na enfermaria. Na bancada estão disponíveis: touca, avental, máscara cirúrgica, máscara PFF2/N95, óculos, face shield, luvas de procedimento, luvas cirúrgicas estéreis e propés. Dispensador de preparação alcoólica na parede.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição exige o uso de touca para entrar no quarto. Na porta do quarto não há placa de precaução por via aérea, mas durante o atendimento haverá risco de respingos de sangue ou secreções. O procedimento que será realizado exige técnica estéril. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação completa, na ordem correta, antes de entrar no quarto. Nesta estação você não precisa realizar o atendimento.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a touca",
+        "why": "Não listada como obrigatória pela ANVISA; frequentemente exigida por protocolos hospitalares — cultura institucional / controle adicional de respingos (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Proteção respiratória básica; obrigatória em gotículas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas cirúrgicas (estéreis)",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "PFF2/N95 é a máscara obrigatória em aerossóis (p. 8); este caso não é de aerossóis."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "O caso exige técnica estéril: luva cirúrgica (estéril)."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos depois de calçar as luvas",
+        "why": "A higienização das mãos é o primeiro passo da paramentação, antes de tocar em qualquer EPI (p. 8)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-p7",
+    "title": "Paramentação — com touca · PFF2/N95 · luva de procedimento",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antessala do quarto de isolamento, na enfermaria. Na bancada estão disponíveis: touca, avental, máscara cirúrgica, máscara PFF2/N95, óculos, face shield, luvas de procedimento, luvas cirúrgicas estéreis e propés. Dispensador de preparação alcoólica na parede.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição exige o uso de touca para entrar no quarto. Na porta do quarto há uma placa: PRECAUÇÃO PARA AEROSSÓIS. Durante o atendimento haverá risco de respingos de sangue ou secreções. O procedimento que será realizado não é estéril. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação completa, na ordem correta, antes de entrar no quarto. Nesta estação você não precisa realizar o atendimento.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a touca",
+        "why": "Não listada como obrigatória pela ANVISA; frequentemente exigida por protocolos hospitalares — cultura institucional / controle adicional de respingos (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "Filtração ≥ 94–95% de partículas; obrigatória em aerossóis (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Em aerossóis o profissional usa PFF2/N95; a máscara cirúrgica é do paciente durante o transporte (p. 6)."
+      },
+      {
+        "action": "Calçar as luvas cirúrgicas (estéreis)",
+        "why": "O procedimento não é estéril: luva de procedimento."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos depois de calçar as luvas",
+        "why": "A higienização das mãos é o primeiro passo da paramentação, antes de tocar em qualquer EPI (p. 8)."
+      },
+      {
+        "action": "Entrar no quarto e só depois colocar a máscara PFF2/N95",
+        "why": "A máscara deve ser colocada antes de entrar no quarto, mantendo a porta sempre fechada (p. 6)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-p8",
+    "title": "Paramentação — com touca · PFF2/N95 · luva estéril",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antessala do quarto de isolamento, na enfermaria. Na bancada estão disponíveis: touca, avental, máscara cirúrgica, máscara PFF2/N95, óculos, face shield, luvas de procedimento, luvas cirúrgicas estéreis e propés. Dispensador de preparação alcoólica na parede.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição exige o uso de touca para entrar no quarto. Na porta do quarto há uma placa: PRECAUÇÃO PARA AEROSSÓIS. Durante o atendimento haverá risco de respingos de sangue ou secreções. O procedimento que será realizado exige técnica estéril. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação completa, na ordem correta, antes de entrar no quarto. Nesta estação você não precisa realizar o atendimento.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a touca",
+        "why": "Não listada como obrigatória pela ANVISA; frequentemente exigida por protocolos hospitalares — cultura institucional / controle adicional de respingos (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "Filtração ≥ 94–95% de partículas; obrigatória em aerossóis (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas cirúrgicas (estéreis)",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Em aerossóis o profissional usa PFF2/N95; a máscara cirúrgica é do paciente durante o transporte (p. 6)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "O caso exige técnica estéril: luva cirúrgica (estéril)."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos depois de calçar as luvas",
+        "why": "A higienização das mãos é o primeiro passo da paramentação, antes de tocar em qualquer EPI (p. 8)."
+      },
+      {
+        "action": "Entrar no quarto e só depois colocar a máscara PFF2/N95",
+        "why": "A máscara deve ser colocada antes de entrar no quarto, mantendo a porta sempre fechada (p. 6)."
+      }
+    ]
+  }
+]

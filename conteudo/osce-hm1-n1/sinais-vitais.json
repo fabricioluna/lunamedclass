@@ -1,0 +1,822 @@
+[
+  {
+    "slug": "hm1-n1-s01",
+    "title": "Preparo do material e abordagem do paciente",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório de uma Unidade Básica de Saúde, silencioso. Sobre a mesa há uma bandeja vazia; no armário estão: estetoscópio, esfigmomanômetro, termômetro, relógio ou cronômetro, bloco de anotações, caneta, luvas de procedimento, álcool 70% e algodão.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na UBS. O Sr. G.M., 52 anos, aguarda na sala ao lado para ter os sinais vitais avaliados antes da consulta. Você ainda não iniciou nenhum preparo.",
+    "task": "Prepare o material e aborde o paciente, na ordem correta, antes de iniciar a avaliação. Nesta estação você não precisa aferir nenhum sinal vital.",
+    "tip": "Todo o material é higienizado com algodão embebido em álcool 70% (p. 1).",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "O roteiro inicia a prática com a lavagem das mãos (p. 1)."
+      },
+      {
+        "action": "Organizar na bandeja: estetoscópio, esfigmomanômetro, termômetro, relógio, bloco, caneta, luvas de procedimento, álcool 70% e algodão"
+      },
+      {
+        "action": "Higienizar o termômetro com algodão e álcool 70%, em movimentos unidirecionais do display para o bulbo"
+      },
+      {
+        "action": "Higienizar a braçadeira do esfigmomanômetro em movimentos unidirecionais"
+      },
+      {
+        "action": "Higienizar o diafragma do estetoscópio em movimentos circulares"
+      },
+      {
+        "action": "Apresentar-se ao paciente"
+      },
+      {
+        "action": "Explicar o procedimento"
+      },
+      {
+        "action": "Pedir o consentimento do paciente"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Higienizar o termômetro do bulbo para o display",
+        "why": "O movimento é unidirecional do display para o bulbo (p. 1)."
+      },
+      {
+        "action": "Higienizar a braçadeira em movimentos circulares",
+        "why": "A braçadeira é higienizada em movimentos unidirecionais (p. 1)."
+      },
+      {
+        "action": "Higienizar o diafragma do estetoscópio em movimentos unidirecionais",
+        "why": "O diafragma é higienizado em movimentos circulares (p. 1)."
+      },
+      {
+        "action": "Higienizar o material com água e sabão",
+        "why": "Todo o material é higienizado com algodão embebido em álcool 70% (p. 1)."
+      },
+      {
+        "action": "Iniciar a aferição sem pedir o consentimento do paciente",
+        "why": "O discente deve se apresentar, explicar o procedimento e pedir o consentimento do paciente (p. 1)."
+      },
+      {
+        "action": "Levar o material solto nas mãos, sem organizá-lo na bandeja",
+        "why": "O material é organizado na bandeja antes de iniciar a avaliação (p. 1)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s02",
+    "title": "Pulso e respiração — alteração de ritmo nos primeiros 30 segundos",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS. O Sr. G.M. está sentado, com o antebraço apoiado sobre a mesa. Você já preparou o material e abordou o paciente, que consentiu. Sobre a mesa: relógio ou cronômetro e bloco de anotações.",
+    "scenario": "Você é acadêmico(a) de Medicina e avaliará o pulso e a respiração do Sr. G.M., 52 anos. Ao palpar o pulso radial, você percebe, nos primeiros 30 segundos, que o ritmo está alterado.",
+    "task": "Avalie o pulso e, em seguida, a respiração, na ordem correta. Nesta estação você não precisa classificar os achados.",
+    "tip": "Sem alteração de ritmo ou amplitude nos primeiros 30 s, pode-se multiplicar o valor por 2. Principais artérias: radial, carotídea e femoral (p. 2).",
+    "steps": [
+      {
+        "action": "Palpar o pulso radial"
+      },
+      {
+        "action": "Contar as pulsações por 30 segundos, observando ritmo, força e amplitude"
+      },
+      {
+        "action": "Manter a contagem até completar 1 minuto",
+        "why": "Com alteração de ritmo ou amplitude nos primeiros 30 s, a contagem vai até 1 minuto (p. 2)."
+      },
+      {
+        "action": "Continuar palpando o pulso e começar a observar discretamente o tórax",
+        "why": "A respiração é avaliada logo após o pulso, continuando a palpar o mesmo (p. 3)."
+      },
+      {
+        "action": "Contar a respiração durante 1 minuto, sem informar o paciente",
+        "why": "Informar o paciente leva ao controle voluntário do padrão respiratório (p. 2)."
+      },
+      {
+        "action": "Avaliar ritmo, amplitude e tiragem da respiração"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Multiplicar o valor de 30 segundos por 2",
+        "why": "Só se multiplica por 2 quando não há alteração de ritmo ou amplitude nos primeiros 30 s (p. 2)."
+      },
+      {
+        "action": "Avisar o paciente de que a respiração será contada",
+        "why": "O observador não deve informar o paciente, para que não ocorra controle voluntário do padrão respiratório (p. 2)."
+      },
+      {
+        "action": "Soltar o pulso para observar o tórax",
+        "why": "Continue palpando o pulso enquanto observa discretamente o tórax (p. 3)."
+      },
+      {
+        "action": "Contar as pulsações por apenas 15 segundos e multiplicar por 4",
+        "why": "A avaliação do pulso é feita em 1 minuto (ou 30 segundos multiplicado por 2, se não houver alteração) (p. 2)."
+      },
+      {
+        "action": "Contar a respiração por 15 segundos e multiplicar por 4",
+        "why": "A respiração é avaliada em um intervalo de 1 minuto (p. 2)."
+      },
+      {
+        "action": "Pedir ao paciente que respire profundamente enquanto você conta",
+        "why": "O paciente não deve ser informado, para não ocorrer controle voluntário do padrão respiratório (p. 2)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s03",
+    "title": "Pressão arterial — método indireto (paciente sentado)",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS, silencioso. A Sra. L.A. está sentada em uma cadeira com apoio para o braço. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial da Sra. L.A., 49 anos, que veio a uma consulta de rotina. Ela já foi abordada, entendeu o procedimento e consentiu. Acabou de chegar à sala e ainda não está em repouso.",
+    "task": "Realize a medida da pressão arterial pelo método indireto, desde a preparação do paciente até o registro dos valores. Nesta estação você não precisa classificar o resultado.",
+    "tip": "Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).",
+    "steps": [
+      {
+        "action": "Garantir repouso de 3 a 5 minutos, em local tranquilo"
+      },
+      {
+        "action": "Posicionar o paciente sentado, confortável"
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal), braço ligeiramente fletido, apoiado em superfície firme, palma da mão para cima"
+      },
+      {
+        "action": "Localizar as pulsações da artéria braquial"
+      },
+      {
+        "action": "Colocar o manguito 2 cm acima da fossa cubital"
+      },
+      {
+        "action": "Palpar o pulso radial"
+      },
+      {
+        "action": "Inflar o manguito até o desaparecimento do pulso radial"
+      },
+      {
+        "action": "Desinsuflar lentamente: o reaparecimento do pulso é a pressão sistólica pelo método palpatório",
+        "why": "O método palpatório evita subestimar a sistólica quando há hiato auscultatório (Imagem 1, p. 5)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria braquial"
+      },
+      {
+        "action": "Insuflar o manguito cerca de 30 mmHg acima da sistólica palpatória"
+      },
+      {
+        "action": "Soltar o ar de maneira contínua, a 2–3 mmHg por segundo, até o completo esvaziamento"
+      },
+      {
+        "action": "Registrar a sistólica no aparecimento do primeiro ruído (fase I de Korotkoff)"
+      },
+      {
+        "action": "Registrar a diastólica no desaparecimento dos sons (fase V de Korotkoff)"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar o manguito sobre a fossa cubital",
+        "why": "O manguito fica 2 cm acima da fossa cubital (p. 3)."
+      },
+      {
+        "action": "Desinsuflar rapidamente o manguito",
+        "why": "O ar é solto de maneira contínua, a 2–3 mmHg por segundo (p. 4)."
+      },
+      {
+        "action": "Registrar a diastólica no abafamento dos sons (fase IV de Korotkoff)",
+        "why": "A diastólica é o desaparecimento dos sons, fase V (p. 4)."
+      },
+      {
+        "action": "Inflar o manguito até um valor fixo, sem palpar o pulso radial antes",
+        "why": "Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4)."
+      },
+      {
+        "action": "Posicionar o braço do paciente abaixo do nível do coração",
+        "why": "A artéria braquial deve ficar ao nível do coração, no 4º espaço intercostal (p. 3)."
+      },
+      {
+        "action": "Aferir a pressão arterial logo que o paciente chega, sem repouso",
+        "why": "O paciente deve ter repouso mínimo de 3 a 5 minutos, em local tranquilo (p. 3)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s04",
+    "title": "Pressão arterial — método indireto (gestante)",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório de pré-natal da UBS. A paciente está em uma maca com apoio para o braço. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial da Sra. C.B., 28 anos, gestante, em consulta de pré-natal. Ela já foi abordada, entendeu o procedimento e consentiu. Acabou de chegar à sala e ainda não está em repouso.",
+    "task": "Realize a medida da pressão arterial pelo método indireto, na posição preferencial para gestantes, até o registro dos valores. Nesta estação você não precisa classificar o resultado.",
+    "tip": "Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).",
+    "steps": [
+      {
+        "action": "Garantir repouso de 3 a 5 minutos, em local tranquilo"
+      },
+      {
+        "action": "Posicionar a gestante em decúbito lateral esquerdo ou decúbito dorsal",
+        "why": "No caso de gestantes, preferir o decúbito lateral esquerdo ou o decúbito dorsal (p. 3)."
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal), braço ligeiramente fletido, apoiado em superfície firme, palma da mão para cima"
+      },
+      {
+        "action": "Localizar as pulsações da artéria braquial"
+      },
+      {
+        "action": "Colocar o manguito 2 cm acima da fossa cubital"
+      },
+      {
+        "action": "Palpar o pulso radial"
+      },
+      {
+        "action": "Inflar o manguito até o desaparecimento do pulso radial"
+      },
+      {
+        "action": "Desinsuflar lentamente: o reaparecimento do pulso é a pressão sistólica pelo método palpatório",
+        "why": "O método palpatório evita subestimar a sistólica quando há hiato auscultatório (Imagem 1, p. 5)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria braquial"
+      },
+      {
+        "action": "Insuflar o manguito cerca de 30 mmHg acima da sistólica palpatória"
+      },
+      {
+        "action": "Soltar o ar de maneira contínua, a 2–3 mmHg por segundo, até o completo esvaziamento"
+      },
+      {
+        "action": "Registrar a sistólica no aparecimento do primeiro ruído (fase I de Korotkoff)"
+      },
+      {
+        "action": "Registrar a diastólica no desaparecimento dos sons (fase V de Korotkoff)"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Colocar o manguito sobre a fossa cubital",
+        "why": "O manguito fica 2 cm acima da fossa cubital (p. 3)."
+      },
+      {
+        "action": "Desinsuflar rapidamente o manguito",
+        "why": "O ar é solto de maneira contínua, a 2–3 mmHg por segundo (p. 4)."
+      },
+      {
+        "action": "Registrar a diastólica no abafamento dos sons (fase IV de Korotkoff)",
+        "why": "A diastólica é o desaparecimento dos sons, fase V (p. 4)."
+      },
+      {
+        "action": "Inflar o manguito até um valor fixo, sem palpar o pulso radial antes",
+        "why": "Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4)."
+      },
+      {
+        "action": "Posicionar o braço do paciente abaixo do nível do coração",
+        "why": "A artéria braquial deve ficar ao nível do coração, no 4º espaço intercostal (p. 3)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s05",
+    "title": "Sequência completa de sinais vitais",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS. Sobre a mesa: bandeja, estetoscópio, esfigmomanômetro, termômetro, relógio, bloco de anotações, caneta, luvas de procedimento, álcool 70% e algodão.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na UBS. O Sr. A.P., 60 anos, aguarda na sala ao lado para a avaliação dos sinais vitais antes da consulta. Ele está consciente e colaborativo. Você ainda não iniciou nenhum preparo.",
+    "task": "Realize a avaliação completa dos sinais vitais, do preparo à comunicação dos achados, na ordem correta. Nesta estação você não precisa detalhar a técnica de cada sinal vital.",
+    "tip": "A técnica de avaliação dos sinais vitais é a mesma, independente do estado de consciência do paciente (p. 1).",
+    "steps": [
+      {
+        "action": "Higienizar as mãos"
+      },
+      {
+        "action": "Organizar e higienizar o material da bandeja com algodão e álcool 70%"
+      },
+      {
+        "action": "Apresentar-se, explicar o procedimento e pedir o consentimento"
+      },
+      {
+        "action": "Avaliar a temperatura corporal"
+      },
+      {
+        "action": "Avaliar o pulso"
+      },
+      {
+        "action": "Avaliar a respiração, sem informar o paciente"
+      },
+      {
+        "action": "Aferir a pressão arterial"
+      },
+      {
+        "action": "Informar os achados ao paciente e perguntar se ele tem alguma dúvida"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Avisar o paciente de que a respiração será observada",
+        "why": "O observador não deve informar o paciente sobre a coleta, para evitar controle voluntário da respiração (p. 2)."
+      },
+      {
+        "action": "Higienizar o material com água e sabão",
+        "why": "Todo o material é higienizado com algodão embebido em álcool 70% (p. 1)."
+      },
+      {
+        "action": "Iniciar a avaliação sem pedir o consentimento do paciente",
+        "why": "O discente deve se apresentar, explicar o procedimento e pedir o consentimento (p. 1)."
+      },
+      {
+        "action": "Registrar os achados sem informá-los ao paciente",
+        "why": "Ao final da avaliação, informar os achados ao paciente e perguntar se ele tem alguma dúvida (p. 6)."
+      },
+      {
+        "action": "Aferir a pressão arterial sem repouso prévio",
+        "why": "A pressão arterial exige repouso mínimo de 3 a 5 minutos (p. 3)."
+      },
+      {
+        "action": "Contar o pulso por 15 segundos e multiplicar por 4",
+        "why": "O pulso é avaliado em 1 minuto (ou 30 segundos multiplicado por 2, se não houver alteração de ritmo ou amplitude) (p. 2)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s06",
+    "title": "Pulso e respiração — sem alteração de ritmo nos primeiros 30 segundos",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS. A Sra. R.D. está sentada, com o antebraço apoiado sobre a mesa. Você já preparou o material e abordou a paciente, que consentiu. Sobre a mesa: relógio ou cronômetro e bloco de anotações.",
+    "scenario": "Você é acadêmico(a) de Medicina e avaliará o pulso e a respiração da Sra. R.D., 38 anos. Ao palpar o pulso radial, você não percebe alteração de ritmo nem de amplitude nos primeiros 30 segundos.",
+    "task": "Avalie o pulso e, em seguida, a respiração, na ordem correta. Nesta estação você não precisa classificar os achados.",
+    "tip": "Principais artérias para avaliação do pulso: radial, carotídea e femoral (p. 2).",
+    "steps": [
+      {
+        "action": "Palpar o pulso radial"
+      },
+      {
+        "action": "Obter a frequência do pulso em 1 minuto, ou em 30 segundos multiplicando o valor por 2, observando ritmo, força e amplitude",
+        "why": "O pulso é avaliado em 1 minuto; se nos primeiros 30 s não houver alteração de ritmo ou amplitude, pode-se multiplicar o valor por 2 (p. 2)."
+      },
+      {
+        "action": "Continuar palpando o pulso e começar a observar discretamente o tórax",
+        "why": "A respiração é avaliada logo após o pulso, continuando a palpar o mesmo (p. 3)."
+      },
+      {
+        "action": "Contar a respiração durante 1 minuto, sem informar o paciente",
+        "why": "Informar o paciente leva ao controle voluntário do padrão respiratório (p. 2)."
+      },
+      {
+        "action": "Avaliar ritmo, amplitude e tiragem da respiração"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Avisar o paciente de que a respiração será contada",
+        "why": "O observador não deve informar o paciente, para que não ocorra controle voluntário do padrão respiratório (p. 2)."
+      },
+      {
+        "action": "Soltar o pulso para observar o tórax",
+        "why": "Continue palpando o pulso enquanto observa discretamente o tórax (p. 3)."
+      },
+      {
+        "action": "Contar as pulsações por apenas 15 segundos e multiplicar por 4",
+        "why": "A avaliação do pulso é feita em 1 minuto (ou 30 segundos multiplicado por 2, se não houver alteração) (p. 2)."
+      },
+      {
+        "action": "Contar a respiração por 15 segundos e multiplicar por 4",
+        "why": "A respiração é avaliada em um intervalo de 1 minuto (p. 2)."
+      },
+      {
+        "action": "Pedir ao paciente que respire profundamente enquanto você conta",
+        "why": "O paciente não deve ser informado, para não ocorrer controle voluntário do padrão respiratório (p. 2)."
+      },
+      {
+        "action": "Avaliar apenas a frequência do pulso, sem observar o ritmo",
+        "why": "No pulso devem ser avaliados a frequência e o ritmo (p. 2)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s07",
+    "title": "Pressão arterial — ruídos de difícil percepção",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS, silencioso. O Sr. P.N. está sentado em uma cadeira com apoio para o braço. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial do Sr. P.N., 63 anos, que veio a uma consulta de rotina. Ele já foi abordado, entendeu o procedimento e consentiu. Durante a ausculta, você percebe que os ruídos estão sendo percebidos com dificuldade.",
+    "task": "Realize a medida da pressão arterial pelo método indireto, incluindo a conduta para facilitar a ausculta, até o registro dos valores. Nesta estação você não precisa classificar o resultado.",
+    "tip": "Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).",
+    "steps": [
+      {
+        "action": "Garantir repouso de 3 a 5 minutos, em local tranquilo"
+      },
+      {
+        "action": "Posicionar o paciente sentado, confortável"
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal), braço ligeiramente fletido, apoiado em superfície firme, palma da mão para cima"
+      },
+      {
+        "action": "Localizar as pulsações da artéria braquial"
+      },
+      {
+        "action": "Colocar o manguito 2 cm acima da fossa cubital"
+      },
+      {
+        "action": "Palpar o pulso radial"
+      },
+      {
+        "action": "Inflar o manguito até o desaparecimento do pulso radial"
+      },
+      {
+        "action": "Desinsuflar lentamente: o reaparecimento do pulso é a pressão sistólica pelo método palpatório",
+        "why": "O método palpatório evita subestimar a sistólica quando há hiato auscultatório (Imagem 1, p. 5)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria braquial"
+      },
+      {
+        "action": "Insuflar o manguito cerca de 30 mmHg acima da sistólica palpatória"
+      },
+      {
+        "action": "Soltar o ar de maneira contínua, a 2–3 mmHg por segundo, até o completo esvaziamento"
+      },
+      {
+        "action": "Aumentar o ângulo entre o braço e o tórax, retificando a artéria, para facilitar a ausculta dos sons",
+        "why": "Se os ruídos forem percebidos com dificuldade, aumentar o ângulo entre o braço e o tórax, retificando a artéria, facilita a ausculta (p. 4)."
+      },
+      {
+        "action": "Registrar a sistólica no aparecimento do primeiro ruído (fase I de Korotkoff)"
+      },
+      {
+        "action": "Registrar a diastólica no desaparecimento dos sons (fase V de Korotkoff)"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Diminuir o ângulo entre o braço e o tórax",
+        "why": "Para facilitar a ausculta, aumenta-se o ângulo entre o braço e o tórax, retificando a artéria (p. 4)."
+      },
+      {
+        "action": "Desinsuflar rapidamente o manguito",
+        "why": "O ar é solto de maneira contínua, a 2–3 mmHg por segundo (p. 4)."
+      },
+      {
+        "action": "Baixar a cabeça para auscultar melhor",
+        "why": "O observador deve evitar baixar a cabeça: a congestão dos vasos do ouvido prejudica a ausculta (p. 3)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria radial",
+        "why": "Na ausculta, o estetoscópio vai sobre a artéria braquial (p. 4); a radial é usada no método palpatório."
+      },
+      {
+        "action": "Registrar a diastólica no abafamento dos sons (fase IV de Korotkoff)",
+        "why": "A diastólica é o desaparecimento dos sons, fase V (p. 4)."
+      },
+      {
+        "action": "Colocar o manguito sobre a fossa cubital",
+        "why": "O manguito fica 2 cm acima da fossa cubital (p. 3)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s08",
+    "title": "Pressão arterial em várias posições — idoso, primeira avaliação",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS, silencioso. Há uma cadeira com apoio para o braço e espaço para o paciente ficar em pé ao lado da mesa. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial do Sr. J.A., 74 anos, que comparece pela primeira vez à UBS. Ele já foi abordado, entendeu o procedimento e consentiu. Esta é a primeira avaliação da pressão arterial dele na unidade. Acabou de chegar à sala e ainda não está em repouso.",
+    "task": "Realize a medida da pressão arterial pelo método indireto nas posições sentado e em pé, até o registro dos valores de cada posição. Nesta estação você não precisa classificar o resultado.",
+    "tip": "Por ocasião da primeira avaliação e em alguns casos (idosos, controle de terapêutica, suspeita de hipotensão postural), deve-se efetuar a medida nas várias posições (p. 3).",
+    "steps": [
+      {
+        "action": "Garantir repouso de 3 a 5 minutos, em local tranquilo"
+      },
+      {
+        "action": "Posicionar o paciente sentado, confortável"
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal), braço ligeiramente fletido, apoiado em superfície firme, palma da mão para cima"
+      },
+      {
+        "action": "Localizar as pulsações da artéria braquial"
+      },
+      {
+        "action": "Colocar o manguito 2 cm acima da fossa cubital"
+      },
+      {
+        "action": "Palpar o pulso radial"
+      },
+      {
+        "action": "Inflar o manguito até o desaparecimento do pulso radial"
+      },
+      {
+        "action": "Desinsuflar lentamente: o reaparecimento do pulso é a pressão sistólica pelo método palpatório",
+        "why": "O método palpatório evita subestimar a sistólica quando há hiato auscultatório (Imagem 1, p. 5)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria braquial"
+      },
+      {
+        "action": "Insuflar o manguito cerca de 30 mmHg acima da sistólica palpatória"
+      },
+      {
+        "action": "Soltar o ar de maneira contínua, a 2–3 mmHg por segundo, até o completo esvaziamento"
+      },
+      {
+        "action": "Registrar a sistólica no aparecimento do primeiro ruído (fase I de Korotkoff)"
+      },
+      {
+        "action": "Registrar a diastólica no desaparecimento dos sons (fase V de Korotkoff)"
+      },
+      {
+        "action": "Posicionar o paciente em pé",
+        "why": "Nestes casos a medida deve ser feita nas várias posições: sentado, deitado ou em pé (p. 3)."
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal) também com o paciente em pé, com o braço apoiado",
+        "why": "Em qualquer posição, a artéria braquial deve ficar ao nível do coração (p. 3)."
+      },
+      {
+        "action": "Repetir a medida da pressão arterial, com a mesma técnica"
+      },
+      {
+        "action": "Registrar as pressões obtidas em cada posição"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Aferir a pressão arterial somente na posição sentada",
+        "why": "Nestes casos a medida deve ser feita nas várias posições (p. 3)."
+      },
+      {
+        "action": "Medir em pé com o braço pendente ao lado do corpo",
+        "why": "Em qualquer posição, a artéria braquial deve ficar ao nível do coração (4º espaço intercostal), com o braço apoiado (p. 3)."
+      },
+      {
+        "action": "Aferir a pressão arterial logo que o paciente chega, sem repouso",
+        "why": "O paciente deve ter repouso mínimo de 3 a 5 minutos, em local tranquilo (p. 3)."
+      },
+      {
+        "action": "Desinsuflar rapidamente o manguito",
+        "why": "O ar é solto de maneira contínua, a 2–3 mmHg por segundo (p. 4)."
+      },
+      {
+        "action": "Registrar a diastólica no abafamento dos sons (fase IV de Korotkoff)",
+        "why": "A diastólica é o desaparecimento dos sons, fase V (p. 4)."
+      },
+      {
+        "action": "Inflar o manguito até um valor fixo, sem palpar o pulso radial antes",
+        "why": "Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s09",
+    "title": "Pressão arterial em várias posições — controle de terapêutica",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS, silencioso. Há uma cadeira com apoio para o braço e espaço para o paciente ficar em pé ao lado da mesa. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial da Sra. E.M., 66 anos, em acompanhamento na UBS para controle do tratamento da pressão arterial. Ela já foi abordada, entendeu o procedimento e consentiu. Acabou de chegar à sala e ainda não está em repouso.",
+    "task": "Realize a medida da pressão arterial pelo método indireto nas posições sentado e em pé, até o registro dos valores de cada posição. Nesta estação você não precisa classificar o resultado.",
+    "tip": "Por ocasião da primeira avaliação e em alguns casos (idosos, controle de terapêutica, suspeita de hipotensão postural), deve-se efetuar a medida nas várias posições (p. 3).",
+    "steps": [
+      {
+        "action": "Garantir repouso de 3 a 5 minutos, em local tranquilo"
+      },
+      {
+        "action": "Posicionar o paciente sentado, confortável"
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal), braço ligeiramente fletido, apoiado em superfície firme, palma da mão para cima"
+      },
+      {
+        "action": "Localizar as pulsações da artéria braquial"
+      },
+      {
+        "action": "Colocar o manguito 2 cm acima da fossa cubital"
+      },
+      {
+        "action": "Palpar o pulso radial"
+      },
+      {
+        "action": "Inflar o manguito até o desaparecimento do pulso radial"
+      },
+      {
+        "action": "Desinsuflar lentamente: o reaparecimento do pulso é a pressão sistólica pelo método palpatório",
+        "why": "O método palpatório evita subestimar a sistólica quando há hiato auscultatório (Imagem 1, p. 5)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria braquial"
+      },
+      {
+        "action": "Insuflar o manguito cerca de 30 mmHg acima da sistólica palpatória"
+      },
+      {
+        "action": "Soltar o ar de maneira contínua, a 2–3 mmHg por segundo, até o completo esvaziamento"
+      },
+      {
+        "action": "Registrar a sistólica no aparecimento do primeiro ruído (fase I de Korotkoff)"
+      },
+      {
+        "action": "Registrar a diastólica no desaparecimento dos sons (fase V de Korotkoff)"
+      },
+      {
+        "action": "Posicionar o paciente em pé",
+        "why": "Nestes casos a medida deve ser feita nas várias posições: sentado, deitado ou em pé (p. 3)."
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal) também com o paciente em pé, com o braço apoiado",
+        "why": "Em qualquer posição, a artéria braquial deve ficar ao nível do coração (p. 3)."
+      },
+      {
+        "action": "Repetir a medida da pressão arterial, com a mesma técnica"
+      },
+      {
+        "action": "Registrar as pressões obtidas em cada posição"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Aferir a pressão arterial somente na posição sentada",
+        "why": "Nestes casos a medida deve ser feita nas várias posições (p. 3)."
+      },
+      {
+        "action": "Medir em pé com o braço pendente ao lado do corpo",
+        "why": "Em qualquer posição, a artéria braquial deve ficar ao nível do coração (4º espaço intercostal), com o braço apoiado (p. 3)."
+      },
+      {
+        "action": "Aferir a pressão arterial logo que o paciente chega, sem repouso",
+        "why": "O paciente deve ter repouso mínimo de 3 a 5 minutos, em local tranquilo (p. 3)."
+      },
+      {
+        "action": "Desinsuflar rapidamente o manguito",
+        "why": "O ar é solto de maneira contínua, a 2–3 mmHg por segundo (p. 4)."
+      },
+      {
+        "action": "Registrar a diastólica no abafamento dos sons (fase IV de Korotkoff)",
+        "why": "A diastólica é o desaparecimento dos sons, fase V (p. 4)."
+      },
+      {
+        "action": "Inflar o manguito até um valor fixo, sem palpar o pulso radial antes",
+        "why": "Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s10",
+    "title": "Pressão arterial em várias posições — suspeita de hipotensão postural",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS, silencioso. Há uma cadeira com apoio para o braço e espaço para o paciente ficar em pé ao lado da mesa. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial do Sr. W.C., 69 anos, que refere tontura quando se levanta da cama. Há suspeita de hipotensão postural. Ele já foi abordado, entendeu o procedimento e consentiu. Acabou de chegar à sala e ainda não está em repouso.",
+    "task": "Realize a medida da pressão arterial pelo método indireto nas posições sentado e em pé, até o registro dos valores de cada posição. Nesta estação você não precisa classificar o resultado.",
+    "tip": "Por ocasião da primeira avaliação e em alguns casos (idosos, controle de terapêutica, suspeita de hipotensão postural), deve-se efetuar a medida nas várias posições (p. 3).",
+    "steps": [
+      {
+        "action": "Garantir repouso de 3 a 5 minutos, em local tranquilo"
+      },
+      {
+        "action": "Posicionar o paciente sentado, confortável"
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal), braço ligeiramente fletido, apoiado em superfície firme, palma da mão para cima"
+      },
+      {
+        "action": "Localizar as pulsações da artéria braquial"
+      },
+      {
+        "action": "Colocar o manguito 2 cm acima da fossa cubital"
+      },
+      {
+        "action": "Palpar o pulso radial"
+      },
+      {
+        "action": "Inflar o manguito até o desaparecimento do pulso radial"
+      },
+      {
+        "action": "Desinsuflar lentamente: o reaparecimento do pulso é a pressão sistólica pelo método palpatório",
+        "why": "O método palpatório evita subestimar a sistólica quando há hiato auscultatório (Imagem 1, p. 5)."
+      },
+      {
+        "action": "Colocar o estetoscópio sobre a artéria braquial"
+      },
+      {
+        "action": "Insuflar o manguito cerca de 30 mmHg acima da sistólica palpatória"
+      },
+      {
+        "action": "Soltar o ar de maneira contínua, a 2–3 mmHg por segundo, até o completo esvaziamento"
+      },
+      {
+        "action": "Registrar a sistólica no aparecimento do primeiro ruído (fase I de Korotkoff)"
+      },
+      {
+        "action": "Registrar a diastólica no desaparecimento dos sons (fase V de Korotkoff)"
+      },
+      {
+        "action": "Posicionar o paciente em pé",
+        "why": "Nestes casos a medida deve ser feita nas várias posições: sentado, deitado ou em pé (p. 3)."
+      },
+      {
+        "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal) também com o paciente em pé, com o braço apoiado",
+        "why": "Em qualquer posição, a artéria braquial deve ficar ao nível do coração (p. 3)."
+      },
+      {
+        "action": "Repetir a medida da pressão arterial, com a mesma técnica"
+      },
+      {
+        "action": "Registrar as pressões obtidas em cada posição"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Aferir a pressão arterial somente na posição sentada",
+        "why": "Nestes casos a medida deve ser feita nas várias posições (p. 3)."
+      },
+      {
+        "action": "Medir em pé com o braço pendente ao lado do corpo",
+        "why": "Em qualquer posição, a artéria braquial deve ficar ao nível do coração (4º espaço intercostal), com o braço apoiado (p. 3)."
+      },
+      {
+        "action": "Aferir a pressão arterial logo que o paciente chega, sem repouso",
+        "why": "O paciente deve ter repouso mínimo de 3 a 5 minutos, em local tranquilo (p. 3)."
+      },
+      {
+        "action": "Desinsuflar rapidamente o manguito",
+        "why": "O ar é solto de maneira contínua, a 2–3 mmHg por segundo (p. 4)."
+      },
+      {
+        "action": "Registrar a diastólica no abafamento dos sons (fase IV de Korotkoff)",
+        "why": "A diastólica é o desaparecimento dos sons, fase V (p. 4)."
+      },
+      {
+        "action": "Inflar o manguito até um valor fixo, sem palpar o pulso radial antes",
+        "why": "Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-s11",
+    "title": "Sequência completa de sinais vitais — paciente inconsciente",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Sala de observação do pronto atendimento. O paciente está em uma maca, com acesso livre aos dois braços e ao pescoço. Sobre a bancada: bandeja, estetoscópio, esfigmomanômetro, termômetro, relógio, bloco de anotações, caneta, luvas de procedimento, álcool 70% e algodão.",
+    "scenario": "Você é acadêmico(a) de Medicina em estágio no pronto atendimento. Um paciente adulto foi acomodado na maca da sala de observação, inconsciente, sem acompanhante e sem informações prévias. A equipe médica já o avaliou e pediu que você afira os sinais vitais enquanto aguarda os exames. Você ainda não iniciou nenhum preparo.",
+    "task": "Realize a avaliação completa dos sinais vitais deste paciente, do preparo à comunicação dos achados, na ordem correta. Nesta estação você não precisa classificar os achados nem conduzir o caso.",
+    "tip": "A técnica de avaliação dos sinais vitais é a mesma, independente do estado de consciência do paciente (p. 1). Principais artérias para avaliação do pulso: radial, carotídea e femoral (p. 2).",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "O roteiro inicia a prática com a lavagem das mãos (p. 1)."
+      },
+      {
+        "action": "Organizar e higienizar o material da bandeja com algodão e álcool 70%"
+      },
+      {
+        "action": "Apresentar-se, explicar o procedimento e pedir o consentimento",
+        "why": "A avaliação dos sinais vitais segue a mesma técnica independente do estado de consciência do paciente (p. 1)."
+      },
+      {
+        "action": "Avaliar a temperatura corporal"
+      },
+      {
+        "action": "Palpar o pulso na artéria carótida, avaliando frequência, ritmo e força",
+        "why": "As principais artérias para avaliação do pulso são radial, carotídea e femoral (p. 2); no paciente inconsciente, o pulso é verificado na carótida."
+      },
+      {
+        "action": "Continuar palpando o pulso e começar a observar discretamente o tórax",
+        "why": "A respiração é avaliada logo após o pulso, continuando a palpar o mesmo (p. 3)."
+      },
+      {
+        "action": "Contar a respiração durante 1 minuto, avaliando ritmo, amplitude e tiragem"
+      },
+      {
+        "action": "Aferir a pressão arterial"
+      },
+      {
+        "action": "Informar os achados ao paciente e perguntar se ele tem alguma dúvida"
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Palpar o pulso na veia jugular",
+        "why": "O pulso é palpado em artérias — radial, carotídea e femoral (p. 2). A jugular é uma veia."
+      },
+      {
+        "action": "Dispensar a apresentação e a explicação do procedimento porque o paciente está inconsciente",
+        "why": "A avaliação dos sinais vitais deve seguir a mesma técnica independente do estado de consciência do paciente (p. 1)."
+      },
+      {
+        "action": "Não avaliar a respiração, pois o paciente está inconsciente",
+        "why": "Todos os sinais vitais são avaliados com a mesma técnica, independente do estado de consciência (p. 1)."
+      },
+      {
+        "action": "Higienizar o material com água e sabão",
+        "why": "Todo o material é higienizado com algodão embebido em álcool 70% (p. 1)."
+      },
+      {
+        "action": "Registrar os achados sem informá-los ao paciente",
+        "why": "Ao final da avaliação, informar os achados ao paciente e perguntar se ele tem alguma dúvida (p. 6)."
+      },
+      {
+        "action": "Contar o pulso por 15 segundos e multiplicar por 4",
+        "why": "O pulso é avaliado em 1 minuto (ou 30 segundos multiplicado por 2, se não houver alteração de ritmo ou amplitude) (p. 2)."
+      }
+    ]
+  }
+]
