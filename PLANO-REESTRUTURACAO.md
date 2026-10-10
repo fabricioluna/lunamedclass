@@ -1833,6 +1833,20 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   - Não testado ao vivo: a importação em si (exige conta admin) — coberta pelos testes de
     `osceImport` e pelo tipo; validar no primeiro upload real do conteúdo.
 
+  🟡 **Conteúdo estático em revisão docente (2026-10-10).** Fonte única do conteúdo:
+  `conteudo/osce-hm1-n1/estacoes.mjs` (cada passo/distrator com origem `R` = roteiro ou
+  `D` = derivado, a validar). Gerado a partir dela o Word
+  `Documents/Estacoes-OSCE-HM1-N1-revisao-docente.docx` (fora do repo), enviado pelo usuário
+  às professoras. 24 estações: B01–B02 (higiene das mãos), P1–P8 (paramentação: touca ×
+  máscara × luva), D1–D4 (desparamentação: touca × máscara), C1–C3 (contato/gotículas/
+  aerossóis, entrar e sair), L1–L2 (luvas), S01–S05 (preparo, pulso+respiração, PA sentado,
+  PA gestante, sequência completa). 9 perguntas abertas às professoras na seção "Pontos para
+  decisão" do documento. **Ajuste de desenho:** não há estação de pulso com ritmo regular —
+  multiplicar 30 s × 2 é opcional no roteiro ("pode-se"), e uma sequência fixa puniria quem
+  contasse o minuto inteiro; ficou só a variação com alteração de ritmo (1 minuto obrigatório).
+  Próximo passo: incorporar o retorno das professoras em `estacoes.mjs` e gerar os JSON de
+  importação no formato da Fase 1.
+
   **Fase 2 — RPG de técnica:** gabarito e nota vindos da estação (IA só comenta; nota =
   fases cumpridas − erros críticos); `feedbackText`/`isFatalError` passam a valer; monitor
   opcional por estação (em SSVV os valores aparecem pela narrativa só quando a técnica está
