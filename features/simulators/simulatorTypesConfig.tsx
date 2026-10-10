@@ -11,6 +11,16 @@ export interface SimulatorTypeConfig {
   buildPath: (disciplineId: string) => string;
 }
 
+// Um tipo de simulador OSCE casa com mais de um `mode` de estação quando há mais de um motor para
+// o mesmo cartão do aluno: o RPG guiado (sem IA, item 6.17) aparece como "RPG", ao lado do RPG por
+// texto livre com IA. Os modos ficam separados no cadastro porque têm formatos diferentes.
+const OSCE_MODES_BY_TYPE: Record<string, string[]> = {
+  rpg: ['rpg', 'guided'],
+};
+
+export const stationModeMatchesType = (stationMode: string, matchValue: string): boolean =>
+  (OSCE_MODES_BY_TYPE[matchValue] ?? [matchValue]).includes(stationMode);
+
 export interface ComingSoonSimulatorType {
   title: string;
   description: string;

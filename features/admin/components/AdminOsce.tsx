@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { OsceStation, SimulationInfo, Period, AcademicUnit } from '../../../types';
-import { Trash2, ClipboardList, Gamepad2, Bot, UploadCloud, Download, AlertTriangle, XCircle } from 'lucide-react';
-import { parseOsceImport, ParsedOsceItem } from '../../../utils/osceImport';
+import { Trash2, ClipboardList, Gamepad2, Bot, UploadCloud, Download, AlertTriangle, XCircle, Route } from 'lucide-react';
+import { parseOsceImport, ParsedOsceItem, OsceImportMode } from '../../../utils/osceImport';
 import { normalizeStaticStation } from '../../../utils/osceStation';
 
 interface AdminOsceProps {
@@ -34,12 +34,43 @@ const STATIC_TEMPLATE = [
   },
 ];
 
-const downloadTemplate = () => {
-  const blob = new Blob([JSON.stringify(STATIC_TEMPLATE, null, 2)], { type: 'application/json' });
+// Modelo do RPG guiado: cenas lineares; em cada uma, 4 a 6 condutas com o desfecho/consequência
+// de cada uma. `reveals` (valores aferidos) só aparece depois da conduta correta.
+const GUIDED_TEMPLATE = [
+  {
+    slug: 'hm1-exemplo-rpg-pa',
+    title: 'Título do caso',
+    theme: '(opcional) tema da disciplina — se omitido, usa o tema escolhido na tela',
+    unit: 'N1',
+    setting: 'Onde a cena acontece e o material disponível',
+    scenario: 'Caso apresentado ao aluno',
+    task: 'O que o aluno deve realizar (e o que NÃO precisa fazer)',
+    tip: '(opcional) dica exibida no resultado',
+    scenes: [
+      {
+        narrative: 'O que o aluno vê, ouve e sente nesta cena.',
+        patient: '(opcional) fala do paciente ou da equipe',
+        prompt: '(opcional) pergunta ao aluno — padrão: "O que você faz agora?"',
+        choices: [
+          { action: 'Conduta correta', correct: true, feedback: 'Desfecho da conduta certa.' },
+          { action: 'Conduta errada 1', feedback: 'Consequência narrada + por que está errada.' },
+          { action: 'Conduta errada 2', feedback: 'Consequência narrada + por que está errada.' },
+          { action: 'Conduta errada 3', feedback: 'Consequência narrada + por que está errada.' },
+        ],
+        reveals: [{ label: 'Pressão arterial', value: '120/80 mmHg' }],
+      },
+    ],
+    checklist: ['(opcional) critério de avaliação exibido no resultado'],
+  },
+];
+
+const downloadTemplate = (mode: OsceImportMode) => {
+  const isGuided = mode === 'guided';
+  const blob = new Blob([JSON.stringify(isGuided ? GUIDED_TEMPLATE : STATIC_TEMPLATE, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'modelo-estacao-estatica.json';
+  link.download = isGuided ? 'modelo-rpg-guiado.json' : 'modelo-estacao-estatica.json';
   link.click();
   URL.revokeObjectURL(url);
 };
@@ -62,7 +93,8 @@ const ImportPreviewItem = ({ item }: { item: ParsedOsceItem }) => {
         <p className="text-[9px] font-bold uppercase tracking-widest opacity-70 mt-1">
           {station.unit} • {station.theme}
           {steps && ` • ${steps.steps.length} passos • ${steps.distractors.length} distratores`}
-          {station.mode !== 'clinical' && ` • ${Object.keys(station.phases).length} fases`}
+          {station.mode === 'guided' && ` • ${station.scenes.length} cenas • ${station.scenes.filter(s => s.reveals?.length).length} com valores aferidos`}
+          {(station.mode === 'rpg' || station.mode === 'ai') && ` • ${Object.keys(station.phases).length} fases`}
         </p>
       )}
       {errors.map((e, i) => (
@@ -71,6 +103,20 @@ const ImportPreviewItem = ({ item }: { item: ParsedOsceItem }) => {
       {warnings.map((w, i) => (
         <p key={`w${i}`} className="text-[10px] font-bold text-amber-200 mt-2 flex gap-1"><AlertTriangle size={12} className="shrink-0 mt-0.5" /> {w}</p>
       ))}
+      {station?.mode === 'guided' && station.scenes.length > 0 && (
+        <details className="mt-2">
+          <summary className="text-[9px] font-black uppercase tracking-widest cursor-pointer opacity-80">Ver cenas</summary>
+          <ol className="mt-2 space-y-2 list-decimal list-inside text-[11px]">
+            {station.scenes.map((scene, i) => (
+              <li key={i}>
+                {scene.narrative.length > 90 ? `${scene.narrative.slice(0, 90)}…` : scene.narrative}
+                <span className="opacity-70"> — certa: {scene.choices.filter(c => c.correct).map(c => c.action).join(' / ')}</span>
+                {scene.reveals?.length ? <span className="text-green-200"> (revela {scene.reveals.map(r => r.label).join(', ')})</span> : null}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
       {steps && steps.steps.length > 0 && (
         <details className="mt-2">
           <summary className="text-[9px] font-black uppercase tracking-widest cursor-pointer opacity-80">Ver gabarito</summary>
@@ -101,10 +147,10 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
   const [discFilterOsce, setDiscFilterOsce] = useState(''); 
   const [unitFilterOsce, setUnitFilterOsce] = useState<AcademicUnit | ''>(''); // NOVO: Filtro de Unidade
   const [themeFilterOsce, setThemeFilterOsce] = useState(''); 
-  const [typeFilter, setTypeFilter] = useState<'all' | 'clinical' | 'rpg' | 'ai'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | OsceImportMode>('all');
 
   // --- ESTADOS DE IMPORTAÇÃO (LADO ESQUERDO) ---
-  const [importMode, setImportMode] = useState<'clinical' | 'rpg' | 'ai'>('clinical'); 
+  const [importMode, setImportMode] = useState<OsceImportMode>('clinical');
   const [oscePeriod, setOscePeriod] = useState(''); 
   const [osceDiscipline, setOsceDiscipline] = useState('');
   
@@ -194,20 +240,27 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
             </h3>
 
             {/* SELETOR DE MODO - O ADMIN ESCOLHE O MOTOR AQUI */}
-            <div className="bg-gray-50 p-2 rounded-2xl mb-6 grid grid-cols-3 gap-1 border border-gray-100">
-                <button 
+            <div className="bg-gray-50 p-2 rounded-2xl mb-6 grid grid-cols-4 gap-1 border border-gray-100">
+                <button
                     onClick={() => setImportMode('clinical')}
                     className={`flex flex-col items-center py-3 rounded-xl transition-all ${importMode === 'clinical' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                 >
                     <ClipboardList size={20} />
                     <span className="text-[7px] font-black uppercase mt-1">Estático</span>
                 </button>
-                <button 
+                <button
+                    onClick={() => setImportMode('guided')}
+                    className={`flex flex-col items-center py-3 rounded-xl transition-all ${importMode === 'guided' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                    <Route size={20} />
+                    <span className="text-[7px] font-black uppercase mt-1">RPG Guiado</span>
+                </button>
+                <button
                     onClick={() => setImportMode('rpg')}
                     className={`flex flex-col items-center py-3 rounded-xl transition-all ${importMode === 'rpg' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
                 >
                     <Gamepad2 size={20} />
-                    <span className="text-[7px] font-black uppercase mt-1">RPG</span>
+                    <span className="text-[7px] font-black uppercase mt-1">RPG IA</span>
                 </button>
                 <button 
                     onClick={() => setImportMode('ai')}
@@ -247,9 +300,9 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
               </button>
             </form>
 
-            {importMode === 'clinical' && (
-              <button onClick={downloadTemplate} className="w-full mt-3 flex items-center justify-center gap-2 text-[#003366] bg-blue-50 border border-blue-100 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-blue-100 transition-all">
-                <Download size={14} /> Baixar modelo de estação estática
+            {(importMode === 'clinical' || importMode === 'guided') && (
+              <button onClick={() => downloadTemplate(importMode)} className="w-full mt-3 flex items-center justify-center gap-2 text-[#003366] bg-blue-50 border border-blue-100 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-blue-100 transition-all">
+                <Download size={14} /> {importMode === 'guided' ? 'Baixar modelo de RPG guiado' : 'Baixar modelo de estação estática'}
               </button>
             )}
           </div>
@@ -295,7 +348,8 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setTypeFilter('all')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${typeFilter === 'all' ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-gray-400 border-gray-100'}`}>Todos</button>
             <button onClick={() => setTypeFilter('clinical')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'clinical' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-400 border-blue-100'}`}><ClipboardList size={12}/> Estático</button>
-            <button onClick={() => setTypeFilter('rpg')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'rpg' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-400 border-purple-100'}`}><Gamepad2 size={12}/> RPG</button>
+            <button onClick={() => setTypeFilter('guided')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'guided' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-400 border-purple-100'}`}><Route size={12}/> RPG Guiado</button>
+            <button onClick={() => setTypeFilter('rpg')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'rpg' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-400 border-purple-100'}`}><Gamepad2 size={12}/> RPG IA</button>
             <button onClick={() => setTypeFilter('ai')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'ai' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-400 border-green-100'}`}><Bot size={12}/> Virtual</button>
           </div>
 
@@ -339,18 +393,19 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
             return matchDisc && matchUnit && matchTheme && matchType;
           }).map((station) => (
             <div key={station.firebaseId ?? station.id} className={`p-4 rounded-[1.5rem] border flex justify-between items-center transition-all hover:shadow-md ${
-              station.mode === 'rpg' ? 'bg-purple-50/40 border-purple-100' : 
-              station.mode === 'ai' ? 'bg-green-50/40 border-green-100' : 
+              station.mode === 'rpg' || station.mode === 'guided' ? 'bg-purple-50/40 border-purple-100' :
+              station.mode === 'ai' ? 'bg-green-50/40 border-green-100' :
               'bg-gray-50 border-gray-100'
             }`}>
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                   station.mode === 'rpg' ? 'bg-purple-100 text-purple-600' : 
-                   station.mode === 'ai' ? 'bg-green-100 text-green-600' : 
+                   station.mode === 'rpg' || station.mode === 'guided' ? 'bg-purple-100 text-purple-600' :
+                   station.mode === 'ai' ? 'bg-green-100 text-green-600' :
                    'bg-blue-100 text-blue-600'
                 }`}>
-                  {station.mode === 'rpg' ? <Gamepad2 size={18}/> : 
-                   station.mode === 'ai' ? <Bot size={18}/> : 
+                  {station.mode === 'rpg' ? <Gamepad2 size={18}/> :
+                   station.mode === 'guided' ? <Route size={18}/> :
+                   station.mode === 'ai' ? <Bot size={18}/> :
                    <ClipboardList size={18}/>}
                 </div>
                 <div>

@@ -18,6 +18,7 @@ const OsceView = lazy(() => import('../features/osce/OsceView'));
 const DynamicOsceView = lazy(() => import('../features/osce/DynamicOsceView'));
 const OsceSetupView = lazy(() => import('../features/osce/OsceSetupView'));
 const OsceAIView = lazy(() => import('../features/osce/OsceAIView'));
+const GuidedRpgView = lazy(() => import('../features/osce/GuidedRpgView'));
 const OsceModeSelectionView = lazy(() => import('../features/osce/OsceModeSelectionView'));
 const CalculatorsView = lazy(() => import('../views/CalculatorsView'));
 const CareerQuiz = lazy(() => import('../components/CareerQuiz'));
@@ -40,7 +41,7 @@ import { submitSurvey } from '../services/surveyService';
 import { fetchOsceStationById, fetchOsceStationsOnce } from '../services/osceService';
 import { fetchLabSimulationById, fetchLabSimulationsOnce } from '../services/labService';
 import { isCountedResultType } from '../utils/resultsPolicy';
-import { AVAILABLE_SIMULATOR_TYPES } from '../features/simulators/simulatorTypesConfig';
+import { AVAILABLE_SIMULATOR_TYPES, stationModeMatchesType } from '../features/simulators/simulatorTypesConfig';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -315,6 +316,21 @@ const OsceExecFlow = () => {
     return <OsceAIView station={station} onBack={onBack} />;
   }
 
+  // RPG guiado (sem IA): nota calculada no próprio player. Mesma política de resultado do RPG.
+  if (station.mode === 'guided') {
+    return (
+      <GuidedRpgView
+        station={station}
+        onBack={onBack}
+        onSaveResult={isCountedResultType('osce-rpg') ? (score, total, time) => {
+          if (currentUser) {
+            saveQuizResult({ userId: currentUser.uid, userEmail: currentUser.email, score, total, timeSpent: time, date: new Date().toLocaleString(), discipline: station.disciplineId, unit, quizTitle: station.title, type: 'osce-rpg' });
+          }
+        } : undefined}
+      />
+    );
+  }
+
   return (
     <OsceView
       station={station}
@@ -523,7 +539,7 @@ const TypeDisciplineListFlow = () => {
 
     const fetchPromise = config.source === 'lab'
       ? fetchLabSimulationsOnce().then((sims) => sims.filter((s) => s.category?.toLowerCase() === config.matchValue).map((s) => s.disciplineId))
-      : fetchOsceStationsOnce().then((stations) => stations.filter((s) => s.mode === config.matchValue).map((s) => s.disciplineId));
+      : fetchOsceStationsOnce().then((stations) => stations.filter((s) => stationModeMatchesType(s.mode, config.matchValue)).map((s) => s.disciplineId));
 
     fetchPromise
       .then((disciplineIds) => {
