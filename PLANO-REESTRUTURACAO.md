@@ -1883,6 +1883,32 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   docx` antes). Próximo passo: ler as correções do usuário nos .docx, aplicar em
   `estacoes.mjs`, regenerar o JSON e liberar o lote 2 com o que ele aprovar.
 
+  🔁 **Revisão 2 do conteúdo (2026-10-10), retorno geral do usuário:** (1) casos "muito
+  sucintos" → reescritos como enunciado de OSCE (ambiente com o material disponível, paciente
+  fictício, contexto e instrução ao candidato, incluindo "o que você não precisa fazer"); (2)
+  "poucos distratores" → de 0–4 para **4–12 por estação**, sempre ancorados numa frase do
+  roteiro (negação, tempo/medida trocados, técnica de outra seção, item do EPI errado para o
+  caso); (3) **variáveis de Sinais Vitais que o próprio roteiro cita** → 6 estações novas:
+  S06 (pulso sem alteração de ritmo — passo aceita 1 min ou 30 s×2, para não punir a contagem
+  opcional), S07 (ruídos de difícil percepção → aumentar o ângulo braço/tórax), S08–S10 (PA em
+  várias posições: idoso/primeira avaliação, controle de terapêutica, suspeita de hipotensão
+  postural) e S11 (sequência completa em paciente **inconsciente** — roteiro: mesma técnica);
+  (4) "siga exatamente o roteiro" → o que o roteiro NÃO traz ficou de fora (tempos de espera
+  e valores de queda da pressão ortostática, artéria do pulso no inconsciente) e virou
+  pergunta nos "Pontos para revisar" de cada Word.
+  - **Pendência de decisão do usuário/professores:** a **ordem das posições** em S08–S10
+    (sentado → em pé) é derivada (origem D) — o roteiro manda medir "nas várias posições" sem
+    definir ordem. Idem a posição "deitada", que o roteiro cita e não foi coberta.
+  - Arquivos: `estacoes.mjs` (fonte), `todas.json` (as 30, só validação — `todas.test.ts` exige
+    ≥4 distratores, enunciado completo, sem erro de importação), `lote-1.json` (as 13 já no ar,
+    **conteúdo revisado**: reimportar ATUALIZA no lugar), `publicadas.json` (slugs no banco de
+    produção — atualizar a cada importação; o Word usa para o status "JÁ NO AR (versão
+    anterior)" × "AINDA NÃO PUBLICADA").
+  - Word da revisão 2 em `Documents/Estacoes OSCE HM1 N1 - revisao v2/` (30 arquivos). A pasta
+    `... - revisao` (v1) **não foi tocada**: o usuário já tinha o S03 aberto no Word.
+  - **A versão revisada das 13 ainda NÃO está em produção** — só entra quando o usuário
+    reimportar `lote-1.json` depois de revisar os Word.
+
   **Fase 2 — RPG de técnica:** gabarito e nota vindos da estação (IA só comenta; nota =
   fases cumpridas − erros críticos); `feedbackText`/`isFatalError` passam a valer; monitor
   opcional por estação (em SSVV os valores aparecem pela narrativa só quando a técnica está
