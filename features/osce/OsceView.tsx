@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { OsceStation, StaticOsceStation } from '../../types';
-import { calculateOsceScore } from '../../utils/osceScoring';
-import { 
-  ClipboardList, Timer, CheckCircle2, AlertCircle, ChevronRight, RotateCcw, Map, Trophy, History, FlaskConical
+import React, { useState, useEffect, useMemo } from 'react';
+import { OsceStation, StaticOsceStep } from '../../types';
+import { calculateOsceScore, OsceScoreResult } from '../../utils/osceScoring';
+import { buildActionCloud, explanationFor, normalizeStaticStation, NormalizedStaticStation } from '../../utils/osceStation';
+import {
+  ClipboardList, Timer, CheckCircle2, AlertCircle, ChevronRight, RotateCcw, Map, Trophy, History, FlaskConical, MapPin, Lightbulb, AlertOctagon
 } from 'lucide-react';
 
 interface StaticOsceAnalytics {
@@ -37,22 +38,27 @@ const ModeMismatchWarning = ({ onBack, requiredMode }: { onBack: () => void, req
   </div>
 );
 
-const StationHeader = ({ onBack, theme }: { onBack: () => void, theme: string }) => (
-  <div className="flex justify-between items-center mb-10 border-b pb-6">
-    <button onClick={onBack} className="text-[#003366] font-black uppercase text-[10px] flex items-center gap-2 hover:text-[#D4A017] transition-colors">
+const StationHeader = ({ onBack, theme, title }: { onBack: () => void, theme: string, title: string }) => (
+  <div className="flex justify-between items-center mb-10 border-b pb-6 gap-4">
+    <button onClick={onBack} className="text-[#003366] font-black uppercase text-[10px] flex items-center gap-2 hover:text-[#D4A017] transition-colors shrink-0">
       <RotateCcw size={14} /> Sair da Estação
     </button>
     <div className="text-right">
       <span className="text-[10px] font-black text-[#D4A017] uppercase tracking-widest">{theme}</span>
-      <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">📋 SIMULADO ESTÁTICO</h2>
+      <h2 className="text-xl md:text-2xl font-black text-[#003366] uppercase tracking-tighter">📋 {title}</h2>
     </div>
   </div>
 );
 
-const ContextPanel = ({ isUC, scenario, task }: { isUC: boolean, scenario: string, task: string }) => (
+const ContextPanel = ({ isUC, setting, scenario, task }: { isUC: boolean, setting?: string, scenario: string, task: string }) => (
   <div className="bg-white p-8 rounded-[2rem] shadow-xl border-t-8 border-[#003366]">
+    {setting && (
+      <p className="text-[11px] text-gray-500 font-bold mb-5 flex gap-2 items-start bg-gray-50 p-3 rounded-xl">
+        <MapPin size={14} className="text-[#D4A017] shrink-0 mt-0.5" /> {setting}
+      </p>
+    )}
     <h3 className="text-[10px] font-black text-[#003366] uppercase mb-4 tracking-widest flex items-center gap-2">
-      {isUC ? <FlaskConical size={14}/> : <ClipboardList size={14}/>} 
+      {isUC ? <FlaskConical size={14}/> : <ClipboardList size={14}/>}
       {isUC ? 'Contexto da Bancada' : 'Cenário Clínico'}
     </h3>
     <p className="text-gray-700 leading-relaxed font-medium mb-6">"{scenario}"</p>
@@ -75,13 +81,17 @@ const TimerDisplay = ({ timer, formatTime }: { timer: number, formatTime: (s: nu
 );
 
 interface InteractionAreaProps {
-  selectedActions: number[];
-  safeActionCloud: string[];
+  selectedActions: string[];
+  actionCloud: string[];
   isUC: boolean;
-  onToggleAction: (index: number) => void;
+  onAddAction: (action: string) => void;
+  onRemoveAt: (position: number) => void;
 }
 
-const InteractionArea = ({ selectedActions, safeActionCloud, isUC, onToggleAction }: InteractionAreaProps) => (
+// Os botões da nuvem nunca ficam desabilitados: um passo pode se repetir na técnica (ex.:
+// higienizar as mãos várias vezes na desparamentação), e desabilitar só os que "ainda
+// faltam" entregaria ao aluno quais ações se repetem no gabarito.
+const InteractionArea = ({ selectedActions, actionCloud, isUC, onAddAction, onRemoveAt }: InteractionAreaProps) => (
   <div className="space-y-8">
     <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-dashed border-blue-100">
       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4 flex items-center gap-2">
@@ -89,13 +99,13 @@ const InteractionArea = ({ selectedActions, safeActionCloud, isUC, onToggleActio
       </label>
       <div className="flex flex-wrap gap-3 min-h-[120px] items-start content-start">
         {selectedActions.length === 0 && (
-          <p className="text-gray-300 text-sm italic w-full text-center py-8">Toque nas ações da nuvem abaixo na ordem correta...</p>
+          <p className="text-gray-300 text-sm italic w-full text-center py-8">Toque nas ações da nuvem abaixo na ordem correta. Uma ação pode ser usada mais de uma vez.</p>
         )}
-        {selectedActions.map((idx: number, i: number) => (
+        {selectedActions.map((action, i) => (
           <div key={i} className="bg-white pl-2 pr-4 py-2 rounded-xl shadow-md border-2 border-[#003366] text-xs font-black text-[#003366] flex items-center gap-3 animate-in zoom-in">
             <span className="bg-[#003366] text-white w-6 h-6 rounded-lg flex items-center justify-center text-[10px]">{i + 1}</span>
-            {safeActionCloud[idx]}
-            <button onClick={() => onToggleAction(idx)} className="text-red-400 hover:text-red-600 transition-colors">✕</button>
+            {action}
+            <button onClick={() => onRemoveAt(i)} className="text-red-400 hover:text-red-600 transition-colors" aria-label="Remover ação">✕</button>
           </div>
         ))}
       </div>
@@ -106,133 +116,207 @@ const InteractionArea = ({ selectedActions, safeActionCloud, isUC, onToggleActio
         {isUC ? 'Nuvem de Itens e Procedimentos' : 'Nuvem de Ações e Condutas'}
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {safeActionCloud.map((action: string, idx: number) => (
-          <button
-            key={idx}
-            disabled={selectedActions.includes(idx)}
-            onClick={() => onToggleAction(idx)}
-            className={`p-5 rounded-2xl text-left text-xs font-bold transition-all border-2
-              ${selectedActions.includes(idx) 
-                ? 'bg-gray-50 border-gray-50 text-gray-200 opacity-40 cursor-not-allowed' 
-                : 'bg-white border-gray-100 text-[#003366] hover:border-[#D4A017] hover:shadow-xl active:scale-95'}
-            `}
-          >
-            {action}
-          </button>
-        ))}
+        {actionCloud.map((action) => {
+          const timesUsed = selectedActions.filter(a => a === action).length;
+          return (
+            <button
+              key={action}
+              onClick={() => onAddAction(action)}
+              className={`relative p-5 rounded-2xl text-left text-xs font-bold transition-all border-2 active:scale-95
+                ${timesUsed > 0
+                  ? 'bg-blue-50/60 border-blue-100 text-[#003366]/60'
+                  : 'bg-white border-gray-100 text-[#003366] hover:border-[#D4A017] hover:shadow-xl'}
+              `}
+            >
+              {action}
+              {timesUsed > 0 && (
+                <span className="absolute top-2 right-2 bg-[#003366] text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">×{timesUsed}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   </div>
 );
 
 interface ResultsDashboardProps {
-  score: number;
+  result: OsceScoreResult;
   timer: number;
-  selectedActions: number[];
-  safeActionCloud: string[];
-  safeOrderIndices: number[];
+  normalized: NormalizedStaticStation;
   checklist?: string[];
+  tip?: string;
   formatTime: (s: number) => string;
 }
 
-const ResultsDashboard = ({ score, timer, selectedActions, safeActionCloud, safeOrderIndices, checklist, formatTime }: ResultsDashboardProps) => (
-  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
-    {/* BOX DE NOTA */}
-    <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-b-8 border-[#D4A017] relative overflow-hidden">
-      <div className="absolute top-0 right-0 p-8 opacity-10 text-[#003366]"><Trophy size={120}/></div>
-      <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Desempenho Técnico</p>
-      <h4 className="text-8xl font-black text-[#003366] tracking-tighter">{score.toFixed(1)}</h4>
-      <div className="mt-4 flex items-center justify-center gap-4">
-          <span className="px-4 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-              Tempo de Execução: {formatTime(timer)}
-          </span>
-          <span className="px-4 py-1 bg-purple-50 text-purple-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-              {selectedActions.length} Etapas Realizadas
-          </span>
-      </div>
-    </div>
+const stepWhy = (steps: StaticOsceStep[], position?: number) =>
+  position === undefined ? undefined : steps[position]?.why;
 
-    {/* AVALIAÇÃO PASSO A PASSO */}
-    <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
-      <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3">
-        <Map size={20} className="text-[#D4A017]"/> Análise Passo a Passo
-      </h4>
-      <div className="space-y-3">
-        {selectedActions.length === 0 && (
-          <p className="text-sm text-red-500 font-bold">Nenhuma ação foi selecionada.</p>
-        )}
-        {selectedActions.map((actionIdx: number, userPos: number) => {
-          const correctPos = safeOrderIndices.indexOf(actionIdx);
-          const isCorrect = correctPos !== -1;
-          const onTime = correctPos === userPos;
+const ResultsDashboard = ({ result, timer, normalized, checklist, tip, formatTime }: ResultsDashboardProps) => {
+  const { steps } = normalized;
+  const omittedSteps = result.omittedPositions.map(pos => ({ pos, step: steps[pos] }));
+  const criticalOmitted = omittedSteps.filter(o => o.step?.critical);
+  const stepActions = new Set(steps.map(s => s.action));
 
-          return (
-            <div key={userPos} className={`p-5 rounded-2xl border-2 flex items-center justify-between gap-4 transition-all
-              ${!isCorrect ? 'bg-red-50 border-red-100' : onTime ? 'bg-green-50 border-green-100' : 'bg-yellow-50 border-yellow-100'}
-            `}>
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-sm
-                  ${!isCorrect ? 'bg-red-500 text-white' : onTime ? 'bg-green-600 text-white' : 'bg-yellow-500 text-white'}
-                `}>
-                  {userPos + 1}
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-800">{safeActionCloud[actionIdx]}</p>
-                  <span className={`text-[9px] font-black uppercase tracking-tighter mt-1 block
-                      ${!isCorrect ? 'text-red-500' : onTime ? 'text-green-600' : 'text-yellow-600'}
-                  `}>
-                      {!isCorrect ? '❌ Conduta Incorreta (Penalidade)' : onTime ? '✅ Na Ordem Correta' : `⚠️ Fora de Sequência (Deveria ser o ${correctPos + 1}º)`}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-
-    {/* GABARITO E CHECKLIST */}
-    <div className="grid grid-cols-1 gap-6">
-      <div className="bg-[#003366] p-10 rounded-[3rem] shadow-2xl text-white">
-        <h4 className="text-lg font-black text-[#D4A017] uppercase mb-8 flex items-center gap-3 border-b border-white/10 pb-4">
-          <CheckCircle2 size={20}/> Gabarito Oficial (Padrão-Ouro)
-        </h4>
-        <div className="space-y-4">
-          {safeOrderIndices.map((idx: number, i: number) => (
-            <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
-              <span className="text-[#D4A017] font-black text-xs bg-white/10 w-6 h-6 rounded flex items-center justify-center">{i + 1}</span>
-              <p className="text-sm font-medium">{safeActionCloud[idx]}</p>
-            </div>
-          ))}
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
+      {/* BOX DE NOTA */}
+      <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-b-8 border-[#D4A017] relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10 text-[#003366]"><Trophy size={120}/></div>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Desempenho Técnico</p>
+        <h4 className="text-8xl font-black text-[#003366] tracking-tighter">{result.grade.toFixed(1)}</h4>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 md:gap-4">
+            <span className="px-4 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                Tempo de Execução: {formatTime(timer)}
+            </span>
+            <span className="px-4 py-1 bg-purple-50 text-purple-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                {result.selections.length} Etapas Realizadas
+            </span>
+            {omittedSteps.length > 0 && (
+              <span className="px-4 py-1 bg-red-50 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                {omittedSteps.length} Passo{omittedSteps.length > 1 ? 's' : ''} Esquecido{omittedSteps.length > 1 ? 's' : ''}
+              </span>
+            )}
         </div>
       </div>
-      
-      {checklist && checklist.length > 0 && (
-        <div className="bg-white p-10 rounded-[3rem] border-2 border-gray-100 shadow-xl">
-          <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3 border-b pb-4">
-            <span>📋</span> Critérios de Avaliação (Checklist)
+
+      {/* PASSOS CRÍTICOS ESQUECIDOS — destaque, sem limitar a nota (decisão do item 6.17) */}
+      {criticalOmitted.length > 0 && (
+        <div className="bg-red-600 text-white p-8 rounded-[2.5rem] shadow-xl">
+          <h4 className="font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
+            <AlertOctagon size={20} /> Passo{criticalOmitted.length > 1 ? 's' : ''} crítico{criticalOmitted.length > 1 ? 's' : ''} esquecido{criticalOmitted.length > 1 ? 's' : ''}
           </h4>
           <ul className="space-y-3">
-            {checklist.map((item: string, i: number) => (
-              <li key={i} className="flex items-start gap-3 text-xs font-bold text-gray-500">
-                <span className="text-[#D4A017]">●</span> {item}
+            {criticalOmitted.map(({ pos, step }) => (
+              <li key={pos} className="text-sm">
+                <span className="font-black">{pos + 1}º — {step.action}</span>
+                {step.why && <span className="block text-red-100 text-xs mt-1">{step.why}</span>}
               </li>
             ))}
           </ul>
         </div>
       )}
+
+      {/* AVALIAÇÃO PASSO A PASSO */}
+      <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
+        <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3">
+          <Map size={20} className="text-[#D4A017]"/> Análise Passo a Passo
+        </h4>
+        <div className="space-y-3">
+          {result.selections.length === 0 && (
+            <p className="text-sm text-red-500 font-bold">Nenhuma ação foi selecionada.</p>
+          )}
+          {result.selections.map((selection, userPos) => {
+            const isWrong = selection.status === 'wrong';
+            const isInOrder = selection.status === 'in-order';
+            const why = isWrong
+              ? (stepActions.has(selection.action)
+                  ? 'Esta ação já tinha sido feita tantas vezes quanto a técnica pede.'
+                  : explanationFor(normalized, selection.action))
+              : stepWhy(steps, selection.expectedPosition);
+
+            return (
+              <div key={userPos} className={`p-5 rounded-2xl border-2 flex items-start gap-4 transition-all
+                ${isWrong ? 'bg-red-50 border-red-100' : isInOrder ? 'bg-green-50 border-green-100' : 'bg-yellow-50 border-yellow-100'}
+              `}>
+                <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-sm font-black shadow-sm
+                  ${isWrong ? 'bg-red-500 text-white' : isInOrder ? 'bg-green-600 text-white' : 'bg-yellow-500 text-white'}
+                `}>
+                  {userPos + 1}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-800">{selection.action}</p>
+                  <span className={`text-[9px] font-black uppercase tracking-tighter mt-1 block
+                      ${isWrong ? 'text-red-500' : isInOrder ? 'text-green-600' : 'text-yellow-600'}
+                  `}>
+                      {isWrong
+                        ? (stepActions.has(selection.action) ? '❌ Repetição Desnecessária (Penalidade)' : '❌ Conduta Incorreta (Penalidade)')
+                        : isInOrder ? '✅ Na Ordem Correta' : `⚠️ Fora de Sequência (é o ${(selection.expectedPosition ?? 0) + 1}º passo)`}
+                  </span>
+                  {why && <p className="text-xs text-gray-500 font-medium mt-2 leading-relaxed">{why}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {omittedSteps.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <h5 className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-3">Passos que você esqueceu</h5>
+            <ul className="space-y-2">
+              {omittedSteps.map(({ pos, step }) => (
+                <li key={pos} className={`text-xs font-bold p-3 rounded-xl ${step.critical ? 'bg-red-100 text-red-700' : 'bg-gray-50 text-gray-600'}`}>
+                  {pos + 1}º — {step.action}{step.critical && ' (crítico)'}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {tip && (
+        <div className="bg-amber-50 p-8 rounded-[2.5rem] border border-amber-100 flex gap-4">
+          <Lightbulb size={22} className="text-[#D4A017] shrink-0" />
+          <p className="text-sm text-amber-900 font-medium leading-relaxed">{tip}</p>
+        </div>
+      )}
+
+      {/* GABARITO E CHECKLIST */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-[#003366] p-10 rounded-[3rem] shadow-2xl text-white">
+          <h4 className="text-lg font-black text-[#D4A017] uppercase mb-8 flex items-center gap-3 border-b border-white/10 pb-4">
+            <CheckCircle2 size={20}/> Gabarito Oficial (Padrão-Ouro)
+          </h4>
+          <div className="space-y-4">
+            {steps.map((step, i) => (
+              <div key={i} className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                <span className="text-[#D4A017] font-black text-xs bg-white/10 w-6 h-6 shrink-0 rounded flex items-center justify-center">{i + 1}</span>
+                <div>
+                  <p className="text-sm font-medium">
+                    {step.action}
+                    {step.critical && <span className="ml-2 text-[9px] font-black uppercase tracking-widest bg-red-500 px-2 py-0.5 rounded">crítico</span>}
+                  </p>
+                  {step.why && <p className="text-xs text-blue-100/70 mt-1">{step.why}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {checklist && checklist.length > 0 && (
+          <div className="bg-white p-10 rounded-[3rem] border-2 border-gray-100 shadow-xl">
+            <h4 className="text-lg font-black text-[#003366] uppercase mb-8 flex items-center gap-3 border-b pb-4">
+              <span>📋</span> Critérios de Avaliação (Checklist)
+            </h4>
+            <ul className="space-y-3">
+              {checklist.map((item: string, i: number) => (
+                <li key={i} className="flex items-start gap-3 text-xs font-bold text-gray-500">
+                  <span className="text-[#D4A017]">●</span> {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ============================================================================
 // COMPONENTE PRINCIPAL (MAESTRO)
 // ============================================================================
 const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) => {
-  const [selectedActions, setSelectedActions] = useState<number[]>([]);
-  const [isFinished, setIsFinished] = useState(false);
-  const [score, setScore] = useState(0);
+  const [selectedActions, setSelectedActions] = useState<string[]>([]);
+  const [result, setResult] = useState<OsceScoreResult | null>(null);
   const [timer, setTimer] = useState(0);
+  const isFinished = result !== null;
+
+  const normalized = useMemo(
+    () => (station.mode === 'clinical' ? normalizeStaticStation(station) : { steps: [], distractors: [] }),
+    [station]
+  );
+  // Embaralhada uma vez por tentativa (montagem do componente), não a cada render.
+  const actionCloud = useMemo(() => buildActionCloud(normalized), [normalized]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -246,18 +330,17 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
     return <ModeMismatchWarning onBack={onBack} requiredMode={station.mode === 'rpg' ? 'Luna Engine (RPG)' : 'Paciente Virtual (IA)'} />;
   }
 
-  const staticStation = station as StaticOsceStation;
-  const isUC = staticStation.disciplineId.toLowerCase().startsWith('uc');
-  const safeActionCloud = staticStation.actionCloud || [];
-  const safeOrderIndices = staticStation.correctOrderIndices || [];
+  const isUC = station.disciplineId.toLowerCase().startsWith('uc');
+  const correctSequence = normalized.steps.map(s => s.action);
 
-  const toggleAction = (index: number) => {
+  const addAction = (action: string) => {
     if (isFinished) return;
-    if (selectedActions.includes(index)) {
-      setSelectedActions(prev => prev.filter(i => i !== index));
-    } else {
-      setSelectedActions(prev => [...prev, index]);
-    }
+    setSelectedActions(prev => [...prev, action]);
+  };
+
+  const removeAt = (position: number) => {
+    if (isFinished) return;
+    setSelectedActions(prev => prev.filter((_, i) => i !== position));
   };
 
   const formatTime = (seconds: number) => {
@@ -266,58 +349,56 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const calculateDetailedScore = () => {
-    const { errors, grade: finalRounded } = calculateOsceScore(safeOrderIndices, selectedActions);
-
-    setScore(finalRounded);
+  const finishStation = () => {
+    const scored = calculateOsceScore(correctSequence, selectedActions);
+    setResult(scored);
 
     const analytics: StaticOsceAnalytics = {
       stationId: station.id,
       mode: 'static-cloud',
       timeSpent: timer,
-      userSequence: selectedActions.map(idx => safeActionCloud[idx]),
-      correctSequence: safeOrderIndices.map(idx => safeActionCloud[idx]),
-      totalErrors: errors,
-      efficiency: (finalRounded / (timer || 1)).toFixed(4),
-      grade: finalRounded
+      userSequence: selectedActions,
+      correctSequence,
+      totalErrors: scored.errors,
+      efficiency: (scored.grade / (timer || 1)).toFixed(4),
+      grade: scored.grade
     };
 
     if (onSaveResult) {
-      onSaveResult(finalRounded, 10, timer, analytics);
+      onSaveResult(scored.grade, 10, timer, analytics);
     }
 
-    setIsFinished(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 pb-40">
-      <StationHeader onBack={onBack} theme={staticStation.theme} />
+      <StationHeader onBack={onBack} theme={station.theme} title={station.title} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-1 space-y-6">
-          <ContextPanel isUC={isUC} scenario={staticStation.scenario} task={staticStation.task} />
+          <ContextPanel isUC={isUC} setting={station.setting} scenario={station.scenario} task={station.task} />
           {!isFinished && <TimerDisplay timer={timer} formatTime={formatTime} />}
         </div>
 
         <div className="lg:col-span-2">
-          {!isFinished ? (
-            <InteractionArea 
-              selectedActions={selectedActions} 
-              safeActionCloud={safeActionCloud} 
-              isUC={isUC} 
-              onToggleAction={toggleAction} 
+          {!result ? (
+            <InteractionArea
+              selectedActions={selectedActions}
+              actionCloud={actionCloud}
+              isUC={isUC}
+              onAddAction={addAction}
+              onRemoveAt={removeAt}
             />
           ) : (
             <>
-              <ResultsDashboard 
-                score={score} 
-                timer={timer} 
-                selectedActions={selectedActions} 
-                safeActionCloud={safeActionCloud} 
-                safeOrderIndices={safeOrderIndices} 
-                checklist={staticStation.checklist} 
-                formatTime={formatTime} 
+              <ResultsDashboard
+                result={result}
+                timer={timer}
+                normalized={normalized}
+                checklist={station.checklist}
+                tip={station.tip}
+                formatTime={formatTime}
               />
               <div className="pt-6 flex justify-center">
                 <button onClick={onBack} className="w-full md:w-auto bg-[#D4A017] text-[#003366] px-16 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">
@@ -333,7 +414,7 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
       {!isFinished && selectedActions.length > 0 && (
         <div className="fixed bottom-10 left-0 right-0 px-4 z-50 animate-in slide-in-from-bottom-10">
           <div className="max-w-md mx-auto">
-            <button onClick={calculateDetailedScore} className="w-full bg-[#003366] text-white py-6 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.2em] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-[#D4A017] hover:bg-[#D4A017] hover:text-[#003366] transition-all flex items-center justify-center gap-4">
+            <button onClick={finishStation} className="w-full bg-[#003366] text-white py-6 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.2em] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-[#D4A017] hover:bg-[#D4A017] hover:text-[#003366] transition-all flex items-center justify-center gap-4">
               Encerrar Simulação <ChevronRight size={20}/>
             </button>
           </div>

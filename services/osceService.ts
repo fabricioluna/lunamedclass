@@ -1,7 +1,7 @@
 import { firestoreDB } from '../firebase';
 import {
   collection, doc, getDoc, getDocs, onSnapshot,
-  addDoc, deleteDoc, query, where, writeBatch,
+  addDoc, deleteDoc, query, setDoc, where, writeBatch,
 } from 'firebase/firestore';
 import { OsceStation } from '../types';
 
@@ -28,8 +28,13 @@ export const subscribeToOsceStations = (onData: (stations: OsceStation[]) => voi
   return onSnapshot(osceCollection, (snap) => onData(snap.docs.map(toStation)));
 };
 
-export const addOsceStations = async (stations: OsceStation[]) => {
-  await Promise.all(stations.map((s) => addDoc(osceCollection, s)));
+// Estação com `slug` usa o slug como id do documento: reimportar o arquivo corrigido substitui
+// a versão anterior em vez de criar uma cópia, e a URL da estação (que usa o id do documento)
+// não muda entre versões. Sem slug, mantém o comportamento antigo de id automático.
+export const saveOsceStations = async (stations: OsceStation[]) => {
+  await Promise.all(
+    stations.map((s) => (s.slug ? setDoc(doc(firestoreDB, 'osceStations', s.slug), s) : addDoc(osceCollection, s)))
+  );
 };
 
 export const removeOsceStation = async (firebaseId: string) => {

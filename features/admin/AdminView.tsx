@@ -492,9 +492,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           periods={periods}
           disciplines={disciplines}
           osceStations={adminOsceStations}
-          onAddOsceStations={async (os) => {
-            await osceService.addOsceStations(os).catch(console.error);
-          }}
+          onSaveOsceStations={osceService.saveOsceStations}
           onRemoveOsceStation={async (id) => {
             const o = adminOsceStations.find(item => item.id === id);
             if (o?.firebaseId) {
