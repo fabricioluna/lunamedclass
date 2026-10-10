@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GuidedChoice, GuidedOsceStation, GuidedReveal } from '../../types';
 import { calculateGuidedScore, GuidedScoreResult, sceneCredit } from '../../utils/guidedScoring';
 import { DEFAULT_GUIDED_PROMPT, isCorrectChoice, KeyedChoice, shuffleChoices } from '../../utils/guidedStation';
@@ -131,7 +131,7 @@ const ScenePanel = ({ narrative, patient, prompt, choices, tried, isAnswered, ch
       <div className="flex gap-3 items-start">
         <div className="w-10 h-10 shrink-0 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center"><MessageCircle size={18} /></div>
         <div className="bg-white border border-purple-100 rounded-2xl rounded-tl-none px-5 py-4 shadow-sm">
-          <p className="text-sm text-gray-800 font-medium italic whitespace-pre-line">"{patient}"</p>
+          <p className="text-sm text-gray-800 font-medium italic whitespace-pre-line">{patient}</p>
         </div>
       </div>
     )}
@@ -295,6 +295,18 @@ const GuidedRpgView: React.FC<GuidedRpgViewProps> = ({ station, onBack, onSaveRe
     return () => clearInterval(interval);
   }, [score]);
 
+  // No celular a consequência fica abaixo das opções, fora da tela: leva o aluno até ela. E, ao
+  // avançar, leva ao topo da cena nova (o painel de contexto vem antes dela na coluna única).
+  // scrollIntoView não existe no jsdom — daí o `?.`.
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  const sceneTopRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (lastWrong || chosenKey !== null) feedbackRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+  }, [lastWrong, chosenKey]);
+  useEffect(() => {
+    if (sceneIndex > 0) sceneTopRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, [sceneIndex]);
+
   const handleChoose = (choice: KeyedChoice) => {
     if (isAnswered || tried.includes(choice.key)) return;
 
@@ -370,20 +382,22 @@ const GuidedRpgView: React.FC<GuidedRpgViewProps> = ({ station, onBack, onSaveRe
             </>
           ) : (
             <>
-              <ScenePanel
-                narrative={scene.narrative}
-                patient={scene.patient}
-                prompt={scene.prompt || DEFAULT_GUIDED_PROMPT}
-                choices={choices}
-                tried={tried}
-                isAnswered={isAnswered}
-                chosenKey={chosenKey}
-                onChoose={handleChoose}
-              />
-              {lastWrong && !isAnswered && <FeedbackBox kind="wrong" text={lastWrong.feedback} />}
+              <div ref={sceneTopRef} className="scroll-mt-4">
+                <ScenePanel
+                  narrative={scene.narrative}
+                  patient={scene.patient}
+                  prompt={scene.prompt || DEFAULT_GUIDED_PROMPT}
+                  choices={choices}
+                  tried={tried}
+                  isAnswered={isAnswered}
+                  chosenKey={chosenKey}
+                  onChoose={handleChoose}
+                />
+              </div>
+              {lastWrong && !isAnswered && <div ref={feedbackRef}><FeedbackBox kind="wrong" text={lastWrong.feedback} /></div>}
               {isAnswered && rightChoice && (
                 <>
-                  <FeedbackBox kind="right" text={rightChoice.feedback} />
+                  <div ref={feedbackRef}><FeedbackBox kind="right" text={rightChoice.feedback} /></div>
                   <div className="flex justify-end">
                     <button onClick={handleContinue} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg border-2 border-[#D4A017] hover:bg-[#D4A017] hover:text-[#003366] transition-all flex items-center gap-3">
                       {isLastScene ? 'Concluir caso' : 'Continuar'} <ChevronRight size={18} />

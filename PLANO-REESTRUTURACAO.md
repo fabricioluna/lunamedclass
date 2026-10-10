@@ -1944,11 +1944,55 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     `OSCE-HM1-N1-lote-1.json` foi renomeado para `OBSOLETO-...` (versão fraca, para ninguém
     importar por engano).
 
-  **Fase 2 — RPG de técnica:** gabarito e nota vindos da estação (IA só comenta; nota =
-  fases cumpridas − erros críticos); `feedbackText`/`isFatalError` passam a valer; monitor
-  opcional por estação (em SSVV os valores aparecem pela narrativa só quando a técnica está
-  certa — ex.: desinsuflou rápido demais → não identifica a PAS); tela final sem "óbito" em
-  estações de técnica.
+  **Fase 2 — RPG de técnica** *(plano original, SUBSTITUÍDO em 2026-10-10 — ver "RPG guiado"
+  abaixo)*: gabarito e nota vindos da estação (IA só comenta; nota = fases cumpridas − erros
+  críticos); `feedbackText`/`isFatalError` passam a valer; monitor opcional por estação; tela
+  final sem "óbito" em estações de técnica. O RPG por texto livre com IA **continua existindo
+  como está** (modo `rpg`), mas não é usado para a técnica da HM1.
+
+  🎮 **RPG guiado (Fase 2 redefinida, 2026-10-10)** — decisão do usuário via `AskUserQuestion`,
+  depois de eu apontar 4 limites do motor com IA (a IA inventa gabarito e nota; custo por ação
+  com OSCE público e `/api/chat` sem autenticação — CLAUDE.md; o monitor auto-conecta e revela os
+  valores que o aluno deveria aferir; `feedbackText`/`isFatalError` nunca usados + tela de
+  "óbito"):
+  - **Escolhas guiadas por etapa, sem IA.** A cada cena o aluno escolhe entre 4 a 6 condutas
+    (embaralhadas). Errou → vê a **consequência narrada**, a opção trava, escolhe de novo; só
+    acerta para avançar. Nota: 1 por cena de primeira, 0,5 na segunda tentativa, 0 da terceira
+    (`utils/guidedScoring.ts`). Gratuito, previsível e seguro com acesso público.
+  - Elementos de realismo escolhidos: **consequência do erro narrada**, **valores aferidos
+    revelados só depois da técnica correta** (painel "Aferições") e **diálogo com o paciente**
+    (balão de fala). **Não escolhidos:** intercorrências no meio da técnica — por isso ficaram de
+    fora os casos "ruídos de difícil percepção" e "ritmo alterado" que eu havia proposto.
+  - **Código:** `types.ts` (`GuidedOsceStation`, `mode: 'guided'`), `utils/guidedScoring.ts`,
+    `utils/guidedStation.ts`, `utils/osceImport.ts` (modo `guided`: cenas, ≥1 certa e ≥1 errada,
+    feedback em toda opção, textos únicos, aviso fora de 4 a 6 opções),
+    `features/osce/GuidedRpgView.tsx` (cena, balão, consequência, painel de aferições, revisão
+    cena a cena; rola até a consequência no celular), encaixe em `routes/AppRoutes.tsx`
+    (despacho), `OsceSetupView` (lista do RPG inclui `guided`, selo "RPG Guiado"),
+    `simulatorTypesConfig.tsx` (`stationModeMatchesType`: o tipo RPG de `/simulators` casa
+    `rpg` e `guided`) e `AdminOsce.tsx` (4º modo "RPG Guiado", modelo baixável, prévia com
+    cenas e valores revelados).
+  - **8 casos** (`conteudo/osce-hm1-n1/rpg.mjs` → `rpg.json`): R1 aerossóis, R2 contato
+    (exame físico + estetoscópio exclusivo), R3 gotículas, R4 desparamentação com consequência
+    (variação com touca + PFF2), R5 sinais vitais completos (valores revelados), R6 PA e o
+    **hiato auscultatório** (pular o palpatório subestima a PAS — Imagem 1), R7 PA em gestante,
+    R8 sinais vitais no paciente inconsciente (pulso na **carótida**; jugular é opção errada).
+    Valores aferidos e nomes são fictícios e coerentes entre as cenas; nada é classificado.
+  - **Verificado:** `typecheck`, `vitest` (inclui `rpg.test.tsx`: os 8 casos validam com o
+    parser da importação, 0 erros e 0 avisos; acertar tudo dá 10; errar uma vez por cena dá 5;
+    valores só revelados em cena com conduta certa), `lint` 22 (nenhum novo), `build`; captura de
+    tela no computador e no celular; as rotas `/simulators`, `/simulators/osce-rpg`,
+    `/simulators/osce-estatico`, `/disciplina/hm1/osce` e `.../configurar/{rpg,static}` abrem sem
+    erro de JS e sem login. Descoberto na captura e corrigido: aspas duplicadas na fala do
+    paciente (o componente adicionava aspas e o texto já as trazia).
+  - **Pendências:** (1) o usuário revisa os Word (`Documents/Casos RPG HM1 N1 - revisao/`) e
+    depois importa `rpg.json` em Admin → OSCE → **RPG Guiado** — exige o deploy do código novo;
+    (2) **ordem das posições** em pressão em várias posições segue pendente (sem RPG para ela);
+    (3) decidir se as variações de desparamentação (sem touca / máscara cirúrgica) ganham RPG.
+  - ℹ️ **Estado de produção observado em 2026-10-10 (noite):** o banco já tem **as 30 estações
+    estáticas** (importadas pelo usuário depois da revisão 3; conferido via REST, slugs iguais
+    aos de `todas.json`). `publicadas.json` atualizado com os 30. Os Word v3 foram gerados antes
+    disso e ainda dizem "AINDA NÃO PUBLICADA" — regenerar mostra "JÁ NO AR".
 
   **Fase 3 — opcional:** modo treino (retorno a cada clique) × modo prova; imagem de
   referência no gabarito (só com autorização de uso das figuras); tempo limite por estação.
