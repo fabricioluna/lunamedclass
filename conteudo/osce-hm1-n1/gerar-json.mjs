@@ -1,24 +1,18 @@
 // Gera o JSON de importação (Admin → OSCE → Estático) a partir de estacoes.mjs.
 // Uso: node conteudo/osce-hm1-n1/gerar-json.mjs
 //
-// LOTE 1 (publicado antes do retorno das professoras, a pedido do usuário em 2026-10-10):
-// só as estações cuja sequência é inteira do roteiro e que não dependem de nenhuma pergunta
-// aberta do documento de revisão. Ficam de fora até a resposta:
-//   - P1–P8 (paramentação): touca como distrator, PFF2 fora de aerossóis e o gatilho da luva
-//     estéril (perguntas 3, 4 e 5);
-//   - C1–C3 (precauções): a desparamentação de cada precaução foi derivada da ordem geral
-//     (pergunta 6).
-// Em todas as estações do lote: sem a marca de "crítico" (pergunta 1) e sem itens `pendente`.
-// A revisão 2 (2026-10-10) reescreveu casos e distratores destas mesmas 13 estações; os slugs
-// são os mesmos, então importar o arquivo de novo ATUALIZA as que já estão no ar.
-// Distratores de origem D entram quando negam diretamente uma frase do roteiro.
+// Saída: todas.json — as 30 estações da HM1/N1. NÃO importar antes da revisão do usuário nos
+// Word: o conteúdo só vai ao ar depois que ele aprovar (e as estações que ele reprovar saem do
+// arquivo antes). Os slugs são fixos (`hm1-n1-<código>`): reimportar ATUALIZA em vez de duplicar.
+//
+// O que NÃO é exportado, de propósito:
+//   - a marca de "crítico" (proposta, ainda sem aval docente);
+//   - distratores `pendente` (dependem de resposta docente).
 
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import estacoes, { TEMAS } from './estacoes.mjs';
-
-const LOTE_1 = ['B01', 'B02', 'D1', 'D2', 'D3', 'D4', 'L1', 'L2', 'S01', 'S02', 'S03', 'S04', 'S05'];
 
 const familyStations = (fam, baseTitle) =>
   fam.variants.map((v) => ({
@@ -56,19 +50,8 @@ const paraImportacao = (s) =>
     distractors: s.distractors.filter((d) => !d.pendente).map(({ action, why }) => semVazio({ action, why })),
   });
 
-const lote = LOTE_1.map((code) => {
-  const station = todas.find((s) => s.code === code);
-  if (!station) throw new Error(`Estação ${code} não encontrada em estacoes.mjs`);
-  return paraImportacao(station);
-});
+const ordem = (a, b) => a.slug.localeCompare(b.slug, 'pt', { numeric: true });
+const tudo = todas.map(paraImportacao).sort(ordem);
 
-const pasta = dirname(fileURLToPath(import.meta.url));
-writeFileSync(join(pasta, 'lote-1.json'), `${JSON.stringify(lote, null, 2)}\n`);
-console.log(`${lote.length} estações → lote-1.json`);
-
-// Todas as estações (inclusive as ainda não aprovadas): NÃO é para importar como está — serve
-// para validar o conteúdo inteiro com o mesmo parser da tela de importação (todas.test.ts) e,
-// depois da aprovação, para extrair o lote seguinte.
-const tudo = todas.map(paraImportacao);
-writeFileSync(join(pasta, 'todas.json'), `${JSON.stringify(tudo, null, 2)}\n`);
-console.log(`${tudo.length} estações → todas.json (só validação)`);
+writeFileSync(join(dirname(fileURLToPath(import.meta.url)), 'todas.json'), `${JSON.stringify(tudo, null, 2)}\n`);
+console.log(`${tudo.length} estações → todas.json`);

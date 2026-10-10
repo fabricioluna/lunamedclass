@@ -87,8 +87,9 @@ const pontosDa = (s) => {
     pts.push(['Posição deitada. ', 'O roteiro também cita a posição deitada; esta estação cobra sentado e em pé. Deseja uma variação com deitado?']);
   }
   if (s.code === 'S11') {
-    pts.push(['Mesma técnica no paciente inconsciente. ', 'O roteiro diz que a técnica é a mesma independente do estado de consciência. Por isso a sequência é igual à de S05, inclusive apresentar-se, explicar o procedimento e informar os achados. Está correto, ou algum passo muda?']);
-    pts.push(['Artéria do pulso. ', 'O roteiro lista radial, carotídea e femoral como principais artérias, sem dizer qual usar no paciente inconsciente. A estação não especifica a artéria. Deseja especificar?']);
+    pts.push(['Mesma técnica no paciente inconsciente. ', 'O roteiro diz que a técnica é a mesma independente do estado de consciência. Por isso a sequência segue a de S05 (com o pulso na carótida), inclusive apresentar-se, explicar o procedimento e informar os achados. Está correto, ou algum passo muda?']);
+    pts.push(['Artéria do pulso (origem D). ', 'Foi usada a artéria CARÓTIDA no paciente inconsciente. O roteiro lista a carotídea entre as principais artérias, mas não diz qual usar neste caso. A veia jugular entrou como distrator: o pulso se palpa em artéria, não em veia. Confirmar.']);
+    pts.push(['Comunicar os achados ao paciente inconsciente. ', 'O roteiro manda informar os achados ao paciente e perguntar se há dúvida. Com o paciente inconsciente, isso pode ser trocado por comunicar à equipe. O roteiro não define; manter como está ou trocar?']);
   }
   pts.push(['Enunciado do caso. ', 'Nomes, idades e contexto são fictícios e não alteram a técnica. Ajuste o texto ao estilo das suas provas de OSCE.']);
   if (s.distractors.some((d) => d.pendente)) pts.push(['Distrator não publicado. ', 'O distrator marcado como "não publicado" ficou fora do ar porque o roteiro só diz "preferir" o decúbito lateral esquerdo ou dorsal. Manter como erro?']);
