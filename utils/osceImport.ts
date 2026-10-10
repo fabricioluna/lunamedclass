@@ -1,14 +1,15 @@
 import type {
-  AcademicUnit, ClinicalState, DynamicOsceStation, OsceStation, SimulationPhase,
-  StaticOsceDistractor, StaticOsceStation, StaticOsceStep,
+  AcademicUnit, ClinicalState, DynamicOsceStation, GuidedChoice, GuidedOsceStation, GuidedReveal,
+  GuidedScene, OsceStation, SimulationPhase, StaticOsceDistractor, StaticOsceStation, StaticOsceStep,
 } from '../types';
+import { sceneHasValidChoices } from './guidedStation';
 
 // Leitura + validação do JSON de importação de estações OSCE (aba OSCE do admin). Regra pura,
 // testada em osceImport.test.ts — antes vivia como closure dentro de AdminOsce.tsx, sem
 // validação nenhuma: a prévia só mostrava a contagem, e um gabarito apontando para ação
 // inexistente só aparecia quando o aluno abria a estação.
 
-export type OsceImportMode = 'clinical' | 'rpg' | 'ai';
+export type OsceImportMode = 'clinical' | 'rpg' | 'ai' | 'guided';
 
 export interface OsceImportContext {
   mode: OsceImportMode;
@@ -115,6 +116,71 @@ const parseStaticFields = (item: Record<string, unknown>, errors: string[], warn
   return { actionCloud, correctOrderIndices };
 };
 
+const parseReveals = (value: unknown, sceneNumber: number, errors: string[]): GuidedReveal[] => {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    errors.push(`Cena ${sceneNumber}: "reveals" precisa ser uma lista.`);
+    return [];
+  }
+  return value.flatMap((raw) => {
+    const label = isRecord(raw) ? asText(raw.label) : '';
+    const text = isRecord(raw) ? asText(raw.value) : '';
+    if (!label || !text) {
+      errors.push(`Cena ${sceneNumber}: cada item de "reveals" precisa de "label" e "value".`);
+      return [];
+    }
+    return [{ label, value: text }];
+  });
+};
+
+const parseChoices = (value: unknown, sceneNumber: number, errors: string[]): GuidedChoice[] => {
+  const rawChoices = Array.isArray(value) ? value : [];
+  return rawChoices.flatMap((raw, idx) => {
+    if (!isRecord(raw)) {
+      errors.push(`Cena ${sceneNumber}, opção ${idx + 1}: não é um objeto.`);
+      return [];
+    }
+    const action = asText(raw.action);
+    const feedback = asText(raw.feedback);
+    if (!action) {
+      errors.push(`Cena ${sceneNumber}, opção ${idx + 1}: sem "action".`);
+      return [];
+    }
+    if (!feedback) errors.push(`Cena ${sceneNumber}, opção "${action}": sem "feedback" (a consequência ou o desfecho da conduta).`);
+    return [{ action, ...(raw.correct === true ? { correct: true } : {}), feedback }];
+  });
+};
+
+const parseScenes = (value: unknown, errors: string[], warnings: string[]): GuidedScene[] => {
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push('A estação não tem nenhuma cena ("scenes").');
+    return [];
+  }
+  return value.flatMap((raw, idx) => {
+    const n = idx + 1;
+    if (!isRecord(raw)) {
+      errors.push(`Cena ${n}: não é um objeto.`);
+      return [];
+    }
+    const narrative = asText(raw.narrative);
+    if (!narrative) errors.push(`Cena ${n}: sem "narrative".`);
+
+    const choices = parseChoices(raw.choices, n, errors);
+    if (!sceneHasValidChoices(choices)) errors.push(`Cena ${n}: precisa de pelo menos uma conduta certa ("correct": true) e uma errada.`);
+    if (new Set(choices.map((c) => c.action)).size !== choices.length) errors.push(`Cena ${n}: há opções com o mesmo texto.`);
+    if (choices.length < 4 || choices.length > 6) warnings.push(`Cena ${n}: ${choices.length} opções — o recomendado é de 4 a 6.`);
+
+    const scene: GuidedScene = { narrative, choices };
+    const patient = asText(raw.patient);
+    const prompt = asText(raw.prompt);
+    const reveals = parseReveals(raw.reveals, n, errors);
+    if (patient) scene.patient = patient;
+    if (prompt) scene.prompt = prompt;
+    if (reveals.length > 0) scene.reveals = reveals;
+    return [scene];
+  });
+};
+
 const parsePhases = (value: unknown): Record<string, SimulationPhase> =>
   isRecord(value) ? (value as Record<string, SimulationPhase>) : {};
 
@@ -202,6 +268,14 @@ const parseItem = (
       checklist: asTextList(raw.checklist),
       ...parseStaticFields(raw, errors, warnings),
     } satisfies StaticOsceStation;
+  } else if (ctx.mode === 'guided') {
+    station = {
+      ...base,
+      mode: 'guided',
+      ...(setting ? { setting } : {}),
+      checklist: asTextList(raw.checklist),
+      scenes: parseScenes(raw.scenes, errors, warnings),
+    } satisfies GuidedOsceStation;
   } else {
     const initialPhaseId = asText(raw.initialPhaseId) || asText(raw.no_inicial) || 'fase_1';
     const phases = parsePhases(raw.phases);

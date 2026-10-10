@@ -191,8 +191,48 @@ export interface DynamicOsceStation {
   tip?: string;
 }
 
+// === INTERFACE 3: RPG GUIADO (item 6.17, Fase 2) ===
+// Caso interativo SEM IA: a cada cena o aluno escolhe uma conduta entre 4 a 6 opções. Nota,
+// feedback e consequências saem do próprio cadastro — nada é julgado em tempo real por modelo,
+// então é gratuito, previsível e seguro com acesso público (diferente do RPG por texto livre).
+export interface GuidedChoice {
+  action: string;
+  correct?: boolean; // pode haver mais de uma correta quando o roteiro aceita mais de uma conduta
+  feedback: string; // na errada: a consequência narrada + o porquê; na certa: o desfecho da ação
+}
+
+export interface GuidedReveal {
+  label: string;
+  value: string;
+}
+
+export interface GuidedScene {
+  narrative: string;
+  patient?: string; // fala do paciente (ou da equipe), exibida como balão
+  prompt?: string; // pergunta ao aluno; padrão: "O que você faz agora?"
+  choices: GuidedChoice[];
+  reveals?: GuidedReveal[]; // valores que só aparecem DEPOIS da escolha correta (técnica feita certo)
+}
+
+export interface GuidedOsceStation {
+  mode: 'guided';
+  id: string;
+  firebaseId?: string;
+  slug?: string;
+  disciplineId: string;
+  unit?: AcademicUnit;
+  theme: string;
+  title: string;
+  scenario: string;
+  setting?: string;
+  task: string;
+  tip?: string;
+  checklist?: string[];
+  scenes: GuidedScene[];
+}
+
 // === UNIÃO DISCRIMINADA ===
-export type OsceStation = StaticOsceStation | DynamicOsceStation;
+export type OsceStation = StaticOsceStation | DynamicOsceStation | GuidedOsceStation;
 
 export interface SimulationInfo {
   id: string;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseOsceImport, OsceImportContext } from './osceImport';
-import type { DynamicOsceStation, StaticOsceStation } from '../types';
+import type { DynamicOsceStation, GuidedOsceStation, StaticOsceStation } from '../types';
 
 const ctx: OsceImportContext = {
   mode: 'clinical',
@@ -107,6 +107,70 @@ describe('parseOsceImport — estático', () => {
     const result = parseOne({ title: 'Antiga', actionCloud: ['A', 'B'], correctOrderIndices: [1, 0] });
     expect(result.errors).toEqual([]);
     expect((result.station as StaticOsceStation).correctOrderIndices).toEqual([1, 0]);
+  });
+});
+
+describe('parseOsceImport — RPG guiado', () => {
+  const guidedCtx: OsceImportContext = { ...ctx, mode: 'guided' };
+  const scene = {
+    narrative: 'Você está diante da porta do quarto.',
+    patient: 'Pode entrar, doutor(a).',
+    choices: [
+      { action: 'Higienizar as mãos', correct: true, feedback: 'Correto.' },
+      { action: 'Entrar direto', feedback: 'Você contaminou o ambiente.' },
+      { action: 'Calçar luvas primeiro', feedback: 'Antes, higienize as mãos.' },
+      { action: 'Colocar a touca', feedback: 'Não é o primeiro passo.' },
+    ],
+    reveals: [{ label: 'PA', value: '120/80 mmHg' }],
+  };
+  const guidedItem = { slug: 'rpg-teste', title: 'Visita', scenario: 'Caso', task: 'Tarefa', scenes: [scene] };
+
+  it('lê as cenas, a fala do paciente e os valores revelados', () => {
+    const { station, errors, warnings } = parseOne(guidedItem, guidedCtx);
+    const g = station as GuidedOsceStation;
+    expect(errors).toEqual([]);
+    expect(warnings).toEqual([]);
+    expect(g.mode).toBe('guided');
+    expect(g.scenes).toHaveLength(1);
+    expect(g.scenes[0].patient).toBe('Pode entrar, doutor(a).');
+    expect(g.scenes[0].reveals).toEqual([{ label: 'PA', value: '120/80 mmHg' }]);
+    expect(g.scenes[0].choices.filter((c) => c.correct)).toHaveLength(1);
+  });
+
+  it('erro quando não há cenas', () => {
+    expect(parseOne({ ...guidedItem, scenes: [] }, guidedCtx).errors.join()).toMatch(/nenhuma cena/);
+  });
+
+  it('erro quando a cena não tem conduta certa', () => {
+    const semCerta = { ...scene, choices: scene.choices.map(({ action, feedback }) => ({ action, feedback })) };
+    expect(parseOne({ ...guidedItem, scenes: [semCerta] }, guidedCtx).errors.join()).toMatch(/uma conduta certa/);
+  });
+
+  it('erro quando uma opção não tem feedback', () => {
+    const semFeedback = { ...scene, choices: [...scene.choices.slice(0, 3), { action: 'Sem feedback' }] };
+    expect(parseOne({ ...guidedItem, scenes: [semFeedback] }, guidedCtx).errors.join()).toMatch(/sem "feedback"/);
+  });
+
+  it('erro quando duas opções têm o mesmo texto', () => {
+    const repetida = { ...scene, choices: [...scene.choices, { action: 'Entrar direto', feedback: 'x' }] };
+    expect(parseOne({ ...guidedItem, scenes: [repetida] }, guidedCtx).errors.join()).toMatch(/mesmo texto/);
+  });
+
+  it('erro quando "reveals" está malformado', () => {
+    const ruim = { ...scene, reveals: [{ label: 'PA' }] };
+    expect(parseOne({ ...guidedItem, scenes: [ruim] }, guidedCtx).errors.join()).toMatch(/reveals/);
+  });
+
+  it('aviso (não erro) quando a cena foge de 4 a 6 opções', () => {
+    const curta = { ...scene, choices: scene.choices.slice(0, 3) };
+    const result = parseOne({ ...guidedItem, scenes: [curta] }, guidedCtx);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings.join()).toMatch(/4 a 6/);
+  });
+
+  it('aceita mais de uma conduta certa na mesma cena', () => {
+    const duas = { ...scene, choices: scene.choices.map((c, i) => (i === 1 ? { ...c, correct: true } : c)) };
+    expect(parseOne({ ...guidedItem, scenes: [duas] }, guidedCtx).errors).toEqual([]);
   });
 });
 

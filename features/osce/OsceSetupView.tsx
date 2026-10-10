@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SimulationInfo, OsceStation, AcademicUnit } from '../../types';
 import { Milestone, Layers } from 'lucide-react';
 import { fetchOsceStationsOnce } from '../../services/osceService';
+import { stationModeMatchesType } from '../simulators/simulatorTypesConfig';
 
 interface OsceSetupViewProps {
   discipline: SimulationInfo;
@@ -43,7 +44,7 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
           if (!isCorrectDisc || !isCorrectUnit) return false;
 
           if (setupMode === 'static') return s.mode === 'clinical';
-          if (setupMode === 'rpg') return s.mode === 'rpg';
+          if (setupMode === 'rpg') return stationModeMatchesType(s.mode, 'rpg');
           if (setupMode === 'ai') return s.mode === 'ai';
           return true;
         });
@@ -75,7 +76,7 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
   } else if (setupMode === 'rpg') {
     headerEmoji = '🎮';
     headerTitle = 'Simulado RPG';
-    headerSubtitle = 'Decisões dinâmicas e vitais em tempo real';
+    headerSubtitle = 'Casos interativos: decida a conduta a cada cena';
   } else if (setupMode === 'static') {
     headerEmoji = '📋';
     headerTitle = 'Simulado Estático';
@@ -239,6 +240,10 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
                           {station.mode === 'rpg' ? (
                             <span className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
                               🎮 Simulado RPG
+                            </span>
+                          ) : station.mode === 'guided' ? (
+                            <span className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
+                              🎮 RPG Guiado
                             </span>
                           ) : station.mode === 'ai' ? (
                             <span className="bg-green-100 text-green-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-green-200 flex items-center gap-1">
