@@ -6,16 +6,16 @@ import OsceView from './OsceView';
 import { parseOsceImport } from '../../utils/osceImport';
 import type { StaticOsceStation } from '../../types';
 
-// Usa o conteúdo real do lote 1 (conteudo/osce-hm1-n1) para garantir que o player roda o
+// Usa o conteúdo real das estações (conteudo/osce-hm1-n1) para garantir que o player roda o
 // formato de autoria do item 6.17 de ponta a ponta — inclusive passo repetido.
 const loadStation = (slug: string): StaticOsceStation => {
-  const text = readFileSync(join(__dirname, '../../conteudo/osce-hm1-n1/lote-1.json'), 'utf8');
+  const text = readFileSync(join(__dirname, '../../conteudo/osce-hm1-n1/todas.json'), 'utf8');
   const { items } = parseOsceImport(text, {
     mode: 'clinical', disciplineId: 'hm1', defaultUnit: 'N1', forceUnitN1: false, defaultTheme: '',
     allowedThemes: ['Biossegurança e Controle de IRAS', 'Sinais Vitais'], existingIds: [], now: 0,
   });
   const station = items.find((i) => i.station?.slug === slug)?.station;
-  if (!station) throw new Error(`Estação ${slug} não está no lote 1`);
+  if (!station) throw new Error(`Estação ${slug} não está em todas.json`);
   return station as StaticOsceStation;
 };
 

@@ -1909,6 +1909,26 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   - **A versão revisada das 13 ainda NÃO está em produção** — só entra quando o usuário
     reimportar `lote-1.json` depois de revisar os Word.
 
+  🔁 **Revisão 3 (2026-10-10) — substitui os pontos acima onde divergirem:**
+  - **Distratores: 4 a 6 por estação** (o usuário: "12 são muitos"). Sobram os erros mais
+    plausíveis; PA usa um banco nomeado (`PA` em `estacoes.mjs`) e cada estação escolhe os seus.
+    `todas.test.ts` trava o intervalo.
+  - **Paciente inconsciente (S11): pulso na artéria CARÓTIDA** (o usuário escreveu "jugular";
+    a jugular é veia, não sítio de pulso — dito a ele). A veia jugular virou **distrator**.
+    O roteiro lista a carotídea entre as principais artérias (p. 2) mas não diz qual usar no
+    inconsciente → passo com origem D. Caso reescrito para dizer que a equipe médica **já
+    avaliou** o paciente (não é parada/BLS — isso é a Unidade 3).
+  - **O usuário apagou TODAS as estações do site** (banco com 0 estações, conferido via REST) e
+    liberou recriar JSON e Word. Por isso a ideia de "lote 1" acabou: `lote-1.json` e
+    `lote-1.test.ts` foram removidos; agora há **um único `todas.json` (30 estações)**, gerado
+    por `gerar-json.mjs`, a importar só depois da revisão dele. `publicadas.json` = `[]`.
+    O teste do player (`OsceView.test.tsx`) passou a ler `todas.json`.
+  - Word da revisão 3 em `Documents/Estacoes OSCE HM1 N1 - revisao v3/` (30). As pastas v1 e v2
+    ficaram como estavam. O JSON a importar depois está em
+    `Documents/OSCE-HM1-N1-todas-para-importar-APOS-REVISAO.json`; o antigo
+    `OSCE-HM1-N1-lote-1.json` foi renomeado para `OBSOLETO-...` (versão fraca, para ninguém
+    importar por engano).
+
   **Fase 2 — RPG de técnica:** gabarito e nota vindos da estação (IA só comenta; nota =
   fases cumpridas − erros críticos); `feedbackText`/`isFatalError` passam a valer; monitor
   opcional por estação (em SSVV os valores aparecem pela narrativa só quando a técnica está

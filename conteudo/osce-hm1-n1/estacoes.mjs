@@ -66,7 +66,6 @@ const B01 = {
     d('Aplicar preparação alcoólica nas mãos visivelmente sujas', 'Com as mãos visivelmente sujas, a higienização é com água e sabonete (p. 4); a fricção alcoólica é para mãos sem sujidade visível (p. 5).'),
     d('Aplicar uma pequena quantidade de sabão, apenas nas pontas dos dedos', 'O sabão deve ser aplicado em quantidade suficiente para cobrir toda a palma (passo 1, p. 3).'),
     d('Esfregar apenas as palmas das mãos, dispensando o dorso, os dedos e os polegares', 'A sequência inclui palma contra palma, dorso das mãos, costas dos dedos, polegares e pontas dos dedos (passos 2 a 7, p. 3).'),
-    d('Aplicar a preparação alcoólica depois de enxaguar as mãos', 'A preparação alcoólica pertence a outra técnica (p. 4); na lavagem com água e sabão, após enxaguar, as mãos são secas com papel-toalha (p. 3).'),
   ],
   tip: 'Higienize as mãos com água e sabonete quando estiverem visivelmente sujas; nas demais situações, prefira a fricção com preparação alcoólica (p. 4).',
 };
@@ -91,7 +90,6 @@ const B02 = {
     d('Secar as mãos com papel-toalha', 'Na fricção alcoólica as mãos secam sozinhas: "quando estiverem secas, suas mãos estarão seguras" (p. 4).'),
     d('Aplicar uma pequena quantidade de preparação alcoólica, apenas na palma de uma das mãos', 'A quantidade deve ser suficiente para cobrir todas as superfícies das mãos (passo 1a/1b, p. 4).'),
     d('Encerrar a fricção após 5 segundos', 'A duração de todo o procedimento é de 20 a 30 segundos (p. 4).'),
-    d('Aplicar sabonete líquido nas mãos', 'O sabonete pertence à lavagem com água e sabão (p. 3); aqui a técnica é a fricção com preparação alcoólica (p. 4).'),
     d('Friccionar somente as palmas das mãos', 'A fricção inclui dorso das mãos, espaços interdigitais, dedos, polegares e polpas digitais (passos 2 a 7, p. 4).'),
   ],
   tip: 'Duração de todo o procedimento: 20 a 30 segundos. Higienize com água e sabonete apenas quando as mãos estiverem visivelmente sujas (p. 4).',
@@ -354,7 +352,6 @@ const S01 = {
     d('Higienizar a braçadeira em movimentos circulares', 'A braçadeira é higienizada em movimentos unidirecionais (p. 1).'),
     d('Higienizar o diafragma do estetoscópio em movimentos unidirecionais', 'O diafragma é higienizado em movimentos circulares (p. 1).'),
     d('Higienizar o material com água e sabão', 'Todo o material é higienizado com algodão embebido em álcool 70% (p. 1).'),
-    d('Limpar o termômetro com algodão seco', 'O algodão deve estar embebido em álcool 70% (p. 1).'),
     d('Iniciar a aferição sem pedir o consentimento do paciente', 'O discente deve se apresentar, explicar o procedimento e pedir o consentimento do paciente (p. 1).'),
     d('Levar o material solto nas mãos, sem organizá-lo na bandeja', 'O material é organizado na bandeja antes de iniciar a avaliação (p. 1).'),
   ],
@@ -383,7 +380,6 @@ const S02 = {
     d('Contar as pulsações por apenas 15 segundos e multiplicar por 4', 'A avaliação do pulso é feita em 1 minuto (ou 30 segundos multiplicado por 2, se não houver alteração) (p. 2).'),
     d('Contar a respiração por 15 segundos e multiplicar por 4', 'A respiração é avaliada em um intervalo de 1 minuto (p. 2).'),
     d('Pedir ao paciente que respire profundamente enquanto você conta', 'O paciente não deve ser informado, para não ocorrer controle voluntário do padrão respiratório (p. 2).'),
-    d('Avaliar apenas a frequência do pulso, sem observar o ritmo', 'No pulso devem ser avaliados a frequência e o ritmo (p. 2).'),
   ],
   tip: 'Sem alteração de ritmo ou amplitude nos primeiros 30 s, pode-se multiplicar o valor por 2. Principais artérias: radial, carotídea e femoral (p. 2).',
 };
@@ -404,18 +400,18 @@ const paSteps = (posicao) => [
   { action: 'Registrar a diastólica no desaparecimento dos sons (fase V de Korotkoff)', origem: 'R' },
 ];
 
-const PA_DISTRACTORS = [
-  d('Colocar o manguito sobre a fossa cubital', 'O manguito fica 2 cm acima da fossa cubital (p. 3).'),
-  d('Desinsuflar rapidamente o manguito', 'O ar é solto de maneira contínua, a 2–3 mmHg por segundo (p. 4).'),
-  d('Registrar a diastólica no abafamento dos sons (fase IV de Korotkoff)', 'A diastólica é o desaparecimento dos sons, fase V (p. 4).'),
-  d('Baixar a cabeça para auscultar melhor', 'O observador deve evitar baixar a cabeça: a congestão dos vasos do ouvido prejudica a ausculta (p. 3).'),
-  d('Inflar o manguito até um valor fixo, sem palpar o pulso radial antes', 'Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4).'),
-  d('Registrar a sistólica no desaparecimento dos sons (fase V de Korotkoff)', 'A sistólica é o aparecimento do primeiro ruído, fase I; o desaparecimento dos sons marca a diastólica (p. 4).'),
-  d('Posicionar o braço do paciente abaixo do nível do coração', 'A artéria braquial deve ficar ao nível do coração, no 4º espaço intercostal (p. 3).'),
-  d('Colocar o estetoscópio sobre a artéria radial', 'Na ausculta, o estetoscópio vai sobre a artéria braquial (p. 4); a radial é usada no método palpatório.'),
-  d('Insuflar o manguito apenas 10 mmHg acima da sistólica palpatória', 'A insuflação vai cerca de 30 mmHg acima do valor encontrado pelo método palpatório (p. 4).'),
-  d('Aferir a pressão arterial logo que o paciente chega, sem repouso', 'O paciente deve ter repouso mínimo de 3 a 5 minutos, em local tranquilo (p. 3).'),
-];
+// Banco de distratores de PA. Cada estação escolhe de 4 a 6 — mais que isso dilui o exercício
+// (decisão do usuário, 2026-10-10): entram os erros mais prováveis para o caso daquela estação.
+const PA = {
+  cubital: d('Colocar o manguito sobre a fossa cubital', 'O manguito fica 2 cm acima da fossa cubital (p. 3).'),
+  rapido: d('Desinsuflar rapidamente o manguito', 'O ar é solto de maneira contínua, a 2–3 mmHg por segundo (p. 4).'),
+  fase4: d('Registrar a diastólica no abafamento dos sons (fase IV de Korotkoff)', 'A diastólica é o desaparecimento dos sons, fase V (p. 4).'),
+  cabeca: d('Baixar a cabeça para auscultar melhor', 'O observador deve evitar baixar a cabeça: a congestão dos vasos do ouvido prejudica a ausculta (p. 3).'),
+  semPalpar: d('Inflar o manguito até um valor fixo, sem palpar o pulso radial antes', 'Primeiro se estima a sistólica pelo método palpatório (pulso radial) e só então se insufla 30 mmHg acima desse valor (p. 3–4).'),
+  bracoAbaixo: d('Posicionar o braço do paciente abaixo do nível do coração', 'A artéria braquial deve ficar ao nível do coração, no 4º espaço intercostal (p. 3).'),
+  radial: d('Colocar o estetoscópio sobre a artéria radial', 'Na ausculta, o estetoscópio vai sobre a artéria braquial (p. 4); a radial é usada no método palpatório.'),
+  semRepouso: d('Aferir a pressão arterial logo que o paciente chega, sem repouso', 'O paciente deve ter repouso mínimo de 3 a 5 minutos, em local tranquilo (p. 3).'),
+};
 
 const S03 = {
   code: 'S03', title: 'Pressão arterial — método indireto (paciente sentado)', fonte: `${SV}, p. 3–5`,
@@ -423,7 +419,7 @@ const S03 = {
   scenario: 'Você é acadêmico(a) de Medicina e vai aferir a pressão arterial da Sra. L.A., 49 anos, que veio a uma consulta de rotina. Ela já foi abordada, entendeu o procedimento e consentiu. Acabou de chegar à sala e ainda não está em repouso.',
   task: 'Realize a medida da pressão arterial pelo método indireto, desde a preparação do paciente até o registro dos valores. Nesta estação você não precisa classificar o resultado.',
   steps: paSteps({ action: 'Posicionar o paciente sentado, confortável', origem: 'R' }),
-  distractors: PA_DISTRACTORS,
+  distractors: [PA.cubital, PA.rapido, PA.fase4, PA.semPalpar, PA.bracoAbaixo, PA.semRepouso],
   tip: 'Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).',
 };
 
@@ -435,7 +431,7 @@ const S04 = {
   steps: paSteps({ action: 'Posicionar a gestante em decúbito lateral esquerdo ou decúbito dorsal', why: 'No caso de gestantes, preferir o decúbito lateral esquerdo ou o decúbito dorsal (p. 3).', critical: true, origem: 'R' }),
   distractors: [
     d('Posicionar a gestante em decúbito lateral direito', 'O roteiro indica decúbito lateral esquerdo ou dorsal para gestantes (p. 3).', 'D', { pendente: true }),
-    ...PA_DISTRACTORS,
+    PA.cubital, PA.rapido, PA.fase4, PA.semPalpar, PA.bracoAbaixo,
   ],
   tip: 'Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).',
 };
@@ -510,7 +506,7 @@ const S07 = {
   ],
   distractors: [
     d('Diminuir o ângulo entre o braço e o tórax', 'Para facilitar a ausculta, aumenta-se o ângulo entre o braço e o tórax, retificando a artéria (p. 4).'),
-    ...PA_DISTRACTORS,
+    PA.rapido, PA.cabeca, PA.radial, PA.fase4, PA.cubital,
   ],
   tip: 'Se os ruídos estiverem difíceis de ouvir, aumente o ângulo entre o braço e o tórax, retificando a artéria (p. 4).',
 };
@@ -534,7 +530,7 @@ const paPosicoes = ({ code, title, scenario }) => ({
   distractors: [
     d('Aferir a pressão arterial somente na posição sentada', 'Nestes casos a medida deve ser feita nas várias posições (p. 3).'),
     d('Medir em pé com o braço pendente ao lado do corpo', 'Em qualquer posição, a artéria braquial deve ficar ao nível do coração (4º espaço intercostal), com o braço apoiado (p. 3).'),
-    ...PA_DISTRACTORS,
+    PA.semRepouso, PA.rapido, PA.fase4, PA.semPalpar,
   ],
   tip: 'Por ocasião da primeira avaliação e em alguns casos (idosos, controle de terapêutica, suspeita de hipotensão postural), deve-se efetuar a medida nas várias posições (p. 3).',
 });
@@ -554,20 +550,35 @@ const S10 = paPosicoes({
   scenario: 'Você é acadêmico(a) de Medicina e vai aferir a pressão arterial do Sr. W.C., 69 anos, que refere tontura quando se levanta da cama. Há suspeita de hipotensão postural. Ele já foi abordado, entendeu o procedimento e consentiu. Acabou de chegar à sala e ainda não está em repouso.',
 });
 
-// O roteiro (p. 1) diz que a técnica é a mesma independente do estado de consciência.
+// O roteiro (p. 1) diz que a técnica é a mesma independente do estado de consciência. O pulso é
+// verificado na artéria CARÓTIDA (instrução do usuário: "paciente inconsciente verifica a pulsação
+// no pescoço"; o roteiro lista a carotídea entre as principais artérias, p. 2, mas não diz qual
+// usar no inconsciente — origem D). A veia jugular entra como distrator: é confusão comum.
 const S11 = {
   code: 'S11', title: 'Sequência completa de sinais vitais — paciente inconsciente', fonte: `${SV}, p. 1–6`,
-  setting: 'Sala de observação do pronto atendimento. O paciente está em uma maca, com acesso livre aos dois braços. Sobre a bancada: bandeja, estetoscópio, esfigmomanômetro, termômetro, relógio, bloco de anotações, caneta, luvas de procedimento, álcool 70% e algodão.',
-  scenario: 'Você é acadêmico(a) de Medicina em estágio no pronto atendimento. Um paciente adulto foi acomodado na maca da sala de observação, inconsciente, sem acompanhante e sem informações prévias. A equipe pede que você avalie os sinais vitais enquanto aguarda o médico responsável. Você ainda não iniciou nenhum preparo.',
-  task: 'Realize a avaliação completa dos sinais vitais deste paciente, do preparo à comunicação dos achados, na ordem correta. Nesta estação você não precisa classificar os achados.',
-  steps: SV_COMPLETA,
-  distractors: [
-    d('Dispensar a apresentação e a explicação do procedimento porque o paciente está inconsciente', 'A avaliação dos sinais vitais deve seguir a mesma técnica independente do estado de consciência do paciente (p. 1).'),
-    d('Usar uma técnica simplificada porque o paciente está inconsciente', 'A avaliação dos sinais vitais deve seguir a mesma técnica independente do estado de consciência do paciente (p. 1).'),
-    d('Não avaliar a respiração, pois o paciente está inconsciente', 'Todos os sinais vitais são avaliados com a mesma técnica, independente do estado de consciência (p. 1).'),
-    ...SV_COMPLETA_DISTRACTORS,
+  setting: 'Sala de observação do pronto atendimento. O paciente está em uma maca, com acesso livre aos dois braços e ao pescoço. Sobre a bancada: bandeja, estetoscópio, esfigmomanômetro, termômetro, relógio, bloco de anotações, caneta, luvas de procedimento, álcool 70% e algodão.',
+  scenario: 'Você é acadêmico(a) de Medicina em estágio no pronto atendimento. Um paciente adulto foi acomodado na maca da sala de observação, inconsciente, sem acompanhante e sem informações prévias. A equipe médica já o avaliou e pediu que você afira os sinais vitais enquanto aguarda os exames. Você ainda não iniciou nenhum preparo.',
+  task: 'Realize a avaliação completa dos sinais vitais deste paciente, do preparo à comunicação dos achados, na ordem correta. Nesta estação você não precisa classificar os achados nem conduzir o caso.',
+  steps: [
+    { action: 'Higienizar as mãos', why: 'O roteiro inicia a prática com a lavagem das mãos (p. 1).', critical: true, origem: 'R' },
+    { action: 'Organizar e higienizar o material da bandeja com algodão e álcool 70%', origem: 'R' },
+    { action: 'Apresentar-se, explicar o procedimento e pedir o consentimento', why: 'A avaliação dos sinais vitais segue a mesma técnica independente do estado de consciência do paciente (p. 1).', origem: 'R' },
+    { action: 'Avaliar a temperatura corporal', origem: 'R' },
+    { action: 'Palpar o pulso na artéria carótida, avaliando frequência, ritmo e força', why: 'As principais artérias para avaliação do pulso são radial, carotídea e femoral (p. 2); no paciente inconsciente, o pulso é verificado na carótida.', critical: true, origem: 'D' },
+    { action: 'Continuar palpando o pulso e começar a observar discretamente o tórax', why: 'A respiração é avaliada logo após o pulso, continuando a palpar o mesmo (p. 3).', origem: 'R' },
+    { action: 'Contar a respiração durante 1 minuto, avaliando ritmo, amplitude e tiragem', origem: 'R' },
+    { action: 'Aferir a pressão arterial', origem: 'R' },
+    { action: 'Informar os achados ao paciente e perguntar se ele tem alguma dúvida', origem: 'R' },
   ],
-  tip: 'A técnica de avaliação dos sinais vitais é a mesma, independente do estado de consciência do paciente (p. 1).',
+  distractors: [
+    d('Palpar o pulso na veia jugular', 'O pulso é palpado em artérias — radial, carotídea e femoral (p. 2). A jugular é uma veia.'),
+    d('Dispensar a apresentação e a explicação do procedimento porque o paciente está inconsciente', 'A avaliação dos sinais vitais deve seguir a mesma técnica independente do estado de consciência do paciente (p. 1).'),
+    d('Não avaliar a respiração, pois o paciente está inconsciente', 'Todos os sinais vitais são avaliados com a mesma técnica, independente do estado de consciência (p. 1).'),
+    d('Higienizar o material com água e sabão', 'Todo o material é higienizado com algodão embebido em álcool 70% (p. 1).'),
+    d('Registrar os achados sem informá-los ao paciente', 'Ao final da avaliação, informar os achados ao paciente e perguntar se ele tem alguma dúvida (p. 6).'),
+    d('Contar o pulso por 15 segundos e multiplicar por 4', 'O pulso é avaliado em 1 minuto (ou 30 segundos multiplicado por 2, se não houver alteração de ritmo ou amplitude) (p. 2).'),
+  ],
+  tip: 'A técnica de avaliação dos sinais vitais é a mesma, independente do estado de consciência do paciente (p. 1). Principais artérias para avaliação do pulso: radial, carotídea e femoral (p. 2).',
 };
 
 export default {
