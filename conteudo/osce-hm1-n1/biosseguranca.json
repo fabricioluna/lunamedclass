@@ -125,6 +125,222 @@
     ]
   },
   {
+    "slug": "hm1-n1-b03",
+    "title": "Precaução padrão — procedimento com seringa e agulha, sem risco de respingos",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Quarto de enfermaria. Sobre a mesa auxiliar: bandeja com seringa e agulha já preparadas, caixa de luvas de procedimento e dispensador de preparação alcoólica. Uma caixa coletora de perfurocortantes está presa à parede, ao lado do leito.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai administrar uma medicação injetável ao Sr. L.M., 55 anos, internado para acompanhamento. Durante o procedimento há risco de contato com sangue, mas não há risco de respingos. A precaução padrão vale para todos os pacientes, independentemente do diagnóstico. Você ainda não tocou no paciente.",
+    "task": "Realize a sequência da precaução padrão, da higiene das mãos antes do contato até a higiene final, incluindo o descarte da seringa e da agulha. Nesta estação você não precisa detalhar a técnica da injeção.",
+    "tip": "Precaução padrão (p. 5 e 7): higiene das mãos, luvas e avental, óculos e máscara quando há risco de respingos, e descarte adequado de perfurocortantes. Vale para TODOS os pacientes, independentemente de suspeita de infecção.",
+    "steps": [
+      {
+        "action": "Higienizar as mãos antes do contato com o paciente",
+        "why": "A higienização das mãos é feita antes e após o contato com qualquer paciente (p. 5)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento imediatamente antes do contato com o paciente",
+        "why": "Use luvas quando houver risco de contato com sangue, secreções ou membranas mucosas; calce-as imediatamente antes do contato com o paciente (p. 5)."
+      },
+      {
+        "action": "Realizar o procedimento com a seringa e a agulha"
+      },
+      {
+        "action": "Descartar a seringa e a agulha na caixa de perfurocortantes, sem desconectá-las e sem reencapá-las",
+        "why": "Descarte, em recipientes apropriados, seringas e agulhas, sem desconectá-las ou reencapá-las (p. 5)."
+      },
+      {
+        "action": "Retirar as luvas logo após o uso",
+        "why": "As luvas são retiradas logo após o uso (p. 5)."
+      },
+      {
+        "action": "Higienizar as mãos em seguida",
+        "why": "Após retirar as luvas, higienizam-se as mãos em seguida (p. 5)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Reencapar a agulha antes de descartá-la",
+        "why": "Seringas e agulhas são descartadas sem desconectá-las ou reencapá-las (p. 5)."
+      },
+      {
+        "action": "Desconectar a agulha da seringa para descartá-las separadamente",
+        "why": "Seringas e agulhas são descartadas sem desconectá-las ou reencapá-las (p. 5)."
+      },
+      {
+        "action": "Descartar a seringa e a agulha no lixo comum",
+        "why": "O descarte é em recipientes apropriados, a caixa de perfurocortantes (p. 5 e 7)."
+      },
+      {
+        "action": "Manter as luvas calçadas para atender o próximo paciente",
+        "why": "As luvas são retiradas logo após o uso, higienizando as mãos em seguida (p. 5)."
+      },
+      {
+        "action": "Colocar o avental, a máscara e os óculos",
+        "why": "Óculos, máscara e/ou avental são usados quando há risco de contato de sangue ou secreções com a mucosa, a roupa e as superfícies corporais (p. 5); o caso informa que não há risco de respingos."
+      },
+      {
+        "action": "Dispensar as luvas, pois o procedimento é rápido",
+        "why": "Luvas são indicadas quando há risco de contato com sangue, secreções ou membranas mucosas (p. 5); o caso informa esse risco."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-b04",
+    "title": "Precaução padrão — procedimento com seringa e agulha, com risco de respingos",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Quarto de enfermaria. Sobre a mesa auxiliar: bandeja com seringa e agulha já preparadas, avental, máscara cirúrgica, óculos, face shield, luvas de procedimento e dispensador de preparação alcoólica. Uma caixa coletora de perfurocortantes está presa à parede, ao lado do leito.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai realizar, na Sra. T.R., 62 anos, um procedimento com seringa e agulha em que há risco de respingos de sangue ou secreções nos olhos, na boca e no nariz. Não há placa de precaução por via aérea nem de contato na porta; vale a precaução padrão. O protocolo da instituição não exige touca. Você ainda não tocou em nenhum EPI.",
+    "task": "Realize a paramentação, o procedimento com o descarte da seringa e da agulha e a desparamentação, na ordem correta. Nesta estação você não precisa detalhar a técnica do procedimento.",
+    "tip": "Óculos, máscara e/ou avental protegem a mucosa de olhos, boca e nariz, a roupa e as superfícies corporais quando há risco de contato com sangue ou secreções (p. 5).",
+    "steps": [
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar o avental",
+        "why": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Colocar a máscara cirúrgica",
+        "why": "Máscara, óculos e/ou avental são usados quando há risco de contato de sangue ou secreções (p. 5); a sequência de paramentação é a da p. 8."
+      },
+      {
+        "action": "Colocar os óculos ou o face shield",
+        "why": "Proteção de mucosa ocular (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Calçar as luvas de procedimento",
+        "why": "Proteção contra contato direto (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Realizar o procedimento com a seringa e a agulha"
+      },
+      {
+        "action": "Descartar a seringa e a agulha na caixa de perfurocortantes, sem desconectá-las e sem reencapá-las",
+        "why": "Descarte, em recipientes apropriados, seringas e agulhas, sem desconectá-las ou reencapá-las (p. 5)."
+      },
+      {
+        "action": "Retirar as luvas"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar o avental"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Principal medida de prevenção de IRAS; obrigatória antes e entre etapas (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Retirar os óculos ou o face shield"
+      },
+      {
+        "action": "Retirar a máscara cirúrgica"
+      },
+      {
+        "action": "Higienizar as mãos",
+        "why": "Higienização final das mãos (p. 8)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Reencapar a agulha antes de descartá-la",
+        "why": "Seringas e agulhas são descartadas sem desconectá-las ou reencapá-las (p. 5)."
+      },
+      {
+        "action": "Desconectar a agulha da seringa para descartá-las separadamente",
+        "why": "Seringas e agulhas são descartadas sem desconectá-las ou reencapá-las (p. 5)."
+      },
+      {
+        "action": "Descartar a seringa e a agulha no lixo comum",
+        "why": "O descarte é em recipientes apropriados, a caixa de perfurocortantes (p. 5 e 7)."
+      },
+      {
+        "action": "Colocar a máscara PFF2/N95",
+        "why": "PFF2/N95 é a máscara obrigatória em aerossóis (p. 8); este caso é de precaução padrão."
+      },
+      {
+        "action": "Colocar o propé",
+        "why": "Não recomendado rotineiramente: evidência limitada para redução de transmissão (tabela de EPI, p. 8)."
+      },
+      {
+        "action": "Higienizar as mãos apenas depois de retirar todos os EPIs",
+        "why": "A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8)."
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-b05",
+    "title": "Os 5 momentos da higiene das mãos em um atendimento ao leito",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Quarto de enfermaria, leito 3. Dispensador de preparação alcoólica ao lado da cama; mesa de cabeceira com os objetos do paciente; bandeja com o material do procedimento.",
+    "scenario": "Você é acadêmico(a) de Medicina e fará o atendimento do Sr. P.S., 49 anos: primeiro o exame; depois um procedimento limpo/asséptico em que há risco de exposição a fluidos corporais; ao final, você vai ajeitar o paciente no leito e organizar a mesa de cabeceira. Suas mãos estão limpas, mas você ainda não tocou no paciente.",
+    "task": "Conduza o atendimento higienizando as mãos nos cinco momentos corretos. Nesta estação você não precisa detalhar o exame nem o procedimento.",
+    "tip": "Os 5 momentos: antes de tocar o paciente; antes de procedimento limpo/asséptico; após risco de exposição a fluidos corporais; após tocar o paciente; após tocar superfícies próximas ao paciente (p. 2).",
+    "steps": [
+      {
+        "action": "Higienizar as mãos antes de tocar o paciente",
+        "why": "Momento 1: antes de tocar o paciente (p. 2)."
+      },
+      {
+        "action": "Examinar o paciente"
+      },
+      {
+        "action": "Higienizar as mãos antes de realizar o procedimento limpo/asséptico",
+        "why": "Momento 2: antes de realizar procedimento limpo/asséptico (p. 2)."
+      },
+      {
+        "action": "Realizar o procedimento limpo/asséptico"
+      },
+      {
+        "action": "Higienizar as mãos após o risco de exposição a fluidos corporais",
+        "why": "Momento 3: após risco de exposição a fluidos corporais (p. 2)."
+      },
+      {
+        "action": "Ajeitar o paciente no leito"
+      },
+      {
+        "action": "Higienizar as mãos após tocar o paciente",
+        "why": "Momento 4: após tocar o paciente (p. 2)."
+      },
+      {
+        "action": "Organizar a mesa de cabeceira"
+      },
+      {
+        "action": "Higienizar as mãos após tocar superfícies próximas ao paciente",
+        "why": "Momento 5: após tocar superfícies próximas ao paciente (p. 2)."
+      }
+    ],
+    "distractors": [
+      {
+        "action": "Calçar as luvas de procedimento no lugar de higienizar as mãos antes de tocar o paciente",
+        "why": "As luvas não substituem a higienização das mãos, que é feita antes e após o contato com qualquer paciente (p. 5)."
+      },
+      {
+        "action": "Higienizar as mãos somente ao final do atendimento",
+        "why": "São cinco momentos ao longo do atendimento, e não apenas um ao final (p. 2)."
+      },
+      {
+        "action": "Dispensar a higienização antes do procedimento, pois as mãos já foram higienizadas antes do exame",
+        "why": "Antes de realizar procedimento limpo/asséptico há um momento próprio de higienização (momento 2, p. 2)."
+      },
+      {
+        "action": "Dispensar a higienização depois de tocar a mesa de cabeceira, por ela não ser o paciente",
+        "why": "Após tocar superfícies próximas ao paciente há um momento próprio de higienização (momento 5, p. 2)."
+      },
+      {
+        "action": "Higienizar as mãos somente quando estiverem visivelmente sujas",
+        "why": "A higienização é feita nos cinco momentos (p. 2); a escolha entre água e sabonete ou álcool é que depende de sujidade visível (p. 5)."
+      }
+    ]
+  },
+  {
     "slug": "hm1-n1-c1",
     "title": "Precaução de contato — entrar e sair do quarto",
     "theme": "Biossegurança e Controle de IRAS",

@@ -1,4 +1,5 @@
 // Gera um .docx por caso de RPG guiado (revisão do usuário/professores) a partir de rpg.mjs.
+// Uso: acrescente --novas para gerar só os casos que ainda não estão no ar (publicadas-rpg.json).
 // Uso (o pacote docx não é dependência do projeto — mesmo padrão dos scripts/ com firebase-admin):
 //   npm install --no-save docx
 //   node conteudo/osce-hm1-n1/gerar-word-rpg.mjs "C:/Users/Luna/Documents/Casos RPG HM1 N1 - revisao"
@@ -16,6 +17,7 @@ import casos from './rpg.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = process.argv[2];
+const SO_NOVAS = process.argv.includes('--novas'); // só os casos que ainda não estão no ar
 if (!OUT) throw new Error('Informe a pasta de saída: node conteudo/osce-hm1-n1/gerar-word-rpg.mjs <pasta>');
 const NO_AR = JSON.parse(fs.readFileSync(path.join(HERE, 'publicadas-rpg.json'), 'utf8'));
 
@@ -23,6 +25,11 @@ const SLUGS = {
   R1: 'hm1-n1-r1-aerossois', R2: 'hm1-n1-r2-contato', R3: 'hm1-n1-r3-goticulas', R4: 'hm1-n1-r4-desparamentacao',
   R5: 'hm1-n1-r5-sinais-vitais-completo', R6: 'hm1-n1-r6-pa-hiato-auscultatorio', R7: 'hm1-n1-r7-pa-gestante',
   R8: 'hm1-n1-r8-sinais-vitais-inconsciente',
+  R9: 'hm1-n1-r9-cinco-momentos',
+  R10: 'hm1-n1-r10-precaucao-padrao-agulha',
+  R11: 'hm1-n1-r11-higiene-maos-tecnicas',
+  R12: 'hm1-n1-r12-luvas-procedimento',
+  R13: 'hm1-n1-r13-luvas-cirurgicas',
 };
 
 const NAVY = '003366';
@@ -124,6 +131,25 @@ const pontosDo = (caso) => {
     pts.push(['Artéria do pulso (origem D). ', 'Foi usada a artéria CARÓTIDA no paciente inconsciente. O roteiro lista a carotídea entre as principais (p. 2) mas não diz qual usar neste caso. A veia jugular entra como opção errada: o pulso se palpa em artéria. Confirmar.']);
     pts.push(['Mesma técnica no inconsciente. ', 'Por isso o caso mantém apresentar-se, explicar o procedimento e informar os achados (p. 1 e 6). Está correto, ou algum passo muda (ex.: comunicar à equipe)?']);
   }
+  if (caso.code === 'R9') {
+    pts.push(['Os 5 momentos em ordem de história. ', 'O roteiro numera os momentos mas não define a ordem em que ocorrem. Aqui a história fixa: exame → procedimento com risco de exposição → ajeitar o paciente → mesa de cabeceira. Está adequado?']);
+    pts.push(['Cenas do paciente. ', 'As falas do paciente ("não precisa lavar a mão por causa da mesinha") são o tipo de pressão real que o aluno enfrenta. Confirmar que o tom é adequado.']);
+  }
+  if (caso.code === 'R10') {
+    pts.push(['Colega sugerindo reencapar a agulha. ', 'Reproduz uma fala comum no plantão para o aluno aprender a recusar. O roteiro diz "sem desconectá-las ou reencapá-las" (p. 5); a explicação do risco (mão perto da ponta) é consequência lógica, não texto do roteiro.']);
+    pts.push(['Procedimento sem risco de respingos. ', 'O caso usa só luvas, como a precaução padrão prevê quando não há risco de respingos. A versão com avental, máscara e óculos existe na estação estática B04.']);
+  }
+  if (caso.code === 'R11') {
+    pts.push(['Duas situações no mesmo caso. ', 'Mãos sujas (água e sabonete) e mãos limpas (fricção alcoólica). Em mãos limpas o roteiro admite também água e sabonete; por isso a cena cobra só a execução da fricção, não a escolha.']);
+    pts.push(['Só as etapas mais erradas. ', 'O caso não percorre os 11 passos da lavagem nem os 8 da fricção (isso está nas estações estáticas B01 e B02). Está adequado?']);
+  }
+  if (caso.code === 'R12') {
+    pts.push(['Retirada em 4 cenas. ', 'A retirada é a sequência do roteiro (p. 10) dividida em cenas: primeira luva, segurá-la, dedos por dentro, segunda luva. Está adequado, ou prefere menos cenas?']);
+  }
+  if (caso.code === 'R13') {
+    pts.push(['Só calçar. ', 'O roteiro mostra apenas como calçar a luva cirúrgica; a retirada dela não consta, por isso não foi criada.']);
+    pts.push(['Quando usar luva estéril. ', 'O roteiro ensina a técnica, mas não diz quando usá-la. O caso diz que o procedimento exige técnica estéril. Está adequado?']);
+  }
   pts.push(['Enunciado, nomes e valores. ', 'Fictícios; não alteram a técnica. Ajuste o texto ao estilo das suas provas.']);
   return pts;
 };
@@ -193,7 +219,9 @@ const doc = (caso) => {
 
 const safe = (t) => t.replace(/[\\/:*?"<>|]/g, '-');
 const contagem = {};
+let gerados = 0;
 for (const caso of casos) {
+  if (SO_NOVAS && NO_AR.includes(SLUGS[caso.code])) continue;
   const pasta = caso.theme === 'Sinais Vitais' ? '2 - Sinais Vitais' : '1 - Biossegurança';
   const dir = path.join(OUT, pasta);
   fs.mkdirSync(dir, { recursive: true });
@@ -201,5 +229,6 @@ for (const caso of casos) {
   const nome = `${String(contagem[pasta]).padStart(2, '0')} - ${caso.code} - ${safe(caso.title)}.docx`;
   fs.writeFileSync(path.join(dir, nome), await Packer.toBuffer(doc(caso)));
   console.log(`${pasta}/${nome}`);
+  gerados += 1;
 }
-console.log(`${casos.length} arquivos`);
+console.log(`${gerados} arquivos`);

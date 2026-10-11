@@ -1,11 +1,11 @@
 // Gera o JSON de importação dos casos de RPG GUIADO (Admin → OSCE → RPG Guiado) a partir de rpg.mjs.
 // Uso: node conteudo/osce-hm1-n1/gerar-json-rpg.mjs
 //
-// Saídas: rpg.json (os 8 casos). NÃO importar antes da revisão do usuário nos Word. Slugs fixos
+// Saídas: rpg.json (todos os casos) e rpg-novos.json (só os que ainda NÃO estão no ar, conforme publicadas-rpg.json). NÃO importar antes da revisão do usuário nos Word. Slugs fixos
 // (`hm1-n1-r<N>-...`): reimportar ATUALIZA em vez de duplicar. Os campos de revisão de cada cena
 // (`passo`, `fonte`, `origem`) ficam só nos Word e não vão para o banco.
 
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import casos from './rpg.mjs';
@@ -19,6 +19,11 @@ const SLUGS = {
   R6: 'hm1-n1-r6-pa-hiato-auscultatorio',
   R7: 'hm1-n1-r7-pa-gestante',
   R8: 'hm1-n1-r8-sinais-vitais-inconsciente',
+  R9: 'hm1-n1-r9-cinco-momentos',
+  R10: 'hm1-n1-r10-precaucao-padrao-agulha',
+  R11: 'hm1-n1-r11-higiene-maos-tecnicas',
+  R12: 'hm1-n1-r12-luvas-procedimento',
+  R13: 'hm1-n1-r13-luvas-cirurgicas',
 };
 
 const semVazio = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== ''));
@@ -44,6 +49,13 @@ const paraImportacao = (caso) =>
     ),
   });
 
+const pasta = dirname(fileURLToPath(import.meta.url));
+const publicadas = JSON.parse(readFileSync(join(pasta, 'publicadas-rpg.json'), 'utf8'));
+const grava = (nome, lista) => {
+  writeFileSync(join(pasta, nome), `${JSON.stringify(lista, null, 2)}\n`);
+  console.log(`${lista.length} casos → ${nome}`);
+};
+
 const lista = casos.map(paraImportacao);
-writeFileSync(join(dirname(fileURLToPath(import.meta.url)), 'rpg.json'), `${JSON.stringify(lista, null, 2)}\n`);
-console.log(`${lista.length} casos → rpg.json`);
+grava('rpg.json', lista);
+grava('rpg-novos.json', lista.filter((c) => !publicadas.includes(c.slug)));

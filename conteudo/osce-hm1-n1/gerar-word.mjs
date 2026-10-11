@@ -14,6 +14,7 @@ import {
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = process.argv[2];
+const SO_NOVAS = process.argv.includes('--novas'); // só as estações que ainda não estão no ar
 if (!OUT) throw new Error('Informe a pasta de saída: node conteudo/osce-hm1-n1/gerar-word.mjs <pasta>');
 const { default: E, TEMAS } = await import(pathToFileURL(path.join(HERE, 'estacoes.mjs')).href);
 // Slugs que JÁ estão no banco de produção (atualizar publicadas.json a cada importação). A versão
@@ -90,6 +91,17 @@ const pontosDa = (s) => {
     pts.push(['Mesma técnica no paciente inconsciente. ', 'O roteiro diz que a técnica é a mesma independente do estado de consciência. Por isso a sequência segue a de S05 (com o pulso na carótida), inclusive apresentar-se, explicar o procedimento e informar os achados. Está correto, ou algum passo muda?']);
     pts.push(['Artéria do pulso (origem D). ', 'Foi usada a artéria CARÓTIDA no paciente inconsciente. O roteiro lista a carotídea entre as principais artérias, mas não diz qual usar neste caso. A veia jugular entrou como distrator: o pulso se palpa em artéria, não em veia. Confirmar.']);
     pts.push(['Comunicar os achados ao paciente inconsciente. ', 'O roteiro manda informar os achados ao paciente e perguntar se há dúvida. Com o paciente inconsciente, isso pode ser trocado por comunicar à equipe. O roteiro não define; manter como está ou trocar?']);
+  }
+  if (s.code === 'B03' || s.code === 'B04') {
+    pts.push(['Passo "Realizar o procedimento" (origem D). ', 'É um passo-âncora para o descarte da seringa e da agulha ter posição na sequência. O roteiro não descreve o procedimento. Está adequado?']);
+    pts.push(['Descarte antes de retirar as luvas (origem D). ', 'O roteiro manda descartar seringas e agulhas em recipiente apropriado, sem desconectar nem reencapar (p. 5), mas não diz em que momento da sequência. Foi colocado logo depois do procedimento, ainda de luvas. Confirmar.']);
+  }
+  if (s.code === 'B04') {
+    pts.push(['Sequência de EPIs. ', 'Paramentação e desparamentação são as da p. 8 (sem touca). O protocolo do caso diz que não exige touca. Está correto?']);
+  }
+  if (s.code === 'B05') {
+    pts.push(['Ordem dos momentos 3 e 4 (origem D). ', 'O roteiro numera os 5 momentos (p. 2) mas não define a ordem em que ocorrem. A história do caso fixa: procedimento com risco de exposição → higienizar (3) → ajeitar o paciente → higienizar (4) → mesa de cabeceira → higienizar (5). Está adequado?']);
+    pts.push(['Passos de ação (origem D). ', '"Examinar o paciente", "Realizar o procedimento", "Ajeitar o paciente" e "Organizar a mesa" são âncoras para os momentos terem posição. Confirmar.']);
   }
   pts.push(['Enunciado do caso. ', 'Nomes, idades e contexto são fictícios e não alteram a técnica. Ajuste o texto ao estilo das suas provas de OSCE.']);
   if (s.distractors.some((d) => d.pendente)) pts.push(['Distrator não publicado. ', 'O distrator marcado como "não publicado" ficou fora do ar porque o roteiro só diz "preferir" o decúbito lateral esquerdo ou dorsal. Manter como erro?']);
@@ -191,6 +203,7 @@ const safe = (t) => t.replace(/[\\/:*?"<>|]/g, '-');
 let n = 0;
 const porPasta = {};
 for (const s of ORDEM) {
+  if (SO_NOVAS && NO_AR.includes(`hm1-n1-${s.code.toLowerCase()}`)) continue;
   const dir = path.join(OUT, s.pasta);
   fs.mkdirSync(dir, { recursive: true });
   porPasta[s.pasta] = (porPasta[s.pasta] ?? 0) + 1;
