@@ -95,6 +95,94 @@ const B02 = {
   tip: 'Duração de todo o procedimento: 20 a 30 segundos. Higienize com água e sabonete apenas quando as mãos estiverem visivelmente sujas (p. 4).',
 };
 
+// --- Precaução padrão (p. 5 e 7) e os 5 momentos da higiene das mãos (p. 2) — lacunas fechadas na
+// revisão 4 (a precaução padrão e os 5 momentos não tinham estação própria).
+
+const B03 = {
+  code: 'B03', title: 'Precaução padrão — procedimento com seringa e agulha, sem risco de respingos', fonte: `${BIO}, p. 5 e 7`,
+  setting: 'Quarto de enfermaria. Sobre a mesa auxiliar: bandeja com seringa e agulha já preparadas, caixa de luvas de procedimento e dispensador de preparação alcoólica. Uma caixa coletora de perfurocortantes está presa à parede, ao lado do leito.',
+  scenario: 'Você é acadêmico(a) de Medicina e vai administrar uma medicação injetável ao Sr. L.M., 55 anos, internado para acompanhamento. Durante o procedimento há risco de contato com sangue, mas não há risco de respingos. A precaução padrão vale para todos os pacientes, independentemente do diagnóstico. Você ainda não tocou no paciente.',
+  task: 'Realize a sequência da precaução padrão, da higiene das mãos antes do contato até a higiene final, incluindo o descarte da seringa e da agulha. Nesta estação você não precisa detalhar a técnica da injeção.',
+  steps: [
+    { action: 'Higienizar as mãos antes do contato com o paciente', why: 'A higienização das mãos é feita antes e após o contato com qualquer paciente (p. 5).', critical: true, origem: 'R' },
+    { action: 'Calçar as luvas de procedimento imediatamente antes do contato com o paciente', why: 'Use luvas quando houver risco de contato com sangue, secreções ou membranas mucosas; calce-as imediatamente antes do contato com o paciente (p. 5).', origem: 'R' },
+    { action: 'Realizar o procedimento com a seringa e a agulha', origem: 'D' },
+    { action: 'Descartar a seringa e a agulha na caixa de perfurocortantes, sem desconectá-las e sem reencapá-las', why: 'Descarte, em recipientes apropriados, seringas e agulhas, sem desconectá-las ou reencapá-las (p. 5).', critical: true, origem: 'R' },
+    { action: 'Retirar as luvas logo após o uso', why: 'As luvas são retiradas logo após o uso (p. 5).', origem: 'R' },
+    { action: 'Higienizar as mãos em seguida', why: 'Após retirar as luvas, higienizam-se as mãos em seguida (p. 5).', critical: true, origem: 'R' },
+  ],
+  distractors: [
+    d('Reencapar a agulha antes de descartá-la', 'Seringas e agulhas são descartadas sem desconectá-las ou reencapá-las (p. 5).', 'R'),
+    d('Desconectar a agulha da seringa para descartá-las separadamente', 'Seringas e agulhas são descartadas sem desconectá-las ou reencapá-las (p. 5).', 'R'),
+    d('Descartar a seringa e a agulha no lixo comum', 'O descarte é em recipientes apropriados, a caixa de perfurocortantes (p. 5 e 7).'),
+    d('Manter as luvas calçadas para atender o próximo paciente', 'As luvas são retiradas logo após o uso, higienizando as mãos em seguida (p. 5).', 'R'),
+    d('Colocar o avental, a máscara e os óculos', 'Óculos, máscara e/ou avental são usados quando há risco de contato de sangue ou secreções com a mucosa, a roupa e as superfícies corporais (p. 5); o caso informa que não há risco de respingos.'),
+    d('Dispensar as luvas, pois o procedimento é rápido', 'Luvas são indicadas quando há risco de contato com sangue, secreções ou membranas mucosas (p. 5); o caso informa esse risco.'),
+  ],
+  tip: 'Precaução padrão (p. 5 e 7): higiene das mãos, luvas e avental, óculos e máscara quando há risco de respingos, e descarte adequado de perfurocortantes. Vale para TODOS os pacientes, independentemente de suspeita de infecção.',
+};
+
+const B04 = {
+  code: 'B04', title: 'Precaução padrão — procedimento com seringa e agulha, com risco de respingos', fonte: `${BIO}, p. 5, 7 e 8`,
+  setting: 'Quarto de enfermaria. Sobre a mesa auxiliar: bandeja com seringa e agulha já preparadas, avental, máscara cirúrgica, óculos, face shield, luvas de procedimento e dispensador de preparação alcoólica. Uma caixa coletora de perfurocortantes está presa à parede, ao lado do leito.',
+  scenario: 'Você é acadêmico(a) de Medicina e vai realizar, na Sra. T.R., 62 anos, um procedimento com seringa e agulha em que há risco de respingos de sangue ou secreções nos olhos, na boca e no nariz. Não há placa de precaução por via aérea nem de contato na porta; vale a precaução padrão. O protocolo da instituição não exige touca. Você ainda não tocou em nenhum EPI.',
+  task: 'Realize a paramentação, o procedimento com o descarte da seringa e da agulha e a desparamentação, na ordem correta. Nesta estação você não precisa detalhar a técnica do procedimento.',
+  steps: [
+    { action: 'Higienizar as mãos', why: WHY.maos, critical: true, origem: 'R' },
+    { action: 'Colocar o avental', why: WHY.avental, origem: 'R' },
+    { action: 'Colocar a máscara cirúrgica', why: 'Máscara, óculos e/ou avental são usados quando há risco de contato de sangue ou secreções (p. 5); a sequência de paramentação é a da p. 8.', origem: 'R' },
+    { action: 'Colocar os óculos ou o face shield', why: WHY.oculos, origem: 'R' },
+    { action: 'Calçar as luvas de procedimento', why: WHY.luvas, origem: 'R' },
+    { action: 'Realizar o procedimento com a seringa e a agulha', origem: 'D' },
+    { action: 'Descartar a seringa e a agulha na caixa de perfurocortantes, sem desconectá-las e sem reencapá-las', why: 'Descarte, em recipientes apropriados, seringas e agulhas, sem desconectá-las ou reencapá-las (p. 5).', critical: true, origem: 'R' },
+    { action: 'Retirar as luvas', origem: 'R' },
+    { action: 'Higienizar as mãos', why: WHY.maos, critical: true, origem: 'R' },
+    { action: 'Retirar o avental', origem: 'R' },
+    { action: 'Higienizar as mãos', why: WHY.maos, critical: true, origem: 'R' },
+    { action: 'Retirar os óculos ou o face shield', origem: 'R' },
+    { action: 'Retirar a máscara cirúrgica', origem: 'R' },
+    { action: 'Higienizar as mãos', why: 'Higienização final das mãos (p. 8).', critical: true, origem: 'R' },
+  ],
+  distractors: [
+    d('Reencapar a agulha antes de descartá-la', 'Seringas e agulhas são descartadas sem desconectá-las ou reencapá-las (p. 5).', 'R'),
+    d('Desconectar a agulha da seringa para descartá-las separadamente', 'Seringas e agulhas são descartadas sem desconectá-las ou reencapá-las (p. 5).', 'R'),
+    d('Descartar a seringa e a agulha no lixo comum', 'O descarte é em recipientes apropriados, a caixa de perfurocortantes (p. 5 e 7).'),
+    d('Colocar a máscara PFF2/N95', 'PFF2/N95 é a máscara obrigatória em aerossóis (p. 8); este caso é de precaução padrão.'),
+    DIST.propé,
+    d('Higienizar as mãos apenas depois de retirar todos os EPIs', 'A desparamentação é a fase de maior risco: as mãos são higienizadas após retirar as luvas e após retirar o avental, além da higienização final (p. 8).'),
+  ],
+  tip: 'Óculos, máscara e/ou avental protegem a mucosa de olhos, boca e nariz, a roupa e as superfícies corporais quando há risco de contato com sangue ou secreções (p. 5).',
+};
+
+// Os 5 momentos (figura da p. 2): o roteiro numera os momentos mas não define a ordem em que eles
+// ocorrem. A história do caso fixa uma ordem (procedimento → ajeitar o paciente → mesa de
+// cabeceira) para a estação poder ter gabarito — está nos pontos de revisão.
+const B05 = {
+  code: 'B05', title: 'Os 5 momentos da higiene das mãos em um atendimento ao leito', fonte: `${BIO}, p. 2 e 5`,
+  setting: 'Quarto de enfermaria, leito 3. Dispensador de preparação alcoólica ao lado da cama; mesa de cabeceira com os objetos do paciente; bandeja com o material do procedimento.',
+  scenario: 'Você é acadêmico(a) de Medicina e fará o atendimento do Sr. P.S., 49 anos: primeiro o exame; depois um procedimento limpo/asséptico em que há risco de exposição a fluidos corporais; ao final, você vai ajeitar o paciente no leito e organizar a mesa de cabeceira. Suas mãos estão limpas, mas você ainda não tocou no paciente.',
+  task: 'Conduza o atendimento higienizando as mãos nos cinco momentos corretos. Nesta estação você não precisa detalhar o exame nem o procedimento.',
+  steps: [
+    { action: 'Higienizar as mãos antes de tocar o paciente', why: 'Momento 1: antes de tocar o paciente (p. 2).', critical: true, origem: 'R' },
+    { action: 'Examinar o paciente', origem: 'D' },
+    { action: 'Higienizar as mãos antes de realizar o procedimento limpo/asséptico', why: 'Momento 2: antes de realizar procedimento limpo/asséptico (p. 2).', critical: true, origem: 'R' },
+    { action: 'Realizar o procedimento limpo/asséptico', origem: 'D' },
+    { action: 'Higienizar as mãos após o risco de exposição a fluidos corporais', why: 'Momento 3: após risco de exposição a fluidos corporais (p. 2).', critical: true, origem: 'R' },
+    { action: 'Ajeitar o paciente no leito', origem: 'D' },
+    { action: 'Higienizar as mãos após tocar o paciente', why: 'Momento 4: após tocar o paciente (p. 2).', critical: true, origem: 'R' },
+    { action: 'Organizar a mesa de cabeceira', origem: 'D' },
+    { action: 'Higienizar as mãos após tocar superfícies próximas ao paciente', why: 'Momento 5: após tocar superfícies próximas ao paciente (p. 2).', critical: true, origem: 'R' },
+  ],
+  distractors: [
+    d('Calçar as luvas de procedimento no lugar de higienizar as mãos antes de tocar o paciente', 'As luvas não substituem a higienização das mãos, que é feita antes e após o contato com qualquer paciente (p. 5).'),
+    d('Higienizar as mãos somente ao final do atendimento', 'São cinco momentos ao longo do atendimento, e não apenas um ao final (p. 2).'),
+    d('Dispensar a higienização antes do procedimento, pois as mãos já foram higienizadas antes do exame', 'Antes de realizar procedimento limpo/asséptico há um momento próprio de higienização (momento 2, p. 2).'),
+    d('Dispensar a higienização depois de tocar a mesa de cabeceira, por ela não ser o paciente', 'Após tocar superfícies próximas ao paciente há um momento próprio de higienização (momento 5, p. 2).'),
+    d('Higienizar as mãos somente quando estiverem visivelmente sujas', 'A higienização é feita nos cinco momentos (p. 2); a escolha entre água e sabonete ou álcool é que depende de sujidade visível (p. 5).'),
+  ],
+  tip: 'Os 5 momentos: antes de tocar o paciente; antes de procedimento limpo/asséptico; após risco de exposição a fluidos corporais; após tocar o paciente; após tocar superfícies próximas ao paciente (p. 2).',
+};
+
 // --- Paramentação (família P) — ordem do roteiro: p. 8 (sem touca) e p. 9 (com touca)
 const PARAM_ACTIONS = {
   maos: { action: 'Higienizar as mãos', why: WHY.maos, critical: true },
@@ -582,6 +670,6 @@ const S11 = {
 };
 
 export default {
-  biosseguranca: { single: [B01, B02], param: PARAM, desp: DESP, precaucoes: [C1, C2, C3], luvas: [L1, L2] },
+  biosseguranca: { single: [B01, B02, B03, B04, B05], param: PARAM, desp: DESP, precaucoes: [C1, C2, C3], luvas: [L1, L2] },
   sinaisVitais: [S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11],
 };

@@ -26,9 +26,9 @@ beforeAll(() => {
 });
 
 describe('conteúdo RPG guiado HM1/N1', () => {
-  it('o arquivo é uma lista válida de 8 casos', () => {
+  it('o arquivo é uma lista válida de 13 casos', () => {
     expect(fileError).toBeUndefined();
-    expect(items).toHaveLength(8);
+    expect(items).toHaveLength(13);
   });
 
   it('nenhum caso tem erro nem aviso de validação (toda cena com 4 a 6 opções)', () => {
@@ -38,7 +38,7 @@ describe('conteúdo RPG guiado HM1/N1', () => {
 
   it('todo caso tem slug, unidade N1, ambiente, cenário e missão', () => {
     stations.forEach((s) => {
-      expect(s.slug).toMatch(/^hm1-n1-r\d-/);
+      expect(s.slug).toMatch(/^hm1-n1-r\d+-/);
       expect(s.unit).toBe('N1');
       expect(s.setting?.length ?? 0).toBeGreaterThan(60);
       expect(s.scenario.length).toBeGreaterThan(150);

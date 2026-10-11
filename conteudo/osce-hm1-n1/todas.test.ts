@@ -22,7 +22,7 @@ const stations = items.map((i) => i.station as StaticOsceStation);
 describe('conteúdo OSCE HM1/N1 — todas as estações', () => {
   it('o arquivo é uma lista válida', () => {
     expect(fileError).toBeUndefined();
-    expect(items.length).toBe(30); // 19 de Biossegurança + 11 de Sinais Vitais
+    expect(items.length).toBe(33); // 22 de Biossegurança + 11 de Sinais Vitais
   });
 
   it('nenhuma estação tem erro de validação', () => {

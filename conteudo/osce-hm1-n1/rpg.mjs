@@ -760,5 +760,387 @@ const R8 = {
   ],
 };
 
-export const casos = [R1, R2, R3, R4, R5, R6, R7, R8];
+// ---------------------------------------------------------------------------
+// LACUNAS FECHADAS NA REVISÃO 4: 5 momentos, precaução padrão, higiene das mãos e luvas
+// ---------------------------------------------------------------------------
+
+const R9 = {
+  code: 'R9', theme: TEMAS.biosseguranca, title: 'Os 5 momentos da higiene das mãos', fonte: `${BIO}, p. 2 e 5`,
+  setting: 'Quarto de enfermaria, leito 3. Dispensador de preparação alcoólica ao lado da cama; mesa de cabeceira com os objetos do paciente; bandeja com o material do procedimento.',
+  scenario: 'Você é acadêmico(a) de Medicina e fará o atendimento do Sr. P.S., 49 anos: o exame, um procedimento limpo/asséptico com risco de exposição a fluidos corporais e, ao final, o cuidado com o leito. Suas mãos estão limpas, mas você ainda não tocou no paciente.',
+  task: 'Decida, a cada situação, o que fazer com as suas mãos, nos cinco momentos da higiene das mãos. Nesta estação você não precisa realizar o exame nem o procedimento.',
+  tip: 'Os 5 momentos: antes de tocar o paciente; antes de procedimento limpo/asséptico; após risco de exposição a fluidos corporais; após tocar o paciente; após tocar superfícies próximas ao paciente (p. 2).',
+  scenes: [
+    cena({
+      passo: 'Momento 1: higienizar as mãos antes de tocar o paciente', fonte: 'p. 2 e 5',
+      narrative: 'Você chega ao leito 3. O Sr. P.S. está deitado e estende o braço para você.',
+      patient: 'Sr. P.S.: "Pode me examinar, doutor(a)."',
+      prompt: 'O que você faz com as suas mãos antes de tocá-lo?',
+      choices: [
+        ok('Higienizar as mãos antes de tocar o paciente', 'Momento 1 (p. 2): antes de tocar o paciente. Você higieniza as mãos diante dele e só então o examina.'),
+        no('Calçar luvas de procedimento e tocar o paciente', 'As luvas não substituem a higienização das mãos, feita antes e após o contato com qualquer paciente (p. 5).'),
+        no('Examinar o paciente e higienizar as mãos só depois', 'A primeira higienização vem ANTES de tocar o paciente (momento 1, p. 2); sem ela, o que está nas suas mãos vai para ele.'),
+        no('Dispensar a higienização, pois as mãos parecem limpas', 'A higienização antes de tocar o paciente é um dos cinco momentos (p. 2); ela não depende de as mãos parecerem sujas.'),
+      ],
+    }),
+    cena({
+      passo: 'Momento 2: higienizar as mãos antes do procedimento limpo/asséptico', fonte: 'p. 2',
+      narrative: 'O exame terminou. Agora você vai realizar um procedimento limpo/asséptico. Entre o exame e o procedimento, você tocou o paciente.',
+      prompt: 'Antes de começar o procedimento, o que você faz?',
+      choices: [
+        ok('Higienizar as mãos antes de realizar o procedimento limpo/asséptico', 'Momento 2 (p. 2): mesmo tendo higienizado antes do exame, você higieniza de novo antes do procedimento.'),
+        no('Seguir direto para o procedimento, pois já higienizou as mãos antes do exame', 'Entre o exame e o procedimento você tocou o paciente: antes do procedimento limpo/asséptico há um momento próprio de higienização (p. 2).'),
+        no('Higienizar as mãos só depois do procedimento', 'O momento 2 é ANTES do procedimento limpo/asséptico (p. 2).'),
+        no('Calçar luvas para substituir a higienização das mãos', 'As luvas não substituem a higienização das mãos (p. 5).'),
+      ],
+    }),
+    cena({
+      passo: 'Momento 3: higienizar as mãos após risco de exposição a fluidos corporais', fonte: 'p. 2 e 5',
+      narrative: 'O procedimento terminou. Houve risco de exposição a fluidos corporais do paciente.',
+      patient: 'Sr. P.S.: "Acho que respingou um pouquinho, doutor(a)."',
+      prompt: 'O que você faz com as mãos agora?',
+      choices: [
+        ok('Higienizar as mãos após o risco de exposição a fluidos corporais', 'Momento 3 (p. 2): após risco de exposição a fluidos corporais; a higienização também é feita após o contato com sangue ou secreções (p. 5).'),
+        no('Ajeitar o paciente no leito e higienizar as mãos depois', 'Depois do risco de exposição a fluidos corporais, você higieniza as mãos antes de tocar de novo o paciente ou o ambiente (p. 2).'),
+        no('Higienizar as mãos somente se houver sangue visível', 'O momento 3 vale após o RISCO de exposição, não apenas quando há sangue visível (p. 2).'),
+        no('Anotar no prontuário e higienizar as mãos ao final do plantão', 'A higienização é feita no momento do risco de exposição (p. 2), e não ao final do plantão.'),
+      ],
+    }),
+    cena({
+      passo: 'Momento 4: higienizar as mãos após tocar o paciente', fonte: 'p. 2 e 5',
+      narrative: 'Você ajeita o travesseiro e cobre o paciente antes de sair.',
+      prompt: 'Depois de tocar o paciente, o que você faz?',
+      choices: [
+        ok('Higienizar as mãos após tocar o paciente', 'Momento 4 (p. 2): após tocar o paciente; a higienização é feita antes e após o contato com qualquer paciente (p. 5).'),
+        no('Seguir sem higienizar, pois já higienizou há pouco', 'Após tocar o paciente há um momento próprio de higienização (momento 4, p. 2).'),
+        no('Higienizar as mãos só se o paciente tiver alguma infecção', 'A precaução padrão vale para todos os pacientes, independentemente de diagnóstico (p. 5 e 7): a higienização não depende de suspeita de infecção.'),
+        no('Calçar luvas para mexer na mesa de cabeceira', 'As luvas são para risco de contato com sangue, secreções ou membranas mucosas (p. 5) e não substituem a higienização das mãos.'),
+      ],
+    }),
+    cena({
+      passo: 'Momento 5: higienizar as mãos após tocar superfícies próximas ao paciente', fonte: 'p. 2',
+      narrative: 'Sobre a mesa de cabeceira estão o copo, o controle remoto e os óculos do paciente. Você os reorganiza.',
+      patient: 'Sr. P.S.: "Pode deixar aí, doutor(a). É só a mesinha, não precisa lavar a mão por causa dela."',
+      prompt: 'Depois de tocar a mesa de cabeceira, o que você faz?',
+      choices: [
+        ok('Higienizar as mãos após tocar superfícies próximas ao paciente', 'Momento 5 (p. 2): após tocar superfícies próximas ao paciente, mesmo sem ter tocado nele.'),
+        no('Concordar com o paciente: a mesa não é o paciente, então não precisa higienizar', 'Tocar superfícies próximas ao paciente também exige higienização (momento 5, p. 2).'),
+        no('Higienizar as mãos só se a mesa estiver visivelmente suja', 'O momento 5 não depende de sujidade visível (p. 2).'),
+        no('Higienizar apenas as pontas dos dedos', 'A higienização cobre todas as superfícies das mãos (p. 3–4).'),
+      ],
+    }),
+  ],
+};
+
+const R10 = {
+  code: 'R10', theme: TEMAS.biosseguranca, title: 'Precaução padrão: injeção e descarte da agulha', fonte: `${BIO}, p. 5 e 7`,
+  setting: 'Quarto de enfermaria. Sobre a mesa auxiliar: bandeja com seringa e agulha já preparadas, caixa de luvas de procedimento e dispensador de preparação alcoólica. Uma caixa coletora de perfurocortantes está presa à parede, ao lado do leito.',
+  scenario: 'Você é acadêmico(a) de Medicina e vai administrar uma medicação injetável ao Sr. L.M., 55 anos, internado para acompanhamento. Durante o procedimento há risco de contato com sangue, mas não há risco de respingos. A precaução padrão vale para todos os pacientes. Você ainda não tocou no paciente.',
+  task: 'Conduza a sequência da precaução padrão, da higiene das mãos antes do contato ao descarte da seringa e da agulha e à higiene final. Nesta estação você não precisa detalhar a técnica da injeção.',
+  tip: 'Precaução padrão (p. 5 e 7): higiene das mãos, luvas e avental, óculos e máscara quando há risco de respingos, e descarte adequado de perfurocortantes. Vale para TODOS os pacientes.',
+  scenes: [
+    cena({
+      passo: 'Higienizar as mãos antes do contato com o paciente', fonte: 'p. 5',
+      narrative: 'Você está ao lado do leito do Sr. L.M., com a medicação preparada na bandeja. Há risco de contato com sangue durante a injeção, mas não de respingos.',
+      patient: 'Sr. L.M.: "Pode aplicar quando quiser, doutor(a)."',
+      prompt: 'O que você faz primeiro?',
+      choices: [
+        ok('Higienizar as mãos', 'A higienização das mãos é feita antes e após o contato com qualquer paciente (p. 5).'),
+        no('Calçar as luvas de procedimento sem higienizar as mãos', 'A higienização vem antes: ela é feita antes e após o contato com qualquer paciente (p. 5), e as luvas não a substituem.'),
+        no('Colocar avental, máscara e óculos', 'Óculos, máscara e/ou avental são usados quando há risco de contato de sangue ou secreções com a mucosa, a roupa e as superfícies corporais (p. 5); aqui não há risco de respingos.'),
+        no('Aplicar a injeção e higienizar as mãos só depois', 'Antes do contato com o paciente as mãos já devem estar higienizadas (p. 5).'),
+      ],
+    }),
+    cena({
+      passo: 'Calçar as luvas imediatamente antes do contato', fonte: 'p. 5',
+      narrative: 'Suas mãos estão higienizadas. A caixa de luvas de procedimento está aberta ao lado.',
+      prompt: 'E agora?',
+      choices: [
+        ok('Calçar as luvas de procedimento imediatamente antes do contato com o paciente', 'Há risco de contato com sangue: as luvas são calçadas imediatamente antes do contato com o paciente (p. 5).'),
+        no('Calçar as luvas agora e usá-las também para anotar no prontuário', 'As luvas são calçadas imediatamente antes do contato e retiradas logo após o uso (p. 5).'),
+        no('Dispensar as luvas, pois o procedimento é rápido', 'Luvas são indicadas quando há risco de contato com sangue, secreções ou membranas mucosas (p. 5); o caso informa esse risco.'),
+        no('Calçar as luvas cirúrgicas (estéreis)', 'O caso não informa técnica estéril: o EPI é a luva de procedimento (p. 9–10).'),
+      ],
+    }),
+    cena({
+      passo: 'Descartar a seringa e a agulha sem desconectar nem reencapar', fonte: 'p. 5 e 7',
+      narrative: 'A injeção foi aplicada. Você está com a seringa e a agulha usadas na mão, ainda de luvas. A caixa de perfurocortantes está na parede, a um passo de você.',
+      patient: 'Colega: "Reencapa essa agulha antes de levar até a caixa, é mais seguro."',
+      prompt: 'O que você faz com a seringa e a agulha?',
+      choices: [
+        ok('Descartar a seringa e a agulha na caixa de perfurocortantes, sem desconectá-las e sem reencapá-las', 'Descarte, em recipientes apropriados, seringas e agulhas, sem desconectá-las ou reencapá-las (p. 5).'),
+        no('Reencapar a agulha, como o colega sugeriu', 'Seringas e agulhas são descartadas sem reencapá-las (p. 5): ao reencapar, sua mão fica perto da ponta da agulha e o risco de acidente com perfurocortante aumenta.'),
+        no('Desconectar a agulha da seringa para descartar cada uma em um recipiente', 'Seringas e agulhas são descartadas sem desconectá-las (p. 5).'),
+        no('Deixar sobre a bandeja para descartar depois', 'O descarte adequado de perfurocortantes faz parte da precaução padrão (p. 5 e 7); deixar a agulha exposta mantém o risco de acidente para você e para a equipe.'),
+        no('Descartar no lixo comum', 'O descarte é em recipientes apropriados, a caixa de perfurocortantes (p. 5 e 7).'),
+      ],
+    }),
+    cena({
+      passo: 'Retirar as luvas logo após o uso', fonte: 'p. 5',
+      narrative: 'A seringa e a agulha foram descartadas. Você ainda está de luvas, ao lado do leito.',
+      prompt: 'O que você faz com as luvas?',
+      choices: [
+        ok('Retirar as luvas logo após o uso', 'As luvas são retiradas logo após o uso (p. 5).'),
+        no('Manter as luvas para atender o próximo paciente', 'As luvas são retiradas logo após o uso, higienizando as mãos em seguida (p. 5).'),
+        no('Usar as luvas para anotar no prontuário e retirá-las só depois', 'As luvas são retiradas logo após o uso (p. 5); o prontuário e outras superfícies não fazem parte do procedimento.'),
+        no('Retirar as luvas e guardá-las no bolso para reutilizar', 'As luvas são descartadas em lixo infectante após o uso (p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Higienizar as mãos em seguida', fonte: 'p. 5',
+      narrative: 'As luvas foram retiradas e descartadas.',
+      prompt: 'Para encerrar, o que você faz?',
+      choices: [
+        ok('Higienizar as mãos em seguida', 'Após a remoção das luvas, as mãos são higienizadas em seguida (p. 5).'),
+        no('Sair do quarto sem higienizar as mãos, pois usou luvas durante todo o procedimento', 'As luvas não dispensam a higienização: ela é feita após a remoção das luvas (p. 5).'),
+        no('Higienizar as mãos só se houver sangue visível nas luvas', 'A higienização após a remoção das luvas faz parte da precaução padrão (p. 5), com ou sem sujidade visível.'),
+        no('Higienizar as mãos somente ao final do plantão', 'A higienização é feita em seguida à remoção das luvas (p. 5).'),
+      ],
+    }),
+  ],
+};
+
+const R11 = {
+  code: 'R11', theme: TEMAS.biosseguranca, title: 'Higiene das mãos: qual técnica usar e como executá-la', fonte: `${BIO}, p. 3–5`,
+  setting: 'Posto de enfermagem da enfermaria. Pia com torneira de acionamento manual, sabonete líquido e dispensador de papel-toalha. Dispensador de preparação alcoólica na parede.',
+  scenario: 'Você é acadêmico(a) de Medicina em atividade prática na enfermaria. Ao longo do plantão você vai higienizar as mãos em duas situações diferentes e precisa escolher e executar a técnica correta em cada uma.',
+  task: 'Em cada situação, escolha a técnica adequada e execute as etapas que mais costumam ser erradas. Nesta estação você não precisa atender os pacientes.',
+  tip: 'Água e sabonete quando as mãos estiverem visivelmente sujas; fricção com preparação alcoólica (20 a 30 segundos) nas demais situações (p. 4–5).',
+  scenes: [
+    cena({
+      passo: 'Mãos visivelmente sujas: higienizar com água e sabonete', fonte: 'p. 4–5',
+      narrative: 'Você acabou de organizar caixas de material e percebe sujidade visível nas suas mãos. Ao lado da pia, na parede, está o dispensador de álcool.',
+      patient: 'Colega: "Usa o álcool mesmo, é bem mais rápido."',
+      prompt: 'Qual técnica você usa?',
+      choices: [
+        ok('Lavar as mãos com água e sabonete', 'Com as mãos visivelmente sujas, a higienização é com água e sabonete (p. 4); a fricção alcoólica é para mãos sem sujidade visível (p. 5).'),
+        no('Friccionar as mãos com preparação alcoólica, como o colega sugeriu', 'Com sujidade visível o álcool não é a técnica indicada: lava-se com água e sabonete (p. 4–5).'),
+        no('Calçar luvas por cima da sujeira', 'As luvas não substituem a higienização das mãos (p. 5).'),
+        no('Passar um papel-toalha seco nas mãos', 'O papel-toalha seco não é uma técnica de higienização: lava-se com água e sabonete (p. 3).'),
+      ],
+    }),
+    cena({
+      passo: 'Aplicar sabão em quantidade suficiente para cobrir toda a palma', fonte: 'p. 3',
+      narrative: 'Suas mãos estão molhadas. O sabonete líquido está à sua frente.',
+      prompt: 'Quanto sabonete você aplica?',
+      choices: [
+        ok('Quantidade suficiente para cobrir toda a palma', 'O sabão é aplicado em quantidade suficiente para cobrir toda a palma (passo 1, p. 3).'),
+        no('Uma gota, apenas nas pontas dos dedos', 'A quantidade deve ser suficiente para cobrir toda a palma (passo 1, p. 3): uma gota não alcança todas as superfícies das mãos.'),
+        no('Nenhum sabão: só água, para economizar', 'A técnica é com água e sabonete (p. 3–4); só água não higieniza as mãos visivelmente sujas.'),
+        no('Sabonete só na palma da mão dominante', 'O sabão deve cobrir toda a palma de ambas as mãos, e as etapas seguintes esfregam as duas (p. 3).'),
+      ],
+    }),
+    cena({
+      passo: 'Esfregar palmas, dorso, costas dos dedos, polegares e pontas dos dedos', fonte: 'p. 3',
+      narrative: 'O sabonete cobre as palmas das mãos. Agora vem a fricção.',
+      prompt: 'O que você esfrega?',
+      choices: [
+        ok('Palma com palma, dorso de cada mão com os dedos entrelaçados, costas dos dedos, polegares e pontas dos dedos', 'A sequência passa por todas as superfícies: palmas, dorso com dedos entrelaçados, costas dos dedos, polegares e pontas dos dedos em movimento circular (passos 2 a 7, p. 3).'),
+        no('Apenas as palmas das mãos', 'Só as palmas deixam sem higienizar o dorso, os espaços entre os dedos, os polegares e as pontas dos dedos (passos 2 a 7, p. 3).'),
+        no('Apenas as pontas dos dedos', 'As pontas dos dedos são só uma das etapas; a sequência inclui palmas, dorso, dedos e polegares (p. 3).'),
+        no('Só o dorso das mãos, já que as palmas ficam limpas', 'As palmas fazem parte da sequência e são a primeira etapa (p. 3).'),
+      ],
+    }),
+    cena({
+      passo: 'Enxaguar, secar e usar o papel-toalha para fechar a torneira', fonte: 'p. 3',
+      narrative: 'As mãos foram esfregadas. Falta enxaguar e secar.',
+      prompt: 'Como você termina?',
+      choices: [
+        ok('Enxaguar com água, secar bem as mãos e usar o papel-toalha para fechar a torneira', 'Enxágue, secagem completa e torneira fechada com o papel-toalha: assim as mãos limpas não tocam de novo a superfície contaminada (passos 8 a 10, p. 3).'),
+        no('Enxaguar, secar e fechar a torneira com a mão', 'O roteiro orienta usar o papel-toalha para fechar a torneira (passo 10, p. 3): com a mão, você recontamina o que acabou de higienizar.'),
+        no('Fechar a torneira com a mão limpa e secar depois', 'A torneira é fechada com o papel-toalha, depois de secar as mãos (passos 9 e 10, p. 3).'),
+        no('Friccionar as mãos até secarem, sem enxaguar', 'Este é o final da fricção alcoólica (p. 4); na lavagem, as mãos são enxaguadas com água e secas (p. 3).'),
+      ],
+    }),
+    cena({
+      passo: 'Fricção alcoólica: quantidade suficiente em uma mão em forma de concha', fonte: 'p. 4–5',
+      narrative: 'Mais tarde você vai examinar uma paciente. Suas mãos não estão visivelmente sujas e há preparação alcoólica ao lado do leito.',
+      prompt: 'Como você aplica a preparação alcoólica?',
+      choices: [
+        ok('Aplicar quantidade suficiente em uma mão em forma de concha, para cobrir todas as superfícies das mãos', 'A quantidade deve ser suficiente para cobrir todas as superfícies das mãos (passo 1a/1b, p. 4).'),
+        no('Aplicar uma gota apenas na palma', 'A quantidade deve cobrir todas as superfícies das mãos (p. 4): uma gota não alcança o dorso nem os dedos.'),
+        no('Aplicar a preparação alcoólica só nas pontas dos dedos', 'A preparação cobre todas as superfícies das mãos (p. 4).'),
+        no('Aplicar e enxaguar logo em seguida', 'O enxágue faz parte da lavagem com água e sabonete (p. 3), e não da fricção alcoólica (p. 4).'),
+      ],
+    }),
+    cena({
+      passo: 'Friccionar por 20 a 30 segundos, até as mãos secarem', fonte: 'p. 4',
+      narrative: 'A preparação alcoólica está nas suas mãos. A paciente espera no leito.',
+      prompt: 'Como você conduz a fricção?',
+      choices: [
+        ok('Friccionar todas as superfícies por 20 a 30 segundos, até as mãos secarem', 'A duração de todo o procedimento é de 20 a 30 segundos; quando as mãos estiverem secas, estarão seguras (p. 4).'),
+        no('Friccionar por 5 segundos e tocar na paciente', 'A duração de todo o procedimento é de 20 a 30 segundos (p. 4); com 5 segundos, as mãos não ficaram seguras.'),
+        no('Secar as mãos com papel-toalha', 'Na fricção alcoólica as mãos secam sozinhas: "quando estiverem secas, suas mãos estarão seguras" (p. 4).'),
+        no('Enxaguar as mãos depois de friccionar', 'O enxágue faz parte da lavagem com água e sabonete (p. 3), e não da fricção alcoólica (p. 4).'),
+      ],
+    }),
+  ],
+};
+
+const R12 = {
+  code: 'R12', theme: TEMAS.biosseguranca, title: 'Luvas de procedimento: calçar e retirar', fonte: `${BIO}, p. 5 e 9–10`,
+  setting: 'Beira do leito, na enfermaria. Caixa de luvas de procedimento sobre a mesa auxiliar e recipiente para lixo infectante ao lado da cama. Dispensador de preparação alcoólica na parede.',
+  scenario: 'Você é acadêmico(a) de Medicina e fará, no paciente S.T., 45 anos, um procedimento de assistência não estéril, com risco de contato com secreções. Você usa um relógio e uma pulseira no punho e acaba de higienizar as mãos.',
+  task: 'Calce as luvas de procedimento e, ao final do procedimento, retire-as, descarte-as e finalize a técnica. Nesta estação você não precisa realizar o procedimento no paciente.',
+  tip: 'Calce as luvas imediatamente antes do contato com o paciente e retire-as logo após o uso, higienizando as mãos em seguida (p. 5).',
+  scenes: [
+    cena({
+      passo: 'Remover joias e outros artefatos das mãos e pulsos', fonte: 'p. 9',
+      narrative: 'Você abre a caixa de luvas. O relógio e a pulseira ainda estão no seu punho.',
+      prompt: 'O que você faz antes de calçar as luvas?',
+      choices: [
+        ok('Remover as joias e outros artefatos das mãos e dos pulsos', 'Antes de calçar as luvas, remova joias e outros artefatos das mãos e pulsos (p. 9).'),
+        no('Calçar as luvas por cima do relógio e da pulseira', 'Joias e artefatos devem ser removidos antes (p. 9); sob a luva eles ficam fora do alcance da higienização e podem rasgá-la.'),
+        no('Remover apenas a pulseira e manter o relógio', 'O roteiro pede remover joias e outros artefatos das mãos e pulsos (p. 9), o que inclui o relógio.'),
+        no('Dispensar a remoção, pois as luvas são resistentes', 'A remoção de joias e artefatos das mãos e pulsos vem antes de calçar as luvas (p. 9).'),
+      ],
+    }),
+    cena({
+      passo: 'Calçar a luva cuidadosamente, ajustando-a até o pulso', fonte: 'p. 5 e 9',
+      narrative: 'As joias foram removidas. O paciente já está no leito, à sua espera.',
+      patient: 'Colega: "Pode calçar rápido, não precisa ajustar até o pulso."',
+      prompt: 'Como você calça a luva?',
+      choices: [
+        ok('Calçar a luva cuidadosamente, ajustando-a até o pulso', 'Cuidadosamente, calce a luva ajustando-a até o pulso (p. 9).'),
+        no('Calçar a luva rapidamente, sem ajustá-la até o pulso', 'A luva é calçada cuidadosamente, ajustada até o pulso (p. 9): sem ajuste, o punho fica exposto.'),
+        no('Calçar as luvas cirúrgicas (estéreis)', 'O procedimento não é estéril: o EPI é a luva de procedimento (p. 9–10).'),
+        no('Calçar a luva depois de tocar o paciente', 'Calce-as imediatamente antes do contato com o paciente (p. 5).'),
+      ],
+    }),
+    cena({
+      passo: 'Retirar a primeira luva segurando pela parte externa, na altura do punho', fonte: 'p. 10', origem: 'R',
+      narrative: 'O procedimento terminou. Você está de luvas, ao lado do leito.',
+      prompt: 'Como você retira a primeira luva?',
+      choices: [
+        ok('Segurar uma luva pela parte externa, na altura do punho, e puxá-la em direção à ponta dos dedos, de modo que saia do avesso', 'Segure uma luva pela parte externa, na altura do punho, e puxe em direção à ponta dos dedos: a luva sairá do avesso (p. 10).'),
+        no('Puxar a luva pela ponta dos dedos', 'A luva é segurada pela parte externa, na altura do punho, e puxada em direção à ponta dos dedos (p. 10).'),
+        no('Retirar as duas luvas ao mesmo tempo, puxando-as pelos dedos', 'A retirada é uma luva de cada vez, começando pela externa na altura do punho (p. 10).'),
+        no('Esfregar uma luva na outra até soltarem', 'Não é a técnica prevista: segure pela parte externa, na altura do punho, e puxe em direção à ponta dos dedos (p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Segurar a luva removida com a outra mão enluvada', fonte: 'p. 10',
+      narrative: 'A primeira luva saiu do avesso e está na sua mão.',
+      prompt: 'O que você faz com ela?',
+      choices: [
+        ok('Segurar a luva removida com a outra mão ainda enluvada', 'Segure a luva removida com a outra mão enluvada (p. 10).'),
+        no('Largar a luva sobre a cama enquanto retira a segunda', 'A luva removida fica na outra mão enluvada (p. 10); sobre a cama, ela contamina o leito.'),
+        no('Segurá-la com a mão sem luva', 'A luva removida é segurada pela mão que ainda está enluvada (p. 10).'),
+        no('Jogá-la no lixo comum antes de retirar a segunda', 'As luvas são descartadas em lixo infectante, ao final (p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Colocar os dedos da mão sem luva por dentro da segunda luva', fonte: 'p. 10',
+      narrative: 'Resta a segunda luva, na mão que segura a primeira.',
+      prompt: 'Como você começa a retirar a segunda luva?',
+      choices: [
+        ok('Colocar os dedos da mão sem luva na parte interna da segunda luva, entre a luva e o punho', 'Coloque os dedos da mão não enluvada na parte interna da luva, entre a luva e o punho (p. 10).'),
+        no('Segurar a segunda luva pela parte externa com a mão sem luva', 'A mão sem luva entra pela parte interna da segunda luva, entre a luva e o punho (p. 10); a parte externa está contaminada.'),
+        no('Arrancar a segunda luva pelos dedos', 'A segunda luva é retirada pelo lado de dentro, a partir do punho (p. 10).'),
+        no('Retirar a segunda luva tocando a parte externa com os dois polegares', 'A parte externa está contaminada; os dedos entram pela parte interna, entre a luva e o punho (p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Remover a segunda luva, arrastando-a sobre a primeira', fonte: 'p. 10',
+      narrative: 'Seus dedos estão por dentro da segunda luva, na altura do punho.',
+      prompt: 'Como você remove a segunda luva?',
+      choices: [
+        ok('Remover a segunda luva, arrastando-a em direção à ponta dos dedos e da outra luva', 'Remova a segunda luva, arrastando-a em direção à ponta dos dedos e da outra luva (p. 10): a primeira fica dentro da segunda.'),
+        no('Puxar a segunda luva pela parte externa, sem passar pela outra luva', 'A segunda luva sai pelo lado de dentro, arrastada em direção à ponta dos dedos e da outra luva (p. 10).'),
+        no('Soltar a primeira luva e retirar a segunda separadamente', 'A primeira luva permanece segura pela mão enluvada e é envolvida pela segunda (p. 10).'),
+        no('Rasgar a segunda luva para soltá-la', 'A segunda luva é arrastada para fora, e não rasgada (p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Descartar as luvas em lixo infectante', fonte: 'p. 10',
+      narrative: 'As duas luvas estão juntas na sua mão. O recipiente de lixo infectante está ao lado da cama; o lixo comum, perto da porta.',
+      patient: 'Colega: "Pode jogar no lixo comum aqui perto, é mais rápido."',
+      prompt: 'O que você faz com as luvas?',
+      choices: [
+        ok('Descartar as luvas em lixo infectante', 'Descarte as luvas em lixo infectante (p. 10).'),
+        no('Descartar as luvas no lixo comum, como o colega sugeriu', 'As luvas são descartadas em lixo infectante (p. 10): no lixo comum, elas expõem outras pessoas.'),
+        no('Guardar as luvas no bolso do jaleco para reutilizar', 'As luvas são descartadas após o uso, em lixo infectante (p. 10).'),
+        no('Deixar as luvas sobre a mesa auxiliar', 'As luvas são descartadas em lixo infectante (p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Higienizar as mãos', fonte: 'p. 5 e 10',
+      narrative: 'As luvas foram descartadas. Suas mãos estão sem luvas.',
+      prompt: 'Para encerrar, o que você faz?',
+      choices: [
+        ok('Higienizar as mãos', 'Descarte as luvas em lixo infectante e higienize as mãos (p. 10); a higienização é feita após a remoção das luvas (p. 5).'),
+        no('Sair sem higienizar as mãos, pois usou luvas', 'As luvas não dispensam a higienização: ela é feita após a remoção das luvas (p. 5 e 10).'),
+        no('Higienizar as mãos só se estiverem visivelmente sujas', 'A higienização após a remoção das luvas faz parte da técnica (p. 5 e 10), com ou sem sujidade visível.'),
+        no('Calçar novas luvas para sair do quarto', 'Luvas só são indicadas quando há risco de contato com sangue, secreções ou mucosas (p. 5); a técnica termina com a higienização das mãos.'),
+      ],
+    }),
+  ],
+};
+
+const R13 = {
+  code: 'R13', theme: TEMAS.biosseguranca, title: 'Luvas cirúrgicas (estéreis): calçar', fonte: `${BIO}, p. 10`,
+  setting: 'Sala de procedimentos do ambulatório. O pacote de luvas cirúrgicas estéreis está aberto sobre a mesa auxiliar. Ao lado, uma caixa de luvas de procedimento.',
+  scenario: 'Você é acadêmico(a) de Medicina e vai auxiliar um procedimento que exige técnica estéril, em paciente do ambulatório. Você precisa calçar as luvas cirúrgicas antes de começar. Você ainda não tocou nas luvas.',
+  task: 'Calce as luvas cirúrgicas, na sequência correta. Cada passo errado mostra o efeito sobre a técnica estéril. Nesta estação você não precisa realizar o procedimento.',
+  tip: 'Luva cirúrgica: pegue uma luva com o polegar e o indicador; puxe-a na mão; deslize a mão parcialmente enluvada sob a borda da segunda luva; puxe-a pelo lado de dentro até o pulso; deslize os dedos sob a borda da primeira e ajuste-a (p. 10).',
+  scenes: [
+    cena({
+      passo: 'Pegar uma luva com o polegar e o indicador', fonte: 'p. 10',
+      narrative: 'O pacote está aberto: as duas luvas estão lado a lado sobre a embalagem. Você ainda não tocou nelas.',
+      prompt: 'Como você pega a primeira luva?',
+      choices: [
+        ok('Pegar uma luva com o polegar e o indicador', 'A primeira luva é pega com o polegar e o indicador (passo 1, p. 10).'),
+        no('Pegar as duas luvas ao mesmo tempo, com a palma da mão', 'A técnica é sequencial: uma luva com o polegar e o indicador, e a outra depois (passos 1 a 5, p. 10).'),
+        no('Pegar a luva com a mão inteira, tocando também a parte de fora', 'A primeira luva é pega com o polegar e o indicador (passo 1, p. 10); a mão inteira toca mais superfície da luva.'),
+        no('Calçar a luva sem tirá-la da embalagem', 'Pega-se a luva com o polegar e o indicador e puxa-se na mão (passos 1 e 2, p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Puxar a luva na mão', fonte: 'p. 10',
+      narrative: 'A primeira luva está entre o seu polegar e o indicador.',
+      prompt: 'O que você faz com ela?',
+      choices: [
+        ok('Puxar a luva na mão', 'Você puxa a luva na mão (passo 2, p. 10).'),
+        no('Calçar a luva com a outra mão, ainda sem luva, tocando a parte externa', 'A parte externa não deve ser tocada pela mão sem luva; a luva é puxada na mão (passo 2, p. 10).'),
+        no('Deixar a luva pela metade e ajustá-la depois com a mão sem luva', 'A luva é puxada na mão (passo 2, p. 10) e o ajuste final é feito com a mão enluvada (passo 5).'),
+        no('Trocar para a luva de procedimento, que é mais fácil de calçar', 'O procedimento exige técnica estéril: luva cirúrgica (p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Deslizar a mão parcialmente enluvada sob a borda da segunda luva', fonte: 'p. 10',
+      narrative: 'A primeira mão está parcialmente enluvada. A segunda luva continua sobre a embalagem.',
+      prompt: 'Como você pega a segunda luva?',
+      choices: [
+        ok('Deslizar a mão parcialmente enluvada sob a borda da segunda luva', 'Deslize a mão parcialmente enluvada sob a borda da segunda luva (passo 3, p. 10).'),
+        no('Pegar a segunda luva pela parte externa com a mão ainda sem luva', 'A mão sem luva não toca a parte externa: a segunda luva é pega pela borda, com a mão parcialmente enluvada (passo 3, p. 10).'),
+        no('Pegar a segunda luva com a mão sem luva, pelo lado de dentro', 'A segunda luva é pega pela borda com a mão parcialmente enluvada (passo 3, p. 10).'),
+        no('Calçar as duas luvas ao mesmo tempo', 'A técnica é sequencial: uma mão primeiro, depois a outra com a mão parcialmente enluvada (passos 1 a 5, p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Puxar a outra luva pelo lado de dentro até o pulso', fonte: 'p. 10',
+      narrative: 'Sua mão parcialmente enluvada está sob a borda da segunda luva.',
+      prompt: 'Como você calça a segunda luva?',
+      choices: [
+        ok('Puxar a outra luva pelo lado de dentro e puxá-la até o pulso', 'Puxe a outra luva pelo lado de dentro e a leve até o pulso (passo 4, p. 10).'),
+        no('Puxar a outra luva pela parte externa até o pulso', 'A luva é puxada pelo lado de dentro (passo 4, p. 10).'),
+        no('Puxar a luva apenas até a metade da mão', 'A luva é puxada até o pulso (passo 4, p. 10).'),
+        no('Ajustar a luva tocando a parte externa com a mão sem luva', 'O ajuste é feito com a mão enluvada, e a parte externa não é tocada pela mão sem luva (passos 4 e 5, p. 10).'),
+      ],
+    }),
+    cena({
+      passo: 'Deslizar os dedos sob a borda da primeira luva e puxá-la até o pulso', fonte: 'p. 10',
+      narrative: 'A segunda luva está no pulso. A primeira ainda está parcialmente calçada.',
+      prompt: 'O que falta?',
+      choices: [
+        ok('Deslizar os dedos da mão completamente enluvada sob a borda da primeira luva e puxá-la até o pulso', 'Deslize os dedos da mão completamente enluvada sob a borda da primeira luva e puxe-a até o pulso (passo 5, p. 10). Os dois punhos estão ajustados e a técnica está completa.'),
+        no('Deixar a primeira luva como está, sem ajustá-la até o pulso', 'A primeira luva também é puxada até o pulso (passo 5, p. 10).'),
+        no('Tocar a parte externa da primeira luva com a mão sem luva para ajustá-la', 'As duas mãos já estão enluvadas; o ajuste é feito deslizando os dedos sob a borda (passo 5, p. 10).'),
+        no('Tirar a primeira luva e recolocá-la', 'Não há esse passo: a primeira luva é ajustada sob a borda e puxada até o pulso (passo 5, p. 10).'),
+      ],
+    }),
+  ],
+};
+
+export const casos = [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13];
 export default casos;

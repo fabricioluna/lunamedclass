@@ -1989,6 +1989,32 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     depois importa `rpg.json` em Admin → OSCE → **RPG Guiado** — exige o deploy do código novo;
     (2) **ordem das posições** em pressão em várias posições segue pendente (sem RPG para ela);
     (3) decidir se as variações de desparamentação (sem touca / máscara cirúrgica) ganham RPG.
+  - 🔍 **Auditoria de cobertura dos 2 roteiros (2026-10-11)** — o usuário perguntou se a
+    quantidade (30 estáticas × 8 RPG) abrangia tudo. Resultado: a TÉCNICA estava quase toda
+    coberta; lacunas reais: **precaução padrão com descarte de perfurocortantes** (Biossegurança
+    p. 5 e 7) e **os 5 momentos da higiene das mãos** (p. 2, só implícitos na paramentação); e
+    **RPG** inexistente para higiene das mãos e luvas. **Fora por decisão do usuário (só
+    técnica):** IRAS (definição e critérios), definição de biossegurança, tabela de EPI,
+    classificação de temperatura e de PA (Imagem 2), termos da respiração. **Fora por falta de
+    técnica no roteiro:** temperatura passo a passo. Sugestão registrada: o conteúdo conceitual
+    vai para o **Simulado Teórico** (o usuário não escolheu montar o banco agora).
+  - ➕ **Revisão 4 — lacunas fechadas (2026-10-11)**, escolha do usuário via `AskUserQuestion`:
+    **estáticas B03** (precaução padrão: injeção sem respingos), **B04** (com respingos: EPIs
+    completos + descarte) e **B05** (5 momentos); **RPG R9** (5 momentos), **R10** (precaução
+    padrão com agulha; o colega sugere reencapar), **R11** (higiene das mãos: técnica e
+    execução, 2 situações), **R12** (luvas de procedimento: calçar e retirar, 8 cenas) e **R13**
+    (luva cirúrgica, 5 cenas). Total previsto no site: **33 estáticas + 13 RPG guiado**.
+    - Passos-âncora de origem D (ex.: "Realizar o procedimento") dão posição ao descarte e aos
+      momentos; a ordem dos momentos 3 e 4 do B05 é fixada pela história do caso (o roteiro
+      numera os momentos mas não define a ordem em que ocorrem).
+    - `gerar-json.mjs` agora também grava `estaticas-novas.json` (o que não está em
+      `publicadas.json`); `gerar-json-rpg.mjs` grava `rpg-novos.json` (idem, `publicadas-rpg.json`
+      = os 8 casos no ar); `gerar-word*.mjs --novas` gera só o que é novo. Pasta de importação:
+      `Documents/OSCE-HM1-N1-NOVAS-PARA-IMPORTAR/` (3 estáticas + 5 RPG + LEIA-ME).
+    - Testes: `todas.test.ts` (33 estações, 4 a 6 distratores, sem marca crítica) e
+      `rpg.test.tsx` (13 casos validados e jogados: tudo certo = 10; errar uma vez por cena = 5);
+      `OsceView.test.tsx` joga as 33 estáticas. Nenhum código de produção mudou: não precisa de
+      deploy, só importar.
   - ℹ️ **Estado de produção observado em 2026-10-10 (noite):** o banco já tem **as 30 estações
     estáticas** (importadas pelo usuário depois da revisão 3; conferido via REST, slugs iguais
     aos de `todas.json`). `publicadas.json` atualizado com os 30. Os Word v3 foram gerados antes

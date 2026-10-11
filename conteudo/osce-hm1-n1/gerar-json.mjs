@@ -9,7 +9,7 @@
 //   - a marca de "crítico" (proposta, ainda sem aval docente);
 //   - distratores `pendente` (dependem de resposta docente).
 
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import estacoes, { TEMAS } from './estacoes.mjs';
@@ -63,3 +63,7 @@ grava('todas.json', tudo);
 // Os mesmos dados repartidos por tema, para quem preferir importar em dois passos.
 grava('biosseguranca.json', tudo.filter((s) => s.theme === TEMAS.biosseguranca));
 grava('sinais-vitais.json', tudo.filter((s) => s.theme === TEMAS.sinaisVitais));
+// Só o que ainda NÃO está no ar (conforme publicadas.json) — é o arquivo a importar quando as
+// estações já publicadas não mudaram.
+const publicadas = JSON.parse(readFileSync(join(pasta, 'publicadas.json'), 'utf8'));
+grava('estaticas-novas.json', tudo.filter((s) => !publicadas.includes(s.slug)));
