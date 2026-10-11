@@ -2045,6 +2045,27 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
 
 ---
 
+## 🎮 RPG digitado (2026-10) — branch `feat/rpg-digitado`
+
+Os mesmos 13 casos de RPG guiado podem ser jogados **sem alternativas**: o aluno digita a conduta.
+
+- **Porta de entrada:** `features/osce/GuidedRpgGate.tsx` (escolha do modo). "Com alternativas" segue
+  aberto; "Digitando a ação" fica dentro de `<ProtectedRoute>` (só logado).
+- **A IA só classifica.** `POST /api/rpg-match` recebe a cena + opções + texto digitado e devolve
+  `{index|null, multiple}`. Nunca escreve texto para o aluno, nunca decide nota e **nunca recebe qual opção é a
+  certa**. Texto do aluno é delimitado e tratado como dado (anti prompt-injection); saída validada.
+- **Camadas:** `utils/typedMatch.ts` (match local exato primeiro, sem custo) → `services/rpgMatchService.ts`
+  (token do Firebase) → `api/rpg-match.ts` (verifica ID token sem firebase-admin em `api/_lib/firebaseAuth.ts`;
+  limite por IP e por usuário via `createRateLimiter`). Se a IA falhar/exigir login, a tela cai nas alternativas
+  (plano B); se estiver ocupada (429), mantém o texto.
+- **Nota:** 1/0,5/0 por cena (tentativas) menos penalidade de dica (0/0,25/0,5). Dica 1 vem de
+  `conteudo/osce-hm1-n1/rpg-dicas.mjs` (campo `hint` no JSON — **reimportar `rpg.json`** para ativar); dica 2
+  mostra a conduta.
+- **Pendências/limites:** acurácia do classificador com o Gemini real **ainda não medida** (sem chave local);
+  custo não quantificado; orientar alunos a não digitar dados pessoais.
+
+---
+
 ## 📋 Referência rápida
 
 **Achados da auditoria de 2026-08-04**

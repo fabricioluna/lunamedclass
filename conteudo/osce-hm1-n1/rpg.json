@@ -13,6 +13,7 @@
         "narrative": "Você está no corredor, diante da porta fechada do quarto 12. Na porta, a placa: PRECAUÇÃO PARA AEROSSÓIS. Sobre a bancada estão os EPIs.",
         "patient": "Enfermeira do plantão: \"O Sr. R.C. já foi avisado da sua visita. Fique à vontade.\"",
         "prompt": "Qual é o seu primeiro passo?",
+        "hint": "Antes de tocar em qualquer EPI, pense no que as suas mãos precisam. Qual é o primeiro passo da paramentação?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -40,6 +41,7 @@
       {
         "narrative": "Com as mãos higienizadas, você pega a máscara PFF2/N95 na bancada. O paciente aguarda dentro do quarto, de porta fechada.",
         "prompt": "Como você usa a máscara?",
+        "hint": "A placa indica aerossóis. Qual máscara o profissional usa nesta precaução, e quando ela precisa estar no rosto em relação à porta?",
         "choices": [
           {
             "action": "Colocar a máscara PFF2/N95 antes de entrar no quarto",
@@ -64,6 +66,7 @@
         "narrative": "Com a PFF2/N95 ajustada ao rosto, você se prepara para entrar. Dentro do quarto, o paciente tosse ao ouvir você se aproximar.",
         "patient": "Sr. R.C.: \"Pode entrar, doutor(a). Desculpe a tosse.\"",
         "prompt": "Como você entra no quarto?",
+        "hint": "Pense no que acontece com o ar do quarto quando a porta fica aberta.",
         "choices": [
           {
             "action": "Entrar e manter a porta do quarto fechada",
@@ -88,6 +91,7 @@
         "narrative": "A conversa chega ao fim. O paciente se levanta da cama e olha para a porta.",
         "patient": "Sr. R.C.: \"Doutor(a), estou há dias aqui dentro. Posso ir ao corredor esticar as pernas?\"",
         "prompt": "O que você orienta?",
+        "hint": "O roteiro trata do transporte do paciente em precaução para aerossóis. Que proteção ele usa se precisar sair?",
         "choices": [
           {
             "action": "Orientar que sair do quarto deve ser evitado e, se for necessário, ele use máscara cirúrgica durante toda a permanência fora do quarto",
@@ -111,6 +115,7 @@
       {
         "narrative": "Você se despede do paciente e se prepara para encerrar a visita. Você está usando somente a máscara PFF2/N95.",
         "prompt": "Qual é o próximo passo da desparamentação?",
+        "hint": "Quais EPIs você está usando nesta precaução? Só retire o que você realmente está usando.",
         "choices": [
           {
             "action": "Retirar a máscara PFF2/N95",
@@ -134,6 +139,7 @@
       {
         "narrative": "A máscara foi retirada. Você está de volta ao corredor, ao lado do dispensador de preparação alcoólica.",
         "prompt": "Para encerrar, o que você faz?",
+        "hint": "Como a sequência da desparamentação termina?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -170,6 +176,7 @@
         "narrative": "Você está no corredor, em frente ao quarto de isolamento. Na porta, a placa: PRECAUÇÃO DE CONTATO. Os EPIs estão na bancada.",
         "patient": "Enfermeira do plantão: \"O avental e as luvas estão aí. O estetoscópio dele fica dentro do quarto.\"",
         "prompt": "Qual é o seu primeiro passo?",
+        "hint": "Pense no que vem antes de tocar em qualquer EPI.",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -193,6 +200,7 @@
       {
         "narrative": "Suas mãos estão higienizadas. Você vai examinar o paciente e não há risco de respingos.",
         "prompt": "Qual EPI você coloca em seguida?",
+        "hint": "Na precaução de contato, quais EPIs cobrem o corpo e as mãos? Qual deles vem primeiro?",
         "choices": [
           {
             "action": "Colocar o avental",
@@ -216,6 +224,7 @@
       {
         "narrative": "O avental está colocado. Falta o último EPI da paramentação.",
         "prompt": "O que você faz agora?",
+        "hint": "É o último EPI da paramentação. Qual tipo de luva serve para um exame que não é estéril?",
         "choices": [
           {
             "action": "Calçar as luvas de procedimento",
@@ -240,6 +249,7 @@
         "narrative": "Você entra no quarto. Sobre a mesa de cabeceira há um estetoscópio, um termômetro e um esfigmomanômetro. Você vai auscultar o paciente.",
         "patient": "Sr. A.L.: \"Esses aparelhos ficam aqui só pra mim, doutor(a)?\"",
         "prompt": "Qual estetoscópio você usa?",
+        "hint": "O roteiro diz algo sobre os equipamentos usados em quem está em precaução de contato. O que muda para o estetoscópio?",
         "choices": [
           {
             "action": "Usar o estetoscópio que está no quarto, de uso exclusivo do paciente",
@@ -263,6 +273,7 @@
       {
         "narrative": "O exame terminou. Você está de avental e luvas, ao lado do leito, e vai se desparamentar.",
         "prompt": "Qual EPI você retira primeiro?",
+        "hint": "Pense em qual EPI você toca com as mãos mais expostas: ele sai primeiro na desparamentação.",
         "choices": [
           {
             "action": "Retirar as luvas",
@@ -286,6 +297,7 @@
       {
         "narrative": "As luvas foram retiradas e descartadas em lixo infectante. Você ainda está de avental.",
         "prompt": "O que vem agora?",
+        "hint": "O que as mãos precisam, logo depois de retirar a primeira peça e antes de tocar no avental?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -309,6 +321,7 @@
       {
         "narrative": "Suas mãos estão higienizadas. Você ainda está de avental.",
         "prompt": "Qual é o próximo passo?",
+        "hint": "Resta um EPI do corpo. Qual?",
         "choices": [
           {
             "action": "Retirar o avental",
@@ -332,6 +345,7 @@
       {
         "narrative": "O avental foi retirado. Falta o último passo.",
         "prompt": "Para encerrar, o que você faz?",
+        "hint": "Como a sequência da desparamentação termina?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -367,6 +381,7 @@
       {
         "narrative": "Você está no corredor, diante da porta do quarto 8. Na porta, a placa: PRECAUÇÃO PARA GOTÍCULAS. Os EPIs estão na bancada.",
         "prompt": "Qual é o seu primeiro passo?",
+        "hint": "Antes de qualquer EPI, o que se faz?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -390,6 +405,7 @@
       {
         "narrative": "Suas mãos estão higienizadas. A porta do quarto está à sua frente.",
         "prompt": "Qual EPI você coloca antes de entrar?",
+        "hint": "Qual máscara a precaução para gotículas pede ao profissional?",
         "choices": [
           {
             "action": "Colocar a máscara cirúrgica",
@@ -414,6 +430,7 @@
         "narrative": "Você já está no quarto, conversando com a paciente. No corredor, um técnico chega com uma maca para levá-la a um exame de imagem.",
         "patient": "Sra. M.F.: \"O pessoal do raio-X veio me buscar. Preciso ir assim mesmo?\"",
         "prompt": "O que você orienta?",
+        "hint": "Pense na máscara de quem sai do quarto durante o transporte.",
         "choices": [
           {
             "action": "Orientar que, se o transporte for necessário, ela use máscara cirúrgica durante toda a permanência fora do quarto",
@@ -437,6 +454,7 @@
       {
         "narrative": "A conversa terminou e a paciente já voltou do exame. Você vai encerrar a visita usando somente a máscara cirúrgica.",
         "prompt": "Qual é o próximo passo da desparamentação?",
+        "hint": "Quais EPIs você está usando nesta precaução? Só retire o que está usando.",
         "choices": [
           {
             "action": "Retirar a máscara cirúrgica",
@@ -460,6 +478,7 @@
       {
         "narrative": "A máscara foi retirada. Você está de volta ao corredor.",
         "prompt": "Para encerrar, o que você faz?",
+        "hint": "Como a sequência da desparamentação termina?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -495,6 +514,7 @@
       {
         "narrative": "O atendimento terminou. Você está ao lado da porta, usando avental, máscara PFF2/N95, óculos, luvas e touca. Esta é a fase de maior risco.",
         "prompt": "Qual é o primeiro EPI a retirar?",
+        "hint": "Qual EPI está mais exposto ao contato com o paciente? A desparamentação começa por ele.",
         "choices": [
           {
             "action": "Retirar as luvas",
@@ -518,6 +538,7 @@
       {
         "narrative": "As luvas foram retiradas. Suas mãos estão sem luvas, mas você ainda usa avental, óculos, touca e máscara.",
         "prompt": "O que vem agora?",
+        "hint": "O que as mãos precisam logo depois de retirar a primeira peça?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -541,6 +562,7 @@
       {
         "narrative": "Suas mãos estão higienizadas. O avental ainda cobre seu corpo; óculos, touca e máscara continuam no lugar.",
         "prompt": "Qual é o próximo EPI?",
+        "hint": "Agora o EPI que cobre o seu corpo.",
         "choices": [
           {
             "action": "Retirar o avental",
@@ -564,6 +586,7 @@
       {
         "narrative": "O avental foi retirado. Ao tirá-lo, suas mãos tocaram a parte externa dele. Você ainda usa óculos, touca e máscara.",
         "prompt": "O que você faz agora?",
+        "hint": "Você tocou a parte externa do avental. O que as mãos precisam antes de seguir?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -587,6 +610,7 @@
       {
         "narrative": "Suas mãos estão higienizadas. Restam os óculos, a touca e a máscara PFF2/N95.",
         "prompt": "Qual é o próximo EPI?",
+        "hint": "Na sequência com touca, os óculos saem antes de qual outra peça da cabeça?",
         "choices": [
           {
             "action": "Retirar os óculos ou o face shield",
@@ -610,6 +634,7 @@
       {
         "narrative": "Os óculos foram retirados. Restam a touca e a máscara PFF2/N95.",
         "prompt": "Qual é o próximo EPI?",
+        "hint": "Faltam a touca e a máscara. Na sequência com touca, qual vem primeiro?",
         "choices": [
           {
             "action": "Retirar a touca",
@@ -633,6 +658,7 @@
       {
         "narrative": "A touca foi retirada. Resta apenas a máscara PFF2/N95.",
         "prompt": "O que você faz?",
+        "hint": "Resta uma peça de proteção respiratória.",
         "choices": [
           {
             "action": "Retirar a máscara PFF2/N95",
@@ -656,6 +682,7 @@
       {
         "narrative": "Todos os EPIs foram retirados.",
         "prompt": "Para encerrar, o que você faz?",
+        "hint": "Como a sequência termina?",
         "choices": [
           {
             "action": "Higienizar as mãos (higienização final)",
@@ -691,6 +718,7 @@
       {
         "narrative": "O Sr. A.P. aguarda sentado. Você está diante da mesa, com o material pronto.",
         "prompt": "Qual é o seu primeiro passo?",
+        "hint": "Antes de iniciar qualquer avaliação, o que se faz?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -715,6 +743,7 @@
         "narrative": "Suas mãos estão higienizadas. O paciente olha para o esfigmomanômetro e para o relógio sobre a mesa.",
         "patient": "Sr. A.P.: \"Bom dia, doutor(a). Vai demorar? Estou meio nervoso.\"",
         "prompt": "Como você começa?",
+        "hint": "O paciente está nervoso. O que o roteiro pede no início da abordagem?",
         "choices": [
           {
             "action": "Apresentar-se, explicar o procedimento e pedir o consentimento",
@@ -738,6 +767,7 @@
       {
         "narrative": "O paciente consentiu. Você vai começar pela temperatura corporal.",
         "prompt": "Como você avalia a temperatura?",
+        "hint": "Quais instrumentos o roteiro cita para avaliar a temperatura?",
         "choices": [
           {
             "action": "Aferir com um termômetro digital simples",
@@ -768,6 +798,7 @@
       {
         "narrative": "Você posiciona o antebraço do paciente apoiado sobre a mesa. Nos primeiros 30 segundos de palpação do pulso radial, o ritmo e a amplitude se mantêm sem alteração.",
         "prompt": "Como você obtém a frequência do pulso?",
+        "hint": "Frequência e ritmo: em quanto tempo o roteiro manda contar quando não há alteração de ritmo ou amplitude?",
         "choices": [
           {
             "action": "Contar as pulsações por 1 minuto",
@@ -799,6 +830,7 @@
         "narrative": "Você continua com os dedos no pulso e passa a observar, discretamente, o tórax do paciente. Alguns segundos se passam em silêncio.",
         "patient": "Sr. A.P.: \"Está demorando um pouquinho, doutor(a). Está tudo bem?\"",
         "prompt": "O que você faz?",
+        "hint": "Uma das contagens não deve ser avisada ao paciente. Qual, e por quê?",
         "choices": [
           {
             "action": "Tranquilizá-lo, sem dizer que está contando a respiração, e continuar a avaliação por 1 minuto",
@@ -828,6 +860,7 @@
       {
         "narrative": "Faltam as medidas de pressão arterial. O paciente já está sentado e confortável.",
         "prompt": "Como você afere a pressão arterial?",
+        "hint": "Lembre dos passos que antecedem a medida: o repouso e a estimativa pelo método palpatório.",
         "choices": [
           {
             "action": "Garantir repouso de 3 a 5 minutos e medir pelo método indireto, estimando antes a sistólica pelo método palpatório",
@@ -858,6 +891,7 @@
         "narrative": "Você anotou todos os valores. O paciente espera, com o braço ainda apoiado na mesa.",
         "patient": "Sr. A.P.: \"E aí, doutor(a)? Como ficaram os meus números?\"",
         "prompt": "O que você faz?",
+        "hint": "Ao final da avaliação, o que o roteiro pede em relação aos achados?",
         "choices": [
           {
             "action": "Informar os achados ao paciente e perguntar se ele tem alguma dúvida",
@@ -894,6 +928,7 @@
         "narrative": "A Sra. L.A. acabou de entrar, ofegante da escada. O material está pronto sobre a mesa.",
         "patient": "Sra. L.A.: \"Doutor(a), estou atrasada. Pode medir logo a minha pressão?\"",
         "prompt": "O que você faz?",
+        "hint": "A paciente chegou apressada. Pense no que a medida exige antes de começar.",
         "choices": [
           {
             "action": "Pedir que ela se sente confortavelmente e aguardar o repouso de 3 a 5 minutos, em local tranquilo",
@@ -917,6 +952,7 @@
       {
         "narrative": "Passaram-se 5 minutos de repouso. A paciente está sentada. O braço direito dela está sobre o colo.",
         "prompt": "Como você posiciona o braço?",
+        "hint": "Onde deve ficar a artéria braquial em relação ao coração, e como deve estar o braço?",
         "choices": [
           {
             "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal), com o braço ligeiramente fletido e apoiado em superfície firme, palma da mão para cima",
@@ -940,6 +976,7 @@
       {
         "narrative": "O braço está bem posicionado. O manguito do esfigmomanômetro está aberto sobre a mesa.",
         "prompt": "Como você coloca o manguito?",
+        "hint": "O manguito tem uma posição definida em relação à fossa cubital.",
         "choices": [
           {
             "action": "Localizar as pulsações da artéria braquial e colocar o manguito 2 cm acima da fossa cubital",
@@ -963,6 +1000,7 @@
       {
         "narrative": "O manguito está colocado. Você ainda não sabe até que valor insuflar.",
         "prompt": "Como você estima a pressão sistólica?",
+        "hint": "Antes da ausculta há um método para estimar a sistólica. Qual é?",
         "choices": [
           {
             "action": "Palpar o pulso radial, insuflar o manguito até o pulso desaparecer e desinsuflar lentamente até ele reaparecer",
@@ -992,6 +1030,7 @@
       {
         "narrative": "O pulso radial reapareceu em 168 mmHg. Você vai passar à ausculta.",
         "prompt": "Como você prossegue?",
+        "hint": "Qual margem acima do valor palpatório o roteiro manda insuflar, e onde vai o estetoscópio?",
         "choices": [
           {
             "action": "Colocar o estetoscópio sobre a artéria braquial e insuflar o manguito cerca de 30 mmHg acima do valor palpatório (≈ 198 mmHg)",
@@ -1015,6 +1054,7 @@
       {
         "narrative": "O manguito está insuflado a ≈ 198 mmHg, com o estetoscópio sobre a braquial. É hora de desinsuflar.",
         "prompt": "Como você solta o ar?",
+        "hint": "A velocidade de desinsuflação tem um valor definido no roteiro.",
         "choices": [
           {
             "action": "Soltar o ar de maneira contínua, a 2–3 mmHg por segundo",
@@ -1038,6 +1078,7 @@
       {
         "narrative": "Você ouve o primeiro ruído em 168 mmHg. Os sons desaparecem em 150, reaparecem em 132 e, por fim, desaparecem em 96 mmHg.",
         "prompt": "Que valores você registra?",
+        "hint": "Qual ruído marca a sistólica e qual marca a diastólica? Atenção ao silêncio no meio (o hiato).",
         "choices": [
           {
             "action": "Sistólica no primeiro ruído (168 mmHg, fase I) e diastólica no desaparecimento dos sons (96 mmHg, fase V)",
@@ -1080,6 +1121,7 @@
         "narrative": "A paciente entra na sala e se acomoda na beira da maca, olhando o relógio.",
         "patient": "Sra. C.B.: \"Isso vai demorar? Estou com a agenda cheia.\"",
         "prompt": "Como você começa?",
+        "hint": "Pense no que o roteiro pede ao abordar o paciente.",
         "choices": [
           {
             "action": "Apresentar-se, explicar o procedimento e pedir o consentimento",
@@ -1103,6 +1145,7 @@
       {
         "narrative": "A paciente consentiu. Você precisa preparar a medida.",
         "prompt": "O que você faz antes de aferir?",
+        "hint": "Qual intervalo de repouso o roteiro exige?",
         "choices": [
           {
             "action": "Garantir repouso mínimo de 3 a 5 minutos, em local tranquilo",
@@ -1126,6 +1169,7 @@
       {
         "narrative": "O repouso foi cumprido. Agora você posiciona a paciente na maca.",
         "prompt": "Como você posiciona a gestante?",
+        "hint": "O roteiro cita duas posições preferenciais para gestantes. E o nível do braço?",
         "choices": [
           {
             "action": "Decúbito lateral esquerdo, com a artéria braquial ao nível do coração e o braço apoiado",
@@ -1150,6 +1194,7 @@
       {
         "narrative": "A gestante está bem posicionada. O manguito está sobre a mesa.",
         "prompt": "Como você coloca o manguito?",
+        "hint": "Onde se localiza a pulsação e onde fica o manguito em relação à fossa cubital?",
         "choices": [
           {
             "action": "Localizar as pulsações da artéria braquial e colocar o manguito 2 cm acima da fossa cubital",
@@ -1173,6 +1218,7 @@
       {
         "narrative": "O manguito está colocado. Você precisa estimar a sistólica antes da ausculta.",
         "prompt": "Como você estima a pressão sistólica?",
+        "hint": "Antes da ausculta: como se estima a sistólica?",
         "choices": [
           {
             "action": "Palpar o pulso radial, insuflar o manguito até o pulso desaparecer e desinsuflar lentamente até ele reaparecer",
@@ -1202,6 +1248,7 @@
       {
         "narrative": "O pulso radial reapareceu em 128 mmHg. Você parte para a ausculta.",
         "prompt": "Como você prossegue?",
+        "hint": "Margem de insuflação, local do estetoscópio e velocidade de soltura do ar: o roteiro define os três.",
         "choices": [
           {
             "action": "Colocar o estetoscópio sobre a artéria braquial, insuflar cerca de 30 mmHg acima do valor palpatório (≈ 158 mmHg) e soltar o ar de maneira contínua, a 2–3 mmHg por segundo",
@@ -1225,6 +1272,7 @@
       {
         "narrative": "Você ouve o primeiro ruído em 128 mmHg. Os sons abafam em 80 mmHg e desaparecem em 74 mmHg.",
         "prompt": "Que valores você registra?",
+        "hint": "A sistólica é o primeiro ruído. A diastólica é quando os sons fazem o quê?",
         "choices": [
           {
             "action": "Sistólica no primeiro ruído (128 mmHg, fase I) e diastólica no desaparecimento dos sons (74 mmHg, fase V)",
@@ -1255,6 +1303,7 @@
         "narrative": "Você anotou os valores. A paciente espera, ainda deitada.",
         "patient": "Sra. C.B.: \"E aí, doutor(a), como está a minha pressão?\"",
         "prompt": "O que você faz?",
+        "hint": "Ao final da avaliação, o que o roteiro pede?",
         "choices": [
           {
             "action": "Informar os valores aferidos e perguntar se ela tem alguma dúvida",
@@ -1291,6 +1340,7 @@
         "narrative": "O paciente está imóvel na maca, respirando. Sobre a bancada estão os materiais; nada foi higienizado ainda.",
         "patient": "Enfermeira: \"Pode começar. Os sinais vitais dele são para agora.\"",
         "prompt": "Qual é o seu primeiro passo?",
+        "hint": "Higiene das mãos e do material: o roteiro diz com o quê o material é higienizado.",
         "choices": [
           {
             "action": "Higienizar as mãos e higienizar o material da bandeja com algodão embebido em álcool 70%",
@@ -1315,6 +1365,7 @@
         "narrative": "O material está pronto. O paciente continua sem responder.",
         "patient": "Enfermeira: \"Ele está inconsciente, não precisa explicar nada, né?\"",
         "prompt": "O que você faz?",
+        "hint": "A técnica é a mesma, independente do estado de consciência do paciente.",
         "choices": [
           {
             "action": "Apresentar-se, explicar o procedimento e pedir o consentimento, mesmo com o paciente inconsciente",
@@ -1338,6 +1389,7 @@
       {
         "narrative": "Você se apresentou e explicou o que será feito. Vai avaliar a temperatura.",
         "prompt": "Como você avalia a temperatura?",
+        "hint": "Quais instrumentos o roteiro cita para avaliar a temperatura?",
         "choices": [
           {
             "action": "Aferir com um termômetro digital simples",
@@ -1368,6 +1420,7 @@
       {
         "narrative": "O pescoço do paciente está livre. Você vai avaliar o pulso.",
         "prompt": "Onde você verifica o pulso?",
+        "hint": "No paciente inconsciente, em qual artéria do pescoço se verifica a pulsação? Lembre: pulso se palpa em artéria.",
         "choices": [
           {
             "action": "Palpar o pulso na artéria carótida, avaliando frequência, ritmo e força",
@@ -1397,6 +1450,7 @@
       {
         "narrative": "Você mantém os dedos no pulso. O tórax do paciente sobe e desce lentamente.",
         "prompt": "Como você avalia a respiração?",
+        "hint": "A respiração é avaliada logo após o pulso, mantendo a palpação. Por quanto tempo?",
         "choices": [
           {
             "action": "Continuar palpando o pulso, observar discretamente o tórax e contar a respiração durante 1 minuto",
@@ -1427,6 +1481,7 @@
         "narrative": "Faltam as medidas de pressão arterial. O paciente está deitado, com os braços ao longo do corpo.",
         "patient": "Enfermeira: \"Dá para medir o braço direito, está livre.\"",
         "prompt": "Como você afere a pressão arterial?",
+        "hint": "Braço apoiado e artéria braquial ao nível do coração; antes da ausculta, o método palpatório.",
         "choices": [
           {
             "action": "Manter a artéria braquial ao nível do coração, com o braço apoiado, e medir pelo método indireto, estimando antes a sistólica pelo método palpatório",
@@ -1457,6 +1512,7 @@
         "narrative": "Você anotou todos os valores. A enfermeira se aproxima da maca.",
         "patient": "Enfermeira: \"E aí, já tem os valores?\"",
         "prompt": "O que você faz?",
+        "hint": "Ao final da avaliação, o que o roteiro pede?",
         "choices": [
           {
             "action": "Informar os achados e perguntar se há alguma dúvida",
@@ -1493,6 +1549,7 @@
         "narrative": "Você chega ao leito 3. O Sr. P.S. está deitado e estende o braço para você.",
         "patient": "Sr. P.S.: \"Pode me examinar, doutor(a).\"",
         "prompt": "O que você faz com as suas mãos antes de tocá-lo?",
+        "hint": "Qual é o primeiro dos cinco momentos da higiene das mãos?",
         "choices": [
           {
             "action": "Higienizar as mãos antes de tocar o paciente",
@@ -1516,6 +1573,7 @@
       {
         "narrative": "O exame terminou. Agora você vai realizar um procedimento limpo/asséptico. Entre o exame e o procedimento, você tocou o paciente.",
         "prompt": "Antes de começar o procedimento, o que você faz?",
+        "hint": "Entre o exame e o procedimento limpo/asséptico, há um momento próprio de higienização.",
         "choices": [
           {
             "action": "Higienizar as mãos antes de realizar o procedimento limpo/asséptico",
@@ -1540,6 +1598,7 @@
         "narrative": "O procedimento terminou. Houve risco de exposição a fluidos corporais do paciente.",
         "patient": "Sr. P.S.: \"Acho que respingou um pouquinho, doutor(a).\"",
         "prompt": "O que você faz com as mãos agora?",
+        "hint": "O procedimento teve risco de exposição a fluidos corporais. Qual momento é esse?",
         "choices": [
           {
             "action": "Higienizar as mãos após o risco de exposição a fluidos corporais",
@@ -1563,6 +1622,7 @@
       {
         "narrative": "Você ajeita o travesseiro e cobre o paciente antes de sair.",
         "prompt": "Depois de tocar o paciente, o que você faz?",
+        "hint": "Você tocou o paciente para ajeitá-lo. Qual momento é esse?",
         "choices": [
           {
             "action": "Higienizar as mãos após tocar o paciente",
@@ -1587,6 +1647,7 @@
         "narrative": "Sobre a mesa de cabeceira estão o copo, o controle remoto e os óculos do paciente. Você os reorganiza.",
         "patient": "Sr. P.S.: \"Pode deixar aí, doutor(a). É só a mesinha, não precisa lavar a mão por causa dela.\"",
         "prompt": "Depois de tocar a mesa de cabeceira, o que você faz?",
+        "hint": "O paciente disse que a mesa não conta. O roteiro tem um momento para superfícies próximas ao paciente.",
         "choices": [
           {
             "action": "Higienizar as mãos após tocar superfícies próximas ao paciente",
@@ -1623,6 +1684,7 @@
         "narrative": "Você está ao lado do leito do Sr. L.M., com a medicação preparada na bandeja. Há risco de contato com sangue durante a injeção, mas não de respingos.",
         "patient": "Sr. L.M.: \"Pode aplicar quando quiser, doutor(a).\"",
         "prompt": "O que você faz primeiro?",
+        "hint": "Antes e depois do contato com qualquer paciente, o que se faz com as mãos?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -1646,6 +1708,7 @@
       {
         "narrative": "Suas mãos estão higienizadas. A caixa de luvas de procedimento está aberta ao lado.",
         "prompt": "E agora?",
+        "hint": "Quando as luvas devem ser calçadas em relação ao contato com o paciente?",
         "choices": [
           {
             "action": "Calçar as luvas de procedimento imediatamente antes do contato com o paciente",
@@ -1670,6 +1733,7 @@
         "narrative": "A injeção foi aplicada. Você está com a seringa e a agulha usadas na mão, ainda de luvas. A caixa de perfurocortantes está na parede, a um passo de você.",
         "patient": "Colega: \"Reencapa essa agulha antes de levar até a caixa, é mais seguro.\"",
         "prompt": "O que você faz com a seringa e a agulha?",
+        "hint": "O que o roteiro diz sobre seringas e agulhas, e sobre o que NÃO fazer com elas?",
         "choices": [
           {
             "action": "Descartar a seringa e a agulha na caixa de perfurocortantes, sem desconectá-las e sem reencapá-las",
@@ -1697,6 +1761,7 @@
       {
         "narrative": "A seringa e a agulha foram descartadas. Você ainda está de luvas, ao lado do leito.",
         "prompt": "O que você faz com as luvas?",
+        "hint": "Quando as luvas devem ser retiradas?",
         "choices": [
           {
             "action": "Retirar as luvas logo após o uso",
@@ -1720,6 +1785,7 @@
       {
         "narrative": "As luvas foram retiradas e descartadas.",
         "prompt": "Para encerrar, o que você faz?",
+        "hint": "O que se faz em seguida à remoção das luvas?",
         "choices": [
           {
             "action": "Higienizar as mãos em seguida",
@@ -1756,6 +1822,7 @@
         "narrative": "Você acabou de organizar caixas de material e percebe sujidade visível nas suas mãos. Ao lado da pia, na parede, está o dispensador de álcool.",
         "patient": "Colega: \"Usa o álcool mesmo, é bem mais rápido.\"",
         "prompt": "Qual técnica você usa?",
+        "hint": "Mãos visivelmente sujas: qual técnica o roteiro indica?",
         "choices": [
           {
             "action": "Lavar as mãos com água e sabonete",
@@ -1779,6 +1846,7 @@
       {
         "narrative": "Suas mãos estão molhadas. O sabonete líquido está à sua frente.",
         "prompt": "Quanto sabonete você aplica?",
+        "hint": "Quanto sabonete o roteiro manda aplicar? Pense na palma.",
         "choices": [
           {
             "action": "Quantidade suficiente para cobrir toda a palma",
@@ -1802,6 +1870,7 @@
       {
         "narrative": "O sabonete cobre as palmas das mãos. Agora vem a fricção.",
         "prompt": "O que você esfrega?",
+        "hint": "Quais superfícies das mãos entram na sequência de esfregar?",
         "choices": [
           {
             "action": "Palma com palma, dorso de cada mão com os dedos entrelaçados, costas dos dedos, polegares e pontas dos dedos",
@@ -1825,6 +1894,7 @@
       {
         "narrative": "As mãos foram esfregadas. Falta enxaguar e secar.",
         "prompt": "Como você termina?",
+        "hint": "Como termina a lavagem? Atenção ao que se usa para a torneira.",
         "choices": [
           {
             "action": "Enxaguar com água, secar bem as mãos e usar o papel-toalha para fechar a torneira",
@@ -1848,6 +1918,7 @@
       {
         "narrative": "Mais tarde você vai examinar uma paciente. Suas mãos não estão visivelmente sujas e há preparação alcoólica ao lado do leito.",
         "prompt": "Como você aplica a preparação alcoólica?",
+        "hint": "Na fricção alcoólica, quanto produto se aplica e como?",
         "choices": [
           {
             "action": "Aplicar quantidade suficiente em uma mão em forma de concha, para cobrir todas as superfícies das mãos",
@@ -1871,6 +1942,7 @@
       {
         "narrative": "A preparação alcoólica está nas suas mãos. A paciente espera no leito.",
         "prompt": "Como você conduz a fricção?",
+        "hint": "Qual é a duração da fricção e como ela termina?",
         "choices": [
           {
             "action": "Friccionar todas as superfícies por 20 a 30 segundos, até as mãos secarem",
@@ -1906,6 +1978,7 @@
       {
         "narrative": "Você abre a caixa de luvas. O relógio e a pulseira ainda estão no seu punho.",
         "prompt": "O que você faz antes de calçar as luvas?",
+        "hint": "O que se faz com relógio e pulseira antes de calçar as luvas?",
         "choices": [
           {
             "action": "Remover as joias e outros artefatos das mãos e dos pulsos",
@@ -1930,6 +2003,7 @@
         "narrative": "As joias foram removidas. O paciente já está no leito, à sua espera.",
         "patient": "Colega: \"Pode calçar rápido, não precisa ajustar até o pulso.\"",
         "prompt": "Como você calça a luva?",
+        "hint": "Como se calça a luva e até onde se ajusta?",
         "choices": [
           {
             "action": "Calçar a luva cuidadosamente, ajustando-a até o pulso",
@@ -1953,6 +2027,7 @@
       {
         "narrative": "O procedimento terminou. Você está de luvas, ao lado do leito.",
         "prompt": "Como você retira a primeira luva?",
+        "hint": "Que parte da luva se segura para retirar a primeira, e em que direção se puxa?",
         "choices": [
           {
             "action": "Segurar uma luva pela parte externa, na altura do punho, e puxá-la em direção à ponta dos dedos, de modo que saia do avesso",
@@ -1976,6 +2051,7 @@
       {
         "narrative": "A primeira luva saiu do avesso e está na sua mão.",
         "prompt": "O que você faz com ela?",
+        "hint": "O que fazer com a luva que acabou de ser retirada?",
         "choices": [
           {
             "action": "Segurar a luva removida com a outra mão ainda enluvada",
@@ -1999,6 +2075,7 @@
       {
         "narrative": "Resta a segunda luva, na mão que segura a primeira.",
         "prompt": "Como você começa a retirar a segunda luva?",
+        "hint": "A mão sem luva entra por qual lado da segunda luva?",
         "choices": [
           {
             "action": "Colocar os dedos da mão sem luva na parte interna da segunda luva, entre a luva e o punho",
@@ -2022,6 +2099,7 @@
       {
         "narrative": "Seus dedos estão por dentro da segunda luva, na altura do punho.",
         "prompt": "Como você remove a segunda luva?",
+        "hint": "Para onde se arrasta a segunda luva ao retirá-la?",
         "choices": [
           {
             "action": "Remover a segunda luva, arrastando-a em direção à ponta dos dedos e da outra luva",
@@ -2046,6 +2124,7 @@
         "narrative": "As duas luvas estão juntas na sua mão. O recipiente de lixo infectante está ao lado da cama; o lixo comum, perto da porta.",
         "patient": "Colega: \"Pode jogar no lixo comum aqui perto, é mais rápido.\"",
         "prompt": "O que você faz com as luvas?",
+        "hint": "Onde as luvas são descartadas?",
         "choices": [
           {
             "action": "Descartar as luvas em lixo infectante",
@@ -2069,6 +2148,7 @@
       {
         "narrative": "As luvas foram descartadas. Suas mãos estão sem luvas.",
         "prompt": "Para encerrar, o que você faz?",
+        "hint": "O que se faz com as mãos depois?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -2104,6 +2184,7 @@
       {
         "narrative": "O pacote está aberto: as duas luvas estão lado a lado sobre a embalagem. Você ainda não tocou nelas.",
         "prompt": "Como você pega a primeira luva?",
+        "hint": "Com quais dedos se pega a primeira luva?",
         "choices": [
           {
             "action": "Pegar uma luva com o polegar e o indicador",
@@ -2127,6 +2208,7 @@
       {
         "narrative": "A primeira luva está entre o seu polegar e o indicador.",
         "prompt": "O que você faz com ela?",
+        "hint": "O que se faz com a luva depois de pegá-la?",
         "choices": [
           {
             "action": "Puxar a luva na mão",
@@ -2150,6 +2232,7 @@
       {
         "narrative": "A primeira mão está parcialmente enluvada. A segunda luva continua sobre a embalagem.",
         "prompt": "Como você pega a segunda luva?",
+        "hint": "Como se pega a segunda luva usando a mão já parcialmente enluvada?",
         "choices": [
           {
             "action": "Deslizar a mão parcialmente enluvada sob a borda da segunda luva",
@@ -2173,6 +2256,7 @@
       {
         "narrative": "Sua mão parcialmente enluvada está sob a borda da segunda luva.",
         "prompt": "Como você calça a segunda luva?",
+        "hint": "A segunda luva é puxada por qual lado, e até onde?",
         "choices": [
           {
             "action": "Puxar a outra luva pelo lado de dentro e puxá-la até o pulso",
@@ -2196,6 +2280,7 @@
       {
         "narrative": "A segunda luva está no pulso. A primeira ainda está parcialmente calçada.",
         "prompt": "O que falta?",
+        "hint": "O que falta ajustar na primeira luva?",
         "choices": [
           {
             "action": "Deslizar os dedos da mão completamente enluvada sob a borda da primeira luva e puxá-la até o pulso",

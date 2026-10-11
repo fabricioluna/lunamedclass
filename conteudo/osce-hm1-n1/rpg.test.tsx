@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import GuidedRpgView from '../../features/osce/GuidedRpgView';
 import { parseOsceImport } from '../../utils/osceImport';
+import casosFonte from './rpg.mjs';
+import dicas from './rpg-dicas.mjs';
+import type { TypedMatchInput } from '../../features/osce/GuidedRpgView';
 import type { GuidedOsceStation } from '../../types';
 
 // Valida os casos de RPG guiado com o mesmo parser da tela de importação e joga cada um no
@@ -114,5 +117,34 @@ describe('os casos de RPG guiado no player', () => {
     jogar(station, 'erradaPrimeiro');
     expect(screen.getByText('5.0')).toBeInTheDocument();
     expect(screen.getByText(`${station.scenes.length} escolhas erradas`)).toBeInTheDocument();
+  });
+});
+
+describe('modo digitado: dicas e partida completa', () => {
+  it('cada caso tem exatamente uma dica por cena e nenhuma dica repete uma conduta certa por inteiro', () => {
+    casosFonte.forEach((caso) => {
+      expect((dicas as Record<string, string[]>)[caso.code], caso.code).toHaveLength(caso.scenes.length);
+    });
+    expect(Object.keys(dicas).sort()).toEqual(casosFonte.map((c) => c.code).sort());
+    stations.forEach((s) =>
+      s.scenes.forEach((scene, i) => {
+        expect(scene.hint, `${s.slug} cena ${i + 1}`).toBeTruthy();
+        scene.choices.filter((c) => c.correct).forEach((c) => expect(scene.hint!.includes(c.action)).toBe(false));
+      })
+    );
+  });
+
+  it.each(stations.map((s) => [s.slug, s] as const))('%s: digitando a conduta certa em todas as cenas dá 10', async (_slug, station) => {
+    // Interpretador de teste: o aluno digita o texto exato de uma opção e ela é devolvida pelo índice.
+    const matchAction = async ({ options, text }: TypedMatchInput) => ({ kind: 'match' as const, index: options.indexOf(text) });
+    render(<GuidedRpgView station={station} onBack={() => {}} interaction="typed" matchAction={matchAction} />);
+    for (let i = 0; i < station.scenes.length; i++) {
+      const certa = station.scenes[i].choices.find((c) => c.correct)!;
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: certa.action } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enviar conduta' }));
+      const proximo = await screen.findByRole('button', { name: i === station.scenes.length - 1 ? 'Concluir caso' : 'Continuar' });
+      fireEvent.click(proximo);
+    }
+    expect(screen.getByText('10.0')).toBeInTheDocument();
   });
 });

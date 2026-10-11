@@ -14,6 +14,7 @@ import {
   AlignmentType, BorderStyle, LevelFormat, Footer, PageNumber,
 } from 'docx';
 import casos from './rpg.mjs';
+import dicas from './rpg-dicas.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = process.argv[2];
@@ -84,13 +85,14 @@ const choicesTable = (choices) =>
     ])
   );
 
-const sceneBlock = (scene, i, total) => [
+const sceneBlock = (scene, i, total, caso) => [
   sceneTitle(`Cena ${i + 1} de ${total} · ${scene.passo}`),
   small(`Passo do roteiro: ${scene.fonte} · origem ${scene.origem} ${scene.origem === 'D' ? '(derivado — validar)' : '(roteiro)'}`),
   table([1500, CONTENT - 1500], null, [
     [cell('Narrativa', 1500, { fill: LIGHT, bold: true }), cell(scene.narrative, CONTENT - 1500)],
     ...(scene.patient ? [[cell('Fala', 1500, { fill: PURPLE, bold: true }), cell(scene.patient, CONTENT - 1500)]] : []),
     [cell('Pergunta', 1500, { fill: LIGHT, bold: true }), cell(scene.prompt || 'O que você faz agora?', CONTENT - 1500)],
+    ...(dicas[caso.code]?.[i] ? [[cell('Dica (modo digitado)', 1500, { fill: 'FFF4E0', bold: true }), cell(dicas[caso.code][i], CONTENT - 1500)]] : []),
   ]),
   p('', { spacing: { after: 40 } }),
   choicesTable(scene.choices),
@@ -176,7 +178,7 @@ const doc = (caso) => {
       [cell('Missão', 1800, { fill: LIGHT, bold: true }), cell(caso.task, CONTENT - 1800)],
     ]),
 
-    ...caso.scenes.flatMap((scene, i) => sceneBlock(scene, i, total)),
+    ...caso.scenes.flatMap((scene, i) => sceneBlock(scene, i, total, caso)),
 
     ...(caso.tip ? [h3('Dica exibida ao aluno no resultado'), p(caso.tip)] : []),
 

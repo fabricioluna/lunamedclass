@@ -210,6 +210,7 @@ export interface GuidedScene {
   narrative: string;
   patient?: string; // fala do paciente (ou da equipe), exibida como balão
   prompt?: string; // pergunta ao aluno; padrão: "O que você faz agora?"
+  hint?: string; // pista do modo digitado (nível 1); sem ela, o jogo usa uma pista genérica
   choices: GuidedChoice[];
   reveals?: GuidedReveal[]; // valores que só aparecem DEPOIS da escolha correta (técnica feita certo)
 }

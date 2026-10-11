@@ -18,7 +18,7 @@ const OsceView = lazy(() => import('../features/osce/OsceView'));
 const DynamicOsceView = lazy(() => import('../features/osce/DynamicOsceView'));
 const OsceSetupView = lazy(() => import('../features/osce/OsceSetupView'));
 const OsceAIView = lazy(() => import('../features/osce/OsceAIView'));
-const GuidedRpgView = lazy(() => import('../features/osce/GuidedRpgView'));
+const GuidedRpgGate = lazy(() => import('../features/osce/GuidedRpgGate'));
 const OsceModeSelectionView = lazy(() => import('../features/osce/OsceModeSelectionView'));
 const CalculatorsView = lazy(() => import('../views/CalculatorsView'));
 const CareerQuiz = lazy(() => import('../components/CareerQuiz'));
@@ -319,7 +319,7 @@ const OsceExecFlow = () => {
   // RPG guiado (sem IA): nota calculada no próprio player. Mesma política de resultado do RPG.
   if (station.mode === 'guided') {
     return (
-      <GuidedRpgView
+      <GuidedRpgGate
         station={station}
         onBack={onBack}
         onSaveResult={isCountedResultType('osce-rpg') ? (score, total, time) => {

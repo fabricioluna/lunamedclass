@@ -3,12 +3,14 @@
 //
 // Saídas: rpg.json (todos os casos) e rpg-novos.json (só os que ainda NÃO estão no ar, conforme publicadas-rpg.json). NÃO importar antes da revisão do usuário nos Word. Slugs fixos
 // (`hm1-n1-r<N>-...`): reimportar ATUALIZA em vez de duplicar. Os campos de revisão de cada cena
-// (`passo`, `fonte`, `origem`) ficam só nos Word e não vão para o banco.
+// (`passo`, `fonte`, `origem`) ficam só nos Word e não vão para o banco. A dica de nível 1 do
+// modo digitado vem de rpg-dicas.mjs (uma por cena, na ordem).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import casos from './rpg.mjs';
+import dicas from './rpg-dicas.mjs';
 
 const SLUGS = {
   R1: 'hm1-n1-r1-aerossois',
@@ -38,11 +40,12 @@ const paraImportacao = (caso) =>
     scenario: caso.scenario,
     task: caso.task,
     tip: caso.tip,
-    scenes: caso.scenes.map((s) =>
+    scenes: caso.scenes.map((s, i) =>
       semVazio({
         narrative: s.narrative,
         patient: s.patient,
         prompt: s.prompt,
+        hint: dicas[caso.code]?.[i],
         choices: s.choices.map(({ action, correct, feedback }) => semVazio({ action, correct: correct ? true : undefined, feedback })),
         reveals: s.reveals,
       })
