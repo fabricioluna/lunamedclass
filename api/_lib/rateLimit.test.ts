@@ -1,5 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { isRateLimited, getClientIp } from './rateLimit';
+import { isRateLimited, getClientIp, createRateLimiter } from './rateLimit';
+
+describe('createRateLimiter', () => {
+  const limiter = () => createRateLimiter({ shortWindowMs: 1000, shortMax: 3, longWindowMs: 10_000, longMax: 5, maxTracked: 100 });
+
+  it('cada limitador tem o seu próprio contador', () => {
+    const a = limiter();
+    const b = limiter();
+    for (let i = 0; i < 3; i++) a('chave', 1000 + i);
+    expect(a('chave', 1010)).toBe(true);
+    expect(b('chave', 1010)).toBe(false);
+  });
+
+  it('respeita os limites configurados (curto e longo)', () => {
+    const l = limiter();
+    for (let i = 0; i < 3; i++) expect(l('u', 5000 + i)).toBe(false);
+    expect(l('u', 5003)).toBe(true);
+    // depois da janela curta libera, mas o teto da janela longa (5) vale
+    expect(l('u', 6500)).toBe(false);
+    expect(l('u', 6501)).toBe(false);
+    expect(l('u', 8000)).toBe(true);
+  });
+
+  it('o limitador do /api/chat continua com os valores de sempre (10 por minuto)', () => {
+    const now = Date.now();
+    for (let i = 0; i < 10; i++) isRateLimited('chat-compat', now + i);
+    expect(isRateLimited('chat-compat', now + 10)).toBe(true);
+  });
+});
 
 describe('isRateLimited', () => {
   it('libera as primeiras 10 requisições de um IP na mesma janela curta', () => {

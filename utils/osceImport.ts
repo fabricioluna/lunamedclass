@@ -173,9 +173,11 @@ const parseScenes = (value: unknown, errors: string[], warnings: string[]): Guid
     const scene: GuidedScene = { narrative, choices };
     const patient = asText(raw.patient);
     const prompt = asText(raw.prompt);
+    const hint = asText(raw.hint);
     const reveals = parseReveals(raw.reveals, n, errors);
     if (patient) scene.patient = patient;
     if (prompt) scene.prompt = prompt;
+    if (hint) scene.hint = hint;
     if (reveals.length > 0) scene.reveals = reveals;
     return [scene];
   });

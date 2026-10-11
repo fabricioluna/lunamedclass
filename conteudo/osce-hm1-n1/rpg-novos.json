@@ -13,6 +13,7 @@
         "narrative": "Você chega ao leito 3. O Sr. P.S. está deitado e estende o braço para você.",
         "patient": "Sr. P.S.: \"Pode me examinar, doutor(a).\"",
         "prompt": "O que você faz com as suas mãos antes de tocá-lo?",
+        "hint": "Qual é o primeiro dos cinco momentos da higiene das mãos?",
         "choices": [
           {
             "action": "Higienizar as mãos antes de tocar o paciente",
@@ -36,6 +37,7 @@
       {
         "narrative": "O exame terminou. Agora você vai realizar um procedimento limpo/asséptico. Entre o exame e o procedimento, você tocou o paciente.",
         "prompt": "Antes de começar o procedimento, o que você faz?",
+        "hint": "Entre o exame e o procedimento limpo/asséptico, há um momento próprio de higienização.",
         "choices": [
           {
             "action": "Higienizar as mãos antes de realizar o procedimento limpo/asséptico",
@@ -60,6 +62,7 @@
         "narrative": "O procedimento terminou. Houve risco de exposição a fluidos corporais do paciente.",
         "patient": "Sr. P.S.: \"Acho que respingou um pouquinho, doutor(a).\"",
         "prompt": "O que você faz com as mãos agora?",
+        "hint": "O procedimento teve risco de exposição a fluidos corporais. Qual momento é esse?",
         "choices": [
           {
             "action": "Higienizar as mãos após o risco de exposição a fluidos corporais",
@@ -83,6 +86,7 @@
       {
         "narrative": "Você ajeita o travesseiro e cobre o paciente antes de sair.",
         "prompt": "Depois de tocar o paciente, o que você faz?",
+        "hint": "Você tocou o paciente para ajeitá-lo. Qual momento é esse?",
         "choices": [
           {
             "action": "Higienizar as mãos após tocar o paciente",
@@ -107,6 +111,7 @@
         "narrative": "Sobre a mesa de cabeceira estão o copo, o controle remoto e os óculos do paciente. Você os reorganiza.",
         "patient": "Sr. P.S.: \"Pode deixar aí, doutor(a). É só a mesinha, não precisa lavar a mão por causa dela.\"",
         "prompt": "Depois de tocar a mesa de cabeceira, o que você faz?",
+        "hint": "O paciente disse que a mesa não conta. O roteiro tem um momento para superfícies próximas ao paciente.",
         "choices": [
           {
             "action": "Higienizar as mãos após tocar superfícies próximas ao paciente",
@@ -143,6 +148,7 @@
         "narrative": "Você está ao lado do leito do Sr. L.M., com a medicação preparada na bandeja. Há risco de contato com sangue durante a injeção, mas não de respingos.",
         "patient": "Sr. L.M.: \"Pode aplicar quando quiser, doutor(a).\"",
         "prompt": "O que você faz primeiro?",
+        "hint": "Antes e depois do contato com qualquer paciente, o que se faz com as mãos?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -166,6 +172,7 @@
       {
         "narrative": "Suas mãos estão higienizadas. A caixa de luvas de procedimento está aberta ao lado.",
         "prompt": "E agora?",
+        "hint": "Quando as luvas devem ser calçadas em relação ao contato com o paciente?",
         "choices": [
           {
             "action": "Calçar as luvas de procedimento imediatamente antes do contato com o paciente",
@@ -190,6 +197,7 @@
         "narrative": "A injeção foi aplicada. Você está com a seringa e a agulha usadas na mão, ainda de luvas. A caixa de perfurocortantes está na parede, a um passo de você.",
         "patient": "Colega: \"Reencapa essa agulha antes de levar até a caixa, é mais seguro.\"",
         "prompt": "O que você faz com a seringa e a agulha?",
+        "hint": "O que o roteiro diz sobre seringas e agulhas, e sobre o que NÃO fazer com elas?",
         "choices": [
           {
             "action": "Descartar a seringa e a agulha na caixa de perfurocortantes, sem desconectá-las e sem reencapá-las",
@@ -217,6 +225,7 @@
       {
         "narrative": "A seringa e a agulha foram descartadas. Você ainda está de luvas, ao lado do leito.",
         "prompt": "O que você faz com as luvas?",
+        "hint": "Quando as luvas devem ser retiradas?",
         "choices": [
           {
             "action": "Retirar as luvas logo após o uso",
@@ -240,6 +249,7 @@
       {
         "narrative": "As luvas foram retiradas e descartadas.",
         "prompt": "Para encerrar, o que você faz?",
+        "hint": "O que se faz em seguida à remoção das luvas?",
         "choices": [
           {
             "action": "Higienizar as mãos em seguida",
@@ -276,6 +286,7 @@
         "narrative": "Você acabou de organizar caixas de material e percebe sujidade visível nas suas mãos. Ao lado da pia, na parede, está o dispensador de álcool.",
         "patient": "Colega: \"Usa o álcool mesmo, é bem mais rápido.\"",
         "prompt": "Qual técnica você usa?",
+        "hint": "Mãos visivelmente sujas: qual técnica o roteiro indica?",
         "choices": [
           {
             "action": "Lavar as mãos com água e sabonete",
@@ -299,6 +310,7 @@
       {
         "narrative": "Suas mãos estão molhadas. O sabonete líquido está à sua frente.",
         "prompt": "Quanto sabonete você aplica?",
+        "hint": "Quanto sabonete o roteiro manda aplicar? Pense na palma.",
         "choices": [
           {
             "action": "Quantidade suficiente para cobrir toda a palma",
@@ -322,6 +334,7 @@
       {
         "narrative": "O sabonete cobre as palmas das mãos. Agora vem a fricção.",
         "prompt": "O que você esfrega?",
+        "hint": "Quais superfícies das mãos entram na sequência de esfregar?",
         "choices": [
           {
             "action": "Palma com palma, dorso de cada mão com os dedos entrelaçados, costas dos dedos, polegares e pontas dos dedos",
@@ -345,6 +358,7 @@
       {
         "narrative": "As mãos foram esfregadas. Falta enxaguar e secar.",
         "prompt": "Como você termina?",
+        "hint": "Como termina a lavagem? Atenção ao que se usa para a torneira.",
         "choices": [
           {
             "action": "Enxaguar com água, secar bem as mãos e usar o papel-toalha para fechar a torneira",
@@ -368,6 +382,7 @@
       {
         "narrative": "Mais tarde você vai examinar uma paciente. Suas mãos não estão visivelmente sujas e há preparação alcoólica ao lado do leito.",
         "prompt": "Como você aplica a preparação alcoólica?",
+        "hint": "Na fricção alcoólica, quanto produto se aplica e como?",
         "choices": [
           {
             "action": "Aplicar quantidade suficiente em uma mão em forma de concha, para cobrir todas as superfícies das mãos",
@@ -391,6 +406,7 @@
       {
         "narrative": "A preparação alcoólica está nas suas mãos. A paciente espera no leito.",
         "prompt": "Como você conduz a fricção?",
+        "hint": "Qual é a duração da fricção e como ela termina?",
         "choices": [
           {
             "action": "Friccionar todas as superfícies por 20 a 30 segundos, até as mãos secarem",
@@ -426,6 +442,7 @@
       {
         "narrative": "Você abre a caixa de luvas. O relógio e a pulseira ainda estão no seu punho.",
         "prompt": "O que você faz antes de calçar as luvas?",
+        "hint": "O que se faz com relógio e pulseira antes de calçar as luvas?",
         "choices": [
           {
             "action": "Remover as joias e outros artefatos das mãos e dos pulsos",
@@ -450,6 +467,7 @@
         "narrative": "As joias foram removidas. O paciente já está no leito, à sua espera.",
         "patient": "Colega: \"Pode calçar rápido, não precisa ajustar até o pulso.\"",
         "prompt": "Como você calça a luva?",
+        "hint": "Como se calça a luva e até onde se ajusta?",
         "choices": [
           {
             "action": "Calçar a luva cuidadosamente, ajustando-a até o pulso",
@@ -473,6 +491,7 @@
       {
         "narrative": "O procedimento terminou. Você está de luvas, ao lado do leito.",
         "prompt": "Como você retira a primeira luva?",
+        "hint": "Que parte da luva se segura para retirar a primeira, e em que direção se puxa?",
         "choices": [
           {
             "action": "Segurar uma luva pela parte externa, na altura do punho, e puxá-la em direção à ponta dos dedos, de modo que saia do avesso",
@@ -496,6 +515,7 @@
       {
         "narrative": "A primeira luva saiu do avesso e está na sua mão.",
         "prompt": "O que você faz com ela?",
+        "hint": "O que fazer com a luva que acabou de ser retirada?",
         "choices": [
           {
             "action": "Segurar a luva removida com a outra mão ainda enluvada",
@@ -519,6 +539,7 @@
       {
         "narrative": "Resta a segunda luva, na mão que segura a primeira.",
         "prompt": "Como você começa a retirar a segunda luva?",
+        "hint": "A mão sem luva entra por qual lado da segunda luva?",
         "choices": [
           {
             "action": "Colocar os dedos da mão sem luva na parte interna da segunda luva, entre a luva e o punho",
@@ -542,6 +563,7 @@
       {
         "narrative": "Seus dedos estão por dentro da segunda luva, na altura do punho.",
         "prompt": "Como você remove a segunda luva?",
+        "hint": "Para onde se arrasta a segunda luva ao retirá-la?",
         "choices": [
           {
             "action": "Remover a segunda luva, arrastando-a em direção à ponta dos dedos e da outra luva",
@@ -566,6 +588,7 @@
         "narrative": "As duas luvas estão juntas na sua mão. O recipiente de lixo infectante está ao lado da cama; o lixo comum, perto da porta.",
         "patient": "Colega: \"Pode jogar no lixo comum aqui perto, é mais rápido.\"",
         "prompt": "O que você faz com as luvas?",
+        "hint": "Onde as luvas são descartadas?",
         "choices": [
           {
             "action": "Descartar as luvas em lixo infectante",
@@ -589,6 +612,7 @@
       {
         "narrative": "As luvas foram descartadas. Suas mãos estão sem luvas.",
         "prompt": "Para encerrar, o que você faz?",
+        "hint": "O que se faz com as mãos depois?",
         "choices": [
           {
             "action": "Higienizar as mãos",
@@ -624,6 +648,7 @@
       {
         "narrative": "O pacote está aberto: as duas luvas estão lado a lado sobre a embalagem. Você ainda não tocou nelas.",
         "prompt": "Como você pega a primeira luva?",
+        "hint": "Com quais dedos se pega a primeira luva?",
         "choices": [
           {
             "action": "Pegar uma luva com o polegar e o indicador",
@@ -647,6 +672,7 @@
       {
         "narrative": "A primeira luva está entre o seu polegar e o indicador.",
         "prompt": "O que você faz com ela?",
+        "hint": "O que se faz com a luva depois de pegá-la?",
         "choices": [
           {
             "action": "Puxar a luva na mão",
@@ -670,6 +696,7 @@
       {
         "narrative": "A primeira mão está parcialmente enluvada. A segunda luva continua sobre a embalagem.",
         "prompt": "Como você pega a segunda luva?",
+        "hint": "Como se pega a segunda luva usando a mão já parcialmente enluvada?",
         "choices": [
           {
             "action": "Deslizar a mão parcialmente enluvada sob a borda da segunda luva",
@@ -693,6 +720,7 @@
       {
         "narrative": "Sua mão parcialmente enluvada está sob a borda da segunda luva.",
         "prompt": "Como você calça a segunda luva?",
+        "hint": "A segunda luva é puxada por qual lado, e até onde?",
         "choices": [
           {
             "action": "Puxar a outra luva pelo lado de dentro e puxá-la até o pulso",
@@ -716,6 +744,7 @@
       {
         "narrative": "A segunda luva está no pulso. A primeira ainda está parcialmente calçada.",
         "prompt": "O que falta?",
+        "hint": "O que falta ajustar na primeira luva?",
         "choices": [
           {
             "action": "Deslizar os dedos da mão completamente enluvada sob a borda da primeira luva e puxá-la até o pulso",

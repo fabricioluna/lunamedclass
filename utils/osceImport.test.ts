@@ -137,6 +137,13 @@ describe('parseOsceImport — RPG guiado', () => {
     expect(g.scenes[0].choices.filter((c) => c.correct)).toHaveLength(1);
   });
 
+  it('lê a dica da cena (modo digitado) e ela é opcional', () => {
+    const comDica = parseOne({ ...guidedItem, scenes: [{ ...scene, hint: 'Pense no primeiro passo.' }] }, guidedCtx).station as GuidedOsceStation;
+    expect(comDica.scenes[0].hint).toBe('Pense no primeiro passo.');
+    const semDica = parseOne(guidedItem, guidedCtx).station as GuidedOsceStation;
+    expect(semDica.scenes[0].hint).toBeUndefined();
+  });
+
   it('erro quando não há cenas', () => {
     expect(parseOne({ ...guidedItem, scenes: [] }, guidedCtx).errors.join()).toMatch(/nenhuma cena/);
   });

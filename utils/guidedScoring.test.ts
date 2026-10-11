@@ -1,5 +1,37 @@
 import { describe, it, expect } from 'vitest';
-import { calculateGuidedScore, sceneCredit } from './guidedScoring';
+import { calculateGuidedScore, calculateTypedScore, sceneCredit, typedSceneCredit } from './guidedScoring';
+
+describe('RPG digitado: dicas custam pontos', () => {
+  it('sem dica vale o mesmo que o modo com alternativas', () => {
+    expect(calculateTypedScore([{ attempts: 1, hintLevel: 0 }, { attempts: 2, hintLevel: 0 }]).grade).toBe(
+      calculateGuidedScore([1, 2]).grade
+    );
+  });
+
+  it('dica nível 1 desconta 0,25 e nível 2 desconta 0,5 da cena', () => {
+    expect(typedSceneCredit({ attempts: 1, hintLevel: 1 })).toBe(0.75);
+    expect(typedSceneCredit({ attempts: 1, hintLevel: 2 })).toBe(0.5);
+  });
+
+  it('a cena nunca fica negativa (3ª tentativa + dica)', () => {
+    expect(typedSceneCredit({ attempts: 3, hintLevel: 2 })).toBe(0);
+    expect(typedSceneCredit({ attempts: 2, hintLevel: 2 })).toBe(0);
+  });
+
+  it('soma as dicas usadas e calcula a nota 0–10', () => {
+    // cena 1: 1 (de primeira) ; cena 2: 1 − 0,5 = 0,5 → 1,5 de 2 → 7,5
+    const result = calculateTypedScore([{ attempts: 1, hintLevel: 0 }, { attempts: 1, hintLevel: 2 }]);
+    expect(result.grade).toBe(7.5);
+    expect(result.hintsUsed).toBe(2);
+    expect(result.firstTry).toBe(2);
+  });
+
+  it('nível de dica fora da faixa é limitado e sem cenas não divide por zero', () => {
+    expect(typedSceneCredit({ attempts: 1, hintLevel: 99 })).toBe(0.5);
+    expect(typedSceneCredit({ attempts: 1, hintLevel: -3 })).toBe(1);
+    expect(calculateTypedScore([]).grade).toBe(0);
+  });
+});
 
 describe('sceneCredit', () => {
   it('1 de primeira, 0,5 na segunda, 0 da terceira em diante', () => {

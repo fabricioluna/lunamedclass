@@ -53,6 +53,10 @@ Guia de padrões para quem (humano ou IA) for tocar este código. Não é um tou
   limiting é mitigação de custo, não controle de acesso; não tratar como se já resolvesse
   "só usuário logado chama a IA".
 
+- **`/api/rpg-match`** (RPG digitado): diferente do `/api/chat`, **exige ID token do Firebase**
+  (`api/_lib/firebaseAuth.ts`) e tem limite por IP e por usuário. A IA só classifica a conduta digitada em uma das
+  opções da cena; o servidor nunca recebe qual opção é a correta.
+
 ## Convenções de código
 
 - UI e mensagens de erro em **português**; nomes de variáveis/funções em inglês.
