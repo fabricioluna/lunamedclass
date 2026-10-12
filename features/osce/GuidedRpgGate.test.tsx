@@ -95,6 +95,18 @@ describe('GuidedRpgGate', () => {
     expect(matchAction).toHaveBeenCalledTimes(1);
   });
 
+  it('com a interação já escolhida no menu, pula a tela de escolha', () => {
+    authState.currentUser = { uid: 'aluno-1' };
+    const { unmount } = render(<GuidedRpgGate station={station} onBack={() => {}} interaction="choices" />);
+    expect(screen.queryByText('Como você quer jogar?')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Higienizar as mãos' })).toBeInTheDocument();
+    unmount();
+
+    render(<GuidedRpgGate station={station} onBack={() => {}} interaction="typed" />);
+    expect(screen.queryByText('Como você quer jogar?')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
   it('"Sair do Caso" na escolha de modo volta', () => {
     const onBack = vi.fn();
     render(<GuidedRpgGate station={station} onBack={onBack} />);

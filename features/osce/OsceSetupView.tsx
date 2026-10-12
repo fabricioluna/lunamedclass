@@ -45,7 +45,7 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
 
           if (setupMode === 'static') return s.mode === 'clinical';
           if (setupMode === 'rpg') return stationModeMatchesType(s.mode, 'rpg');
-          if (setupMode === 'guided') return stationModeMatchesType(s.mode, 'guided');
+          if (setupMode === 'guided') return s.mode === 'guided';
           if (setupMode === 'ai') return s.mode === 'ai';
           return true;
         });
@@ -76,12 +76,12 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
     headerSubtitle = 'Anamnese livre conversando com a IA';
   } else if (setupMode === 'rpg') {
     headerEmoji = '🎮';
-    headerTitle = 'Simulado RPG';
-    headerSubtitle = 'Casos interativos: decida a conduta a cada cena';
+    headerTitle = 'RPG com IA';
+    headerSubtitle = 'Digite a conduta a cada cena; a IA interpreta o que você escreveu';
   } else if (setupMode === 'guided') {
     headerEmoji = '🎮';
     headerTitle = 'RPG Guiado';
-    headerSubtitle = 'Casos de técnica: escolha ou digite a conduta a cada cena';
+    headerSubtitle = 'Casos de técnica: escolha a conduta entre as alternativas a cada cena';
   } else if (setupMode === 'static') {
     headerEmoji = '📋';
     headerTitle = 'Simulado Estático';
@@ -244,11 +244,11 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
                         <div className="flex gap-2 mt-2">
                           {station.mode === 'rpg' ? (
                             <span className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
-                              🎮 Simulado RPG
+                              🎮 Luna Engine
                             </span>
                           ) : station.mode === 'guided' ? (
                             <span className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
-                              🎮 RPG Guiado
+                              {setupMode === 'rpg' ? '🤖 RPG com IA' : '🧭 RPG Guiado'}
                             </span>
                           ) : station.mode === 'ai' ? (
                             <span className="bg-green-100 text-green-700 text-[8px] font-black uppercase px-2 py-0.5 rounded border border-green-200 flex items-center gap-1">

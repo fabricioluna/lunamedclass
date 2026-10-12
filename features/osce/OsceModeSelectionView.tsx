@@ -29,7 +29,7 @@ const OsceModeSelectionView: React.FC<OsceModeSelectionViewProps> = ({ onSelectM
         <button onClick={() => onSelectMode('guided')} className="bg-white p-8 rounded-[2.5rem] border-2 border-amber-100 hover:border-amber-500 transition-all shadow-sm hover:shadow-xl flex flex-col items-center text-center group">
           <span className="text-6xl mb-6 group-hover:scale-110 transition-transform">🧭</span>
           <h3 className="text-lg font-black text-[#003366] uppercase mb-2">RPG Guiado</h3>
-          <p className="text-xs text-gray-500">Casos de técnica cena a cena, com alternativas ou digitando a conduta.</p>
+          <p className="text-xs text-gray-500">Casos de técnica cena a cena, escolhendo a conduta entre alternativas. Sem IA.</p>
         </button>
 
         {/* CARD IA */}
@@ -42,8 +42,8 @@ const OsceModeSelectionView: React.FC<OsceModeSelectionViewProps> = ({ onSelectM
         {/* CARD RPG */}
         <button onClick={() => onSelectMode('rpg')} className="bg-white p-8 rounded-[2.5rem] border-2 border-purple-100 hover:border-purple-500 transition-all shadow-sm hover:shadow-xl flex flex-col items-center text-center group">
           <span className="text-6xl mb-6 group-hover:scale-110 transition-transform">🎮</span>
-          <h3 className="text-lg font-black text-[#003366] uppercase mb-2">Simulado RPG</h3>
-          <p className="text-xs text-gray-500">Casos clínicos com IA, decisões e sinais vitais dinâmicos.</p>
+          <h3 className="text-lg font-black text-[#003366] uppercase mb-2">RPG com IA</h3>
+          <p className="text-xs text-gray-500">Digite a conduta com as suas palavras e a IA interpreta. Exige login.</p>
         </button>
       </div>
     </div>
