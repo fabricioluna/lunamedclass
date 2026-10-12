@@ -18,7 +18,7 @@ const OsceView = lazy(() => import('../features/osce/OsceView'));
 const DynamicOsceView = lazy(() => import('../features/osce/DynamicOsceView'));
 const OsceSetupView = lazy(() => import('../features/osce/OsceSetupView'));
 const OsceAIView = lazy(() => import('../features/osce/OsceAIView'));
-const GuidedRpgGate = lazy(() => import('../features/osce/GuidedRpgGate'));
+const GuidedRpgView = lazy(() => import('../features/osce/GuidedRpgView'));
 const OsceModeSelectionView = lazy(() => import('../features/osce/OsceModeSelectionView'));
 const CalculatorsView = lazy(() => import('../views/CalculatorsView'));
 const CareerQuiz = lazy(() => import('../components/CareerQuiz'));
@@ -54,8 +54,8 @@ const useAcademicUnit = (): AcademicUnit => {
   return (params.get('unit') as AcademicUnit) || 'N1';
 };
 
-const isValidOsceSetupMode = (mode?: string): mode is 'static' | 'ai' | 'rpg' | 'guided' =>
-  mode === 'static' || mode === 'ai' || mode === 'rpg' || mode === 'guided';
+const isValidOsceSetupMode = (mode?: string): mode is 'static' | 'guided' =>
+  mode === 'static' || mode === 'guided';
 
 // ============================================================================
 // LOADER INLINE REUTILIZÁVEL (fetch por ID nas rotas de execução OSCE/Lab)
@@ -246,14 +246,7 @@ const OsceSetupFlow = () => {
       selectedUnit={unit}
       setupMode={mode}
       onBack={() => navigate(-1)}
-      onStart={(station) => {
-        // O mesmo caso guiado abre direto na interação do cartão escolhido (RPG Guiado × RPG com IA).
-        const params = new URLSearchParams();
-        if (unit) params.set('unit', unit);
-        if (station.mode === 'guided') params.set('modo', mode === 'rpg' ? 'digitado' : 'alternativas');
-        const query = params.toString();
-        navigate(`/disciplina/${disciplineId}/osce/estacao/${station.firebaseId}${query ? `?${query}` : ''}`);
-      }}
+      onStart={(station) => navigate(`/disciplina/${disciplineId}/osce/estacao/${station.firebaseId}${unit ? `?unit=${unit}` : ''}`)}
     />
   );
 };
@@ -268,7 +261,6 @@ type OsceExecState =
 
 const OsceExecFlow = () => {
   const { disciplineId, stationId } = useParams();
-  const { search } = useLocation();
   const unit = useAcademicUnit();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -302,8 +294,6 @@ const OsceExecFlow = () => {
 
   const { station } = state;
   const onBack = () => navigate(-1);
-  const modoParam = new URLSearchParams(search).get('modo');
-  const guidedInteraction = modoParam === 'digitado' ? 'typed' : modoParam === 'alternativas' ? 'choices' : undefined;
 
   // Só Simulado Teórico conta resultado por enquanto — ver utils/resultsPolicy.ts.
   // Decisão "por enquanto" do usuário: reversível trocando COUNTED_RESULT_TYPES lá.
@@ -329,9 +319,8 @@ const OsceExecFlow = () => {
   // RPG guiado (sem IA): nota calculada no próprio player. Mesma política de resultado do RPG.
   if (station.mode === 'guided') {
     return (
-      <GuidedRpgGate
+      <GuidedRpgView
         station={station}
-        interaction={guidedInteraction}
         onBack={onBack}
         onSaveResult={isCountedResultType('osce-rpg') ? (score, total, time) => {
           if (currentUser) {
