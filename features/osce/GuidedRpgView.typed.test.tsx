@@ -82,7 +82,7 @@ describe('GuidedRpgView — modo digitado', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     // o classificador recebeu a narrativa, a lista de condutas e o texto — nunca qual é a certa
     expect(matchAction).toHaveBeenCalledWith({
-      narrative: station.scenes[0].narrative,
+      narrative: [station.scenes[0].narrative, station.scenes[0].patient, station.scenes[0].prompt].filter(Boolean).join('\n'),
       options: station.scenes[0].choices.map((c) => c.action),
       text: 'me apresento, explico e peço permissão',
     });

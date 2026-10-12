@@ -167,9 +167,9 @@ const desparamentacaoSemTouca = () => {
     'O atendimento terminou. Você está ao lado da porta, usando avental, máscara cirúrgica, óculos e luvas. Esta é a fase de maior risco.',
     'As luvas foram retiradas. Suas mãos estão sem luvas, mas você ainda usa avental, óculos e máscara.',
     'Suas mãos estão higienizadas. O avental ainda cobre seu corpo; óculos e máscara continuam no lugar.',
-    'O avental foi retirado. Ao tirá-lo, suas mãos tocaram a parte externa dele. Você ainda usa óculos e máscara.',
-    'Suas mãos estão higienizadas. Restam os óculos e a máscara cirúrgica.',
-    'Os óculos foram retirados. Resta apenas a máscara cirúrgica.',
+    'O avental foi retirado. Você ainda usa óculos e máscara.',
+    'Suas mãos estão higienizadas. Você ainda usa óculos e máscara cirúrgica.',
+    'Os óculos foram retirados. Você ainda usa a máscara cirúrgica.',
     'Todos os EPIs foram retirados.',
   ];
 
@@ -205,7 +205,7 @@ const desparamentacaoSemTouca = () => {
     return cena({
       passo: p.acao, fonte: 'p. 8–9', origem: 'D',
       narrative: narrativas[i],
-      prompt: i === passos.length - 1 ? 'Para encerrar, o que você faz?' : 'O que vem agora?',
+      prompt: i === passos.length - 1 ? 'O que você faz agora?' : 'O que vem agora?',
       choices: [ok(p.acao, p.porque), ...erradas.slice(0, 5)],
     });
   });
@@ -279,7 +279,7 @@ const R19 = {
     cena({
       passo: 'Método palpatório', fonte: 'p. 3–5',
       narrative: 'O manguito está colocado. Você ainda não sabe até que valor insuflar.',
-      prompt: 'Como você estima a pressão sistólica?',
+      prompt: 'Qual é o próximo passo?',
       choices: [
         ok('Palpar o pulso radial, insuflar o manguito até o pulso desaparecer e desinsuflar lentamente até ele reaparecer', 'O reaparecimento do pulso é a pressão sistólica pelo método palpatório, que evita subestimar a sistólica quando há hiato auscultatório (p. 3–5).'),
         no('Dispensar o método palpatório e insuflar até um valor fixo', 'Sem estimar a sistólica antes, você não sabe até onde insuflar (p. 3–5).'),
@@ -300,7 +300,7 @@ const R19 = {
     }),
     cena({
       passo: 'Posicionar o paciente em pé', fonte: 'p. 3',
-      narrative: 'Você registrou as pressões com o Sr. J.A. sentado. Por ser um idoso na primeira avaliação, o roteiro pede a medida nas várias posições.',
+      narrative: 'Você registrou as pressões com o Sr. J.A. sentado.',
       patient: 'Sr. J.A.: "Acabou, doutor(a)? Posso ir embora?"',
       prompt: 'O que você faz?',
       choices: [
@@ -367,7 +367,7 @@ const R20 = {
     cena({
       passo: 'Método palpatório', fonte: 'p. 3–5',
       narrative: 'O manguito está colocado.',
-      prompt: 'Como você estima a pressão sistólica?',
+      prompt: 'Qual é o próximo passo?',
       choices: [
         ok('Palpar o pulso radial, insuflar até o pulso desaparecer e desinsuflar lentamente até ele reaparecer', 'O reaparecimento do pulso dá a sistólica pelo método palpatório (p. 3–5).'),
         no('Dispensar o método palpatório e insuflar direto', 'Sem estimar a sistólica antes, você não sabe até onde insuflar (p. 3–5).'),
@@ -389,7 +389,7 @@ const R20 = {
     }),
     cena({
       passo: 'Facilitar a ausculta: aumentar o ângulo entre o braço e o tórax', fonte: 'p. 4',
-      narrative: 'Os ruídos continuam difíceis de ouvir. A artéria está com o braço bem junto ao corpo.',
+      narrative: 'Os ruídos continuam difíceis de ouvir.',
       prompt: 'O que você faz para facilitar a ausculta?',
       choices: [
         ok('Aumentar o ângulo entre o braço e o tórax, retificando a artéria', 'Aumentar o ângulo entre o braço e o tórax, retificando a artéria, facilita a ausculta dos sons (p. 4).'),

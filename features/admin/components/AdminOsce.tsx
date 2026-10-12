@@ -260,16 +260,26 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
                     className={`flex flex-col items-center py-3 rounded-xl transition-all ${importMode === 'rpg' ? 'bg-white shadow-sm text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
                 >
                     <Gamepad2 size={20} />
-                    <span className="text-[7px] font-black uppercase mt-1">RPG IA</span>
+                    <span className="text-[7px] font-black uppercase mt-1">Luna Engine</span>
                 </button>
                 <button 
                     onClick={() => setImportMode('ai')}
                     className={`flex flex-col items-center py-3 rounded-xl transition-all ${importMode === 'ai' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
                 >
                     <Bot size={20} />
-                    <span className="text-[7px] font-black uppercase mt-1">Virtual</span>
+                    <span className="text-[7px] font-black uppercase mt-1">Anamnese</span>
                 </button>
             </div>
+
+            <p className="text-[10px] text-gray-500 font-medium leading-relaxed mb-4 px-1">
+              {importMode === 'guided'
+                ? 'Casos de técnica cena a cena. O mesmo arquivo aparece para o aluno em "RPG Guiado" (alternativas) e em "RPG com IA" (digitando a conduta).'
+                : importMode === 'rpg'
+                  ? 'Luna Engine: caso clínico em fases, com a IA narrando e o aluno digitando livremente. Aparece só em "RPG com IA".'
+                  : importMode === 'ai'
+                    ? 'Anamnese livre com um paciente simulado pela IA. Aparece em "Paciente Virtual (Anamnese)".'
+                    : 'Checklist sequencial com passos e distratores. Aparece em "Simulado Estático".'}
+            </p>
 
             <form onSubmit={handleOsceReadPreview} className="space-y-4">
               <select value={oscePeriod} onChange={e => { setOscePeriod(e.target.value); setOsceDiscipline(''); setOsceTheme(''); }} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#003366]" required>
@@ -349,8 +359,8 @@ const AdminOsce: React.FC<AdminOsceProps> = ({
             <button onClick={() => setTypeFilter('all')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${typeFilter === 'all' ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-gray-400 border-gray-100'}`}>Todos</button>
             <button onClick={() => setTypeFilter('clinical')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'clinical' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-400 border-blue-100'}`}><ClipboardList size={12}/> Estático</button>
             <button onClick={() => setTypeFilter('guided')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'guided' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-400 border-purple-100'}`}><Route size={12}/> RPG Guiado</button>
-            <button onClick={() => setTypeFilter('rpg')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'rpg' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-400 border-purple-100'}`}><Gamepad2 size={12}/> RPG IA</button>
-            <button onClick={() => setTypeFilter('ai')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'ai' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-400 border-green-100'}`}><Bot size={12}/> Virtual</button>
+            <button onClick={() => setTypeFilter('rpg')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'rpg' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-400 border-purple-100'}`}><Gamepad2 size={12}/> Luna Engine</button>
+            <button onClick={() => setTypeFilter('ai')} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${typeFilter === 'ai' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-400 border-green-100'}`}><Bot size={12}/> Anamnese</button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-2">

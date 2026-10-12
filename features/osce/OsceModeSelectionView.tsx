@@ -32,18 +32,18 @@ const OsceModeSelectionView: React.FC<OsceModeSelectionViewProps> = ({ onSelectM
           <p className="text-xs text-gray-500">Casos de técnica cena a cena, escolhendo a conduta entre alternativas. Sem IA.</p>
         </button>
 
-        {/* CARD IA */}
-        <button onClick={() => onSelectMode('ai')} className="bg-white p-8 rounded-[2.5rem] border-2 border-green-100 hover:border-green-500 transition-all shadow-sm hover:shadow-xl flex flex-col items-center text-center group">
-          <span className="text-6xl mb-6 group-hover:scale-110 transition-transform">🤖</span>
-          <h3 className="text-lg font-black text-[#003366] uppercase mb-2">Paciente Virtual</h3>
-          <p className="text-xs text-gray-500">Anamnese livre conversando com a IA.</p>
-        </button>
-
-        {/* CARD RPG */}
+        {/* CARD RPG COM IA: o aluno digita a conduta */}
         <button onClick={() => onSelectMode('rpg')} className="bg-white p-8 rounded-[2.5rem] border-2 border-purple-100 hover:border-purple-500 transition-all shadow-sm hover:shadow-xl flex flex-col items-center text-center group">
           <span className="text-6xl mb-6 group-hover:scale-110 transition-transform">🎮</span>
           <h3 className="text-lg font-black text-[#003366] uppercase mb-2">RPG com IA</h3>
-          <p className="text-xs text-gray-500">Digite a conduta com as suas palavras e a IA interpreta. Exige login.</p>
+          <p className="text-xs text-gray-500">Os mesmos casos, mas sem alternativas: você digita a conduta com as suas palavras e a IA interpreta. Mais difícil. Exige login.</p>
+        </button>
+
+        {/* CARD PACIENTE VIRTUAL: anamnese livre */}
+        <button onClick={() => onSelectMode('ai')} className="bg-white p-8 rounded-[2.5rem] border-2 border-green-100 hover:border-green-500 transition-all shadow-sm hover:shadow-xl flex flex-col items-center text-center group">
+          <span className="text-6xl mb-6 group-hover:scale-110 transition-transform">🤖</span>
+          <h3 className="text-lg font-black text-[#003366] uppercase mb-2">Paciente Virtual (Anamnese)</h3>
+          <p className="text-xs text-gray-500">Anamnese livre conversando com a IA.</p>
         </button>
       </div>
     </div>

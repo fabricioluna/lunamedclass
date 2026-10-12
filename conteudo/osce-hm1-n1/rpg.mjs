@@ -82,7 +82,7 @@ const R1 = {
     }),
     cena({
       passo: 'Retirar a máscara PFF2/N95 (único EPI desta precaução)', fonte: 'p. 6–8', origem: 'D',
-      narrative: 'Você se despede do paciente e se prepara para encerrar a visita. Você está usando somente a máscara PFF2/N95.',
+      narrative: 'Você se despede do paciente. Você está usando somente a máscara PFF2/N95.',
       prompt: 'Qual é o próximo passo da desparamentação?',
       choices: [
         ok('Retirar a máscara PFF2/N95', 'Nesta precaução você usa apenas a máscara PFF2/N95; ela é o EPI a retirar (p. 6–8). A higienização final das mãos vem logo depois.'),
@@ -94,7 +94,7 @@ const R1 = {
     cena({
       passo: 'Higienização final das mãos', fonte: 'p. 8', origem: 'D',
       narrative: 'A máscara foi retirada. Você está de volta ao corredor, ao lado do dispensador de preparação alcoólica.',
-      prompt: 'Para encerrar, o que você faz?',
+      prompt: 'O que você faz agora?',
       choices: [
         ok('Higienizar as mãos', 'A higienização final das mãos encerra a desparamentação (p. 8).'),
         no('Sair sem higienizar as mãos, pois não houve contato com o paciente', 'A sequência da desparamentação termina com a higienização final das mãos (p. 8–9).'),
@@ -137,7 +137,7 @@ const R2 = {
     }),
     cena({
       passo: 'Calçar as luvas de procedimento', fonte: 'p. 6 e 8',
-      narrative: 'O avental está colocado. Falta o último EPI da paramentação.',
+      narrative: 'O avental está colocado.',
       prompt: 'O que você faz agora?',
       choices: [
         ok('Calçar as luvas de procedimento', 'As luvas completam a paramentação da precaução de contato (p. 6 e 8).'),
@@ -193,8 +193,8 @@ const R2 = {
     }),
     cena({
       passo: 'Higienização final das mãos', fonte: 'p. 6 e 8', origem: 'D',
-      narrative: 'O avental foi retirado. Falta o último passo.',
-      prompt: 'Para encerrar, o que você faz?',
+      narrative: 'O avental foi retirado.',
+      prompt: 'O que você faz agora?',
       choices: [
         ok('Higienizar as mãos', 'Retirados luvas e avental, as mãos são higienizadas em seguida (p. 6); a sequência termina com a higienização final (p. 8).'),
         no('Sair do quarto sem higienizar as mãos', 'A sequência da desparamentação termina com a higienização final das mãos (p. 8).'),
@@ -248,7 +248,7 @@ const R3 = {
     }),
     cena({
       passo: 'Retirar a máscara cirúrgica (único EPI desta precaução)', fonte: 'p. 6–8', origem: 'D',
-      narrative: 'A conversa terminou e a paciente já voltou do exame. Você vai encerrar a visita usando somente a máscara cirúrgica.',
+      narrative: 'A conversa terminou e a paciente já voltou do exame. Você está usando somente a máscara cirúrgica.',
       prompt: 'Qual é o próximo passo da desparamentação?',
       choices: [
         ok('Retirar a máscara cirúrgica', 'Nesta precaução você usa apenas a máscara cirúrgica; ela é o EPI a retirar (p. 6–8).'),
@@ -260,7 +260,7 @@ const R3 = {
     cena({
       passo: 'Higienização final das mãos', fonte: 'p. 8', origem: 'D',
       narrative: 'A máscara foi retirada. Você está de volta ao corredor.',
-      prompt: 'Para encerrar, o que você faz?',
+      prompt: 'O que você faz agora?',
       choices: [
         ok('Higienizar as mãos', 'A higienização final das mãos encerra a desparamentação (p. 8).'),
         no('Sair sem higienizar as mãos, pois não houve contato físico com a paciente', 'A sequência da desparamentação termina com a higienização final das mãos (p. 8–9).'),
@@ -315,7 +315,7 @@ const R4 = {
     }),
     cena({
       passo: 'Higienizar as mãos após retirar o avental', fonte: 'p. 8–9',
-      narrative: 'O avental foi retirado. Ao tirá-lo, suas mãos tocaram a parte externa dele. Você ainda usa óculos, touca e máscara.',
+      narrative: 'O avental foi retirado. Você ainda usa óculos, touca e máscara.',
       prompt: 'O que você faz agora?',
       choices: [
         ok('Higienizar as mãos', 'Depois do avental, as mãos são higienizadas outra vez (p. 8–9).'),
@@ -326,7 +326,7 @@ const R4 = {
     }),
     cena({
       passo: 'Retirar os óculos ou o face shield', fonte: 'p. 9',
-      narrative: 'Suas mãos estão higienizadas. Restam os óculos, a touca e a máscara PFF2/N95.',
+      narrative: 'Suas mãos estão higienizadas. Você ainda usa óculos, touca e máscara PFF2/N95.',
       prompt: 'Qual é o próximo EPI?',
       choices: [
         ok('Retirar os óculos ou o face shield', 'Na sequência com touca, os óculos saem antes da touca e da máscara (p. 9).'),
@@ -337,7 +337,7 @@ const R4 = {
     }),
     cena({
       passo: 'Retirar a touca', fonte: 'p. 9',
-      narrative: 'Os óculos foram retirados. Restam a touca e a máscara PFF2/N95.',
+      narrative: 'Os óculos foram retirados. Você ainda usa touca e máscara PFF2/N95.',
       prompt: 'Qual é o próximo EPI?',
       choices: [
         ok('Retirar a touca', 'Na sequência com touca, a touca sai antes da máscara (p. 9).'),
@@ -348,7 +348,7 @@ const R4 = {
     }),
     cena({
       passo: 'Retirar a máscara PFF2/N95', fonte: 'p. 9',
-      narrative: 'A touca foi retirada. Resta apenas a máscara PFF2/N95.',
+      narrative: 'A touca foi retirada. Você ainda usa a máscara PFF2/N95.',
       prompt: 'O que você faz?',
       choices: [
         ok('Retirar a máscara PFF2/N95', 'A máscara é o último EPI a sair, antes da higienização final (p. 9).'),
@@ -360,7 +360,7 @@ const R4 = {
     cena({
       passo: 'Higienização final das mãos', fonte: 'p. 9',
       narrative: 'Todos os EPIs foram retirados.',
-      prompt: 'Para encerrar, o que você faz?',
+      prompt: 'O que você faz agora?',
       choices: [
         ok('Higienizar as mãos (higienização final)', 'A sequência termina com a higienização final das mãos (p. 9).'),
         no('Sair sem higienizar as mãos, pois já higienizou duas vezes', 'A higienização final faz parte da sequência (p. 9), mesmo depois das anteriores.'),
@@ -444,7 +444,7 @@ const R5 = {
     }),
     cena({
       passo: 'Aferir a pressão arterial pelo método indireto', fonte: 'p. 3–5',
-      narrative: 'Faltam as medidas de pressão arterial. O paciente já está sentado e confortável.',
+      narrative: 'O paciente já está sentado e confortável.',
       prompt: 'Como você afere a pressão arterial?',
       choices: [
         ok('Garantir repouso de 3 a 5 minutos e medir pelo método indireto, estimando antes a sistólica pelo método palpatório', 'Repouso de 3 a 5 minutos, palpatório para estimar a sistólica e depois a ausculta (p. 3–4). Você registra: 124/78 mmHg.'),
@@ -514,8 +514,8 @@ const R6 = {
     }),
     cena({
       passo: 'Método palpatório: estimar a pressão sistólica', fonte: 'p. 3–5',
-      narrative: 'O manguito está colocado. Você ainda não sabe até que valor insuflar.',
-      prompt: 'Como você estima a pressão sistólica?',
+      narrative: 'O manguito está colocado.',
+      prompt: 'Qual é o próximo passo?',
       choices: [
         ok('Palpar o pulso radial, insuflar o manguito até o pulso desaparecer e desinsuflar lentamente até ele reaparecer', 'O pulso radial desaparece com o manguito insuflado e reaparece em 168 mmHg: essa é a pressão sistólica pelo método palpatório (p. 3–4).'),
         no('Dispensar o método palpatório e insuflar direto até 150 mmHg', 'Você insufla até 150 mmHg e começa a desinsuflar. Os primeiros ruídos só aparecem em 132 mmHg, e você registraria 132 como sistólica. Mas os sons tinham sumido entre cerca de 150 e 132 mmHg (hiato auscultatório, Imagem 1, p. 5): a sistólica real é bem maior e você a subestimou. Sem o método palpatório você não sabe até onde insuflar (p. 3–4).'),
@@ -526,7 +526,7 @@ const R6 = {
     }),
     cena({
       passo: 'Insuflar cerca de 30 mmHg acima da sistólica palpatória', fonte: 'p. 4',
-      narrative: 'O pulso radial reapareceu em 168 mmHg. Você vai passar à ausculta.',
+      narrative: 'O pulso radial reapareceu em 168 mmHg.',
       prompt: 'Como você prossegue?',
       choices: [
         ok('Colocar o estetoscópio sobre a artéria braquial e insuflar o manguito cerca de 30 mmHg acima do valor palpatório (≈ 198 mmHg)', 'Estetoscópio sobre a braquial e insuflação cerca de 30 mmHg acima da sistólica palpatória: você parte de ≈ 198 mmHg (p. 4).'),
@@ -537,7 +537,7 @@ const R6 = {
     }),
     cena({
       passo: 'Soltar o ar de maneira contínua, a 2–3 mmHg por segundo', fonte: 'p. 4',
-      narrative: 'O manguito está insuflado a ≈ 198 mmHg, com o estetoscópio sobre a braquial. É hora de desinsuflar.',
+      narrative: 'O manguito está insuflado a ≈ 198 mmHg, com o estetoscópio sobre a braquial. ',
       prompt: 'Como você solta o ar?',
       choices: [
         ok('Soltar o ar de maneira contínua, a 2–3 mmHg por segundo', 'A velocidade de 2–3 mmHg por segundo permite acompanhar cada fase dos ruídos (p. 4).'),
@@ -582,8 +582,8 @@ const R7 = {
     }),
     cena({
       passo: 'Repouso de 3 a 5 minutos, em local tranquilo', fonte: 'p. 3',
-      narrative: 'A paciente consentiu. Você precisa preparar a medida.',
-      prompt: 'O que você faz antes de aferir?',
+      narrative: 'A paciente consentiu.',
+      prompt: 'O que você faz agora?',
       choices: [
         ok('Garantir repouso mínimo de 3 a 5 minutos, em local tranquilo', 'O repouso mínimo de 3 a 5 minutos, em local tranquilo, vem antes da medida (p. 3).'),
         no('Aferir assim que ela se deita, sem repouso', 'Sem o repouso, a medida não reflete a pressão de repouso (p. 3).'),
@@ -615,8 +615,8 @@ const R7 = {
     }),
     cena({
       passo: 'Método palpatório: estimar a pressão sistólica', fonte: 'p. 3–4',
-      narrative: 'O manguito está colocado. Você precisa estimar a sistólica antes da ausculta.',
-      prompt: 'Como você estima a pressão sistólica?',
+      narrative: 'O manguito está colocado.',
+      prompt: 'Qual é o próximo passo?',
       choices: [
         ok('Palpar o pulso radial, insuflar o manguito até o pulso desaparecer e desinsuflar lentamente até ele reaparecer', 'O pulso radial reaparece em 128 mmHg: essa é a pressão sistólica pelo método palpatório (p. 3–4).'),
         no('Pular o método palpatório e auscultar direto', 'Sem o palpatório, você não sabe até onde insuflar, e pode subestimar a sistólica se houver hiato auscultatório (p. 3–5).'),
@@ -627,7 +627,7 @@ const R7 = {
     }),
     cena({
       passo: 'Estetoscópio sobre a braquial, insuflar 30 mmHg acima e soltar o ar de modo contínuo', fonte: 'p. 4',
-      narrative: 'O pulso radial reapareceu em 128 mmHg. Você parte para a ausculta.',
+      narrative: 'O pulso radial reapareceu em 128 mmHg.',
       prompt: 'Como você prossegue?',
       choices: [
         ok('Colocar o estetoscópio sobre a artéria braquial, insuflar cerca de 30 mmHg acima do valor palpatório (≈ 158 mmHg) e soltar o ar de maneira contínua, a 2–3 mmHg por segundo', 'Ausculta sobre a braquial, insuflação cerca de 30 mmHg acima do valor palpatório e soltura contínua, a 2–3 mmHg por segundo (p. 4).'),
@@ -735,7 +735,7 @@ const R8 = {
     }),
     cena({
       passo: 'Aferir a pressão arterial pelo método indireto', fonte: 'p. 3–5',
-      narrative: 'Faltam as medidas de pressão arterial. O paciente está deitado, com os braços ao longo do corpo.',
+      narrative: 'O paciente está deitado, com os braços ao longo do corpo.',
       patient: 'Enfermeira: "Dá para medir o braço direito, está livre."',
       prompt: 'Como você afere a pressão arterial?',
       choices: [
@@ -890,7 +890,7 @@ const R10 = {
     cena({
       passo: 'Higienizar as mãos em seguida', fonte: 'p. 5',
       narrative: 'As luvas foram retiradas e descartadas.',
-      prompt: 'Para encerrar, o que você faz?',
+      prompt: 'O que você faz agora?',
       choices: [
         ok('Higienizar as mãos em seguida', 'Após a remoção das luvas, as mãos são higienizadas em seguida (p. 5).'),
         no('Sair do quarto sem higienizar as mãos, pois usou luvas durante todo o procedimento', 'As luvas não dispensam a higienização: ela é feita após a remoção das luvas (p. 5).'),
@@ -933,8 +933,8 @@ const R11 = {
     }),
     cena({
       passo: 'Esfregar palmas, dorso, costas dos dedos, polegares e pontas dos dedos', fonte: 'p. 3',
-      narrative: 'O sabonete cobre as palmas das mãos. Agora vem a fricção.',
-      prompt: 'O que você esfrega?',
+      narrative: 'O sabonete cobre as palmas das mãos.',
+      prompt: 'Qual é o próximo passo?',
       choices: [
         ok('Palma com palma, dorso de cada mão com os dedos entrelaçados, costas dos dedos, polegares e pontas dos dedos', 'A sequência passa por todas as superfícies: palmas, dorso com dedos entrelaçados, costas dos dedos, polegares e pontas dos dedos em movimento circular (passos 2 a 7, p. 3).'),
         no('Apenas as palmas das mãos', 'Só as palmas deixam sem higienizar o dorso, os espaços entre os dedos, os polegares e as pontas dos dedos (passos 2 a 7, p. 3).'),
@@ -944,7 +944,7 @@ const R11 = {
     }),
     cena({
       passo: 'Enxaguar, secar e usar o papel-toalha para fechar a torneira', fonte: 'p. 3',
-      narrative: 'As mãos foram esfregadas. Falta enxaguar e secar.',
+      narrative: 'As mãos foram esfregadas.',
       prompt: 'Como você termina?',
       choices: [
         ok('Enxaguar com água, secar bem as mãos e usar o papel-toalha para fechar a torneira', 'Enxágue, secagem completa e torneira fechada com o papel-toalha: assim as mãos limpas não tocam de novo a superfície contaminada (passos 8 a 10, p. 3).'),
@@ -1067,7 +1067,7 @@ const R12 = {
     cena({
       passo: 'Higienizar as mãos', fonte: 'p. 5 e 10',
       narrative: 'As luvas foram descartadas. Suas mãos estão sem luvas.',
-      prompt: 'Para encerrar, o que você faz?',
+      prompt: 'O que você faz agora?',
       choices: [
         ok('Higienizar as mãos', 'Descarte as luvas em lixo infectante e higienize as mãos (p. 10); a higienização é feita após a remoção das luvas (p. 5).'),
         no('Sair sem higienizar as mãos, pois usou luvas', 'As luvas não dispensam a higienização: ela é feita após a remoção das luvas (p. 5 e 10).'),

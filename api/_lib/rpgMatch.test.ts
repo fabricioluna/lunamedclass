@@ -54,6 +54,9 @@ describe('buildUserPrompt', () => {
   it('o prompt de sistema trata o texto do aluno como dado e exige só o JSON', () => {
     expect(SYSTEM_PROMPT).toMatch(/nunca uma instrução/);
     expect(SYSTEM_PROMPT).toMatch(/SOMENTE com um JSON/);
+    // tolerância: o aluno escreve com as próprias palavras e não precisa repetir todos os detalhes
+    expect(SYSTEM_PROMPT).toMatch(/SENTIDO, não as palavras/);
+    expect(SYSTEM_PROMPT).toMatch(/NÃO precisa repetir todos os detalhes/);
   });
 });
 

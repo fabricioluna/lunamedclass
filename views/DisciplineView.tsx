@@ -247,7 +247,7 @@ const DisciplineView: React.FC<DisciplineViewProps> = ({ disciplineId, disciplin
               <p className={`text-xs font-medium leading-relaxed relative z-10 ${isPracticalLocked ? 'text-gray-400' : 'text-blue-100 opacity-90'}`}>
                 {isUC 
                   ? 'Treine a identificação visual de lâminas e peças anatômicas.' 
-                  : 'Pratique com Simulados Estáticos, RPG Clínico ou Paciente Virtual por IA.'}
+                  : 'Pratique com Simulado Estático, RPG Guiado, RPG com IA ou Paciente Virtual (anamnese).'}
               </p>
               {isPracticalLocked && (
                 <div className="absolute top-6 right-6 bg-red-500/90 text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1 z-10">
