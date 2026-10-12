@@ -15,23 +15,15 @@ import {
 } from 'docx';
 import casos from './rpg.mjs';
 import dicas from './rpg-dicas.mjs';
+import SLUGS from './rpg-slugs.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = process.argv[2];
+const SO_CODIGOS = (process.argv.find((a) => a.startsWith('--codigos=')) ?? '').slice(10).split(',').filter(Boolean); // ex.: --codigos=R14,R15
 const SO_NOVAS = process.argv.includes('--novas'); // só os casos que ainda não estão no ar
 if (!OUT) throw new Error('Informe a pasta de saída: node conteudo/osce-hm1-n1/gerar-word-rpg.mjs <pasta>');
 const NO_AR = JSON.parse(fs.readFileSync(path.join(HERE, 'publicadas-rpg.json'), 'utf8'));
 
-const SLUGS = {
-  R1: 'hm1-n1-r1-aerossois', R2: 'hm1-n1-r2-contato', R3: 'hm1-n1-r3-goticulas', R4: 'hm1-n1-r4-desparamentacao',
-  R5: 'hm1-n1-r5-sinais-vitais-completo', R6: 'hm1-n1-r6-pa-hiato-auscultatorio', R7: 'hm1-n1-r7-pa-gestante',
-  R8: 'hm1-n1-r8-sinais-vitais-inconsciente',
-  R9: 'hm1-n1-r9-cinco-momentos',
-  R10: 'hm1-n1-r10-precaucao-padrao-agulha',
-  R11: 'hm1-n1-r11-higiene-maos-tecnicas',
-  R12: 'hm1-n1-r12-luvas-procedimento',
-  R13: 'hm1-n1-r13-luvas-cirurgicas',
-};
 
 const NAVY = '003366';
 const GOLD = 'D4A017';
@@ -224,6 +216,7 @@ const contagem = {};
 let gerados = 0;
 for (const caso of casos) {
   if (SO_NOVAS && NO_AR.includes(SLUGS[caso.code])) continue;
+  if (SO_CODIGOS.length && !SO_CODIGOS.includes(caso.code)) continue;
   const pasta = caso.theme === 'Sinais Vitais' ? '2 - Sinais Vitais' : '1 - Biossegurança';
   const dir = path.join(OUT, pasta);
   fs.mkdirSync(dir, { recursive: true });

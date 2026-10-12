@@ -11,22 +11,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import casos from './rpg.mjs';
 import dicas from './rpg-dicas.mjs';
+import SLUGS from './rpg-slugs.mjs';
 
-const SLUGS = {
-  R1: 'hm1-n1-r1-aerossois',
-  R2: 'hm1-n1-r2-contato',
-  R3: 'hm1-n1-r3-goticulas',
-  R4: 'hm1-n1-r4-desparamentacao',
-  R5: 'hm1-n1-r5-sinais-vitais-completo',
-  R6: 'hm1-n1-r6-pa-hiato-auscultatorio',
-  R7: 'hm1-n1-r7-pa-gestante',
-  R8: 'hm1-n1-r8-sinais-vitais-inconsciente',
-  R9: 'hm1-n1-r9-cinco-momentos',
-  R10: 'hm1-n1-r10-precaucao-padrao-agulha',
-  R11: 'hm1-n1-r11-higiene-maos-tecnicas',
-  R12: 'hm1-n1-r12-luvas-procedimento',
-  R13: 'hm1-n1-r13-luvas-cirurgicas',
-};
 
 const semVazio = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== ''));
 

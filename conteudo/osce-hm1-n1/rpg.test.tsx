@@ -29,9 +29,9 @@ beforeAll(() => {
 });
 
 describe('conteúdo RPG guiado HM1/N1', () => {
-  it('o arquivo é uma lista válida de 13 casos', () => {
+  it('o arquivo é uma lista válida de 21 casos', () => {
     expect(fileError).toBeUndefined();
-    expect(items).toHaveLength(13);
+    expect(items).toHaveLength(21);
   });
 
   it('nenhum caso tem erro nem aviso de validação (toda cena com 4 a 6 opções)', () => {

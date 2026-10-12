@@ -10,6 +10,7 @@
 // Nomes, idades e valores aferidos são fictícios e não alteram a técnica.
 
 import { TEMAS } from './estacoes.mjs';
+import { casosVariantes } from './rpg-variantes.mjs';
 
 const BIO = 'Roteiro de Biossegurança (Profª Ingrid Cordeiro)';
 const SV = 'Roteiro de Sinais Vitais (Prof. Michel Melo)';
@@ -1142,5 +1143,5 @@ const R13 = {
   ],
 };
 
-export const casos = [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13];
+export const casos = [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, ...casosVariantes];
 export default casos;

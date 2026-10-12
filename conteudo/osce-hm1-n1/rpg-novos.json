@@ -766,5 +766,1389 @@
         ]
       }
     ]
+  },
+  {
+    "slug": "hm1-n1-r14-paramentacao-sem-touca-cirurgica-procedimento",
+    "title": "Paramentação: sem touca · máscara cirúrgica · luva de procedimento",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antecâmara do quarto de internação, com dispensador de preparação alcoólica, EPIs disponíveis e lixeira para resíduos infectantes. Na porta, não há placa de precaução por via aérea.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição não exige touca. Durante o atendimento haverá risco de respingos de sangue ou secreções, e o procedimento não é estéril.",
+    "task": "Faça a paramentação na ordem correta e escolhendo os EPIs que o caso pede (placa, protocolo, tipo de procedimento). Cada passo errado mostra a consequência.",
+    "tip": "Ordem da tabela de EPI (p. 8): higienizar as mãos → avental → máscara → óculos/face shield → luvas.",
+    "scenes": [
+      {
+        "narrative": "Você está diante da porta do quarto, com todo o material de proteção disponível. Você ainda não tocou em nenhum EPI.",
+        "prompt": "Qual é o primeiro passo?",
+        "hint": "Antes de tocar em qualquer EPI, o que as suas mãos precisam?",
+        "choices": [
+          {
+            "action": "Higienizar as mãos",
+            "correct": true,
+            "feedback": "Principal medida de prevenção de IRAS; vem antes e entre as etapas (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar o avental",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: higienizar as mãos."
+          },
+          {
+            "action": "Colocar a máscara cirúrgica",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: higienizar as mãos."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar o avental",
+            "correct": true,
+            "feedback": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a touca",
+            "feedback": "O protocolo da instituição não exige touca neste caso, e a ANVISA não a lista como obrigatória (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a máscara cirúrgica",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar o avental."
+          },
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar o avental."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, avental. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, avental. Pela tabela de EPI (p. 8), o que vem a seguir? Releia a porta: há placa de precaução por via aérea?",
+        "choices": [
+          {
+            "action": "Colocar a máscara cirúrgica",
+            "correct": true,
+            "feedback": "Proteção respiratória básica (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a máscara PFF2/N95",
+            "feedback": "Não há precaução para aerossóis neste caso: a máscara indicada é a cirúrgica. A PFF2/N95 é a proteção para aerossóis (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar a máscara cirúrgica."
+          },
+          {
+            "action": "Calçar as luvas de procedimento",
+            "feedback": "Fora de ordem. As luvas são o último EPI da paramentação; calçadas antes da hora, você manipula os outros EPIs com elas. Agora é o momento de: colocar a máscara cirúrgica (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, avental, máscara cirúrgica. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, avental, máscara cirúrgica. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "correct": true,
+            "feedback": "Proteção da mucosa ocular, pelo risco de respingos (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Calçar as luvas de procedimento",
+            "feedback": "Fora de ordem. As luvas são o último EPI da paramentação; calçadas antes da hora, você manipula os outros EPIs com elas. Agora é o momento de: colocar os óculos ou o face shield (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, avental, máscara cirúrgica, óculos. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, avental, máscara cirúrgica, óculos. Pela tabela de EPI (p. 8), o que vem a seguir? Releia: o procedimento é estéril ou não?",
+        "choices": [
+          {
+            "action": "Calçar as luvas de procedimento",
+            "correct": true,
+            "feedback": "Proteção contra contato direto, em procedimento não estéril (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Calçar as luvas cirúrgicas (estéreis)",
+            "feedback": "O procedimento não é estéril: bastam as luvas de procedimento. A luva estéril é para técnica estéril (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Entrar no quarto sem luvas e calçá-las só se houver contato",
+            "feedback": "Neste caso haverá contato com risco de respingos de sangue ou secreções: as luvas fazem parte da paramentação antes de entrar (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar as luvas, pois o avental já protege as mãos",
+            "feedback": "O avental protege tronco e membros; as mãos exigem as luvas (tabela de EPI, p. 8)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-r15-paramentacao-touca-pff2-esteril",
+    "title": "Paramentação: com touca · PFF2/N95 · luva estéril",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antecâmara do quarto de isolamento, com dispensador de preparação alcoólica, EPIs disponíveis e lixeira para resíduos infectantes. Na porta, há uma placa: PRECAUÇÃO PARA AEROSSÓIS.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática na enfermaria e participará do atendimento do Sr. J.R., 58 anos, internado neste quarto. O protocolo da instituição exige touca para entrar. Durante o atendimento haverá risco de respingos de sangue ou secreções, e o procedimento exige técnica estéril.",
+    "task": "Faça a paramentação na ordem correta e escolhendo os EPIs que o caso pede (placa, protocolo, tipo de procedimento). Cada passo errado mostra a consequência.",
+    "tip": "Ordem da tabela de EPI (p. 8): higienizar as mãos → touca → avental → máscara → óculos/face shield → luvas.",
+    "scenes": [
+      {
+        "narrative": "Você está diante da porta do quarto, com todo o material de proteção disponível. Você ainda não tocou em nenhum EPI.",
+        "prompt": "Qual é o primeiro passo?",
+        "hint": "Antes de tocar em qualquer EPI, o que as suas mãos precisam?",
+        "choices": [
+          {
+            "action": "Higienizar as mãos",
+            "correct": true,
+            "feedback": "Principal medida de prevenção de IRAS; vem antes e entre as etapas (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a touca antes de higienizar as mãos",
+            "feedback": "A higienização das mãos vem antes de tocar em qualquer EPI (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a touca",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: higienizar as mãos."
+          },
+          {
+            "action": "Colocar o avental",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: higienizar as mãos."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar a touca",
+            "correct": true,
+            "feedback": "O protocolo da instituição exige touca; a ANVISA não a lista como obrigatória (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar o avental",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar a touca."
+          },
+          {
+            "action": "Colocar a máscara PFF2/N95",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar a touca."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, touca. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, touca. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar o avental",
+            "correct": true,
+            "feedback": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a máscara PFF2/N95",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar o avental."
+          },
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar o avental."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, touca, avental. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, touca, avental. Pela tabela de EPI (p. 8), o que vem a seguir? Releia a placa da porta.",
+        "choices": [
+          {
+            "action": "Colocar a máscara PFF2/N95",
+            "correct": true,
+            "feedback": "Filtra 94–95% ou mais das partículas e é a proteção para aerossóis (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a máscara cirúrgica",
+            "feedback": "Há precaução para aerossóis: a proteção respiratória é a PFF2/N95. A máscara cirúrgica é a proteção básica, obrigatória em gotículas (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar a máscara PFF2/N95."
+          },
+          {
+            "action": "Calçar as luvas cirúrgicas (estéreis)",
+            "feedback": "Fora de ordem. As luvas são o último EPI da paramentação; calçadas antes da hora, você manipula os outros EPIs com elas. Agora é o momento de: colocar a máscara PFF2/N95 (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, touca, avental, máscara PFF2/N95. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, touca, avental, máscara PFF2/N95. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "correct": true,
+            "feedback": "Proteção da mucosa ocular, pelo risco de respingos (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Calçar as luvas cirúrgicas (estéreis)",
+            "feedback": "Fora de ordem. As luvas são o último EPI da paramentação; calçadas antes da hora, você manipula os outros EPIs com elas. Agora é o momento de: colocar os óculos ou o face shield (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, touca, avental, máscara PFF2/N95, óculos. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, touca, avental, máscara PFF2/N95, óculos. Pela tabela de EPI (p. 8), o que vem a seguir? Releia: o procedimento é estéril ou não?",
+        "choices": [
+          {
+            "action": "Calçar as luvas cirúrgicas (estéreis)",
+            "correct": true,
+            "feedback": "Proteção contra contato direto, em procedimento de técnica estéril (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Calçar as luvas de procedimento",
+            "feedback": "O procedimento exige técnica estéril: as luvas são as cirúrgicas (estéreis), e não as de procedimento (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Entrar no quarto sem luvas e calçá-las só se houver contato",
+            "feedback": "Neste caso haverá contato com risco de respingos de sangue ou secreções: as luvas fazem parte da paramentação antes de entrar (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar as luvas, pois o avental já protege as mãos",
+            "feedback": "O avental protege tronco e membros; as mãos exigem as luvas (tabela de EPI, p. 8)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-r16-paramentacao-touca-cirurgica-esteril",
+    "title": "Paramentação: com touca · máscara cirúrgica · luva estéril",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antecâmara do quarto de internação, com dispensador de preparação alcoólica, EPIs disponíveis e lixeira para resíduos infectantes. Na porta, não há placa de precaução por via aérea.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática e participará do atendimento da Sra. M.C., 44 anos, internada neste quarto. O protocolo da instituição exige touca para entrar. Durante o atendimento haverá risco de respingos de sangue ou secreções, e o procedimento exige técnica estéril.",
+    "task": "Faça a paramentação na ordem correta e escolhendo os EPIs que o caso pede (placa, protocolo, tipo de procedimento). Cada passo errado mostra a consequência.",
+    "tip": "Ordem da tabela de EPI (p. 8): higienizar as mãos → touca → avental → máscara → óculos/face shield → luvas.",
+    "scenes": [
+      {
+        "narrative": "Você está diante da porta do quarto, com todo o material de proteção disponível. Você ainda não tocou em nenhum EPI.",
+        "prompt": "Qual é o primeiro passo?",
+        "hint": "Antes de tocar em qualquer EPI, o que as suas mãos precisam?",
+        "choices": [
+          {
+            "action": "Higienizar as mãos",
+            "correct": true,
+            "feedback": "Principal medida de prevenção de IRAS; vem antes e entre as etapas (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a touca antes de higienizar as mãos",
+            "feedback": "A higienização das mãos vem antes de tocar em qualquer EPI (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a touca",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: higienizar as mãos."
+          },
+          {
+            "action": "Colocar o avental",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: higienizar as mãos."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar a touca",
+            "correct": true,
+            "feedback": "O protocolo da instituição exige touca; a ANVISA não a lista como obrigatória (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar o avental",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar a touca."
+          },
+          {
+            "action": "Colocar a máscara cirúrgica",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar a touca."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, touca. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, touca. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar o avental",
+            "correct": true,
+            "feedback": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a máscara cirúrgica",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar o avental."
+          },
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar o avental."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, touca, avental. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, touca, avental. Pela tabela de EPI (p. 8), o que vem a seguir? Releia a porta: há placa de precaução por via aérea?",
+        "choices": [
+          {
+            "action": "Colocar a máscara cirúrgica",
+            "correct": true,
+            "feedback": "Proteção respiratória básica (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a máscara PFF2/N95",
+            "feedback": "Não há precaução para aerossóis neste caso: a máscara indicada é a cirúrgica. A PFF2/N95 é a proteção para aerossóis (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar a máscara cirúrgica."
+          },
+          {
+            "action": "Calçar as luvas cirúrgicas (estéreis)",
+            "feedback": "Fora de ordem. As luvas são o último EPI da paramentação; calçadas antes da hora, você manipula os outros EPIs com elas. Agora é o momento de: colocar a máscara cirúrgica (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, touca, avental, máscara cirúrgica. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, touca, avental, máscara cirúrgica. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "correct": true,
+            "feedback": "Proteção da mucosa ocular, pelo risco de respingos (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Calçar as luvas cirúrgicas (estéreis)",
+            "feedback": "Fora de ordem. As luvas são o último EPI da paramentação; calçadas antes da hora, você manipula os outros EPIs com elas. Agora é o momento de: colocar os óculos ou o face shield (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, touca, avental, máscara cirúrgica, óculos. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, touca, avental, máscara cirúrgica, óculos. Pela tabela de EPI (p. 8), o que vem a seguir? Releia: o procedimento é estéril ou não?",
+        "choices": [
+          {
+            "action": "Calçar as luvas cirúrgicas (estéreis)",
+            "correct": true,
+            "feedback": "Proteção contra contato direto, em procedimento de técnica estéril (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Calçar as luvas de procedimento",
+            "feedback": "O procedimento exige técnica estéril: as luvas são as cirúrgicas (estéreis), e não as de procedimento (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Entrar no quarto sem luvas e calçá-las só se houver contato",
+            "feedback": "Neste caso haverá contato com risco de respingos de sangue ou secreções: as luvas fazem parte da paramentação antes de entrar (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar as luvas, pois o avental já protege as mãos",
+            "feedback": "O avental protege tronco e membros; as mãos exigem as luvas (tabela de EPI, p. 8)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-r17-paramentacao-sem-touca-pff2-procedimento",
+    "title": "Paramentação: sem touca · PFF2/N95 · luva de procedimento",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Antecâmara do quarto de isolamento, com dispensador de preparação alcoólica, EPIs disponíveis e lixeira para resíduos infectantes. Na porta, há uma placa: PRECAUÇÃO PARA AEROSSÓIS.",
+    "scenario": "Você é acadêmico(a) de Medicina em atividade prática e participará do atendimento do Sr. A.T., 63 anos, internado neste quarto. O protocolo da instituição não exige touca. Durante o atendimento haverá risco de respingos de sangue ou secreções, e o procedimento não é estéril.",
+    "task": "Faça a paramentação na ordem correta e escolhendo os EPIs que o caso pede (placa, protocolo, tipo de procedimento). Cada passo errado mostra a consequência.",
+    "tip": "Ordem da tabela de EPI (p. 8): higienizar as mãos → avental → máscara → óculos/face shield → luvas.",
+    "scenes": [
+      {
+        "narrative": "Você está diante da porta do quarto, com todo o material de proteção disponível. Você ainda não tocou em nenhum EPI.",
+        "prompt": "Qual é o primeiro passo?",
+        "hint": "Antes de tocar em qualquer EPI, o que as suas mãos precisam?",
+        "choices": [
+          {
+            "action": "Higienizar as mãos",
+            "correct": true,
+            "feedback": "Principal medida de prevenção de IRAS; vem antes e entre as etapas (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar o avental",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: higienizar as mãos."
+          },
+          {
+            "action": "Colocar a máscara PFF2/N95",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: higienizar as mãos."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar o avental",
+            "correct": true,
+            "feedback": "Proteção de tronco e membros contra contato (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a touca",
+            "feedback": "O protocolo da instituição não exige touca neste caso, e a ANVISA não a lista como obrigatória (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a máscara PFF2/N95",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar o avental."
+          },
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar o avental."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, avental. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, avental. Pela tabela de EPI (p. 8), o que vem a seguir? Releia a placa da porta.",
+        "choices": [
+          {
+            "action": "Colocar a máscara PFF2/N95",
+            "correct": true,
+            "feedback": "Filtra 94–95% ou mais das partículas e é a proteção para aerossóis (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar a máscara cirúrgica",
+            "feedback": "Há precaução para aerossóis: a proteção respiratória é a PFF2/N95. A máscara cirúrgica é a proteção básica, obrigatória em gotículas (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "feedback": "Fora de ordem. Pela tabela de EPI (p. 8), o próximo passo é: colocar a máscara PFF2/N95."
+          },
+          {
+            "action": "Calçar as luvas de procedimento",
+            "feedback": "Fora de ordem. As luvas são o último EPI da paramentação; calçadas antes da hora, você manipula os outros EPIs com elas. Agora é o momento de: colocar a máscara PFF2/N95 (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, avental, máscara PFF2/N95. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, avental, máscara PFF2/N95. Pela tabela de EPI (p. 8), o que vem a seguir?",
+        "choices": [
+          {
+            "action": "Colocar os óculos ou o face shield",
+            "correct": true,
+            "feedback": "Proteção da mucosa ocular, pelo risco de respingos (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Calçar as luvas de procedimento",
+            "feedback": "Fora de ordem. As luvas são o último EPI da paramentação; calçadas antes da hora, você manipula os outros EPIs com elas. Agora é o momento de: colocar os óculos ou o face shield (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar este EPI, pois o paciente parece estável",
+            "feedback": "A paramentação segue a tabela de EPI do caso (p. 8); nenhum item é dispensado por impressão sobre o paciente."
+          },
+          {
+            "action": "Entrar no quarto agora e completar a paramentação lá dentro",
+            "feedback": "A paramentação é concluída antes de entrar no quarto (tabela de EPI, p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você já fez: mãos higienizadas, avental, máscara PFF2/N95, óculos. Faltam os demais EPIs da paramentação.",
+        "prompt": "Qual é o próximo passo da paramentação?",
+        "hint": "Você já fez: mãos higienizadas, avental, máscara PFF2/N95, óculos. Pela tabela de EPI (p. 8), o que vem a seguir? Releia: o procedimento é estéril ou não?",
+        "choices": [
+          {
+            "action": "Calçar as luvas de procedimento",
+            "correct": true,
+            "feedback": "Proteção contra contato direto, em procedimento não estéril (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Calçar as luvas cirúrgicas (estéreis)",
+            "feedback": "O procedimento não é estéril: bastam as luvas de procedimento. A luva estéril é para técnica estéril (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Entrar no quarto sem luvas e calçá-las só se houver contato",
+            "feedback": "Neste caso haverá contato com risco de respingos de sangue ou secreções: as luvas fazem parte da paramentação antes de entrar (tabela de EPI, p. 8)."
+          },
+          {
+            "action": "Dispensar as luvas, pois o avental já protege as mãos",
+            "feedback": "O avental protege tronco e membros; as mãos exigem as luvas (tabela de EPI, p. 8)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-r18-desparamentacao-sem-touca",
+    "title": "Desparamentação sem touca: máscara cirúrgica",
+    "theme": "Biossegurança e Controle de IRAS",
+    "unit": "N1",
+    "setting": "Saída do quarto de internação. Dispensador de preparação alcoólica ao lado da porta e lixeira para resíduos infectantes.",
+    "scenario": "Você é acadêmico(a) de Medicina e acaba de concluir, com a equipe, o atendimento ao Sr. J.R., 58 anos, internado neste quarto. Você está usando: avental, máscara cirúrgica, óculos, luvas de procedimento. O protocolo da instituição não exige touca. É preciso sair sem se contaminar e sem contaminar o ambiente.",
+    "task": "Retire os EPIs na ordem correta, com a higienização das mãos nos momentos adequados. Cada passo fora de ordem mostra o que ele leva para o seu corpo.",
+    "tip": "Desparamentação sem touca (p. 8–9): luvas → higienizar as mãos → avental → higienizar as mãos → óculos/face shield → máscara → higienização final. Com PFF2/N95 a ordem é a mesma.",
+    "scenes": [
+      {
+        "narrative": "O atendimento terminou. Você está ao lado da porta, usando avental, máscara cirúrgica, óculos e luvas. Esta é a fase de maior risco.",
+        "prompt": "O que vem agora?",
+        "hint": "Qual EPI está mais exposto ao contato com o paciente? A desparamentação começa por ele.",
+        "choices": [
+          {
+            "action": "Retirar as luvas",
+            "correct": true,
+            "feedback": "A desparamentação começa pelas luvas (p. 8–9)."
+          },
+          {
+            "action": "Retirar o avental",
+            "feedback": "Com as luvas ainda calçadas, você manipula esse EPI com as mãos contaminadas e leva a contaminação para o seu corpo. A desparamentação começa pelas luvas (p. 8–9)."
+          },
+          {
+            "action": "Retirar os óculos ou o face shield",
+            "feedback": "Com as luvas ainda calçadas, você manipula esse EPI com as mãos contaminadas e leva a contaminação para os olhos. A desparamentação começa pelas luvas (p. 8–9)."
+          },
+          {
+            "action": "Retirar a máscara cirúrgica",
+            "feedback": "Com as luvas ainda calçadas, você manipula esse EPI com as mãos contaminadas e leva a contaminação para a boca e o nariz. A desparamentação começa pelas luvas (p. 8–9)."
+          },
+          {
+            "action": "Retirar a touca",
+            "feedback": "Você não está usando touca neste caso; a sequência é a que não inclui esse EPI (p. 8–9)."
+          },
+          {
+            "action": "Retirar o propé",
+            "feedback": "Você não está usando propé; ele não é recomendado rotineiramente (p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "As luvas foram retiradas. Suas mãos estão sem luvas, mas você ainda usa avental, óculos e máscara.",
+        "prompt": "O que vem agora?",
+        "hint": "Você já fez: luvas. O que vem a seguir na sequência sem touca (p. 8–9)?",
+        "choices": [
+          {
+            "action": "Higienizar as mãos",
+            "correct": true,
+            "feedback": "Depois das luvas, as mãos são higienizadas antes de seguir (p. 8–9)."
+          },
+          {
+            "action": "Retirar o avental sem higienizar as mãos",
+            "feedback": "Suas mãos ainda carregam o que ficou do EPI anterior; você leva isso para o seu corpo. A sequência manda higienizar antes (p. 8–9)."
+          },
+          {
+            "action": "Retirar os óculos ou o face shield sem higienizar as mãos",
+            "feedback": "Além de fora de ordem, as mãos contaminadas tocam os olhos. A sequência manda higienizar as mãos agora (p. 8–9)."
+          },
+          {
+            "action": "Retirar a máscara cirúrgica sem higienizar as mãos",
+            "feedback": "Além de fora de ordem, as mãos contaminadas tocam a boca e o nariz. A sequência manda higienizar as mãos agora (p. 8–9)."
+          },
+          {
+            "action": "Sair do quarto e higienizar as mãos só do lado de fora",
+            "feedback": "A higienização das mãos faz parte da sequência dentro dela, entre as retiradas (p. 8–9)."
+          }
+        ]
+      },
+      {
+        "narrative": "Suas mãos estão higienizadas. O avental ainda cobre seu corpo; óculos e máscara continuam no lugar.",
+        "prompt": "O que vem agora?",
+        "hint": "Você já fez: luvas, mãos higienizadas. O que vem a seguir na sequência sem touca (p. 8–9)?",
+        "choices": [
+          {
+            "action": "Retirar o avental",
+            "correct": true,
+            "feedback": "O avental sai depois das luvas e da higienização das mãos (p. 8–9)."
+          },
+          {
+            "action": "Retirar os óculos ou o face shield",
+            "feedback": "Fora de ordem: agora é o momento de retirar o avental (p. 8–9). A sequência existe para proteger os olhos."
+          },
+          {
+            "action": "Retirar a máscara cirúrgica",
+            "feedback": "Fora de ordem: agora é o momento de retirar o avental (p. 8–9). A sequência existe para proteger a boca e o nariz."
+          },
+          {
+            "action": "Retirar a touca",
+            "feedback": "Você não está usando touca neste caso; a sequência é a que não inclui esse EPI (p. 8–9)."
+          },
+          {
+            "action": "Retirar o propé",
+            "feedback": "Você não está usando propé; ele não é recomendado rotineiramente (p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "O avental foi retirado. Ao tirá-lo, suas mãos tocaram a parte externa dele. Você ainda usa óculos e máscara.",
+        "prompt": "O que vem agora?",
+        "hint": "Você já fez: luvas, mãos higienizadas, avental. O que vem a seguir na sequência sem touca (p. 8–9)?",
+        "choices": [
+          {
+            "action": "Higienizar as mãos",
+            "correct": true,
+            "feedback": "Depois do avental, as mãos são higienizadas outra vez (p. 8–9)."
+          },
+          {
+            "action": "Retirar os óculos ou o face shield sem higienizar as mãos",
+            "feedback": "Suas mãos ainda carregam o que ficou do EPI anterior; você leva isso para os olhos. A sequência manda higienizar antes (p. 8–9)."
+          },
+          {
+            "action": "Retirar a máscara cirúrgica sem higienizar as mãos",
+            "feedback": "Além de fora de ordem, as mãos contaminadas tocam a boca e o nariz. A sequência manda higienizar as mãos agora (p. 8–9)."
+          },
+          {
+            "action": "Sair do quarto e higienizar as mãos só do lado de fora",
+            "feedback": "A higienização das mãos faz parte da sequência dentro dela, entre as retiradas (p. 8–9)."
+          }
+        ]
+      },
+      {
+        "narrative": "Suas mãos estão higienizadas. Restam os óculos e a máscara cirúrgica.",
+        "prompt": "O que vem agora?",
+        "hint": "Você já fez: luvas, mãos higienizadas, avental, mãos higienizadas de novo. O que vem a seguir na sequência sem touca (p. 8–9)?",
+        "choices": [
+          {
+            "action": "Retirar os óculos ou o face shield",
+            "correct": true,
+            "feedback": "Sem touca, os óculos saem antes da máscara (p. 8–9)."
+          },
+          {
+            "action": "Retirar a máscara cirúrgica",
+            "feedback": "Fora de ordem: agora é o momento de retirar os óculos ou o face shield (p. 8–9). A sequência existe para proteger a boca e o nariz."
+          },
+          {
+            "action": "Retirar a touca",
+            "feedback": "Você não está usando touca neste caso; a sequência é a que não inclui esse EPI (p. 8–9)."
+          },
+          {
+            "action": "Retirar o propé",
+            "feedback": "Você não está usando propé; ele não é recomendado rotineiramente (p. 8)."
+          }
+        ]
+      },
+      {
+        "narrative": "Os óculos foram retirados. Resta apenas a máscara cirúrgica.",
+        "prompt": "O que vem agora?",
+        "hint": "Você já fez: luvas, mãos higienizadas, avental, mãos higienizadas de novo, óculos. O que vem a seguir na sequência sem touca (p. 8–9)?",
+        "choices": [
+          {
+            "action": "Retirar a máscara cirúrgica",
+            "correct": true,
+            "feedback": "A máscara é o último EPI a sair, antes da higienização final (p. 8–9)."
+          },
+          {
+            "action": "Retirar a touca",
+            "feedback": "Você não está usando touca neste caso; a sequência é a que não inclui esse EPI (p. 8–9)."
+          },
+          {
+            "action": "Retirar o propé",
+            "feedback": "Você não está usando propé; ele não é recomendado rotineiramente (p. 8)."
+          },
+          {
+            "action": "Retirar a máscara PFF2/N95",
+            "feedback": "Você está usando a máscara cirúrgica, e não a PFF2/N95."
+          },
+          {
+            "action": "Higienizar as mãos e manter a máscara até chegar à sala dos professores",
+            "feedback": "A máscara faz parte dos EPIs a retirar na desparamentação, antes da higienização final (p. 8–9)."
+          }
+        ]
+      },
+      {
+        "narrative": "Todos os EPIs foram retirados.",
+        "prompt": "Para encerrar, o que você faz?",
+        "hint": "Você já fez: luvas, mãos higienizadas, avental, mãos higienizadas de novo, óculos, máscara cirúrgica. O que vem a seguir na sequência sem touca (p. 8–9)?",
+        "choices": [
+          {
+            "action": "Higienizar as mãos (higienização final)",
+            "correct": true,
+            "feedback": "A sequência termina com a higienização final das mãos (p. 8–9)."
+          },
+          {
+            "action": "Sair sem higienizar as mãos, pois já higienizou duas vezes",
+            "feedback": "A higienização final faz parte da sequência (p. 8–9), mesmo depois das anteriores."
+          },
+          {
+            "action": "Higienizar as mãos somente se estiverem visivelmente sujas",
+            "feedback": "Na desparamentação, a higienização final faz parte da sequência (p. 8–9); ela não depende de sujidade visível."
+          },
+          {
+            "action": "Calçar luvas novas antes de sair da área, para tocar nas superfícies",
+            "feedback": "Luvas só são indicadas quando há risco de contato com sangue, secreções ou mucosas (p. 5); a sequência termina com a higienização final das mãos (p. 9)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-r19-pa-varias-posicoes",
+    "title": "Pressão arterial em várias posições: idoso, primeira avaliação",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS, silencioso. O Sr. J.A. está de pé junto à porta. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial do Sr. J.A., 74 anos, que comparece pela primeira vez à UBS. Ele já foi abordado, entendeu o procedimento e consentiu. Esta é a primeira avaliação da pressão arterial dele na unidade. Acabou de chegar à sala e ainda não está em repouso.",
+    "task": "Meça a pressão arterial pelo método indireto, nas várias posições que o roteiro pede para este tipo de paciente. Nesta estação você não precisa classificar o resultado.",
+    "tip": "Em idosos na primeira avaliação, em quem faz controle de terapêutica e quando há suspeita de hipotensão postural, a medida é feita nas várias posições: sentado, deitado ou em pé (p. 3). A artéria braquial fica ao nível do coração em qualquer posição.",
+    "scenes": [
+      {
+        "narrative": "O Sr. J.A. acabou de subir a rampa da UBS e entra na sala.",
+        "patient": "Sr. J.A.: \"Cheguei agora, doutor(a). Pode medir já?\"",
+        "prompt": "O que você faz?",
+        "hint": "O que o paciente precisa antes de qualquer medida?",
+        "choices": [
+          {
+            "action": "Pedir que ele se sente e aguardar o repouso de 3 a 5 minutos, em local tranquilo",
+            "correct": true,
+            "feedback": "A medida exige repouso de 3 a 5 minutos, em local tranquilo (p. 3)."
+          },
+          {
+            "action": "Medir imediatamente, já que ele está de pé e disponível",
+            "feedback": "Sem o repouso de 3 a 5 minutos, a medida não reflete a pressão de repouso (p. 3)."
+          },
+          {
+            "action": "Aguardar apenas 1 minuto e medir",
+            "feedback": "O repouso deve ser de 3 a 5 minutos (p. 3)."
+          },
+          {
+            "action": "Medir já em pé, porque é um idoso e a posição é a que importa",
+            "feedback": "A medida começa com o paciente em repouso e sentado; as outras posições vêm depois (p. 3)."
+          }
+        ]
+      },
+      {
+        "narrative": "Passaram-se 5 minutos de repouso. O Sr. J.A. está sentado, com o braço direito sobre o colo.",
+        "prompt": "Como você posiciona o paciente e o braço?",
+        "hint": "Qual a posição do paciente e onde fica a artéria braquial em relação ao coração?",
+        "choices": [
+          {
+            "action": "Sentado, confortável, com a artéria braquial ao nível do coração (4º espaço intercostal), braço ligeiramente fletido e apoiado em superfície firme, palma da mão para cima",
+            "correct": true,
+            "feedback": "Sentado, com a braquial ao nível do coração, o braço fletido e apoiado e a palma para cima (p. 3)."
+          },
+          {
+            "action": "Deixar o braço pendente ao lado do corpo",
+            "feedback": "Com o braço abaixo do nível do coração, a medida sai alterada; a braquial deve ficar no 4º espaço intercostal (p. 3)."
+          },
+          {
+            "action": "Deixar o braço apoiado sobre o colo",
+            "feedback": "O colo deixa o braço abaixo do nível do coração (p. 3)."
+          },
+          {
+            "action": "Deixar o braço esticado para frente, sem apoio",
+            "feedback": "O braço deve ficar ligeiramente fletido e apoiado em superfície firme (p. 3)."
+          }
+        ]
+      },
+      {
+        "narrative": "O braço está bem posicionado. O manguito está aberto sobre a mesa.",
+        "prompt": "Como você coloca o manguito?",
+        "hint": "O manguito tem uma posição definida em relação à fossa cubital.",
+        "choices": [
+          {
+            "action": "Localizar as pulsações da artéria braquial e colocar o manguito 2 cm acima da fossa cubital",
+            "correct": true,
+            "feedback": "Você localiza a braquial e posiciona o manguito 2 cm acima da fossa cubital (p. 3)."
+          },
+          {
+            "action": "Colocar o manguito sobre a fossa cubital",
+            "feedback": "O manguito fica 2 cm acima da fossa cubital (p. 3)."
+          },
+          {
+            "action": "Colocar o manguito 2 cm abaixo da fossa cubital",
+            "feedback": "O manguito deve ficar 2 cm ACIMA da fossa cubital (p. 3)."
+          },
+          {
+            "action": "Colocar o manguito sem localizar a pulsação da artéria braquial",
+            "feedback": "As pulsações da artéria braquial devem ser localizadas antes (p. 3)."
+          }
+        ]
+      },
+      {
+        "narrative": "O manguito está colocado. Você ainda não sabe até que valor insuflar.",
+        "prompt": "Como você estima a pressão sistólica?",
+        "hint": "Há um método para estimar a sistólica antes da ausculta. Qual?",
+        "choices": [
+          {
+            "action": "Palpar o pulso radial, insuflar o manguito até o pulso desaparecer e desinsuflar lentamente até ele reaparecer",
+            "correct": true,
+            "feedback": "O reaparecimento do pulso é a pressão sistólica pelo método palpatório, que evita subestimar a sistólica quando há hiato auscultatório (p. 3–5)."
+          },
+          {
+            "action": "Dispensar o método palpatório e insuflar até um valor fixo",
+            "feedback": "Sem estimar a sistólica antes, você não sabe até onde insuflar (p. 3–5)."
+          },
+          {
+            "action": "Palpar o pulso carotídeo para estimar a sistólica",
+            "feedback": "No método palpatório usa-se o pulso radial (pode ser também a braquial) (p. 3), e não a carótida."
+          },
+          {
+            "action": "Já colocar o estetoscópio e insuflar sem palpar o pulso",
+            "feedback": "O método palpatório vem antes da ausculta (p. 3–5)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você estimou a sistólica pelo método palpatório e colocou o estetoscópio sobre a artéria braquial.",
+        "prompt": "Como você faz a ausculta e o registro?",
+        "hint": "Margem de insuflação, velocidade de soltura do ar e o que marca a sistólica e a diastólica: o roteiro define os três.",
+        "choices": [
+          {
+            "action": "Insuflar cerca de 30 mmHg acima da sistólica palpatória, soltar o ar de forma contínua a 2–3 mmHg por segundo e registrar a sistólica no 1º ruído e a diastólica no desaparecimento dos sons",
+            "correct": true,
+            "feedback": "Insuflação 30 mmHg acima do valor palpatório, desinsuflação contínua a 2–3 mmHg/s, sistólica na fase I e diastólica na fase V de Korotkoff (p. 4)."
+          },
+          {
+            "action": "Insuflar 30 mmHg acima, soltar o ar rapidamente e registrar a diastólica no abafamento",
+            "feedback": "A desinsuflação deve ser contínua e lenta, 2–3 mmHg por segundo; a diastólica é registrada quando os sons desaparecem (p. 4)."
+          },
+          {
+            "action": "Insuflar até o máximo do aparelho e soltar o ar a 10 mmHg por segundo",
+            "feedback": "Insuflar cerca de 30 mmHg acima da sistólica palpatória, e não o máximo, e soltar a 2–3 mmHg por segundo (p. 4)."
+          },
+          {
+            "action": "Insuflar cerca de 30 mmHg acima, soltar em degraus e registrar a sistólica no 2º ruído",
+            "feedback": "A desinsuflação é contínua, e a sistólica é registrada no primeiro ruído (p. 4)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você registrou as pressões com o Sr. J.A. sentado. Por ser um idoso na primeira avaliação, o roteiro pede a medida nas várias posições.",
+        "patient": "Sr. J.A.: \"Acabou, doutor(a)? Posso ir embora?\"",
+        "prompt": "O que você faz?",
+        "hint": "Este paciente é idoso e está na primeira avaliação. O roteiro pede a medida em mais de uma posição?",
+        "choices": [
+          {
+            "action": "Explicar que falta mais uma medida e posicioná-lo em pé",
+            "correct": true,
+            "feedback": "Nestes casos a medida deve ser feita nas várias posições: sentado, deitado ou em pé (p. 3)."
+          },
+          {
+            "action": "Encerrar a avaliação com a medida sentado",
+            "feedback": "Neste caso, a medida deve ser feita nas várias posições (p. 3)."
+          },
+          {
+            "action": "Repetir a medida sentado e considerar a avaliação completa",
+            "feedback": "Repetir na mesma posição não atende ao que o roteiro pede para este paciente: as várias posições (p. 3)."
+          },
+          {
+            "action": "Deixá-lo em pé e já medir, sem esperar nem ajustar o braço",
+            "feedback": "Em qualquer posição, a braquial deve ficar ao nível do coração, com o braço apoiado (p. 3)."
+          }
+        ]
+      },
+      {
+        "narrative": "O Sr. J.A. está em pé. O braço dele está pendente ao lado do corpo.",
+        "prompt": "Como você prepara o braço para a nova medida?",
+        "hint": "Em qualquer posição, onde deve ficar a artéria braquial?",
+        "choices": [
+          {
+            "action": "Manter a artéria braquial ao nível do coração (4º espaço intercostal), com o braço apoiado",
+            "correct": true,
+            "feedback": "Em qualquer posição, a artéria braquial deve ficar ao nível do coração (p. 3)."
+          },
+          {
+            "action": "Medir com o braço pendente, pois o paciente já está em pé",
+            "feedback": "Com o braço pendente, ele fica abaixo do nível do coração e a medida sai alterada (p. 3)."
+          },
+          {
+            "action": "Medir com o braço levantado acima da cabeça",
+            "feedback": "A braquial deve ficar ao nível do coração, nem acima nem abaixo (p. 3)."
+          },
+          {
+            "action": "Dispensar o apoio do braço, pois o paciente consegue segurá-lo sozinho",
+            "feedback": "O braço deve ficar apoiado, com a braquial ao nível do coração (p. 3)."
+          }
+        ]
+      },
+      {
+        "narrative": "O braço está apoiado, com a artéria braquial ao nível do coração.",
+        "prompt": "O que você faz para concluir?",
+        "hint": "A técnica da segunda medida é a mesma ou diferente? E o que se registra?",
+        "choices": [
+          {
+            "action": "Repetir a medida com a mesma técnica e registrar as pressões obtidas em cada posição",
+            "correct": true,
+            "feedback": "Repete-se a medida com a mesma técnica e registram-se as pressões de cada posição (p. 3)."
+          },
+          {
+            "action": "Repetir a medida com uma técnica mais rápida, só pela ausculta",
+            "feedback": "A técnica é a mesma, incluindo o método palpatório e a desinsuflação lenta (p. 3–5)."
+          },
+          {
+            "action": "Registrar apenas a pressão em pé, pois é a mais recente",
+            "feedback": "Registram-se as pressões obtidas em cada posição (p. 3)."
+          },
+          {
+            "action": "Registrar uma média das duas posições em um único valor",
+            "feedback": "Cada posição tem o seu valor registrado, sem média (p. 3)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-r20-pa-ruidos-dificeis",
+    "title": "Pressão arterial: quando os ruídos são de difícil percepção",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS, silencioso. O Sr. P.N. está sentado, com apoio para o braço. Sobre a mesa: esfigmomanômetro, estetoscópio, relógio e bloco de anotações. O material já foi higienizado.",
+    "scenario": "Você é acadêmico(a) de Medicina e vai aferir a pressão arterial do Sr. P.N., 63 anos, que veio a uma consulta de rotina. Ele já foi abordado, entendeu o procedimento e consentiu. Durante a ausculta, você percebe que os ruídos estão sendo percebidos com dificuldade.",
+    "task": "Meça a pressão arterial pelo método indireto e resolva a dificuldade de ouvir os ruídos sem perder a técnica. Nesta estação você não precisa classificar o resultado.",
+    "tip": "Se os ruídos forem percebidos com dificuldade, aumentar o ângulo entre o braço e o tórax, retificando a artéria, facilita a ausculta (p. 4).",
+    "scenes": [
+      {
+        "narrative": "O Sr. P.N. acabou de chegar. O material está pronto sobre a mesa.",
+        "prompt": "Como você começa?",
+        "hint": "O que o paciente precisa antes de qualquer medida e em que posição fica?",
+        "choices": [
+          {
+            "action": "Garantir repouso de 3 a 5 minutos, em local tranquilo, com o paciente sentado e confortável",
+            "correct": true,
+            "feedback": "A medida exige repouso de 3 a 5 minutos, em local tranquilo, com o paciente sentado e confortável (p. 3)."
+          },
+          {
+            "action": "Medir assim que ele se sentar",
+            "feedback": "Sem o repouso de 3 a 5 minutos, a medida não reflete a pressão de repouso (p. 3)."
+          },
+          {
+            "action": "Fazer o repouso com ele em pé ao lado da mesa",
+            "feedback": "A posição preferencial é sentado, confortável (p. 3)."
+          },
+          {
+            "action": "Aguardar o repouso com ele conversando sobre o trabalho",
+            "feedback": "O local deve ser tranquilo e sem ruídos que atrapalhem a ausculta (p. 3)."
+          }
+        ]
+      },
+      {
+        "narrative": "Passaram-se 5 minutos de repouso.",
+        "prompt": "Como você posiciona o braço e o manguito?",
+        "hint": "Onde fica a artéria braquial em relação ao coração e onde vai o manguito?",
+        "choices": [
+          {
+            "action": "Braquial ao nível do coração (4º espaço intercostal), braço ligeiramente fletido e apoiado, palma para cima; localizar as pulsações e colocar o manguito 2 cm acima da fossa cubital",
+            "correct": true,
+            "feedback": "Posição do braço e manguito corretos (p. 3)."
+          },
+          {
+            "action": "Braço pendente ao lado do corpo e manguito sobre a fossa cubital",
+            "feedback": "O braço deve ficar com a braquial ao nível do coração e o manguito 2 cm ACIMA da fossa cubital (p. 3)."
+          },
+          {
+            "action": "Braço apoiado no colo e manguito 2 cm abaixo da fossa cubital",
+            "feedback": "O colo deixa o braço abaixo do coração, e o manguito fica acima da fossa cubital (p. 3)."
+          },
+          {
+            "action": "Braço esticado sem apoio e manguito colocado sem localizar a braquial",
+            "feedback": "O braço deve ficar ligeiramente fletido e apoiado, e a pulsação da braquial deve ser localizada antes (p. 3)."
+          }
+        ]
+      },
+      {
+        "narrative": "O manguito está colocado.",
+        "prompt": "Como você estima a pressão sistólica?",
+        "hint": "Antes da ausculta há um método para estimar a sistólica.",
+        "choices": [
+          {
+            "action": "Palpar o pulso radial, insuflar até o pulso desaparecer e desinsuflar lentamente até ele reaparecer",
+            "correct": true,
+            "feedback": "O reaparecimento do pulso dá a sistólica pelo método palpatório (p. 3–5)."
+          },
+          {
+            "action": "Dispensar o método palpatório e insuflar direto",
+            "feedback": "Sem estimar a sistólica antes, você não sabe até onde insuflar (p. 3–5)."
+          },
+          {
+            "action": "Palpar o pulso carotídeo para estimar a sistólica",
+            "feedback": "No método palpatório usa-se o pulso radial (p. 3), e não a carótida."
+          },
+          {
+            "action": "Estimar a sistólica pelo tamanho do manguito",
+            "feedback": "A estimativa é feita palpando o pulso radial durante a desinsuflação (p. 3–5)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você colocou o estetoscópio sobre a artéria braquial. Ao insuflar e começar a soltar o ar, quase não ouve os ruídos.",
+        "patient": "Sr. P.N.: \"Está tudo bem, doutor(a)? O senhor ficou calado.\"",
+        "prompt": "Qual é o seu primeiro passo para a ausculta?",
+        "hint": "Os ruídos são fracos, mas a técnica de insuflação e soltura do ar continua a mesma.",
+        "choices": [
+          {
+            "action": "Insuflar cerca de 30 mmHg acima da sistólica palpatória e soltar o ar de forma contínua a 2–3 mmHg por segundo",
+            "correct": true,
+            "feedback": "A técnica de insuflação e desinsuflação não muda quando os ruídos são fracos (p. 4)."
+          },
+          {
+            "action": "Insuflar até o máximo do aparelho para ouvir melhor",
+            "feedback": "Insuflar cerca de 30 mmHg acima da sistólica palpatória, e não o máximo (p. 4)."
+          },
+          {
+            "action": "Soltar o ar rapidamente para os sons ficarem mais altos",
+            "feedback": "A desinsuflação deve ser contínua e lenta, a 2–3 mmHg por segundo (p. 4)."
+          },
+          {
+            "action": "Soltar o ar até zero e desinsuflar de novo logo em seguida, repetidas vezes",
+            "feedback": "Insuflar e esvaziar repetidamente não faz parte da técnica; resolva a dificuldade e conclua a ausculta (p. 4)."
+          }
+        ]
+      },
+      {
+        "narrative": "Os ruídos continuam difíceis de ouvir. A artéria está com o braço bem junto ao corpo.",
+        "prompt": "O que você faz para facilitar a ausculta?",
+        "hint": "O roteiro cita um recurso que muda a posição do braço em relação ao tórax.",
+        "choices": [
+          {
+            "action": "Aumentar o ângulo entre o braço e o tórax, retificando a artéria",
+            "correct": true,
+            "feedback": "Aumentar o ângulo entre o braço e o tórax, retificando a artéria, facilita a ausculta dos sons (p. 4)."
+          },
+          {
+            "action": "Pedir que o paciente fale mais alto para cobrir o ruído da sala",
+            "feedback": "A conversa atrapalha a ausculta; o recurso do roteiro é retificar a artéria (p. 4)."
+          },
+          {
+            "action": "Apertar mais o manguito sobre o braço",
+            "feedback": "O manguito fica na posição indicada; o recurso do roteiro é aumentar o ângulo entre o braço e o tórax (p. 4)."
+          },
+          {
+            "action": "Trocar a medida para o pulso radial e registrar o valor palpatório como pressão",
+            "feedback": "O valor palpatório é só uma estimativa da sistólica; ele não substitui a ausculta (p. 3–5)."
+          }
+        ]
+      },
+      {
+        "narrative": "Com a artéria retificada, você consegue ouvir os ruídos.",
+        "prompt": "Como você registra os valores?",
+        "hint": "Qual ruído marca a sistólica e o que marca a diastólica?",
+        "choices": [
+          {
+            "action": "Registrar a sistólica no aparecimento do primeiro ruído e a diastólica no desaparecimento dos sons",
+            "correct": true,
+            "feedback": "Sistólica na fase I e diastólica na fase V de Korotkoff (p. 4)."
+          },
+          {
+            "action": "Registrar a sistólica no desaparecimento dos sons e a diastólica no primeiro ruído",
+            "feedback": "Os valores estão invertidos: a sistólica é o primeiro ruído, e a diastólica é o desaparecimento dos sons (p. 4)."
+          },
+          {
+            "action": "Registrar apenas a sistólica, já que a diastólica é difícil de ouvir",
+            "feedback": "Registram-se a sistólica e a diastólica (p. 4)."
+          },
+          {
+            "action": "Registrar a diastólica no início do abafamento dos sons",
+            "feedback": "A diastólica é registrada no desaparecimento dos sons (fase V) (p. 4)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "hm1-n1-r21-pulso-respiracao-ritmo-alterado",
+    "title": "Pulso e respiração: quando o ritmo está alterado",
+    "theme": "Sinais Vitais",
+    "unit": "N1",
+    "setting": "Consultório da UBS, silencioso. O Sr. G.M. está sentado, com o braço apoiado. Sobre a mesa: relógio com marcador de segundos e bloco de anotações. As mãos e o material já foram higienizados.",
+    "scenario": "Você é acadêmico(a) de Medicina e avaliará o pulso e a respiração do Sr. G.M., 52 anos. Ele já foi abordado, entendeu o procedimento e consentiu. Ao palpar o pulso radial, você percebe, nos primeiros 30 segundos, que o ritmo está alterado.",
+    "task": "Avalie o pulso e a respiração com a técnica do roteiro. Nesta estação você não precisa classificar os valores.",
+    "tip": "Se houver alteração de ritmo ou de amplitude nos primeiros 30 segundos, a contagem do pulso vai até 1 minuto. A respiração é contada sem avisar o paciente (p. 2).",
+    "scenes": [
+      {
+        "narrative": "O Sr. G.M. está sentado, com o antebraço apoiado e a palma para cima.",
+        "prompt": "O que você faz para avaliar o pulso?",
+        "hint": "Em qual artéria se palpa o pulso de um paciente consciente?",
+        "choices": [
+          {
+            "action": "Palpar o pulso radial",
+            "correct": true,
+            "feedback": "O pulso radial é o local de palpação nesta avaliação (p. 2)."
+          },
+          {
+            "action": "Palpar o pulso na veia jugular",
+            "feedback": "Pulso é palpado em artéria; a jugular é uma veia."
+          },
+          {
+            "action": "Contar os batimentos pelo relógio, sem palpar",
+            "feedback": "O pulso é avaliado palpando a artéria, para perceber também ritmo, força e amplitude (p. 2)."
+          },
+          {
+            "action": "Palpar o pulso carotídeo nos dois lados ao mesmo tempo",
+            "feedback": "Neste paciente consciente, o pulso é palpado na artéria radial (p. 2)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você está com os dedos sobre o pulso radial do Sr. G.M.",
+        "prompt": "Como você conta o pulso?",
+        "hint": "Por quanto tempo se conta o pulso no início, e o que mais se observa?",
+        "choices": [
+          {
+            "action": "Contar as pulsações por 30 segundos, observando ritmo, força e amplitude",
+            "correct": true,
+            "feedback": "A contagem começa por 30 segundos, observando ritmo, força e amplitude (p. 2)."
+          },
+          {
+            "action": "Contar por 10 segundos e multiplicar por 6",
+            "feedback": "O roteiro manda contar por 30 segundos para observar também ritmo e amplitude (p. 2)."
+          },
+          {
+            "action": "Contar sem olhar o relógio, só pela sensação",
+            "feedback": "A contagem é feita com o tempo marcado (p. 2)."
+          },
+          {
+            "action": "Contar apenas as pulsações, sem observar o ritmo",
+            "feedback": "Observam-se ritmo, força e amplitude durante a contagem (p. 2)."
+          }
+        ]
+      },
+      {
+        "narrative": "Nos primeiros 30 segundos, o ritmo do pulso está irregular.",
+        "prompt": "O que você faz agora?",
+        "hint": "O ritmo está alterado. Isso muda o tempo de contagem?",
+        "choices": [
+          {
+            "action": "Manter a contagem até completar 1 minuto",
+            "correct": true,
+            "feedback": "Com alteração de ritmo ou de amplitude nos primeiros 30 segundos, a contagem vai até 1 minuto (p. 2)."
+          },
+          {
+            "action": "Multiplicar o valor dos 30 segundos por 2 e encerrar",
+            "feedback": "A multiplicação por 2 só vale quando não há alteração de ritmo ou amplitude (p. 2)."
+          },
+          {
+            "action": "Repetir a contagem de 30 segundos e fazer a média",
+            "feedback": "Com ritmo alterado, a contagem é mantida até 1 minuto, e não há média (p. 2)."
+          },
+          {
+            "action": "Desistir do pulso radial e trocar para o pulso carotídeo",
+            "feedback": "A técnica continua no radial, estendendo a contagem para 1 minuto (p. 2)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você completou 1 minuto de contagem do pulso.",
+        "prompt": "Como você passa à avaliação da respiração?",
+        "hint": "A respiração é avaliada logo após o pulso. Os dedos soltam o pulso?",
+        "choices": [
+          {
+            "action": "Continuar palpando o pulso e começar a observar discretamente o tórax",
+            "correct": true,
+            "feedback": "A respiração é avaliada logo após o pulso, continuando a palpar o mesmo (p. 3)."
+          },
+          {
+            "action": "Soltar o pulso e avisar que vai contar a respiração",
+            "feedback": "Avisar leva ao controle voluntário do padrão respiratório; a palpação do pulso continua (p. 2–3)."
+          },
+          {
+            "action": "Pedir ao paciente que respire fundo para facilitar a contagem",
+            "feedback": "A respiração é avaliada sem interferir no padrão do paciente (p. 2)."
+          },
+          {
+            "action": "Esperar um tempo, soltar o pulso e contar a respiração depois",
+            "feedback": "A respiração é avaliada logo após o pulso, continuando a palpar o mesmo (p. 3)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você mantém os dedos no pulso e observa o tórax do Sr. G.M.",
+        "patient": "Sr. G.M.: \"O que o senhor está fazendo agora, doutor(a)?\"",
+        "prompt": "Como você conta a respiração?",
+        "hint": "Por quanto tempo se conta a respiração? E o paciente fica sabendo?",
+        "choices": [
+          {
+            "action": "Contar a respiração durante 1 minuto, sem informar o paciente",
+            "correct": true,
+            "feedback": "Informar o paciente leva ao controle voluntário do padrão respiratório (p. 2)."
+          },
+          {
+            "action": "Dizer que vai contar a respiração e pedir que ele respire normalmente",
+            "feedback": "Ao saber, o paciente tende a controlar a respiração (p. 2)."
+          },
+          {
+            "action": "Contar a respiração por 15 segundos e multiplicar por 4",
+            "feedback": "Para a respiração, o roteiro manda contar durante 1 minuto (p. 2)."
+          },
+          {
+            "action": "Contar a respiração por 30 segundos e multiplicar por 2",
+            "feedback": "Para a respiração, o roteiro manda contar durante 1 minuto (p. 2)."
+          }
+        ]
+      },
+      {
+        "narrative": "Você completou 1 minuto de contagem da respiração.",
+        "prompt": "O que você avalia além da frequência?",
+        "hint": "Além da frequência, o que mais se avalia na respiração?",
+        "choices": [
+          {
+            "action": "Avaliar ritmo, amplitude e tiragem da respiração",
+            "correct": true,
+            "feedback": "Além da frequência, avaliam-se ritmo, amplitude e tiragem (p. 2–3)."
+          },
+          {
+            "action": "Avaliar apenas a frequência, pois o resto é do exame do tórax",
+            "feedback": "Ritmo, amplitude e tiragem também fazem parte da avaliação da respiração (p. 2–3)."
+          },
+          {
+            "action": "Avaliar a cor das unhas e a temperatura da pele",
+            "feedback": "Esses itens não fazem parte da avaliação da respiração neste roteiro."
+          },
+          {
+            "action": "Avaliar a pressão arterial no mesmo braço, sem soltar o pulso",
+            "feedback": "A pressão arterial é uma avaliação à parte, com a técnica própria (p. 3–5)."
+          }
+        ]
+      }
+    ]
   }
 ]
