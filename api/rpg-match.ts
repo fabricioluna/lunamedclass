@@ -73,10 +73,14 @@ export default async function handler(req: RpgMatchRequest, res: RpgMatchRespons
       const model = genAI.getGenerativeModel({
         model: MODEL,
         systemInstruction: system,
-        generationConfig: { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 60 },
+        // Teto folgado de propósito: em modelos com "raciocínio", os tokens de raciocínio contam no limite de
+        // saída — com um teto curto o JSON vinha cortado e toda frase livre virava "não entendi".
+        generationConfig: { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 1024 },
       } as unknown as ModelParams);
       const response = await model.generateContent(user);
-      return response.response.text();
+      const text = response.response.text();
+      if (!text.trim()) console.warn('rpg-match: resposta vazia do modelo');
+      return text;
     });
 
     return res.status(200).json(result);

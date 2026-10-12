@@ -113,7 +113,7 @@
         ]
       },
       {
-        "narrative": "Você se despede do paciente e se prepara para encerrar a visita. Você está usando somente a máscara PFF2/N95.",
+        "narrative": "Você se despede do paciente. Você está usando somente a máscara PFF2/N95.",
         "prompt": "Qual é o próximo passo da desparamentação?",
         "hint": "Quais EPIs você está usando nesta precaução? Só retire o que você realmente está usando.",
         "choices": [
@@ -138,7 +138,7 @@
       },
       {
         "narrative": "A máscara foi retirada. Você está de volta ao corredor, ao lado do dispensador de preparação alcoólica.",
-        "prompt": "Para encerrar, o que você faz?",
+        "prompt": "O que você faz agora?",
         "hint": "Como a sequência da desparamentação termina?",
         "choices": [
           {
@@ -222,7 +222,7 @@
         ]
       },
       {
-        "narrative": "O avental está colocado. Falta o último EPI da paramentação.",
+        "narrative": "O avental está colocado.",
         "prompt": "O que você faz agora?",
         "hint": "É o último EPI da paramentação. Qual tipo de luva serve para um exame que não é estéril?",
         "choices": [
@@ -343,8 +343,8 @@
         ]
       },
       {
-        "narrative": "O avental foi retirado. Falta o último passo.",
-        "prompt": "Para encerrar, o que você faz?",
+        "narrative": "O avental foi retirado.",
+        "prompt": "O que você faz agora?",
         "hint": "Como a sequência da desparamentação termina?",
         "choices": [
           {
@@ -452,7 +452,7 @@
         ]
       },
       {
-        "narrative": "A conversa terminou e a paciente já voltou do exame. Você vai encerrar a visita usando somente a máscara cirúrgica.",
+        "narrative": "A conversa terminou e a paciente já voltou do exame. Você está usando somente a máscara cirúrgica.",
         "prompt": "Qual é o próximo passo da desparamentação?",
         "hint": "Quais EPIs você está usando nesta precaução? Só retire o que está usando.",
         "choices": [
@@ -477,7 +477,7 @@
       },
       {
         "narrative": "A máscara foi retirada. Você está de volta ao corredor.",
-        "prompt": "Para encerrar, o que você faz?",
+        "prompt": "O que você faz agora?",
         "hint": "Como a sequência da desparamentação termina?",
         "choices": [
           {
@@ -584,7 +584,7 @@
         ]
       },
       {
-        "narrative": "O avental foi retirado. Ao tirá-lo, suas mãos tocaram a parte externa dele. Você ainda usa óculos, touca e máscara.",
+        "narrative": "O avental foi retirado. Você ainda usa óculos, touca e máscara.",
         "prompt": "O que você faz agora?",
         "hint": "Você tocou a parte externa do avental. O que as mãos precisam antes de seguir?",
         "choices": [
@@ -608,7 +608,7 @@
         ]
       },
       {
-        "narrative": "Suas mãos estão higienizadas. Restam os óculos, a touca e a máscara PFF2/N95.",
+        "narrative": "Suas mãos estão higienizadas. Você ainda usa óculos, touca e máscara PFF2/N95.",
         "prompt": "Qual é o próximo EPI?",
         "hint": "Na sequência com touca, os óculos saem antes de qual outra peça da cabeça?",
         "choices": [
@@ -632,7 +632,7 @@
         ]
       },
       {
-        "narrative": "Os óculos foram retirados. Restam a touca e a máscara PFF2/N95.",
+        "narrative": "Os óculos foram retirados. Você ainda usa touca e máscara PFF2/N95.",
         "prompt": "Qual é o próximo EPI?",
         "hint": "Faltam a touca e a máscara. Na sequência com touca, qual vem primeiro?",
         "choices": [
@@ -656,7 +656,7 @@
         ]
       },
       {
-        "narrative": "A touca foi retirada. Resta apenas a máscara PFF2/N95.",
+        "narrative": "A touca foi retirada. Você ainda usa a máscara PFF2/N95.",
         "prompt": "O que você faz?",
         "hint": "Resta uma peça de proteção respiratória.",
         "choices": [
@@ -681,7 +681,7 @@
       },
       {
         "narrative": "Todos os EPIs foram retirados.",
-        "prompt": "Para encerrar, o que você faz?",
+        "prompt": "O que você faz agora?",
         "hint": "Como a sequência termina?",
         "choices": [
           {
@@ -858,7 +858,7 @@
         ]
       },
       {
-        "narrative": "Faltam as medidas de pressão arterial. O paciente já está sentado e confortável.",
+        "narrative": "O paciente já está sentado e confortável.",
         "prompt": "Como você afere a pressão arterial?",
         "hint": "Lembre dos passos que antecedem a medida: o repouso e a estimativa pelo método palpatório.",
         "choices": [
@@ -998,8 +998,8 @@
         ]
       },
       {
-        "narrative": "O manguito está colocado. Você ainda não sabe até que valor insuflar.",
-        "prompt": "Como você estima a pressão sistólica?",
+        "narrative": "O manguito está colocado.",
+        "prompt": "Qual é o próximo passo?",
         "hint": "Antes da ausculta há um método para estimar a sistólica. Qual é?",
         "choices": [
           {
@@ -1028,7 +1028,7 @@
         ]
       },
       {
-        "narrative": "O pulso radial reapareceu em 168 mmHg. Você vai passar à ausculta.",
+        "narrative": "O pulso radial reapareceu em 168 mmHg.",
         "prompt": "Como você prossegue?",
         "hint": "Qual margem acima do valor palpatório o roteiro manda insuflar, e onde vai o estetoscópio?",
         "choices": [
@@ -1052,7 +1052,7 @@
         ]
       },
       {
-        "narrative": "O manguito está insuflado a ≈ 198 mmHg, com o estetoscópio sobre a braquial. É hora de desinsuflar.",
+        "narrative": "O manguito está insuflado a ≈ 198 mmHg, com o estetoscópio sobre a braquial. ",
         "prompt": "Como você solta o ar?",
         "hint": "A velocidade de desinsuflação tem um valor definido no roteiro.",
         "choices": [
@@ -1143,8 +1143,8 @@
         ]
       },
       {
-        "narrative": "A paciente consentiu. Você precisa preparar a medida.",
-        "prompt": "O que você faz antes de aferir?",
+        "narrative": "A paciente consentiu.",
+        "prompt": "O que você faz agora?",
         "hint": "Qual intervalo de repouso o roteiro exige?",
         "choices": [
           {
@@ -1216,8 +1216,8 @@
         ]
       },
       {
-        "narrative": "O manguito está colocado. Você precisa estimar a sistólica antes da ausculta.",
-        "prompt": "Como você estima a pressão sistólica?",
+        "narrative": "O manguito está colocado.",
+        "prompt": "Qual é o próximo passo?",
         "hint": "Antes da ausculta: como se estima a sistólica?",
         "choices": [
           {
@@ -1246,7 +1246,7 @@
         ]
       },
       {
-        "narrative": "O pulso radial reapareceu em 128 mmHg. Você parte para a ausculta.",
+        "narrative": "O pulso radial reapareceu em 128 mmHg.",
         "prompt": "Como você prossegue?",
         "hint": "Margem de insuflação, local do estetoscópio e velocidade de soltura do ar: o roteiro define os três.",
         "choices": [
@@ -1478,7 +1478,7 @@
         ]
       },
       {
-        "narrative": "Faltam as medidas de pressão arterial. O paciente está deitado, com os braços ao longo do corpo.",
+        "narrative": "O paciente está deitado, com os braços ao longo do corpo.",
         "patient": "Enfermeira: \"Dá para medir o braço direito, está livre.\"",
         "prompt": "Como você afere a pressão arterial?",
         "hint": "Braço apoiado e artéria braquial ao nível do coração; antes da ausculta, o método palpatório.",
@@ -1784,7 +1784,7 @@
       },
       {
         "narrative": "As luvas foram retiradas e descartadas.",
-        "prompt": "Para encerrar, o que você faz?",
+        "prompt": "O que você faz agora?",
         "hint": "O que se faz em seguida à remoção das luvas?",
         "choices": [
           {
@@ -1868,8 +1868,8 @@
         ]
       },
       {
-        "narrative": "O sabonete cobre as palmas das mãos. Agora vem a fricção.",
-        "prompt": "O que você esfrega?",
+        "narrative": "O sabonete cobre as palmas das mãos.",
+        "prompt": "Qual é o próximo passo?",
         "hint": "Quais superfícies das mãos entram na sequência de esfregar?",
         "choices": [
           {
@@ -1892,7 +1892,7 @@
         ]
       },
       {
-        "narrative": "As mãos foram esfregadas. Falta enxaguar e secar.",
+        "narrative": "As mãos foram esfregadas.",
         "prompt": "Como você termina?",
         "hint": "Como termina a lavagem? Atenção ao que se usa para a torneira.",
         "choices": [
@@ -2147,7 +2147,7 @@
       },
       {
         "narrative": "As luvas foram descartadas. Suas mãos estão sem luvas.",
-        "prompt": "Para encerrar, o que você faz?",
+        "prompt": "O que você faz agora?",
         "hint": "O que se faz com as mãos depois?",
         "choices": [
           {
@@ -3066,7 +3066,7 @@
         ]
       },
       {
-        "narrative": "O avental foi retirado. Ao tirá-lo, suas mãos tocaram a parte externa dele. Você ainda usa óculos e máscara.",
+        "narrative": "O avental foi retirado. Você ainda usa óculos e máscara.",
         "prompt": "O que vem agora?",
         "hint": "Você já fez: luvas, mãos higienizadas, avental. O que vem a seguir na sequência sem touca (p. 8–9)?",
         "choices": [
@@ -3090,7 +3090,7 @@
         ]
       },
       {
-        "narrative": "Suas mãos estão higienizadas. Restam os óculos e a máscara cirúrgica.",
+        "narrative": "Suas mãos estão higienizadas. Você ainda usa óculos e máscara cirúrgica.",
         "prompt": "O que vem agora?",
         "hint": "Você já fez: luvas, mãos higienizadas, avental, mãos higienizadas de novo. O que vem a seguir na sequência sem touca (p. 8–9)?",
         "choices": [
@@ -3114,7 +3114,7 @@
         ]
       },
       {
-        "narrative": "Os óculos foram retirados. Resta apenas a máscara cirúrgica.",
+        "narrative": "Os óculos foram retirados. Você ainda usa a máscara cirúrgica.",
         "prompt": "O que vem agora?",
         "hint": "Você já fez: luvas, mãos higienizadas, avental, mãos higienizadas de novo, óculos. O que vem a seguir na sequência sem touca (p. 8–9)?",
         "choices": [
@@ -3143,7 +3143,7 @@
       },
       {
         "narrative": "Todos os EPIs foram retirados.",
-        "prompt": "Para encerrar, o que você faz?",
+        "prompt": "O que você faz agora?",
         "hint": "Você já fez: luvas, mãos higienizadas, avental, mãos higienizadas de novo, óculos, máscara cirúrgica. O que vem a seguir na sequência sem touca (p. 8–9)?",
         "choices": [
           {
@@ -3252,7 +3252,7 @@
       },
       {
         "narrative": "O manguito está colocado. Você ainda não sabe até que valor insuflar.",
-        "prompt": "Como você estima a pressão sistólica?",
+        "prompt": "Qual é o próximo passo?",
         "hint": "Há um método para estimar a sistólica antes da ausculta. Qual?",
         "choices": [
           {
@@ -3299,7 +3299,7 @@
         ]
       },
       {
-        "narrative": "Você registrou as pressões com o Sr. J.A. sentado. Por ser um idoso na primeira avaliação, o roteiro pede a medida nas várias posições.",
+        "narrative": "Você registrou as pressões com o Sr. J.A. sentado.",
         "patient": "Sr. J.A.: \"Acabou, doutor(a)? Posso ir embora?\"",
         "prompt": "O que você faz?",
         "hint": "Este paciente é idoso e está na primeira avaliação. O roteiro pede a medida em mais de uma posição?",
@@ -3433,7 +3433,7 @@
       },
       {
         "narrative": "O manguito está colocado.",
-        "prompt": "Como você estima a pressão sistólica?",
+        "prompt": "Qual é o próximo passo?",
         "hint": "Antes da ausculta há um método para estimar a sistólica.",
         "choices": [
           {
@@ -3481,7 +3481,7 @@
         ]
       },
       {
-        "narrative": "Os ruídos continuam difíceis de ouvir. A artéria está com o braço bem junto ao corpo.",
+        "narrative": "Os ruídos continuam difíceis de ouvir.",
         "prompt": "O que você faz para facilitar a ausculta?",
         "hint": "O roteiro cita um recurso que muda a posição do braço em relação ao tórax.",
         "choices": [

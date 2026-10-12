@@ -489,7 +489,9 @@ const GuidedRpgView: React.FC<GuidedRpgViewProps> = ({ station, onBack, onSaveRe
     setIsMatching(true);
 
     try {
-      const result = await matchAction({ narrative: scene.narrative, options: scene.choices.map((c) => c.action), text });
+      // A pergunta da cena vai junto: ela dá o contexto do que o aluno está respondendo.
+      const context = [scene.narrative, scene.patient, scene.prompt].filter(Boolean).join('\n');
+      const result = await matchAction({ narrative: context, options: scene.choices.map((c) => c.action), text });
 
       if (result.kind === 'match') {
         const choice = scene.choices[result.index];
