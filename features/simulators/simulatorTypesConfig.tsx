@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Gamepad2, Microscope, Pill, ClipboardList, Sword, UserSquare2, FileSearch, Stethoscope } from 'lucide-react';
+import { Activity, Gamepad2, Microscope, Pill, ClipboardList, FileSearch, Stethoscope } from 'lucide-react';
 
 export interface SimulatorTypeConfig {
   slug: string;
@@ -11,15 +11,10 @@ export interface SimulatorTypeConfig {
   buildPath: (disciplineId: string) => string;
 }
 
-// Os mesmos casos de RPG guiado (item 6.17) aparecem em dois cartões, com interações diferentes:
-// "RPG Guiado" (escolha entre alternativas, sem IA) e "RPG com IA" (o aluno digita a conduta e a IA
-// só interpreta). O cartão "RPG com IA" também lista os casos do motor antigo (Luna Engine, `rpg`).
-const OSCE_MODES_BY_TYPE: Record<string, string[]> = {
-  rpg: ['rpg', 'guided'],
-};
-
-export const stationModeMatchesType = (stationMode: string, matchValue: string): boolean =>
-  (OSCE_MODES_BY_TYPE[matchValue] ?? [matchValue]).includes(stationMode);
+// Cada tipo OSCE casa com exatamente um `mode` de estação. Só há dois formatos ativos para o aluno:
+// Estático (`clinical`) e RPG Guiado (`guided`). Os motores `rpg` (Luna Engine) e `ai` (Paciente
+// Virtual) continuam no código, mas sem cartão: ver PLANO-REESTRUTURACAO.md.
+export const stationModeMatchesType = (stationMode: string, matchValue: string): boolean => stationMode === matchValue;
 
 export interface ComingSoonSimulatorType {
   title: string;
@@ -95,24 +90,6 @@ export const AVAILABLE_SIMULATOR_TYPES: SimulatorTypeConfig[] = [
     source: 'osce',
     matchValue: 'guided',
     buildPath: (id) => `/disciplina/${id}/osce/configurar/guided`,
-  },
-  {
-    slug: 'osce-rpg',
-    title: 'OSCE RPG com IA',
-    description: 'Digite a conduta com as suas palavras e a IA interpreta. Inclui casos dinâmicos com sinais vitais.',
-    icon: <Sword className="w-8 h-8 text-[#D4A017]" />,
-    source: 'osce',
-    matchValue: 'rpg',
-    buildPath: (id) => `/disciplina/${id}/osce/configurar/rpg`,
-  },
-  {
-    slug: 'paciente-virtual',
-    title: 'Paciente Virtual (Anamnese)',
-    description: 'Anamnese livre conversando com a IA.',
-    icon: <UserSquare2 className="w-8 h-8 text-[#D4A017]" />,
-    source: 'osce',
-    matchValue: 'ai',
-    buildPath: (id) => `/disciplina/${id}/osce/configurar/ai`,
   },
 ];
 

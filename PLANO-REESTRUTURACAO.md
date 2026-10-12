@@ -2045,30 +2045,24 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
 
 ---
 
-## 🎮 RPG digitado (2026-10) — branch `feat/rpg-digitado`
+## 🎮 RPG digitado — EXPERIMENTO ENCERRADO (2026-10-12)
 
-Os mesmos 13 casos de RPG guiado podem ser jogados **sem alternativas**: o aluno digita a conduta.
+O modo "digitando a ação" (IA classificando o texto livre em uma das opções da cena) foi construído e
+publicado, mas **não funcionou bem o bastante** na prática (a interpretação do que o aluno escreve era
+rígida, e não havia como medir a acurácia sem a chave do Gemini). Decisão do usuário: **ficam só
+Simulado Estático e RPG Guiado.**
 
-- **Porta de entrada:** `features/osce/GuidedRpgGate.tsx` (escolha do modo). "Com alternativas" segue
-  aberto; "Digitando a ação" fica dentro de `<ProtectedRoute>` (só logado).
-- **A IA só classifica.** `POST /api/rpg-match` recebe a cena + opções + texto digitado e devolve
-  `{index|null, multiple}`. Nunca escreve texto para o aluno, nunca decide nota e **nunca recebe qual opção é a
-  certa**. Texto do aluno é delimitado e tratado como dado (anti prompt-injection); saída validada.
-- **Camadas:** `utils/typedMatch.ts` (match local exato primeiro, sem custo) → `services/rpgMatchService.ts`
-  (token do Firebase) → `api/rpg-match.ts` (verifica ID token sem firebase-admin em `api/_lib/firebaseAuth.ts`;
-  limite por IP e por usuário via `createRateLimiter`). Se a IA falhar/exigir login, a tela cai nas alternativas
-  (plano B); se estiver ocupada (429), mantém o texto.
-- **Nota:** 1/0,5/0 por cena (tentativas) menos penalidade de dica (0/0,25/0,5). Dica 1 vem de
-  `conteudo/osce-hm1-n1/rpg-dicas.mjs` (campo `hint` no JSON — **reimportar `rpg.json`** para ativar); dica 2
-  mostra a conduta.
-- **Menu OSCE (4 cartões, revisão de 2026-10-12):** Estático (`clinical`) · RPG Guiado (`guided`, alternativas, sem IA,
-  sem login) · RPG com IA (`guided` digitado + Luna Engine `rpg`, exige login) · Paciente Virtual/Anamnese (`ai`, ainda
-  sem conteúdo). O mesmo caso `guided` aparece nos dois cartões de RPG; o formato vai no `?modo=` da URL e a tela de
-  escolha de modo foi removida (sem `modo`, abre com alternativas). Trava de acesso: `osce-rpg-guiado` e `osce-rpg`.
-  No admin, "Luna Engine" = importação `rpg` (fases com IA narrando); "Anamnese" = `ai`. Não há estação `rpg` nem `ai`
-  no banco hoje; `DynamicOsceView` (Luna Engine) e `OsceAIView` foram mantidos de propósito.
-- **Pendências/limites:** acurácia do classificador com o Gemini real **ainda não medida** (sem chave local);
-  custo não quantificado; orientar alunos a não digitar dados pessoais.
+- **Menu OSCE:** apenas Estático (`clinical`) e RPG Guiado (`guided`, alternativas, sem IA e sem login).
+  `/simulators` e o admin (importar/filtrar) também só mostram esses dois. Os motores `rpg` (Luna Engine,
+  `DynamicOsceView`) e `ai` (Paciente Virtual, `OsceAIView`) seguem no código, sem cartão e sem estação no banco.
+- **Removido:** `/api/rpg-match`, `api/_lib/rpgMatch*`, `services/rpgMatchService*`, `GuidedRpgGate`.
+- **Mantido de propósito:** `api/_lib/firebaseAuth.ts` (verificação de ID token sem firebase-admin, testada) e
+  `createRateLimiter` — úteis para proteger o `/api/chat` no futuro; `utils/typedMatch.ts` e o modo digitado
+  dormente dentro de `GuidedRpgView` (só ativa com `matchAction`, que nada passa); campo `hint` e
+  `conteudo/osce-hm1-n1/rpg-dicas.mjs`.
+- **Recuperar tudo:** `git checkout rpg-digitado-v1` (tag no commit 988c4f5).
+- **Lição:** classificar texto livre por IA exige um conjunto de frases reais para medir a acurácia ANTES de
+  publicar; sem isso, o ajuste vira tentativa e erro com alunos.
 
 ---
 
