@@ -3,7 +3,10 @@
 // está alinhada, na ordem, às cenas do caso em rpg.mjs — rpg.test.tsx confere que o tamanho bate e
 // que nenhuma dica contém a conduta correta por inteiro.
 
+import { dicasVariantes } from './rpg-variantes.mjs';
+
 export default {
+  ...dicasVariantes,
   R1: [
     'Antes de tocar em qualquer EPI, pense no que as suas mãos precisam. Qual é o primeiro passo da paramentação?',
     'A placa indica aerossóis. Qual máscara o profissional usa nesta precaução, e quando ela precisa estar no rosto em relação à porta?',
