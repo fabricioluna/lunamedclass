@@ -2061,6 +2061,12 @@ Os mesmos 13 casos de RPG guiado podem ser jogados **sem alternativas**: o aluno
 - **Nota:** 1/0,5/0 por cena (tentativas) menos penalidade de dica (0/0,25/0,5). Dica 1 vem de
   `conteudo/osce-hm1-n1/rpg-dicas.mjs` (campo `hint` no JSON — **reimportar `rpg.json`** para ativar); dica 2
   mostra a conduta.
+- **Menu OSCE (4 cartões, revisão de 2026-10-12):** Estático (`clinical`) · RPG Guiado (`guided`, alternativas, sem IA,
+  sem login) · RPG com IA (`guided` digitado + Luna Engine `rpg`, exige login) · Paciente Virtual/Anamnese (`ai`, ainda
+  sem conteúdo). O mesmo caso `guided` aparece nos dois cartões de RPG; o formato vai no `?modo=` da URL e a tela de
+  escolha de modo foi removida (sem `modo`, abre com alternativas). Trava de acesso: `osce-rpg-guiado` e `osce-rpg`.
+  No admin, "Luna Engine" = importação `rpg` (fases com IA narrando); "Anamnese" = `ai`. Não há estação `rpg` nem `ai`
+  no banco hoje; `DynamicOsceView` (Luna Engine) e `OsceAIView` foram mantidos de propósito.
 - **Pendências/limites:** acurácia do classificador com o Gemini real **ainda não medida** (sem chave local);
   custo não quantificado; orientar alunos a não digitar dados pessoais.
 

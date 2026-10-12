@@ -327,7 +327,7 @@ const OsceView: React.FC<OsceViewProps> = ({ station, onBack, onSaveResult }) =>
   }, [isFinished]);
 
   if (station.mode !== 'clinical') {
-    return <ModeMismatchWarning onBack={onBack} requiredMode={station.mode === 'rpg' ? 'Luna Engine (RPG)' : station.mode === 'guided' ? 'RPG Guiado' : 'Paciente Virtual (IA)'} />;
+    return <ModeMismatchWarning onBack={onBack} requiredMode={station.mode === 'rpg' ? 'Luna Engine (RPG)' : station.mode === 'guided' ? 'RPG Guiado' : 'Paciente Virtual (Anamnese)'} />;
   }
 
   const isUC = station.disciplineId.toLowerCase().startsWith('uc');

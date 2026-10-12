@@ -49,7 +49,8 @@ describe('as estações do arquivo de importação no player', () => {
 
     expect(screen.getByText('10.0')).toBeInTheDocument();
     expect(screen.queryByText('Passos que você esqueceu')).not.toBeInTheDocument();
-  });
+    // O primeiro caso paga o custo de carregar o componente; com a suíte inteira em paralelo passava de 5 s.
+  }, 20000);
 });
 
 describe('OsceView com estação no formato de autoria', () => {
