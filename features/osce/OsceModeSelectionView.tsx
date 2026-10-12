@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface OsceModeSelectionViewProps {
-  onSelectMode: (mode: 'static' | 'ai' | 'rpg') => void;
+  onSelectMode: (mode: 'static' | 'ai' | 'rpg' | 'guided') => void;
   onBack: () => void;
 }
 
@@ -17,12 +17,19 @@ const OsceModeSelectionView: React.FC<OsceModeSelectionViewProps> = ({ onSelectM
         <p className="text-gray-500 font-medium text-lg">Escolha como deseja treinar hoje</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* CARD ESTÁTICO */}
         <button onClick={() => onSelectMode('static')} className="bg-white p-8 rounded-[2.5rem] border-2 border-blue-100 hover:border-blue-500 transition-all shadow-sm hover:shadow-xl flex flex-col items-center text-center group">
           <span className="text-6xl mb-6 group-hover:scale-110 transition-transform">📋</span>
           <h3 className="text-lg font-black text-[#003366] uppercase mb-2">Simulado Estático</h3>
           <p className="text-xs text-gray-500">Checklists sequenciais e protocolos técnicos.</p>
+        </button>
+
+        {/* CARD RPG GUIADO (sem IA nas alternativas) */}
+        <button onClick={() => onSelectMode('guided')} className="bg-white p-8 rounded-[2.5rem] border-2 border-amber-100 hover:border-amber-500 transition-all shadow-sm hover:shadow-xl flex flex-col items-center text-center group">
+          <span className="text-6xl mb-6 group-hover:scale-110 transition-transform">🧭</span>
+          <h3 className="text-lg font-black text-[#003366] uppercase mb-2">RPG Guiado</h3>
+          <p className="text-xs text-gray-500">Casos de técnica cena a cena, com alternativas ou digitando a conduta.</p>
         </button>
 
         {/* CARD IA */}
@@ -36,7 +43,7 @@ const OsceModeSelectionView: React.FC<OsceModeSelectionViewProps> = ({ onSelectM
         <button onClick={() => onSelectMode('rpg')} className="bg-white p-8 rounded-[2.5rem] border-2 border-purple-100 hover:border-purple-500 transition-all shadow-sm hover:shadow-xl flex flex-col items-center text-center group">
           <span className="text-6xl mb-6 group-hover:scale-110 transition-transform">🎮</span>
           <h3 className="text-lg font-black text-[#003366] uppercase mb-2">Simulado RPG</h3>
-          <p className="text-xs text-gray-500">Decisões com consequências e sinais vitais dinâmicos.</p>
+          <p className="text-xs text-gray-500">Casos clínicos com IA, decisões e sinais vitais dinâmicos.</p>
         </button>
       </div>
     </div>

@@ -54,8 +54,8 @@ const useAcademicUnit = (): AcademicUnit => {
   return (params.get('unit') as AcademicUnit) || 'N1';
 };
 
-const isValidOsceSetupMode = (mode?: string): mode is 'static' | 'ai' | 'rpg' =>
-  mode === 'static' || mode === 'ai' || mode === 'rpg';
+const isValidOsceSetupMode = (mode?: string): mode is 'static' | 'ai' | 'rpg' | 'guided' =>
+  mode === 'static' || mode === 'ai' || mode === 'rpg' || mode === 'guided';
 
 // ============================================================================
 // LOADER INLINE REUTILIZÁVEL (fetch por ID nas rotas de execução OSCE/Lab)

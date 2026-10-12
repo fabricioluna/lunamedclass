@@ -10,7 +10,7 @@ interface OsceSetupViewProps {
   selectedUnit: AcademicUnit; 
   onStart: (station: OsceStation) => void;
   onBack: () => void;
-  setupMode?: 'static' | 'rpg' | 'ai' | 'lab' | 'all'; 
+  setupMode?: 'static' | 'rpg' | 'guided' | 'ai' | 'lab' | 'all'; 
 }
 
 const OsceSetupView: React.FC<OsceSetupViewProps> = ({ 
@@ -45,6 +45,7 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
 
           if (setupMode === 'static') return s.mode === 'clinical';
           if (setupMode === 'rpg') return stationModeMatchesType(s.mode, 'rpg');
+          if (setupMode === 'guided') return stationModeMatchesType(s.mode, 'guided');
           if (setupMode === 'ai') return s.mode === 'ai';
           return true;
         });
@@ -77,6 +78,10 @@ const OsceSetupView: React.FC<OsceSetupViewProps> = ({
     headerEmoji = '🎮';
     headerTitle = 'Simulado RPG';
     headerSubtitle = 'Casos interativos: decida a conduta a cada cena';
+  } else if (setupMode === 'guided') {
+    headerEmoji = '🎮';
+    headerTitle = 'RPG Guiado';
+    headerSubtitle = 'Casos de técnica: escolha ou digite a conduta a cada cena';
   } else if (setupMode === 'static') {
     headerEmoji = '📋';
     headerTitle = 'Simulado Estático';
