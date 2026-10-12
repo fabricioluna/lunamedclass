@@ -12,6 +12,8 @@ interface GuidedRpgGateProps {
   onBack: () => void;
   onSaveResult?: (score: number, total: number, timeSpent: number, analytics: GuidedOsceAnalytics) => void;
   matchAction?: (input: TypedMatchInput) => Promise<MatchResult>; // injetável para teste
+  // Quando o aluno já escolheu o formato no menu (RPG Guiado × RPG com IA), pula a tela de escolha.
+  interaction?: 'choices' | 'typed';
 }
 
 type Mode = 'choose' | 'choices' | 'typed';
@@ -19,8 +21,8 @@ type Mode = 'choose' | 'choices' | 'typed';
 // Porta de entrada do RPG guiado: o MESMO caso pode ser jogado com alternativas (aberto, sem login)
 // ou digitando a conduta (mais difícil). O modo digitado chama a IA a cada ação, então exige
 // usuário logado — a <ProtectedRoute> mostra o login no lugar e libera o caso depois.
-const GuidedRpgGate: React.FC<GuidedRpgGateProps> = ({ station, onBack, onSaveResult, matchAction = matchTypedAction }) => {
-  const [mode, setMode] = useState<Mode>('choose');
+const GuidedRpgGate: React.FC<GuidedRpgGateProps> = ({ station, onBack, onSaveResult, matchAction = matchTypedAction, interaction }) => {
+  const [mode, setMode] = useState<Mode>(interaction ?? 'choose');
   const { currentUser } = useAuth();
 
   if (mode === 'choices') {

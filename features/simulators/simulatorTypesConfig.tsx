@@ -11,9 +11,15 @@ export interface SimulatorTypeConfig {
   buildPath: (disciplineId: string) => string;
 }
 
-// Cada tipo OSCE casa com exatamente um `mode` de estação. O RPG guiado (sem IA, item 6.17) tem
-// cartão próprio, separado do RPG com IA: os formatos, a correção e a experiência são diferentes.
-export const stationModeMatchesType = (stationMode: string, matchValue: string): boolean => stationMode === matchValue;
+// Os mesmos casos de RPG guiado (item 6.17) aparecem em dois cartões, com interações diferentes:
+// "RPG Guiado" (escolha entre alternativas, sem IA) e "RPG com IA" (o aluno digita a conduta e a IA
+// só interpreta). O cartão "RPG com IA" também lista os casos do motor antigo (Luna Engine, `rpg`).
+const OSCE_MODES_BY_TYPE: Record<string, string[]> = {
+  rpg: ['rpg', 'guided'],
+};
+
+export const stationModeMatchesType = (stationMode: string, matchValue: string): boolean =>
+  (OSCE_MODES_BY_TYPE[matchValue] ?? [matchValue]).includes(stationMode);
 
 export interface ComingSoonSimulatorType {
   title: string;
@@ -83,8 +89,8 @@ export const AVAILABLE_SIMULATOR_TYPES: SimulatorTypeConfig[] = [
   },
   {
     slug: 'osce-rpg',
-    title: 'OSCE RPG com IA (Luna Engine)',
-    description: 'Decisões dinâmicas com sinais vitais em tempo real.',
+    title: 'OSCE RPG com IA',
+    description: 'Digite a conduta com as suas palavras e a IA interpreta. Inclui casos dinâmicos com sinais vitais.',
     icon: <Sword className="w-8 h-8 text-[#D4A017]" />,
     source: 'osce',
     matchValue: 'rpg',
@@ -93,7 +99,7 @@ export const AVAILABLE_SIMULATOR_TYPES: SimulatorTypeConfig[] = [
   {
     slug: 'osce-rpg-guiado',
     title: 'OSCE RPG Guiado',
-    description: 'Casos de técnica, cena a cena, com consequência de cada conduta. Sem IA nas alternativas.',
+    description: 'Casos de técnica, cena a cena, escolhendo a conduta entre alternativas. Sem IA.',
     icon: <Gamepad2 className="w-8 h-8 text-[#D4A017]" />,
     source: 'osce',
     matchValue: 'guided',

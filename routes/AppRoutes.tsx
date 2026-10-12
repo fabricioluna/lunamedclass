@@ -246,7 +246,14 @@ const OsceSetupFlow = () => {
       selectedUnit={unit}
       setupMode={mode}
       onBack={() => navigate(-1)}
-      onStart={(station) => navigate(`/disciplina/${disciplineId}/osce/estacao/${station.firebaseId}${unit ? `?unit=${unit}` : ''}`)}
+      onStart={(station) => {
+        // O mesmo caso guiado abre direto na interação do cartão escolhido (RPG Guiado × RPG com IA).
+        const params = new URLSearchParams();
+        if (unit) params.set('unit', unit);
+        if (station.mode === 'guided') params.set('modo', mode === 'rpg' ? 'digitado' : 'alternativas');
+        const query = params.toString();
+        navigate(`/disciplina/${disciplineId}/osce/estacao/${station.firebaseId}${query ? `?${query}` : ''}`);
+      }}
     />
   );
 };
@@ -261,6 +268,7 @@ type OsceExecState =
 
 const OsceExecFlow = () => {
   const { disciplineId, stationId } = useParams();
+  const { search } = useLocation();
   const unit = useAcademicUnit();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -294,6 +302,8 @@ const OsceExecFlow = () => {
 
   const { station } = state;
   const onBack = () => navigate(-1);
+  const modoParam = new URLSearchParams(search).get('modo');
+  const guidedInteraction = modoParam === 'digitado' ? 'typed' : modoParam === 'alternativas' ? 'choices' : undefined;
 
   // Só Simulado Teórico conta resultado por enquanto — ver utils/resultsPolicy.ts.
   // Decisão "por enquanto" do usuário: reversível trocando COUNTED_RESULT_TYPES lá.
@@ -321,6 +331,7 @@ const OsceExecFlow = () => {
     return (
       <GuidedRpgGate
         station={station}
+        interaction={guidedInteraction}
         onBack={onBack}
         onSaveResult={isCountedResultType('osce-rpg') ? (score, total, time) => {
           if (currentUser) {
