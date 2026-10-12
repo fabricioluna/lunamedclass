@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Microscope, Pill, ClipboardList, Sword, UserSquare2, FileSearch, Stethoscope } from 'lucide-react';
+import { Activity, Gamepad2, Microscope, Pill, ClipboardList, Sword, UserSquare2, FileSearch, Stethoscope } from 'lucide-react';
 
 export interface SimulatorTypeConfig {
   slug: string;
@@ -11,15 +11,9 @@ export interface SimulatorTypeConfig {
   buildPath: (disciplineId: string) => string;
 }
 
-// Um tipo de simulador OSCE casa com mais de um `mode` de estação quando há mais de um motor para
-// o mesmo cartão do aluno: o RPG guiado (sem IA, item 6.17) aparece como "RPG", ao lado do RPG por
-// texto livre com IA. Os modos ficam separados no cadastro porque têm formatos diferentes.
-const OSCE_MODES_BY_TYPE: Record<string, string[]> = {
-  rpg: ['rpg', 'guided'],
-};
-
-export const stationModeMatchesType = (stationMode: string, matchValue: string): boolean =>
-  (OSCE_MODES_BY_TYPE[matchValue] ?? [matchValue]).includes(stationMode);
+// Cada tipo OSCE casa com exatamente um `mode` de estação. O RPG guiado (sem IA, item 6.17) tem
+// cartão próprio, separado do RPG com IA: os formatos, a correção e a experiência são diferentes.
+export const stationModeMatchesType = (stationMode: string, matchValue: string): boolean => stationMode === matchValue;
 
 export interface ComingSoonSimulatorType {
   title: string;
@@ -89,12 +83,21 @@ export const AVAILABLE_SIMULATOR_TYPES: SimulatorTypeConfig[] = [
   },
   {
     slug: 'osce-rpg',
-    title: 'OSCE RPG (Luna Engine)',
+    title: 'OSCE RPG com IA (Luna Engine)',
     description: 'Decisões dinâmicas com sinais vitais em tempo real.',
     icon: <Sword className="w-8 h-8 text-[#D4A017]" />,
     source: 'osce',
     matchValue: 'rpg',
     buildPath: (id) => `/disciplina/${id}/osce/configurar/rpg`,
+  },
+  {
+    slug: 'osce-rpg-guiado',
+    title: 'OSCE RPG Guiado',
+    description: 'Casos de técnica, cena a cena, com consequência de cada conduta. Sem IA nas alternativas.',
+    icon: <Gamepad2 className="w-8 h-8 text-[#D4A017]" />,
+    source: 'osce',
+    matchValue: 'guided',
+    buildPath: (id) => `/disciplina/${id}/osce/configurar/guided`,
   },
   {
     slug: 'paciente-virtual',
