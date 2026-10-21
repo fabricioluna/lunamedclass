@@ -151,6 +151,12 @@ técnica) → conteúdo RPG → **Fase 3** (opcional). Fonte única do conteúdo
 disciplina (Biossegurança — Profª Ingrid Cordeiro; Sinais Vitais — Prof. Michel Melo). Ver
 seção 6.17 na Etapa 6 para decisões, diagnóstico e especificação.
 
+**➡️ Sessão de 2026-10-21: item 6.18 — peças 3D escaneadas no Lab (Fase 1).** Código completo no
+branch `feat/lab-pecas-3d`; `typecheck`/`lint` (22 pré-existentes, nenhum novo)/`test`
+(380/380)/`test:rules`/`build` verdes. **Aguardando teste do usuário** (subir uma peça como admin
+e estudar como aluno) e duas checagens que só ele faz no console: regra do Storage para
+`lab_models/` e CORS do bucket. Ver seção 6.18 na Etapa 6.
+
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
 Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.
@@ -2041,6 +2047,59 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   entrar/sair de quarto com precaução (paramentação → ação simples → desparamentação); SSVV
   completo com valores revelados pela narrativa; hiato auscultatório (pular o palpatório
   subestima a PAS — Imagem 1 do roteiro); pulso com alteração de ritmo contado em 30 s.
+
+- [~] **6.18 — Peças 3D escaneadas no Laboratório (alfinete ou linha sobre a peça)** — Fase 1
+  implementada em 2026-10-21, aguardando teste do usuário.
+
+  **Origem:** ideia do usuário — fotografar peças do laboratório de anatomia (só ossos e peças
+  de plástico, sem peças úmidas) no iPhone 15 Pro Max e usá-las em 3D, marcando a estrutura
+  com **alfinete** (como na prova prática) ou **linha** (suturas cranianas, p. ex.).
+
+  **Decisões (com o usuário, 2026-10-21):**
+  - **Entra no Lab, estilo Anki** — mesma fila, "Lembrei fácil", retomar sessão, treino das
+    difíceis e liberação N1/N2. O aluno **não digita**: pensa, revela e se autoavalia. Evita
+    interpretar escrita com IA (custo + `/api/chat` sem autenticação).
+  - **Fase 2 (opcional, depois de usar):** modo 5 alternativas com distratores automáticos
+    tirados dos outros alfinetes da mesma peça. Não iniciar sem pedido do usuário.
+  - **Captura:** app Reality Composer (Object Capture, captura guiada, grátis) → `.usdz`.
+    Validado com um crânio: 25 mil triângulos, textura 2048², resultado aprovado pelo usuário.
+  - **Biblioteca 3D:** three.js direto (não `<model-viewer>`), porque a linha precisa ser
+    desenhada colada na superfície. Carregado sob demanda (`lazy`) — chunk próprio (~166 KB
+    gzip), não pesa no Lab de lâminas nem no resto do app.
+
+  **O que foi feito:**
+  - `scripts/usdz-to-glb.py` — converte `.usdz` (arquivo ou pasta inteira) para `.glb`, com
+    texturas em JPEG (crânio: 7,8 MB → 1,4 MB). Requer `pip install usd-core numpy pillow`.
+    Scans ficam fora do repo (`Documents/scans-anatomia/`).
+  - `types.ts` — `LabQuestion.imageUrl` virou opcional; novo `model3d` (`modelUrl`,
+    `modelName`, `marker`, `camera`). Marcador: `pin` (`position` + `direction` da haste) ou
+    `line` (`points` achatados — Firestore não aceita array dentro de array).
+  - `utils/anatomyMarkers.ts` (+ teste) — validação, achatamento de pontos, descarte de pontos
+    próximos no traço, arquivos a apagar (deduplicados) e órfãos após edição.
+  - `components/anatomy3d/AnatomyViewer.tsx` — cena three.js, ferramentas Girar/Alfinete/Linha,
+    ângulo inicial salvo por questão (o ângulo em que o admin marcou).
+  - `features/admin/components/AdminLab3DEditor.tsx` — aba "Peças 3D" no Admin → Lab: várias
+    peças por Lab, várias questões por peça, editar Lab 3D existente (ids das questões
+    preservados → progresso dos alunos não se perde). Nada sobe antes de "Salvar".
+  - `labService` — `updateLabSimulation` (regrava o doc e só depois apaga peças órfãs);
+    `removeLabSimulation` passou a apagar também os `.glb`.
+  - `LabQuizView` — questão com `model3d` mostra a peça no lugar da imagem, com botão
+    "Ângulo inicial".
+  - Sem mudança em `firestore.rules`: `labSimulations` já é leitura autenticada / escrita admin.
+
+  **Lições do desenvolvimento:**
+  - Alfinete saindo reto da superfície aponta para a câmera e a cabeça **tampa o ponto
+    marcado** (visto em screenshot). A haste é inclinada para cima/direita da tela de quem
+    marcou — por isso o campo é `direction`, não `normal`.
+  - Verificado com Playwright numa página de teste temporária (removida): peça carrega,
+    alfinete e linha gravam coordenadas válidas, visão do aluno reabre no ângulo salvo.
+    **Não** testado: upload real para o Storage e leitura do `.glb` em produção.
+
+  **Pendências que só o usuário fecha:**
+  - Regras do **Storage** (não versionadas no repo): admin precisa poder gravar em
+    `lab_models/`. Se recusar, o editor mostra mensagem dizendo isso.
+  - **CORS do bucket:** `<img>` não precisa, mas o `.glb` é baixado via `fetch`. Se a peça não
+    abrir com erro de CORS no console, configurar o CORS do bucket.
 
 
 ---

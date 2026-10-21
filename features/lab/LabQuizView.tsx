@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { LabSimulation, LabQuestion, QuizDetail } from '../../types';
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import { LabSimulation, LabQuestion, LabModel3D, QuizDetail } from '../../types';
 import {
   ChevronLeft, Eye, Shuffle, ListOrdered, SlidersHorizontal,
   Image as ImageIcon, Lightbulb, Search, Target, Brain, PartyPopper, Info, RotateCcw, Flame, AlertTriangle, PauseCircle,
+  Box, Crosshair,
 } from 'lucide-react';
+import type { AnatomyViewerHandle } from '../../components/anatomy3d/AnatomyViewer';
 import {
   SrsCardState, SrsRating, SrsSession, PersistedSession, PersistedSessionOptions,
   getOrCreateCardState, answerCard,
@@ -13,6 +15,9 @@ import {
 import {
   fetchFlashcardProgressDoc, upsertFlashcardCardState, clearActiveSession,
 } from '../../services/flashcardsService';
+
+// three.js é pesado: só baixa quando o Lab tem peça 3D, não em todo Lab de lâminas.
+const AnatomyViewer = lazy(() => import('../../components/anatomy3d/AnatomyViewer'));
 
 interface Props {
   simulation: LabSimulation;
@@ -24,10 +29,11 @@ interface Props {
 
 // Função utilitária para pegar o nome da imagem (ex: "040") e tirar a extensão (.jpg) se houver
 const getDisplayImageName = (q: LabQuestion, index: number) => {
+  if (q.model3d) return q.model3d.modelName;
   if (q.imageName) return q.imageName.replace(/\.[^/.]+$/, "");
 
   try {
-    const decoded = decodeURIComponent(q.imageUrl);
+    const decoded = decodeURIComponent(q.imageUrl ?? '');
     const parts = decoded.split('/');
     const lastPart = parts[parts.length - 1].split('?')[0];
     const nameMatch = lastPart.match(/^\d{13}_(.*)$/);
@@ -37,20 +43,57 @@ const getDisplayImageName = (q: LabQuestion, index: number) => {
   return `Imagem ${index + 1}`;
 };
 
+const MediaLabel: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, text }) => (
+  <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm text-[#003366] px-4 py-2 rounded-xl shadow-lg border border-white/20 flex items-center gap-2 pointer-events-none">
+    {icon}
+    <span className="font-black tracking-widest uppercase text-sm">{text}</span>
+  </div>
+);
+
+const Model3DMedia: React.FC<{ model: LabModel3D; displayName: string }> = ({ model, displayName }) => {
+  const viewerRef = useRef<AnatomyViewerHandle>(null);
+  return (
+    <div className="w-full h-80 md:h-[480px] bg-[#1b1d22] rounded-[1.5rem] mb-3 overflow-hidden shadow-inner relative">
+      <MediaLabel icon={<Box size={16} className="text-[#D4A017]" />} text={displayName} />
+      <button
+        onClick={() => viewerRef.current?.resetView()}
+        className="absolute top-4 right-4 z-10 bg-white/90 text-[#003366] px-3 py-2 rounded-xl shadow-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:bg-[#D4A017]"
+      >
+        <Crosshair size={14} /> Ângulo inicial
+      </button>
+      <Suspense fallback={<div className="w-full h-full" />}>
+        <AnatomyViewer
+          ref={viewerRef}
+          modelUrl={model.modelUrl}
+          marker={model.marker}
+          camera={model.camera}
+          className="w-full h-full"
+        />
+      </Suspense>
+    </div>
+  );
+};
+
 const QuestionMedia: React.FC<{ q: LabQuestion; displayName: string }> = ({ q, displayName }) => (
   <>
-    <div className="w-full h-72 md:h-[450px] bg-black rounded-[1.5rem] mb-8 overflow-hidden shadow-inner flex items-center justify-center relative">
-      <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm text-[#003366] px-4 py-2 rounded-xl shadow-lg border border-white/20 flex items-center gap-2">
-        <ImageIcon size={16} className="text-[#D4A017]" />
-        <span className="font-black tracking-widest uppercase text-sm">{displayName}</span>
+    {q.model3d ? (
+      <>
+        <Model3DMedia model={q.model3d} displayName={displayName} />
+        <p className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-8">
+          Arraste para girar · pinça ou roda do mouse para zoom
+        </p>
+      </>
+    ) : (
+      <div className="w-full h-72 md:h-[450px] bg-black rounded-[1.5rem] mb-8 overflow-hidden shadow-inner flex items-center justify-center relative">
+        <MediaLabel icon={<ImageIcon size={16} className="text-[#D4A017]" />} text={displayName} />
+        <img
+          src={q.imageUrl}
+          alt={displayName}
+          className="w-full h-full object-contain"
+          onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/800x450.png?text=Erro+ao+carregar+imagem')}
+        />
       </div>
-      <img
-        src={q.imageUrl}
-        alt={displayName}
-        className="w-full h-full object-contain"
-        onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/800x450.png?text=Erro+ao+carregar+imagem')}
-      />
-    </div>
+    )}
     <h3 className="text-2xl font-black text-[#003366] text-center mb-8">{q.question}</h3>
   </>
 );
