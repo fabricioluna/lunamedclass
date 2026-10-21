@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit } from '../../../types';
-import { Trash2, Microscope, Loader2 } from 'lucide-react';
+import { Trash2, Microscope, Loader2, Box, Pencil, Image as ImageIcon } from 'lucide-react';
 import { uploadFile } from '../../../services/storageService';
 import { parseResilientCSV } from '../../../utils/csvHelper';
+import { hasAny3DQuestion } from '../../../utils/anatomyMarkers';
+import AdminLab3DEditor from './AdminLab3DEditor';
 
 interface AdminLabProps {
   disciplines: SimulationInfo[];
@@ -19,6 +21,9 @@ const AdminLab: React.FC<AdminLabProps> = ({
   onRemoveLabSimulation,
   onClearLab
 }) => {
+  const [mode, setMode] = useState<'csv' | '3d'>('csv');
+  // undefined = editor fechado; null = criando Lab 3D novo; objeto = editando um existente.
+  const [editing3D, setEditing3D] = useState<LabSimulation | null | undefined>(undefined);
   const [discFilterLab, setDiscFilterLab] = useState('');
   
   // === NOVO: Filtro de unidade na listagem visual ===
@@ -166,8 +171,39 @@ const AdminLab: React.FC<AdminLabProps> = ({
     if (onRemoveLabSimulation) onRemoveLabSimulation(simId);
   };
 
+  const modeButton = (value: 'csv' | '3d', icon: React.ReactNode, label: string) => (
+    <button
+      onClick={() => { setMode(value); setEditing3D(undefined); }}
+      className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === value ? 'bg-[#003366] text-white shadow' : 'text-gray-400 hover:text-[#003366]'}`}
+    >
+      {icon} {label}
+    </button>
+  );
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in zoom-in duration-500">
+    <div className="space-y-8 animate-in zoom-in duration-500">
+    <div className="flex p-1 bg-white rounded-2xl border shadow-sm max-w-md">
+      {modeButton('csv', <ImageIcon size={14} />, 'Lâminas (CSV)')}
+      {modeButton('3d', <Box size={14} />, 'Peças 3D')}
+    </div>
+
+    {mode === '3d' && editing3D !== undefined && (
+      <AdminLab3DEditor
+        key={editing3D?.id ?? 'novo'}
+        disciplines={disciplines}
+        initial={editing3D}
+        onDone={() => setEditing3D(undefined)}
+      />
+    )}
+
+    {mode === '3d' && editing3D === undefined && (
+      <button onClick={() => setEditing3D(null)} className="w-full bg-white p-6 rounded-[2rem] border-2 border-dashed border-emerald-300 text-emerald-700 font-black uppercase text-xs tracking-widest hover:bg-emerald-50 flex items-center justify-center gap-2">
+        <Box size={18} /> Criar novo Lab 3D
+      </button>
+    )}
+
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {mode === 'csv' && (
       <div className="lg:col-span-5 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
         <h3 className="text-xl font-black text-[#003366] mb-2 uppercase tracking-tighter">Criar Lab Virtual</h3>
         <p className="text-[10px] font-bold text-gray-500 mb-6 leading-relaxed bg-gray-50 p-3 rounded-xl border">
@@ -218,8 +254,9 @@ const AdminLab: React.FC<AdminLabProps> = ({
           )}
         </form>
       </div>
+      )}
       
-      <div className="lg:col-span-7 bg-white p-8 rounded-[2.5rem] border shadow-sm">
+      <div className={`${mode === 'csv' ? 'lg:col-span-7' : 'lg:col-span-12'} bg-white p-8 rounded-[2.5rem] border shadow-sm`}>
          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
             <div className="flex flex-col gap-2">
               <h3 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Labs em Nuvem</h3>
@@ -248,7 +285,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
               .map(s => (
               <div key={s.id} className="p-5 bg-emerald-50/40 rounded-[1.5rem] border border-emerald-100 flex justify-between items-center group transition-all hover:border-red-100">
                 <div>
-                  <h4 className="font-bold text-[#003366] text-sm mb-1">{s.title} <span className="text-gray-400 font-medium text-xs">({s.questions.length} peças)</span></h4>
+                  <h4 className="font-bold text-[#003366] text-sm mb-1 flex items-center gap-1.5">{hasAny3DQuestion(s) && <Box size={14} className="text-emerald-600"/>}{s.title} <span className="text-gray-400 font-medium text-xs">({s.questions.length} {hasAny3DQuestion(s) ? 'questões' : 'peças'})</span></h4>
                   <div className="flex gap-2 items-center">
                     <p className="text-[9px] font-black uppercase text-[#D4A017] tracking-widest">{s.disciplineId}</p>
                     {/* MOSTRA A UNIDADE NA LISTAGEM */}
@@ -256,9 +293,16 @@ const AdminLab: React.FC<AdminLabProps> = ({
                     <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">• Por {s.author}</p>
                   </div>
                 </div>
-                <button onClick={() => handleDeleteLab(s.id)} className="text-red-300 hover:text-red-500 transition-colors p-2" title="Deletar Simulado e Imagens do Servidor">
-                  <Trash2 size={20}/>
-                </button>
+                <div className="flex items-center gap-1">
+                  {hasAny3DQuestion(s) && (
+                    <button onClick={() => { setMode('3d'); setEditing3D(s); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-[#003366]/40 hover:text-[#003366] transition-colors p-2" title="Editar peças e marcações">
+                      <Pencil size={18}/>
+                    </button>
+                  )}
+                  <button onClick={() => handleDeleteLab(s.id)} className="text-red-300 hover:text-red-500 transition-colors p-2" title="Deletar Simulado e Imagens do Servidor">
+                    <Trash2 size={20}/>
+                  </button>
+                </div>
               </div>
             ))}
             {(labSimulations || [])
@@ -267,6 +311,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
               .length === 0 && <p className="text-center py-10 text-gray-300 italic font-bold">Nenhum simulado de laboratório cadastrado.</p>}
          </div>
       </div>
+    </div>
     </div>
   );
 };

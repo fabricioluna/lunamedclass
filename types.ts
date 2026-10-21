@@ -316,10 +316,32 @@ export interface ReferenceMaterial {
   url?: string;
 }
 
+// Firestore não aceita array dentro de array: a linha guarda as coordenadas "achatadas"
+// (x1, y1, z1, x2, y2, z2, ...) em vez de uma lista de pontos [x, y, z].
+// `direction` é para onde a haste do alfinete sai: inclinada em relação à superfície, para a
+// cabeça não cobrir justamente a estrutura que ele aponta.
+export type AnatomyMarker =
+  | { type: 'pin'; position: number[]; direction: number[] }
+  | { type: 'line'; points: number[] };
+
+export interface AnatomyCameraView {
+  position: number[];
+  target: number[];
+}
+
+export interface LabModel3D {
+  modelUrl: string;
+  modelName: string;
+  marker: AnatomyMarker;
+  camera?: AnatomyCameraView;
+}
+
+// Questão do Lab é de imagem (imageUrl) OU de peça 3D (model3d) — item 6.18.
 export interface LabQuestion {
   id: string;
-  imageUrl: string;          
-  imageName?: string;        
+  imageUrl?: string;
+  model3d?: LabModel3D;
+  imageName?: string;
   question: string;
   answer: string;
   aiIdentification?: string; 

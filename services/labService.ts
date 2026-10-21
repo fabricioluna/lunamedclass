@@ -1,10 +1,11 @@
 import { firestoreDB } from '../firebase';
 import {
   collection, doc, getDoc, getDocs, onSnapshot,
-  addDoc, deleteDoc, query, where, writeBatch,
+  addDoc, deleteDoc, setDoc, query, where, writeBatch,
 } from 'firebase/firestore';
 import { LabSimulation } from '../types';
 import { deleteFileByUrl } from './storageService';
+import { collectStorageUrls, findOrphanUrls } from '../utils/anatomyMarkers';
 
 const labCollection = collection(firestoreDB, 'labSimulations');
 
@@ -36,7 +37,16 @@ export const addLabSimulation = async (simulation: LabSimulation) => {
 export const removeLabSimulation = async (simulation: LabSimulation) => {
   if (!simulation.firebaseId) return;
   await deleteDoc(doc(firestoreDB, 'labSimulations', simulation.firebaseId));
-  await Promise.all(simulation.questions.map((q) => deleteFileByUrl(q.imageUrl)));
+  await Promise.all(collectStorageUrls(simulation.questions).map(deleteFileByUrl));
+};
+
+// Edição do Lab 3D (adicionar/remover alfinetes depois): regrava o documento inteiro e só
+// então apaga as peças que saíram — se a gravação falhar, nenhum arquivo em uso some.
+export const updateLabSimulation = async (previous: LabSimulation, next: LabSimulation) => {
+  if (!previous.firebaseId) throw new Error('Simulado sem identificador no banco.');
+  const { firebaseId: _firebaseId, ...data } = next;
+  await setDoc(doc(firestoreDB, 'labSimulations', previous.firebaseId), data);
+  await Promise.all(findOrphanUrls(previous.questions, next.questions).map(deleteFileByUrl));
 };
 
 export const clearLabSimulations = async (disciplineId?: string) => {
