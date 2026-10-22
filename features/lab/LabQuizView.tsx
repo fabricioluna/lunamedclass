@@ -447,7 +447,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     const totalEstudavel = deckCounts.newCount + deckCounts.unmemorizedCount + deckCounts.memorizedCount;
 
     return (
-      <div className="max-w-3xl mx-auto px-4 py-12 animate-in fade-in duration-500 pb-32">
+      <div className="w-full max-w-3xl mx-auto px-4 py-12 animate-in fade-in duration-500 pb-32">
         <button onClick={onBack} className="group flex items-center text-[#003366] font-bold mb-8 hover:text-[#D4A017] transition-all">
           <span className="mr-2 transition-transform group-hover:-translate-x-1">←</span> Voltar
         </button>
@@ -637,7 +637,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
     const naoMemorizados = respostas.length - memorizados;
 
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12 animate-in zoom-in duration-500 pb-32 text-center">
+      <div className="w-full max-w-2xl mx-auto px-4 py-12 animate-in zoom-in duration-500 pb-32 text-center">
         <div className="w-20 h-20 bg-amber-50 text-[#D4A017] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm"><PartyPopper size={40}/></div>
         <h2 className="text-3xl font-black text-[#003366] uppercase tracking-tighter mb-2">Sessão Concluída!</h2>
         <p className="text-gray-500 text-sm mb-10">{simulation.title}</p>
@@ -692,7 +692,7 @@ const LabQuizView: React.FC<Props> = ({ simulation, onBack, onSaveResult, userId
   const displayName = getDisplayImageName(q, questionIds.indexOf(q.id));
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 animate-in fade-in duration-500 pb-32">
+    <div className="w-full max-w-4xl mx-auto px-4 py-8 animate-in fade-in duration-500 pb-32">
       {saveError && <SaveErrorBanner message={saveError} />}
 
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
