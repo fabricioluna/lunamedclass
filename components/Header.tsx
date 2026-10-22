@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, LogOut, ArrowUpCircle, X, CheckCircle } from 'lucide-react';
+import { ArrowLeft, LogOut, ArrowUpCircle, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { submitPeriodChangeRequest } from '../services/authService';
+import { changeOwnPeriod } from '../services/authService';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [selectedNewPeriod, setSelectedNewPeriod] = useState('');
-  const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+  const [isChangingPeriod, setIsChangingPeriod] = useState(false);
+  const [periodChangeError, setPeriodChangeError] = useState('');
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,29 +36,33 @@ const Header: React.FC = () => {
 
   const currentPeriodName = periods.find(p => p.id === userProfile?.periodId)?.name || 'Sem Período';
 
-  const handleRequestPeriodChange = async () => {
+  const closePeriodModal = () => {
+    setShowPeriodModal(false);
+    setSelectedNewPeriod('');
+    setPeriodChangeError('');
+  };
+
+  const handleChangePeriod = async () => {
     if (!selectedNewPeriod || !currentUser || !userProfile) return;
 
-    setRequestStatus('loading');
+    setIsChangingPeriod(true);
+    setPeriodChangeError('');
     try {
-      await submitPeriodChangeRequest({
+      await changeOwnPeriod({
         userId: currentUser.uid,
         userName: currentUser.displayName || 'Aluno',
         userEmail: currentUser.email || '',
         currentPeriodId: userProfile.periodId || '',
         requestedPeriodId: selectedNewPeriod,
-        status: 'pending',
         timestamp: new Date().toISOString()
       });
-      setRequestStatus('success');
-      setTimeout(() => {
-        setShowPeriodModal(false);
-        setRequestStatus('idle');
-        setSelectedNewPeriod('');
-      }, 2000);
+      closePeriodModal();
+      navigate(`/periodo/${selectedNewPeriod}`);
     } catch (error) {
-      console.error("Erro ao solicitar mudança de período", error);
-      setRequestStatus('idle');
+      console.error("Erro ao mudar de período", error);
+      setPeriodChangeError('Não foi possível mudar de período agora. Verifique sua conexão e tente de novo.');
+    } finally {
+      setIsChangingPeriod(false);
     }
   };
 
@@ -163,7 +168,7 @@ const Header: React.FC = () => {
                       <button 
                         onClick={() => setShowPeriodModal(true)} 
                         className="p-1.5 ml-1 hover:bg-[#D4A017]/20 text-[#D4A017] rounded-lg transition-all border border-[#D4A017]/30" 
-                        title="Mudar Semestre"
+                        title="Mudar de período"
                       >
                         <ArrowUpCircle size={16} />
                       </button>
@@ -287,7 +292,7 @@ const Header: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#003366]/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
             <button 
-              onClick={() => setShowPeriodModal(false)}
+              onClick={closePeriodModal}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 p-2 rounded-full"
             >
               <X size={20} />
@@ -297,40 +302,43 @@ const Header: React.FC = () => {
               <div className="w-16 h-16 bg-[#D4A017]/10 text-[#D4A017] rounded-2xl flex items-center justify-center mb-4">
                 <ArrowUpCircle size={32} />
               </div>
-              <h3 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">Evolução Curricular</h3>
+              <h3 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">Mudar de Período</h3>
               <p className="text-xs text-gray-500 font-bold mt-2 px-4 uppercase tracking-widest">
-                Você está matriculado(a) no <span className="text-[#003366]">{currentPeriodName}</span>. Para qual semestre deseja solicitar transferência?
+                Você está no <span className="text-[#003366]">{currentPeriodName}</span>. Para qual período quer ir?
               </p>
             </div>
 
-            {requestStatus === 'success' ? (
-              <div className="bg-green-50 text-green-700 p-4 rounded-xl flex flex-col items-center text-center animate-in zoom-in">
-                <CheckCircle size={32} className="mb-2" />
-                <p className="font-bold text-sm">Solicitação enviada com sucesso!</p>
-                <p className="text-xs mt-1">Aguarde a aprovação da coordenação.</p>
-              </div>
-            ) : (
-              <>
-                <select
-                  value={selectedNewPeriod}
-                  onChange={(e) => setSelectedNewPeriod(e.target.value)}
-                  className="w-full pl-4 pr-4 py-4 bg-gray-50 rounded-xl outline-none border-2 border-gray-200 focus:border-[#D4A017] transition-all font-bold text-[#003366] appearance-none mb-4"
-                >
-                  <option value="" disabled>Selecione o novo período...</option>
-                  {periods.filter(p => p.id !== userProfile?.periodId).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+            <select
+              value={selectedNewPeriod}
+              onChange={(e) => { setSelectedNewPeriod(e.target.value); setPeriodChangeError(''); }}
+              disabled={isChangingPeriod}
+              className="w-full pl-4 pr-4 py-4 bg-gray-50 rounded-xl outline-none border-2 border-gray-200 focus:border-[#D4A017] transition-all font-bold text-[#003366] appearance-none mb-3"
+            >
+              <option value="" disabled>Selecione o novo período...</option>
+              {periods.filter(p => p.id !== userProfile?.periodId).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
 
-                <button 
-                  onClick={handleRequestPeriodChange}
-                  disabled={!selectedNewPeriod || requestStatus === 'loading'}
-                  className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50"
-                >
-                  {requestStatus === 'loading' ? 'Enviando...' : 'Enviar Solicitação'}
-                </button>
-              </>
+            <p className="text-[11px] text-gray-500 font-medium text-center mb-4 leading-relaxed">
+              A troca vale na hora e você pode mudar de novo quando precisar. Seu progresso nos simulados e no Lab não se perde.
+            </p>
+
+            {periodChangeError && (
+              <p className="bg-red-50 text-red-700 text-xs font-bold p-3 rounded-xl mb-4 text-center">{periodChangeError}</p>
             )}
+
+            <button 
+              onClick={handleChangePeriod}
+              disabled={!selectedNewPeriod || isChangingPeriod}
+              className="w-full bg-[#003366] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#D4A017] hover:text-[#003366] transition-all disabled:opacity-50"
+            >
+              {isChangingPeriod
+                ? 'Mudando...'
+                : selectedNewPeriod
+                  ? `Ir para o ${periods.find(p => p.id === selectedNewPeriod)?.name ?? 'período'}`
+                  : 'Mudar período'}
+            </button>
           </div>
         </div>
       )}

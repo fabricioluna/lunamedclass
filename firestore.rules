@@ -130,12 +130,14 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Solicitação de mudança de período: aluno cria a própria (status inicial 'pending'); só
-    // admin lê a fila e aprova/rejeita.
+    // Histórico de trocas de período. 'self' = troca feita pelo próprio aluno (item 6.20, sem
+    // aprovação). 'pending' continua aceito só para abas abertas com o código antigo; o Admin
+    // ainda consegue aprovar esses pedidos. O período em si já era gravável pelo dono em
+    // users/{uid} — o que esta regra garante é que ninguém registra troca em nome de outro.
     match /periodRequests/{id} {
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status in ['pending', 'self'];
       allow read, update, delete: if isAdmin();
     }
 
