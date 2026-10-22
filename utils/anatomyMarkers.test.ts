@@ -10,6 +10,10 @@ import {
   hasAny3DQuestion,
   roundVec,
   Vec3,
+  computePaintAlpha,
+  accumulatePaintPoint,
+  estimateDocBytes,
+  PAINT_MAX_ALPHA,
 } from './anatomyMarkers';
 import type { LabQuestion, LabSimulation } from '../types';
 
@@ -102,5 +106,49 @@ describe('collectStorageUrls / findOrphanUrls', () => {
     const base: Omit<LabSimulation, 'questions'> = { id: 's', disciplineId: 'd', title: 't', author: 'a', description: '' };
     expect(hasAny3DQuestion({ ...base, questions: [imageQ] })).toBe(false);
     expect(hasAny3DQuestion({ ...base, questions: [imageQ, pinQuestion('a', 'u')] })).toBe(true);
+  });
+});
+
+describe('marca-texto', () => {
+  // 4 vértices numa linha no eixo X, todos com a normal para cima (+Y)
+  const positions = [0, 0, 0, 0.005, 0, 0, 0.009, 0, 0, 0.05, 0, 0];
+  const up = [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
+  const stroke = { radius: 0.01, points: [0, 0, 0], normals: [0, 1, 0] };
+
+  it('pinta cheio perto do pincel, esmaece na borda e não alcança fora do raio', () => {
+    const alpha = computePaintAlpha(positions, up, [stroke]);
+    expect(alpha[0]).toBeCloseTo(PAINT_MAX_ALPHA);
+    expect(alpha[1]).toBeCloseTo(PAINT_MAX_ALPHA); // 5 mm < 60% de 10 mm
+    expect(alpha[2]).toBeGreaterThan(0);
+    expect(alpha[2]).toBeLessThan(PAINT_MAX_ALPHA); // 9 mm: na faixa que esmaece
+    expect(alpha[3]).toBe(0); // 5 cm: fora do raio
+  });
+
+  it('não atravessa para o outro lado de um osso fino (normal oposta)', () => {
+    const down = [0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0];
+    expect(Array.from(computePaintAlpha(positions, down, [stroke]))).toEqual([0, 0, 0, 0]);
+  });
+
+  it('traços sobrepostos não escurecem: fica o maior valor, não a soma', () => {
+    const alpha = computePaintAlpha(positions, up, [stroke, stroke, stroke]);
+    expect(alpha[0]).toBeCloseTo(PAINT_MAX_ALPHA);
+  });
+
+  it('accumulatePaintPoint mantém o que já estava pintado', () => {
+    const alpha = new Float32Array([0.3, 0, 0, 0]);
+    accumulatePaintPoint(alpha, positions, up, [0.05, 0, 0], [0, 1, 0], 0.01);
+    expect(alpha[0]).toBeCloseTo(0.3);
+    expect(alpha[3]).toBeCloseTo(PAINT_MAX_ALPHA);
+  });
+
+  it('isValidMarker valida traços do marca-texto', () => {
+    expect(isValidMarker({ type: 'paint', strokes: [stroke] })).toBe(true);
+    expect(isValidMarker({ type: 'paint', strokes: [] })).toBe(false);
+    expect(isValidMarker({ type: 'paint', strokes: [{ ...stroke, radius: 0 }] })).toBe(false);
+    expect(isValidMarker({ type: 'paint', strokes: [{ ...stroke, normals: [0, 1] }] })).toBe(false);
+  });
+
+  it('estimateDocBytes mede o tamanho em bytes do JSON (acentos contam 2)', () => {
+    expect(estimateDocBytes({ a: 'é' })).toBe(10);
   });
 });
