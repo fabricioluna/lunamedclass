@@ -155,7 +155,7 @@ seção 6.17 na Etapa 6 para decisões, diagnóstico e especificação.
 (merge `3f4656f`); `typecheck`/`lint` (22 pré-existentes, nenhum novo)/`test`
 (380/380)/`test:rules`/`build` verdes. Upload como admin funcionou; a tela do aluno falhava por
 CORS do bucket, configurado pelo usuário no Cloud Shell no mesmo dia (ver lição na seção 6.18).
-Falta só a confirmação final do usuário abrindo a peça como aluno.
+Confirmado pelo usuário em 2026-10-22: peça abre como aluno no computador e no iPhone.
 
 **➡️ Mesma sessão: item 6.19 — abertura do app mais rápida.** Pacote inicial 254,7 → 210,6 KB
 gzip + arquivos do app em cache no navegador. Branch `perf/carregamento-inicial`, verificações
@@ -2052,8 +2052,9 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   completo com valores revelados pela narrativa; hiato auscultatório (pular o palpatório
   subestima a PAS — Imagem 1 do roteiro); pulso com alteração de ritmo contado em 30 s.
 
-- [~] **6.18 — Peças 3D escaneadas no Laboratório (alfinete ou linha sobre a peça)** — Fase 1
-  implementada em 2026-10-21, aguardando teste do usuário.
+- [x] **6.18 — Peças 3D escaneadas no Laboratório (alfinete ou linha sobre a peça)** — Fase 1
+  no ar desde 2026-10-21; confirmada pelo usuário em 2026-10-22 (peça abrindo como aluno, no
+  computador e no iPhone — o ajuste de largura no celular entrou no 6.19).
 
   **Origem:** ideia do usuário — fotografar peças do laboratório de anatomia (só ossos e peças
   de plástico, sem peças úmidas) no iPhone 15 Pro Max e usá-las em 3D, marcando a estrutura
