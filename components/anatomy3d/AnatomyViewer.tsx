@@ -1,12 +1,14 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Minus, Plus } from 'lucide-react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { AnatomyMarker, AnatomyCameraView, AnatomyPaintStroke } from '../../types';
 import {
   accumulatePaintPoint, appendStrokePoint, computePaintAlpha, flattenPoints, isValidCameraView, isValidMarker,
-  paintRadiusFor, paintStrokesOf, roundVec, unflattenPoints, Vec3,
+  lineRadiusFor, lineRadiusOf, LINE_SIZE_DEFAULT, paintRadiusFor, paintStrokesOf, roundVec, unflattenPoints, Vec3,
 } from '../../utils/anatomyMarkers';
+import { isTextEntryTarget } from '../../utils/keyboard';
 
 export type AnatomyTool = 'orbit' | 'pin' | 'line' | 'straight' | 'paint';
 
@@ -25,6 +27,10 @@ interface Props {
   onMarkerDrawn?: (marker: AnatomyMarker, camera: AnatomyCameraView) => void;
   // Espessura do marca-texto (1–10), ver paintRadiusFor.
   paintSize?: number;
+  // Espessura das linhas livre e reta (1–10), ver lineRadiusFor.
+  lineSize?: number;
+  // Barra de zoom à direita — só em tela de computador (no celular, a pinça resolve).
+  showZoom?: boolean;
   onModelLoaded?: (info: { diag: number }) => void;
   className?: string;
   ref?: React.Ref<AnatomyViewerHandle>;
@@ -177,12 +183,13 @@ const buildMarkerObject = (marker: Exclude<AnatomyMarker, { type: 'paint' }>, di
   const points = unflattenPoints(marker.points).map((p) => new THREE.Vector3(...p));
   const curve = new THREE.CatmullRomCurve3(points);
   const segments = Math.min(Math.max(points.length * 4, 16), 800);
-  group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, segments, diag * 0.0035, 8, false), material));
+  group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, segments, lineRadiusOf(marker, diag), 8, false), material));
   return group;
 };
 
 const AnatomyViewer: React.FC<Props> = ({
-  modelUrl, markers, camera, tool = 'orbit', onMarkerDrawn, paintSize = 4, onModelLoaded, className, ref,
+  modelUrl, markers, camera, tool = 'orbit', onMarkerDrawn, paintSize = 4, lineSize = LINE_SIZE_DEFAULT,
+  showZoom = true, onModelLoaded, className, ref,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -207,12 +214,18 @@ const AnatomyViewer: React.FC<Props> = ({
   const cameraPropRef = useRef(camera);
   const markersRef = useRef(markers);
   const paintSizeRef = useRef(paintSize);
+  const lineSizeRef = useRef(lineSize);
+  // Espaço ou Alt pressionado com o mouse sobre a peça: gira mesmo numa ferramenta de traço.
+  const tempOrbitRef = useRef(false);
+  const zoomInputRef = useRef<HTMLInputElement>(null);
+  const zoomDraggingRef = useRef(false);
   const onModelLoadedRef = useRef(onModelLoaded);
   toolRef.current = tool;
   onMarkerDrawnRef.current = onMarkerDrawn;
   cameraPropRef.current = camera;
   markersRef.current = markers;
   paintSizeRef.current = paintSize;
+  lineSizeRef.current = lineSize;
   onModelLoadedRef.current = onModelLoaded;
 
   const clearMarkerObjects = () => {
@@ -236,6 +249,29 @@ const AnatomyViewer: React.FC<Props> = ({
       s.camera.position.copy(model.center).add(new THREE.Vector3(0, 0.25, 1).normalize().multiplyScalar(model.diag * 1.3));
     }
     s.controls.update();
+  };
+
+  const zoomToSlider = (distance: number): number => {
+    const s = sceneRef.current;
+    if (!s) return 0;
+    const { minDistance: min, maxDistance: max } = s.controls;
+    return (100 * Math.log(max / distance)) / Math.log(max / min);
+  };
+
+  const setZoom = (value: number) => {
+    const s = sceneRef.current;
+    if (!s) return;
+    const { minDistance: min, maxDistance: max } = s.controls;
+    const t = Math.min(100, Math.max(0, value)) / 100;
+    const distance = max * Math.pow(min / max, t);
+    const dir = s.camera.position.clone().sub(s.controls.target).normalize();
+    s.camera.position.copy(s.controls.target).addScaledVector(dir, distance);
+    s.controls.update();
+  };
+
+  const currentZoom = () => {
+    const s = sceneRef.current;
+    return s ? zoomToSlider(s.camera.position.distanceTo(s.controls.target)) : 0;
   };
 
   const getCameraView = (): AnatomyCameraView | null => {
@@ -294,8 +330,17 @@ const AnatomyViewer: React.FC<Props> = ({
     const loop = () => {
       frame = requestAnimationFrame(loop);
       // Ferramentas de traço usam o arrasto para desenhar; Girar e Alfinete, para girar a peça.
-      controls.enabled = toolRef.current === 'orbit' || toolRef.current === 'pin';
+      // Espaço/Alt (tempOrbitRef) libera o giro em qualquer ferramenta.
+      const orbiting = toolRef.current === 'orbit' || toolRef.current === 'pin' || tempOrbitRef.current;
+      controls.enabled = orbiting;
+      renderer.domElement.style.cursor = orbiting ? 'grab' : 'crosshair';
       controls.update();
+      // A barra acompanha o zoom feito pela roda do mouse / pinça do touchpad.
+      const zoomInput = zoomInputRef.current;
+      if (zoomInput && !zoomDraggingRef.current && modelRef.current) {
+        const value = zoomToSlider(cam.position.distanceTo(controls.target));
+        if (Math.abs(Number(zoomInput.value) - value) > 0.5) zoomInput.value = String(value);
+      }
       renderer.render(scene, cam);
     };
     loop();
@@ -351,6 +396,9 @@ const AnatomyViewer: React.FC<Props> = ({
       raycaster.setFromCamera(pointer, cam);
       return firstModelHit();
     };
+
+    const currentLineRadius = () =>
+      Math.round(lineRadiusFor(modelRef.current?.diag ?? 1, lineSizeRef.current) * 1e5) / 1e5;
 
     let downAt: { x: number; y: number } | null = null;
     let stroke: Vec3[] | null = null;
@@ -423,7 +471,7 @@ const AnatomyViewer: React.FC<Props> = ({
 
     const finishStraight = (end: SurfaceHit) => {
       if (!straightStart) return;
-      const drawn: AnatomyMarker = { type: 'line', points: flattenPoints(straightLinePoints(straightStart.point, end.point)) };
+      const drawn: AnatomyMarker = { type: 'line', points: flattenPoints(straightLinePoints(straightStart.point, end.point)), radius: currentLineRadius() };
       cancelStraight();
       const view = getCameraView();
       if (view && isValidMarker(drawn)) onMarkerDrawnRef.current?.(drawn, view);
@@ -445,6 +493,7 @@ const AnatomyViewer: React.FC<Props> = ({
 
     const onPointerDown = (event: PointerEvent) => {
       downAt = { x: event.clientX, y: event.clientY };
+      if (tempOrbitRef.current) return;
       const current = toolRef.current;
       if (current !== 'line' && current !== 'paint' && current !== 'straight') return;
       const hit = hitAt(event);
@@ -519,7 +568,7 @@ const AnatomyViewer: React.FC<Props> = ({
         const finished = stroke;
         stroke = null;
         updateStrokePreview();
-        const drawn: AnatomyMarker = { type: 'line', points: flattenPoints(finished) };
+        const drawn: AnatomyMarker = { type: 'line', points: flattenPoints(finished), radius: currentLineRadius() };
         if (view && isValidMarker(drawn)) onMarkerDrawnRef.current?.(drawn, view);
       } else if (toolRef.current === 'pin' && isClick(event)) {
         const hit = hitAt(event);
@@ -538,6 +587,40 @@ const AnatomyViewer: React.FC<Props> = ({
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
 
+    // Espaço/Alt para girar sem trocar de ferramenta — só com o mouse sobre a peça e fora de
+    // campos de texto (senão o Espaço deixaria de digitar e de rolar a página). "Sobre a peça"
+    // vem da última posição do mouse, não de pointerenter/leave: a captura do ponteiro durante
+    // um traço bagunça esses eventos e o Espaço parava de funcionar depois de desenhar.
+    let lastPointer: { x: number; y: number } | null = null;
+    const onWindowPointerMove = (event: PointerEvent) => { lastPointer = { x: event.clientX, y: event.clientY }; };
+    const isPointerOverCanvas = () => {
+      if (!lastPointer) return false;
+      const rect = canvas.getBoundingClientRect();
+      return lastPointer.x >= rect.left && lastPointer.x <= rect.right && lastPointer.y >= rect.top && lastPointer.y <= rect.bottom;
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isPointerOverCanvas() || isTextEntryTarget(event.target)) return;
+      if (event.code === 'Space' || event.key === 'Alt') {
+        event.preventDefault();
+        tempOrbitRef.current = true;
+        // Liga já, sem esperar o próximo quadro: quem aperta Espaço e arrasta no mesmo instante
+        // não pode ficar sem desenhar E sem girar.
+        controls.enabled = true;
+      }
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' && event.key !== 'Alt') return;
+      // Soltar o Alt sozinho ativa o menu do navegador no Windows, e soltar o Espaço "clica" o
+      // botão que estiver com foco (ex.: a última ferramenta escolhida).
+      if (tempOrbitRef.current) event.preventDefault();
+      tempOrbitRef.current = false;
+    };
+    const onBlur = () => { tempOrbitRef.current = false; };
+    window.addEventListener('pointermove', onWindowPointerMove);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+
     return () => {
       cancelled = true;
       cancelAnimationFrame(frame);
@@ -545,6 +628,11 @@ const AnatomyViewer: React.FC<Props> = ({
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointermove', onWindowPointerMove);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+      tempOrbitRef.current = false;
       controls.dispose();
       disposeObject(scene);
       renderer.dispose();
@@ -602,6 +690,29 @@ const AnatomyViewer: React.FC<Props> = ({
       {status === 'error' && (
         <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-red-200 text-xs font-bold">
           Não foi possível carregar a peça 3D. Verifique sua conexão e tente de novo.
+        </div>
+      )}
+      {showZoom && status === 'ready' && (
+        <div className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 flex-col items-center gap-1 bg-black/50 backdrop-blur-sm rounded-xl py-2 px-1.5">
+          <button onClick={() => setZoom(currentZoom() + 10)} title="Aproximar" className="p-1 rounded-lg text-white hover:bg-white/20"><Plus size={14} /></button>
+          {/* Range girado: o vertical nativo ainda não funciona igual em todos os navegadores. */}
+          <div className="relative w-6 h-40">
+            <input
+              ref={zoomInputRef}
+              type="range"
+              min={0}
+              max={100}
+              step={0.5}
+              defaultValue={0}
+              aria-label="Zoom"
+              onPointerDown={() => { zoomDraggingRef.current = true; }}
+              onPointerUp={() => { zoomDraggingRef.current = false; }}
+              onPointerCancel={() => { zoomDraggingRef.current = false; }}
+              onInput={(e) => setZoom(Number(e.currentTarget.value))}
+              className="absolute left-1/2 top-1/2 w-40 -translate-x-1/2 -translate-y-1/2 -rotate-90 accent-[#D4A017] cursor-pointer"
+            />
+          </div>
+          <button onClick={() => setZoom(currentZoom() - 10)} title="Afastar" className="p-1 rounded-lg text-white hover:bg-white/20"><Minus size={14} /></button>
         </div>
       )}
     </div>
