@@ -159,7 +159,7 @@ Falta só a confirmação final do usuário abrindo a peça como aluno.
 
 **➡️ Mesma sessão: item 6.19 — abertura do app mais rápida.** Pacote inicial 254,7 → 210,6 KB
 gzip + arquivos do app em cache no navegador. Branch `perf/carregamento-inicial`, verificações
-verdes. Ver seção 6.19.
+verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -2114,8 +2114,25 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   contornar no código: `getBlob`/`getBytes` do SDK exigem o mesmo CORS. `<img>` (lâminas) nunca
   precisou dele, por isso o problema só apareceu com o `.glb` (baixado via `fetch`).
 
-- [~] **6.19 — Abertura do app mais rápida** — implementado em 2026-10-21 (branch
-  `perf/carregamento-inicial`), aguardando ir para produção e medição depois.
+- [x] **6.19 — Abertura do app mais rápida** — no ar em 2026-10-22 (merge `1c48bfe`).
+
+  **Medido em produção depois (Playwright, mediana de 3, tela de login):** 1ª visita 1,6 s em
+  rede rápida / 2,5 s em 4G simulado; **2ª visita 0,8 s / 0,9 s** (cache dos assets). A medição
+  "antes" foi de execuções avulsas (2,4–4,7 s rápida, ~3,7 s 4G), então a comparação da 1ª
+  visita é indicativa; a da 2ª visita é o ganho grande. Conferido também: `Cache-Control`
+  immutable nos assets, `index.html` sem cache, asset inexistente → 404, F5 em rota interna e
+  `/api/chat` funcionando.
+
+  **Achado no teste do usuário no iPhone (corrigido no mesmo branch, `d98601b`):** a tela da
+  peça 3D (6.18) ficava mais larga que o celular (682 px numa tela de 430). O canvas gravava a
+  largura em px na 1ª medição e a tela do Lab, dentro do `main` flex-col com `mx-auto`, era
+  dimensionada pelo conteúdo. Canvas agora 100% do contêiner (`setSize(w, h, false)`) e as 3
+  telas do `LabQuizView` com `w-full`. **Lição:** componente novo de largura fixa dentro do
+  `main` precisa de teste em viewport de celular — o desktop não mostra o problema.
+
+  **Prévias da Vercel e login Google:** cada prévia tem domínio aleatório, fora dos "Domínios
+  autorizados" do Firebase Auth → o popup do Google abre e fecha. Para testar login numa
+  prévia, autorizar o domínio dela (Authentication → Configurações) ou publicar direto.
 
   **Origem:** usuário achou o app lento na primeira abertura. Medido em produção com Playwright
   (cache vazio, tela de login): conteúdo visível em 2,4–4,7 s em rede rápida e ~3,7 s em 4G
