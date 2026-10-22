@@ -151,11 +151,11 @@ técnica) → conteúdo RPG → **Fase 3** (opcional). Fonte única do conteúdo
 disciplina (Biossegurança — Profª Ingrid Cordeiro; Sinais Vitais — Prof. Michel Melo). Ver
 seção 6.17 na Etapa 6 para decisões, diagnóstico e especificação.
 
-**➡️ Sessão de 2026-10-21: item 6.18 — peças 3D escaneadas no Lab (Fase 1).** Código completo no
-branch `feat/lab-pecas-3d`; `typecheck`/`lint` (22 pré-existentes, nenhum novo)/`test`
-(380/380)/`test:rules`/`build` verdes. **Aguardando teste do usuário** (subir uma peça como admin
-e estudar como aluno) e duas checagens que só ele faz no console: regra do Storage para
-`lab_models/` e CORS do bucket. Ver seção 6.18 na Etapa 6.
+**➡️ Sessão de 2026-10-21: item 6.18 — peças 3D escaneadas no Lab (Fase 1).** No ar em produção
+(merge `3f4656f`); `typecheck`/`lint` (22 pré-existentes, nenhum novo)/`test`
+(380/380)/`test:rules`/`build` verdes. Upload como admin funcionou; a tela do aluno falhava por
+CORS do bucket, configurado pelo usuário no Cloud Shell no mesmo dia (ver lição na seção 6.18).
+Falta só a confirmação final do usuário abrindo a peça como aluno.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -2095,11 +2095,20 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     alfinete e linha gravam coordenadas válidas, visão do aluno reabre no ângulo salvo.
     **Não** testado: upload real para o Storage e leitura do `.glb` em produção.
 
-  **Pendências que só o usuário fecha:**
-  - Regras do **Storage** (não versionadas no repo): admin precisa poder gravar em
-    `lab_models/`. Se recusar, o editor mostra mensagem dizendo isso.
-  - **CORS do bucket:** `<img>` não precisa, mas o `.glb` é baixado via `fetch`. Se a peça não
-    abrir com erro de CORS no console, configurar o CORS do bucket.
+  **Implantação (2026-10-21):** mergeado no `main` (`3f4656f`) e no ar. Upload para
+  `lab_models/` funcionou de primeira (a regra do Storage já permitia). A peça **não abria na
+  tela do aluno**: erro de CORS. Resolvido pelo usuário no Cloud Shell — CORS do bucket
+  `monitor-virtual-fms.firebasestorage.app` = `[{"origin":["*"],"method":["GET","HEAD"],
+  "maxAgeSeconds":3600}]` (recomendação da documentação do Firebase; a leitura continua
+  exigindo o token do link). Confirmado com `curl` no objeto real: `Access-Control-Allow-Origin: *`.
+
+  🔴 **Lição — CORS do Storage não se testa com objeto inexistente.** O primeiro diagnóstico
+  checou CORS com `curl` num caminho que não existia e viu `Access-Control-Allow-Origin: *` —
+  falso positivo: a resposta **404** vem do front-end do Firebase (que sempre põe o cabeçalho),
+  mas o **conteúdo** de um objeto real vem do bucket do Google Cloud, que só manda o cabeçalho
+  com CORS configurado. Testar sempre com o link de um arquivo que existe. Também não dá para
+  contornar no código: `getBlob`/`getBytes` do SDK exigem o mesmo CORS. `<img>` (lâminas) nunca
+  precisou dele, por isso o problema só apareceu com o `.glb` (baixado via `fetch`).
 
 
 ---
