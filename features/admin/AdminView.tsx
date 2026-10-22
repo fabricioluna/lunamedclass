@@ -103,7 +103,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   };
 
   const handleGlobalReset = async () => {
-    if (!confirm("⚠️ AÇÃO DESTRUTIVA: Apagar absolutamente TODO o banco de dados (questões, OSCE, lab, analytics, estrutura base e solicitações)?")) return;
+    if (!confirm("⚠️ AÇÃO DESTRUTIVA: Apagar absolutamente TODO o banco de dados (questões, OSCE, lab, analytics, estrutura base e histórico de trocas de período)?")) return;
     if (prompt('Digite DELETAR para confirmar:') !== 'DELETAR') {
       alert("❌ Confirmação incorreta. Ação cancelada.");
       return;
@@ -229,7 +229,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 
       <nav className="flex flex-wrap gap-2 mb-12 print:hidden">
         {([
-          { id: 'requests', label: `Solicitações ${pendingRequests.length > 0 ? `(${pendingRequests.length})` : ''}`, icon: <UserCheck size={16}/> },
+          { id: 'requests', label: `Trocas de Período ${pendingRequests.length > 0 ? `(${pendingRequests.length})` : ''}`, icon: <UserCheck size={16}/> },
           { id: 'flags', label: 'Feature Flags', icon: <ToggleRight size={16}/> },
           { id: 'stats', label: 'Estatísticas', icon: <BarChart3 size={16}/> },
           { id: 'analytics', label: 'Research Analytics', icon: <BrainCircuit size={16}/> },
@@ -342,14 +342,14 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
               <UserCheck size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Solicitações de Mudança de Período</h2>
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Gestão de Progressão Curricular dos Alunos</p>
+              <h2 className="text-xl font-black text-[#003366] uppercase tracking-tighter">Trocas de Período</h2>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">O aluno troca sozinho — aqui fica o histórico. Pedidos antigos pendentes ainda podem ser aprovados.</p>
             </div>
           </div>
 
           {adminRequests.length === 0 ? (
             <div className="text-center py-12 text-gray-400 font-bold uppercase tracking-widest text-xs">
-              Nenhuma solicitação registrada no sistema.
+              Nenhuma troca de período registrada.
             </div>
           ) : (
             <div className="space-y-4">
@@ -382,8 +382,10 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                           </button>
                         </>
                       ) : (
-                        <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${req.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {req.status === 'approved' ? <><CheckCircle size={14}/> Aprovado</> : <><XCircle size={14}/> Rejeitado</>}
+                        <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${req.status === 'self' ? 'bg-blue-50 text-[#003366]' : req.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {req.status === 'self'
+                            ? <><UserCheck size={14}/> Feita pelo aluno</>
+                            : req.status === 'approved' ? <><CheckCircle size={14}/> Aprovado</> : <><XCircle size={14}/> Rejeitado</>}
                         </div>
                       )}
                     </div>

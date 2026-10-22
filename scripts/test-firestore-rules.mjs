@@ -21,7 +21,7 @@
 
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, addDoc, collection, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
 
 const rules = readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
 
@@ -265,6 +265,33 @@ await check('Aluno B NÃO lê o status de questões respondidas do Aluno A', asy
 });
 await check('Aluno B NÃO zera o status de questões respondidas do Aluno A', async () => {
   await assertFails(deleteDoc(doc(asStudentB, 'users', STUDENT_A, 'quizQuestionStatus', 'hm1')));
+});
+
+// === TROCA DE PERÍODO PELO PRÓPRIO ALUNO (item 6.20) ===
+const periodEntry = (uid, status) => ({
+  userId: uid, userName: 'Aluno', userEmail: 'a@x.com',
+  currentPeriodId: 'p1', requestedPeriodId: 'p2', status, timestamp: '2026-10-22T00:00:00Z',
+});
+await check('Aluno A troca o PRÓPRIO período e registra no histórico (batch, como o app faz)', async () => {
+  const batch = writeBatch(asStudentA);
+  batch.update(doc(asStudentA, 'users', STUDENT_A), { periodId: 'p2' });
+  batch.set(doc(collection(asStudentA, 'periodRequests')), periodEntry(STUDENT_A, 'self'));
+  await assertSucceeds(batch.commit());
+});
+await check('Aluno A NÃO registra troca em nome do Aluno B', async () => {
+  await assertFails(addDoc(collection(asStudentA, 'periodRequests'), periodEntry(STUDENT_B, 'self')));
+});
+await check('Aluno A NÃO cria registro já "aprovado"', async () => {
+  await assertFails(addDoc(collection(asStudentA, 'periodRequests'), periodEntry(STUDENT_A, 'approved')));
+});
+await check('Aluno A NÃO lê o histórico de trocas', async () => {
+  await assertFails(getDocs(collection(asStudentA, 'periodRequests')));
+});
+await check('Admin lê o histórico de trocas', async () => {
+  await assertSucceeds(getDocs(collection(asAdmin, 'periodRequests')));
+});
+await check('Aluno B NÃO troca o período do Aluno A', async () => {
+  await assertFails(setDoc(doc(asStudentB, 'users', STUDENT_A), { periodId: 'p3' }, { merge: true }));
 });
 
 await testEnv.cleanup();

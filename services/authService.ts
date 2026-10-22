@@ -1,7 +1,7 @@
 import { firestoreDB } from '../firebase';
 import {
   doc, getDoc, setDoc, updateDoc, onSnapshot,
-  collection, addDoc, query, orderBy,
+  collection, query, orderBy, writeBatch,
 } from 'firebase/firestore';
 
 export type UserRole = 'student' | 'admin' | 'professor';
@@ -28,7 +28,8 @@ export interface PeriodRequest {
   userEmail: string;
   currentPeriodId: string;
   requestedPeriodId: string;
-  status: 'pending' | 'approved' | 'rejected';
+  // 'self' = troca feita pelo próprio aluno (item 6.20): só registro, ninguém aprova.
+  status: 'pending' | 'approved' | 'rejected' | 'self';
   timestamp: string;
 }
 
@@ -67,13 +68,19 @@ export const getProfileOnce = async (uid: string): Promise<UserProfile | null> =
   return snap.exists() ? (snap.data() as UserProfile) : null;
 };
 
-// === SOLICITAÇÕES DE MUDANÇA DE PERÍODO (criação — lado do aluno) ===
-// Leitura/aprovação fica em adminService, que é quem gerencia a fila.
+// === TROCA DE PERÍODO (lado do aluno) ===
+// Desde o item 6.20 o aluno troca sozinho, sem aprovação. A coleção periodRequests virou o
+// histórico de trocas que o Admin consulta; a leitura fica em adminService.
 
 const periodRequestsCollection = collection(firestoreDB, 'periodRequests');
 
-export const submitPeriodChangeRequest = async (req: Omit<PeriodRequest, 'id'>) => {
-  await addDoc(periodRequestsCollection, req);
+// Batch: o período e o registro no histórico são gravados juntos ou nenhum dos dois — não
+// existe troca que o Admin não veja.
+export const changeOwnPeriod = async (entry: Omit<PeriodRequest, 'id' | 'status'>) => {
+  const batch = writeBatch(firestoreDB);
+  batch.update(profileRef(entry.userId), { periodId: entry.requestedPeriodId });
+  batch.set(doc(periodRequestsCollection), { ...entry, status: 'self' });
+  await batch.commit();
 };
 
 export const periodRequestsQuery = () => query(periodRequestsCollection, orderBy('timestamp', 'desc'));

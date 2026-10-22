@@ -161,6 +161,10 @@ Confirmado pelo usuário em 2026-10-22: peça abre como aluno no computador e no
 gzip + arquivos do app em cache no navegador. Branch `perf/carregamento-inicial`, verificações
 verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 
+**➡️ Mesma sessão: item 6.20 — aluno troca de período sozinho.** Branch
+`feat/aluno-troca-periodo`, verificações verdes. **Ordem de publicação: usuário publica o
+`firestore.rules` no console ANTES do merge.** Ver seção 6.20.
+
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
 Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.
@@ -2162,6 +2166,33 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   **Fica para depois (opção C, risco médio):** cache local do Firestore (`persistentLocalCache`)
   para a tela abrir com os dados da última visita. Mexe em `useAppConfig` — o lugar do
   incidente do `isLoading` — então exige teste dedicado como visitante deslogado.
+
+- [~] **6.20 — Aluno troca de período sozinho, sem aprovação** — implementado em 2026-10-22
+  (branch `feat/aluno-troca-periodo`). **Depende de publicar o `firestore.rules` antes do
+  código** (sem a regra nova, a troca falha com mensagem de erro e o aluno fica onde estava).
+
+  **Pedido do usuário:** o aluno muda de período quando precisar, sem a coordenação aprovar.
+
+  **Diagnóstico:** a aprovação nunca foi trava de segurança — `users/{uid}` já permitia ao dono
+  gravar o próprio `periodId`. Era só fluxo de tela (pedido em `periodRequests` → Admin aprova).
+  O progresso do aluno (flashcards, tentativas, resultados) é por simulado/disciplina, não por
+  período: trocar e voltar não perde nada. `extraPeriodIds` (monitores) não mudou.
+
+  **Decisões do usuário:** manter histórico das trocas no Admin; a aba "Solicitações" vira
+  "Trocas de Período" (histórico), e pedidos antigos pendentes ainda podem ser aprovados.
+
+  **Feito:**
+  - `authService.changeOwnPeriod` — `writeBatch` grava o `periodId` e o registro
+    (`status: 'self'`) juntos: não existe troca fora do histórico. `submitPeriodChangeRequest`
+    removido.
+  - `firestore.rules` — `periodRequests` aceita `status in ['pending', 'self']` na criação
+    (`pending` só para abas abertas com o código antigo); continua exigindo `userId ==
+    request.auth.uid`. +6 casos em `scripts/test-firestore-rules.mjs` (troca própria em batch,
+    não registra em nome de outro, não cria "aprovado", aluno não lê o histórico, admin lê,
+    aluno B não troca o período do A) — todos passando.
+  - `Header` — modal "Mudar de Período": escolhe, botão "Ir para o Xº período", vai direto para
+    `/periodo/{novo}`; erro aparece no modal (antes era só `console.error`).
+  - `AdminView` — aba "Trocas de Período", selo "Feita pelo aluno" para `status: 'self'`.
 
 
 ---
