@@ -4,9 +4,10 @@ import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit, AnatomyMarker
 import type { AnatomyTool } from '../../../components/anatomy3d/AnatomyViewer';
 import { uploadFile } from '../../../services/storageService';
 import { addLabSimulation, updateLabSimulation } from '../../../services/labService';
+import { isTextEntryTarget } from '../../../utils/keyboard';
 import {
-  addMarkerToList, estimateDocBytes, FIRESTORE_DOC_SAFE_BYTES, paintRadiusFor, PAINT_SIZE_MAX, PAINT_SIZE_MIN,
-  questionMarkers, undoLastMarker,
+  addMarkerToList, estimateDocBytes, FIRESTORE_DOC_SAFE_BYTES, LINE_SIZE_DEFAULT, lineRadiusFor, paintRadiusFor,
+  PAINT_SIZE_MAX, PAINT_SIZE_MIN, questionMarkers, undoLastMarker,
 } from '../../../utils/anatomyMarkers';
 
 const AnatomyViewer = lazy(() => import('../../../components/anatomy3d/AnatomyViewer'));
@@ -114,6 +115,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
 
   const [tool, setTool] = useState<AnatomyTool>('pin');
   const [paintSize, setPaintSize] = useState(4);
+  const [lineSize, setLineSize] = useState(LINE_SIZE_DEFAULT);
   const [modelDiag, setModelDiag] = useState<number | null>(null);
   const [work, setWork] = useState<WorkMarks>(EMPTY_WORK);
   // Ângulo para onde a câmera pula ao selecionar uma questão já marcada.
@@ -183,6 +185,25 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
   };
 
   const handleUndoMarker = () => setWork((prev) => ({ ...prev, markers: undoLastMarker(prev.markers) }));
+
+  // Atalhos de teclado para quem edita no computador (item 6.23). Ignorados enquanto se digita
+  // num campo — senão escrever "Sutura" trocaria de ferramenta a cada letra.
+  useEffect(() => {
+    const shortcuts: Record<string, AnatomyTool> = { g: 'orbit', a: 'pin', l: 'line', r: 'straight', m: 'paint' };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isTextEntryTarget(event.target)) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        setWork((prev) => ({ ...prev, markers: undoLastMarker(prev.markers) }));
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const next = shortcuts[event.key.toLowerCase()];
+      if (next) setTool(next);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleClearMarkers = () => {
     if (work.markers.length > 1 && !confirm(`Apagar as ${work.markers.length} marcas desta questão?`)) return;
@@ -315,21 +336,30 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
     }
   };
 
-  const toolButton = (value: AnatomyTool, icon: React.ReactNode, label: string) => (
+  const toolButton = (value: AnatomyTool, icon: React.ReactNode, label: string, shortcut: string) => (
     <button
       onClick={() => setTool(value)}
+      title={`${label} (atalho: ${shortcut})`}
       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${tool === value ? 'bg-[#D4A017] text-[#003366]' : 'bg-white/10 text-white hover:bg-white/20'}`}
     >
       {icon} {label}
+      <kbd className={`hidden md:inline text-[8px] font-black px-1 rounded ${tool === value ? 'bg-[#003366]/15' : 'bg-white/15'}`}>{shortcut}</kbd>
     </button>
   );
 
+  const isLineTool = tool === 'line' || tool === 'straight';
+  const sizeControl = tool === 'paint'
+    ? { value: paintSize, set: setPaintSize, mm: modelDiag ? paintRadiusFor(modelDiag, paintSize) * 2 * 1000 : null }
+    : isLineTool
+      ? { value: lineSize, set: setLineSize, mm: modelDiag ? lineRadiusFor(modelDiag, lineSize) * 2 * 1000 : null }
+      : null;
+
   const toolHint: Record<AnatomyTool, string> = {
-    orbit: 'Arraste para girar, roda/pinça para zoom, botão direito para mover.',
+    orbit: 'Arraste para girar; roda do mouse, pinça do touchpad ou a barra à direita para o zoom; botão direito (ou Shift + arrastar) para mover.',
     pin: 'Clique na peça para fincar o alfinete. Arrastar continua girando.',
-    line: 'Pressione e arraste sobre a peça para desenhar à mão livre. Para girar, volte ao modo Girar.',
-    straight: 'Arraste do ponto inicial até o final (ou clique em um e depois no outro): a reta segue a superfície da peça. Para girar, volte ao modo Girar.',
-    paint: 'Pressione e arraste para pintar. Vários traços somam na mesma área. Para girar, volte ao modo Girar.',
+    line: 'Pressione e arraste sobre a peça para desenhar à mão livre. Segure Espaço e arraste para girar sem trocar de ferramenta.',
+    straight: 'Arraste do ponto inicial até o final (ou clique em um e depois no outro): a reta segue a superfície da peça. Segure Espaço e arraste para girar.',
+    paint: 'Pressione e arraste para pintar. Vários traços somam na mesma área. Segure Espaço e arraste para girar.',
   };
 
   return (
@@ -378,30 +408,30 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
           <div className="lg:col-span-8">
             <div className="relative w-full h-[420px] md:h-[560px] rounded-[1.5rem] overflow-hidden bg-[#1b1d22]">
               <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-2">
-                {toolButton('orbit', <Hand size={14} />, 'Girar')}
-                {toolButton('pin', <MapPin size={14} />, 'Alfinete')}
-                {toolButton('line', <PenLine size={14} />, 'Linha livre')}
-                {toolButton('straight', <Slash size={14} />, 'Reta')}
-                {toolButton('paint', <Highlighter size={14} />, 'Marca-texto')}
+                {toolButton('orbit', <Hand size={14} />, 'Girar', 'G')}
+                {toolButton('pin', <MapPin size={14} />, 'Alfinete', 'A')}
+                {toolButton('line', <PenLine size={14} />, 'Linha livre', 'L')}
+                {toolButton('straight', <Slash size={14} />, 'Reta', 'R')}
+                {toolButton('paint', <Highlighter size={14} />, 'Marca-texto', 'M')}
               </div>
-              {(tool === 'paint' || work.markers.length > 0) && (
+              {(sizeControl || work.markers.length > 0) && (
                 <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center gap-3 bg-black/60 backdrop-blur-sm rounded-xl px-3 py-2">
-                  {tool === 'paint' && (
+                  {sizeControl && (
                   <>
                   <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white">
-                    Espessura
+                    {tool === 'paint' ? 'Espessura do marca-texto' : 'Espessura da linha'}
                     <input
                       type="range"
                       min={PAINT_SIZE_MIN}
                       max={PAINT_SIZE_MAX}
-                      value={paintSize}
-                      onChange={(e) => setPaintSize(Number(e.target.value))}
+                      value={sizeControl.value}
+                      onChange={(e) => sizeControl.set(Number(e.target.value))}
                       className="w-28 accent-[#D4A017]"
                     />
                   </label>
-                  {modelDiag && (
+                  {sizeControl.mm !== null && (
                     <span className="text-[10px] font-bold text-white/70">
-                      ≈ {Math.max(1, Math.round(paintRadiusFor(modelDiag, paintSize) * 2 * 1000))} mm
+                      ≈ {sizeControl.mm < 2 ? sizeControl.mm.toFixed(1).replace('.', ',') : Math.round(sizeControl.mm)} mm
                     </span>
                   )}
                   </>
@@ -412,7 +442,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
                   <button
                     onClick={handleUndoMarker}
                     disabled={work.markers.length === 0}
-                    title="Remove a última marca (no marca-texto, o último traço)"
+                    title="Remove a última marca — no marca-texto, o último traço (atalho: Ctrl+Z)"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 disabled:opacity-30"
                   >
                     <Undo2 size={13} /> Desfazer
@@ -434,6 +464,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
                   tool={tool}
                   onMarkerDrawn={handleMarkerDrawn}
                   paintSize={paintSize}
+                  lineSize={lineSize}
                   onModelLoaded={({ diag }) => setModelDiag(diag)}
                   className="w-full h-full"
                 />
@@ -458,7 +489,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
                   {selected ? `Editando questão ${pieceQuestions.findIndex((q) => q.id === selected.id) + 1}` : 'Nova questão'} · {work.markers.length} marca{work.markers.length === 1 ? '' : 's'}
                 </p>
                 <input value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} placeholder="Pergunta" className="w-full p-3 bg-white rounded-xl font-bold text-sm outline-none border" />
-                <input value={form.answer} onChange={(e) => setForm({ ...form, answer: e.target.value })} placeholder="Resposta (Ex: Sutura coronal)" autoFocus className="w-full p-3 bg-white rounded-xl font-bold text-sm outline-none border" />
+                <input value={form.answer} onChange={(e) => setForm({ ...form, answer: e.target.value })} placeholder="Resposta (Ex: Sutura coronal)" className="w-full p-3 bg-white rounded-xl font-bold text-sm outline-none border" />
                 <details className="text-xs">
                   <summary className="cursor-pointer text-[10px] font-black uppercase text-gray-500">Dicas (opcional)</summary>
                   <div className="space-y-2 mt-2">

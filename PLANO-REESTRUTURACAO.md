@@ -169,7 +169,10 @@ verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 (merge `2e4ee8f`), verificações verdes. Ver seção 6.21.
 
 **➡️ Mesma sessão: item 6.22 — várias marcas por questão + reta por arrasto.** Branch
-`feat/editor-3d-varias-marcas`, verificações verdes. Ver seção 6.22.
+`feat/editor-3d-varias-marcas` — **no ar em 2026-10-22** (merge `803647f`). Ver seção 6.22.
+
+**➡️ Mesma sessão: item 6.23 — editor 3D no computador (zoom, espessura da linha, atalhos).**
+Branch `feat/editor-3d-desktop`, verificações verdes. Ver seção 6.23.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -2227,8 +2230,8 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     pintura em 2 traços, desfazer, gravar questão, reta em 2 cliques — sem erros de console.
 
 
-- [~] **6.22 — Várias marcas por questão + reta que aceita arrasto** — implementado em
-  2026-10-22 (branch `feat/editor-3d-varias-marcas`).
+- [x] **6.22 — Várias marcas por questão + reta que aceita arrasto** — no ar em 2026-10-22
+  (merge `803647f`).
 
   **Pedido do usuário:** mais de um alfinete e mais de uma linha (livre ou reta) na mesma
   questão — estruturas pares e estruturas em mais de um lugar. E: "a linha reta não está
@@ -2253,6 +2256,33 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     `undoLastMarker`, `paintStrokesOf`) com testes (+5).
   - Verificado com Playwright no editor (página temporária, removida): 2 alfinetes, reta por
     arrasto, reta por 2 cliques, pintura + desfazer, questão salva reabre com as 4 marcas.
+
+
+- [~] **6.23 — Editor 3D no computador: zoom, espessura da linha, atalhos** — implementado em
+  2026-10-22 (branch `feat/editor-3d-desktop`).
+
+  **Pedido do usuário:** ele cadastra e edita as peças pelo computador — melhorar o uso com
+  mouse e touchpad, barra de zoom à direita da peça e espessura regulável nas linhas (livre e
+  reta).
+
+  **Como ficou:**
+  - **Barra de zoom** vertical à direita (+ / −), em escala logarítmica entre min/maxDistance;
+    acompanha a roda do mouse / pinça do touchpad. Também aparece para o aluno, só em `md+`.
+  - **Espessura da linha**: `line.radius` opcional; ausente = padrão antigo (0,35% da diagonal,
+    tamanho 3 da escala 1–10). Régua "Espessura da linha" nas ferramentas Linha livre e Reta.
+  - **Espaço (ou Alt) + arrastar** gira a peça em qualquer ferramenta; **atalhos** G/A/L/R/M e
+    Ctrl+Z; cursor mira/mão conforme a ferramenta.
+
+  **Achados no teste (Playwright no editor, página temporária removida):**
+  - Depois da 1ª marca, o campo **Resposta** puxava o foco (`autoFocus`): o Espaço virava
+    espaço digitado e os atalhos viravam letras. Removido o `autoFocus` — quem marca várias
+    estruturas antes de escrever a resposta precisa do teclado livre.
+  - "Está digitando?" agora só considera campos de texto (`utils/keyboard.ts` + teste): régua
+    de espessura com foco não pode bloquear os atalhos.
+  - "Mouse sobre a peça" vem da última posição do ponteiro, não de pointerenter/leave — a
+    captura do ponteiro durante um traço desarranjava esses eventos.
+  - Espaço liga o giro na hora (não no próximo quadro): apertar e arrastar no mesmo instante
+    deixava sem desenhar e sem girar.
 
 
 ---

@@ -18,6 +18,9 @@ import {
   addMarkerToList,
   undoLastMarker,
   paintStrokesOf,
+  lineRadiusFor,
+  lineRadiusOf,
+  LINE_SIZE_DEFAULT,
 } from './anatomyMarkers';
 import type { AnatomyMarker } from '../types';
 import type { LabQuestion, LabSimulation } from '../types';
@@ -194,5 +197,23 @@ describe('várias marcas por questão', () => {
 
   it('paintStrokesOf junta os traços de todas as pinturas da lista', () => {
     expect(paintStrokesOf([pinA, { type: 'paint', strokes: [s1] }, { type: 'paint', strokes: [s2] }])).toEqual([s1, s2]);
+  });
+});
+
+describe('espessura da linha', () => {
+  it('o tamanho padrão reproduz a espessura das linhas antigas (0,35% da diagonal)', () => {
+    expect(lineRadiusFor(1, LINE_SIZE_DEFAULT)).toBeCloseTo(0.0035);
+  });
+
+  it('linha sem radius salvo usa o padrão; com radius, usa o dela', () => {
+    expect(lineRadiusOf({}, 2)).toBeCloseTo(0.007);
+    expect(lineRadiusOf({ radius: 0.01 }, 2)).toBe(0.01);
+  });
+
+  it('isValidMarker recusa espessura inválida, mas aceita linha antiga sem espessura', () => {
+    expect(isValidMarker({ type: 'line', points: [0, 0, 0, 1, 1, 1] })).toBe(true);
+    expect(isValidMarker({ type: 'line', points: [0, 0, 0, 1, 1, 1], radius: 0.002 })).toBe(true);
+    expect(isValidMarker({ type: 'line', points: [0, 0, 0, 1, 1, 1], radius: 0 })).toBe(false);
+    expect(isValidMarker({ type: 'line', points: [0, 0, 0, 1, 1, 1], radius: NaN })).toBe(false);
   });
 });

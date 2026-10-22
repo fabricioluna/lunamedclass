@@ -330,7 +330,8 @@ export interface AnatomyPaintStroke {
 
 export type AnatomyMarker =
   | { type: 'pin'; position: number[]; direction: number[] }
-  | { type: 'line'; points: number[] }
+  // radius = espessura do traço (item 6.23); ausente nas linhas salvas antes, que usam o padrão.
+  | { type: 'line'; points: number[]; radius?: number }
   | { type: 'paint'; strokes: AnatomyPaintStroke[] };
 
 export interface AnatomyCameraView {

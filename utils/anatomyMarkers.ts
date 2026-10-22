@@ -45,6 +45,7 @@ export const isValidMarker = (marker: AnatomyMarker | null | undefined): marker 
   if (!marker) return false;
   if (marker.type === 'pin') return isFiniteVec3(marker.position) && isFiniteVec3(marker.direction);
   if (marker.type === 'paint') return Array.isArray(marker.strokes) && marker.strokes.length > 0 && marker.strokes.every(isValidStroke);
+  if (marker.radius !== undefined && !(Number.isFinite(marker.radius) && marker.radius > 0)) return false;
   return (
     Array.isArray(marker.points) &&
     marker.points.length >= 6 &&
@@ -126,6 +127,13 @@ export const PAINT_MAX_ALPHA = 0.45;
 export const PAINT_SIZE_MIN = 1;
 export const PAINT_SIZE_MAX = 10;
 export const paintRadiusFor = (diag: number, size: number) => diag * 0.004 * size;
+
+// Espessura da linha (livre e reta), mesma escala 1–10. O padrão 3 reproduz a espessura das
+// linhas salvas antes de existir a regulagem (0,35% da diagonal).
+export const LINE_SIZE_DEFAULT = 3;
+export const lineRadiusFor = (diag: number, size: number) => diag * (0.0035 / LINE_SIZE_DEFAULT) * size;
+export const lineRadiusOf = (marker: { radius?: number }, diag: number) =>
+  marker.radius ?? lineRadiusFor(diag, LINE_SIZE_DEFAULT);
 
 // Pinta um ponto do pincel sobre os vértices, em `alpha` (0..maxAlpha por vértice). Usa o
 // MAIOR valor, não soma: traços sobrepostos não escurecem — é uma área marcada, não camadas.
