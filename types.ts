@@ -338,10 +338,14 @@ export interface AnatomyCameraView {
   target: number[];
 }
 
+// Uma questão pode ter várias marcas (estruturas pares, mais de um ponto) — item 6.22.
+// `marker` (uma só) é o formato das questões salvas antes disso; leia sempre via
+// questionMarkers() em utils/anatomyMarkers.ts, que entende os dois.
 export interface LabModel3D {
   modelUrl: string;
   modelName: string;
-  marker: AnatomyMarker;
+  markers?: AnatomyMarker[];
+  marker?: AnatomyMarker;
   camera?: AnatomyCameraView;
 }
 

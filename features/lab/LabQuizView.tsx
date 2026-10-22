@@ -15,6 +15,7 @@ import {
 import {
   fetchFlashcardProgressDoc, upsertFlashcardCardState, clearActiveSession,
 } from '../../services/flashcardsService';
+import { questionMarkers } from '../../utils/anatomyMarkers';
 
 // three.js é pesado: só baixa quando o Lab tem peça 3D, não em todo Lab de lâminas.
 const AnatomyViewer = lazy(() => import('../../components/anatomy3d/AnatomyViewer'));
@@ -52,6 +53,8 @@ const MediaLabel: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, t
 
 const Model3DMedia: React.FC<{ model: LabModel3D; displayName: string }> = ({ model, displayName }) => {
   const viewerRef = useRef<AnatomyViewerHandle>(null);
+  // Lista estável: o visualizador refaz a cena (e recalcula o marca-texto) quando ela muda.
+  const markers = useMemo(() => questionMarkers(model), [model]);
   return (
     <div className="w-full h-80 md:h-[480px] bg-[#1b1d22] rounded-[1.5rem] mb-3 overflow-hidden shadow-inner relative">
       <MediaLabel icon={<Box size={16} className="text-[#D4A017]" />} text={displayName} />
@@ -65,7 +68,7 @@ const Model3DMedia: React.FC<{ model: LabModel3D; displayName: string }> = ({ mo
         <AnatomyViewer
           ref={viewerRef}
           modelUrl={model.modelUrl}
-          marker={model.marker}
+          markers={markers}
           camera={model.camera}
           className="w-full h-full"
         />

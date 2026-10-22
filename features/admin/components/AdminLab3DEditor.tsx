@@ -1,11 +1,12 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Hand, MapPin, PenLine, Plus, Trash2, Loader2, Save, X, Upload, Slash, Highlighter, Undo2 } from 'lucide-react';
+import { Box, Hand, MapPin, PenLine, Plus, Trash2, Loader2, Save, X, Upload, Slash, Highlighter, Undo2, Eraser } from 'lucide-react';
 import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit, AnatomyMarker, AnatomyCameraView } from '../../../types';
 import type { AnatomyTool } from '../../../components/anatomy3d/AnatomyViewer';
 import { uploadFile } from '../../../services/storageService';
 import { addLabSimulation, updateLabSimulation } from '../../../services/labService';
 import {
-  estimateDocBytes, FIRESTORE_DOC_SAFE_BYTES, paintRadiusFor, PAINT_SIZE_MAX, PAINT_SIZE_MIN,
+  addMarkerToList, estimateDocBytes, FIRESTORE_DOC_SAFE_BYTES, paintRadiusFor, PAINT_SIZE_MAX, PAINT_SIZE_MIN,
+  questionMarkers, undoLastMarker,
 } from '../../../utils/anatomyMarkers';
 
 const AnatomyViewer = lazy(() => import('../../../components/anatomy3d/AnatomyViewer'));
@@ -31,9 +32,17 @@ interface DraftQuestion {
   hint1: string;
   hint2: string;
   hint3: string;
-  marker: AnatomyMarker;
+  markers: AnatomyMarker[];
   camera: AnatomyCameraView | null;
 }
+
+// Marcas da questão em edição (nova ou selecionada) e o ângulo da última marca desenhada.
+interface WorkMarks {
+  markers: AnatomyMarker[];
+  camera: AnatomyCameraView | null;
+}
+
+const EMPTY_WORK: WorkMarks = { markers: [], camera: null };
 
 interface QuestionForm {
   question: string;
@@ -51,8 +60,6 @@ const DEFAULT_QUESTION: Record<AnatomyMarker['type'], string> = {
 const DEFAULT_QUESTIONS = new Set(Object.values(DEFAULT_QUESTION));
 
 const EMPTY_FORM: QuestionForm = { question: DEFAULT_QUESTION.pin, answer: '', hint1: '', hint2: '', hint3: '' };
-
-const MARKER_LABEL: Record<AnatomyMarker['type'], string> = { pin: 'alfinete', line: 'linha', paint: 'marca-texto' };
 
 const MarkerIcon: React.FC<{ type: AnatomyMarker['type'] }> = ({ type }) => {
   const props = { size: 12, className: 'text-gray-400 shrink-0' };
@@ -82,7 +89,7 @@ const fromInitial = (sim: LabSimulation | null | undefined) => {
       hint1: hintOrEmpty(q.aiIdentification),
       hint2: hintOrEmpty(q.aiLocation),
       hint3: hintOrEmpty(q.aiFunctions),
-      marker: q.model3d.marker,
+      markers: questionMarkers(q.model3d),
       camera: q.model3d.camera ?? null,
     });
   }
@@ -108,7 +115,9 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
   const [tool, setTool] = useState<AnatomyTool>('pin');
   const [paintSize, setPaintSize] = useState(4);
   const [modelDiag, setModelDiag] = useState<number | null>(null);
-  const [draft, setDraft] = useState<{ marker: AnatomyMarker; camera: AnatomyCameraView } | null>(null);
+  const [work, setWork] = useState<WorkMarks>(EMPTY_WORK);
+  // Ângulo para onde a câmera pula ao selecionar uma questão já marcada.
+  const [jumpCamera, setJumpCamera] = useState<AnatomyCameraView | undefined>(undefined);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<QuestionForm>(EMPTY_FORM);
 
@@ -121,11 +130,12 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
   const activePiece = pieces.find((p) => p.key === activePieceKey) ?? null;
   const pieceQuestions = questions.filter((q) => q.pieceKey === activePieceKey);
   const selected = questions.find((q) => q.id === selectedId) ?? null;
-  const shownMarker = draft?.marker ?? selected?.marker ?? null;
+  const isEditingMarks = !!selected || work.markers.length > 0;
   const isUC = disciplines.find((d) => d.id === disc)?.category === 'UC';
 
   const resetForm = () => {
-    setDraft(null);
+    setWork(EMPTY_WORK);
+    setJumpCamera(undefined);
     setSelectedId(null);
     setForm((prev) => ({ ...EMPTY_FORM, question: DEFAULT_QUESTIONS.has(prev.question) ? prev.question : EMPTY_FORM.question }));
   };
@@ -163,13 +173,25 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
     setPieces((prev) => prev.map((p) => (p.key === activePiece.key ? { ...p, name } : p)));
   };
 
+  // Cada marca nova SOMA às da questão (estruturas pares, mais de um ponto) — item 6.22.
   const handleMarkerDrawn = (marker: AnatomyMarker, camera: AnatomyCameraView) => {
-    setDraft({ marker, camera });
-    setForm((prev) => (DEFAULT_QUESTIONS.has(prev.question) ? { ...prev, question: DEFAULT_QUESTION[marker.type] } : prev));
+    const isFirst = work.markers.length === 0;
+    setWork((prev) => ({ markers: addMarkerToList(prev.markers, marker), camera }));
+    if (isFirst && !selected) {
+      setForm((prev) => (DEFAULT_QUESTIONS.has(prev.question) ? { ...prev, question: DEFAULT_QUESTION[marker.type] } : prev));
+    }
+  };
+
+  const handleUndoMarker = () => setWork((prev) => ({ ...prev, markers: undoLastMarker(prev.markers) }));
+
+  const handleClearMarkers = () => {
+    if (work.markers.length > 1 && !confirm(`Apagar as ${work.markers.length} marcas desta questão?`)) return;
+    setWork((prev) => ({ ...prev, markers: [] }));
   };
 
   const selectQuestion = (q: DraftQuestion) => {
-    setDraft(null);
+    setWork({ markers: q.markers, camera: q.camera });
+    setJumpCamera(q.camera ?? undefined);
     setSelectedId(q.id);
     setForm({ question: q.question, answer: q.answer, hint1: q.hint1, hint2: q.hint2, hint3: q.hint3 });
   };
@@ -178,6 +200,10 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
     if (!activePieceKey) return;
     if (!form.question.trim() || !form.answer.trim()) {
       alert('Preencha a pergunta e a resposta.');
+      return;
+    }
+    if (work.markers.length === 0) {
+      alert('Marque pelo menos um ponto, linha ou área na peça.');
       return;
     }
     const fields = {
@@ -189,16 +215,15 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
     };
     if (selected) {
       setQuestions((prev) => prev.map((q) => (q.id === selected.id
-        ? { ...q, ...fields, ...(draft ? { marker: draft.marker, camera: draft.camera } : {}) }
+        ? { ...q, ...fields, markers: work.markers, camera: work.camera ?? q.camera }
         : q)));
     } else {
-      if (!draft) return;
       setQuestions((prev) => [...prev, {
         id: `lab_q_${Date.now()}_${prev.length}`,
         pieceKey: activePieceKey,
         ...fields,
-        marker: draft.marker,
-        camera: draft.camera,
+        markers: work.markers,
+        camera: work.camera,
       }]);
     }
     resetForm();
@@ -208,13 +233,6 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
     if (!confirm('Excluir esta questão?')) return;
     setQuestions((prev) => prev.filter((q) => q.id !== id));
     if (selectedId === id) resetForm();
-  };
-
-  // Desfaz o último traço do marca-texto em edição; sem traços sobrando, volta ao que estava.
-  const handleUndoPaintStroke = () => {
-    if (draft?.marker.type !== 'paint') return;
-    const strokes = draft.marker.strokes.slice(0, -1);
-    setDraft(strokes.length > 0 ? { ...draft, marker: { type: 'paint', strokes } } : null);
   };
 
   const handleSave = async () => {
@@ -261,7 +279,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
         model3d: {
           modelUrl: remoteUrl.get(q.pieceKey)!,
           modelName: pieceName.get(q.pieceKey)!,
-          marker: q.marker,
+          markers: q.markers,
           ...(q.camera ? { camera: q.camera } : {}),
         },
       }));
@@ -310,7 +328,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
     orbit: 'Arraste para girar, roda/pinça para zoom, botão direito para mover.',
     pin: 'Clique na peça para fincar o alfinete. Arrastar continua girando.',
     line: 'Pressione e arraste sobre a peça para desenhar à mão livre. Para girar, volte ao modo Girar.',
-    straight: 'Clique no ponto inicial e depois no final: a reta segue a superfície da peça. Arrastar continua girando.',
+    straight: 'Arraste do ponto inicial até o final (ou clique em um e depois no outro): a reta segue a superfície da peça. Para girar, volte ao modo Girar.',
     paint: 'Pressione e arraste para pintar. Vários traços somam na mesma área. Para girar, volte ao modo Girar.',
   };
 
@@ -366,8 +384,10 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
                 {toolButton('straight', <Slash size={14} />, 'Reta')}
                 {toolButton('paint', <Highlighter size={14} />, 'Marca-texto')}
               </div>
-              {tool === 'paint' && (
+              {(tool === 'paint' || work.markers.length > 0) && (
                 <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center gap-3 bg-black/60 backdrop-blur-sm rounded-xl px-3 py-2">
+                  {tool === 'paint' && (
+                  <>
                   <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white">
                     Espessura
                     <input
@@ -384,20 +404,33 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
                       ≈ {Math.max(1, Math.round(paintRadiusFor(modelDiag, paintSize) * 2 * 1000))} mm
                     </span>
                   )}
+                  </>
+                  )}
+                  <span className="ml-auto text-[10px] font-bold text-white/70">
+                    {work.markers.length} marca{work.markers.length === 1 ? '' : 's'}
+                  </span>
                   <button
-                    onClick={handleUndoPaintStroke}
-                    disabled={draft?.marker.type !== 'paint'}
-                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 disabled:opacity-30"
+                    onClick={handleUndoMarker}
+                    disabled={work.markers.length === 0}
+                    title="Remove a última marca (no marca-texto, o último traço)"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 disabled:opacity-30"
                   >
-                    <Undo2 size={13} /> Desfazer traço
+                    <Undo2 size={13} /> Desfazer
+                  </button>
+                  <button
+                    onClick={handleClearMarkers}
+                    disabled={work.markers.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 disabled:opacity-30"
+                  >
+                    <Eraser size={13} /> Limpar
                   </button>
                 </div>
               )}
               <Suspense fallback={<div className="w-full h-full" />}>
                 <AnatomyViewer
                   modelUrl={activePiece.url}
-                  marker={shownMarker}
-                  camera={draft ? undefined : selected?.camera ?? undefined}
+                  markers={work.markers}
+                  camera={jumpCamera}
                   tool={tool}
                   onMarkerDrawn={handleMarkerDrawn}
                   paintSize={paintSize}
@@ -406,7 +439,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
                 />
               </Suspense>
             </div>
-            <p className="text-[10px] font-bold text-gray-400 mt-2">{toolHint[tool]} O ângulo em que você marca é o ângulo em que a questão abre para o aluno.</p>
+            <p className="text-[10px] font-bold text-gray-400 mt-2">{toolHint[tool]} Cada marca soma às anteriores na mesma questão (ex.: um alfinete de cada lado). O ângulo da última marca é o ângulo em que a questão abre para o aluno.</p>
             <input
               value={activePiece.name}
               onChange={(e) => renamePiece(e.target.value)}
@@ -419,10 +452,10 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
 
           {/* FORMULÁRIO + LISTA */}
           <div className="lg:col-span-4 space-y-4">
-            {draft || selected ? (
+            {isEditingMarks ? (
               <div className="p-4 rounded-2xl border-2 border-[#003366]/10 bg-blue-50/40 space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-widest text-[#003366]">
-                  {selected ? `Editando questão ${pieceQuestions.findIndex((q) => q.id === selected.id) + 1}${draft ? ' — marca redesenhada' : ''}` : `Nova questão (${draft ? MARKER_LABEL[draft.marker.type] : ''})`}
+                  {selected ? `Editando questão ${pieceQuestions.findIndex((q) => q.id === selected.id) + 1}` : 'Nova questão'} · {work.markers.length} marca{work.markers.length === 1 ? '' : 's'}
                 </p>
                 <input value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} placeholder="Pergunta" className="w-full p-3 bg-white rounded-xl font-bold text-sm outline-none border" />
                 <input value={form.answer} onChange={(e) => setForm({ ...form, answer: e.target.value })} placeholder="Resposta (Ex: Sutura coronal)" autoFocus className="w-full p-3 bg-white rounded-xl font-bold text-sm outline-none border" />
@@ -440,11 +473,11 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
                   </button>
                   <button onClick={resetForm} className="px-4 bg-gray-100 text-gray-500 rounded-xl font-black uppercase text-[10px]">Cancelar</button>
                 </div>
-                {selected && <p className="text-[10px] text-gray-500 font-medium">Para mudar a marca desta questão, desenhe de novo na peça.</p>}
+                {selected && <p className="text-[10px] text-gray-500 font-medium">Marcas novas somam às desta questão. Use Desfazer ou Limpar (embaixo da peça) para tirar.</p>}
               </div>
             ) : (
               <div className="p-4 rounded-2xl border-2 border-dashed border-gray-200 text-xs text-gray-500 font-medium leading-relaxed">
-                Escolha <b>Alfinete</b> ou <b>Linha</b> e marque a estrutura na peça. Depois escreva a pergunta e a resposta.
+                Escolha <b>Alfinete</b>, <b>Linha</b>, <b>Reta</b> ou <b>Marca-texto</b> e marque a estrutura na peça — quantas marcas precisar. Depois escreva a pergunta e a resposta.
               </div>
             )}
 
@@ -455,7 +488,8 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
                   <div key={q.id} className={`flex items-center gap-2 p-2 rounded-xl border transition-all ${q.id === selectedId ? 'border-[#003366] bg-blue-50' : 'border-gray-100 hover:border-gray-300'}`}>
                     <button onClick={() => selectQuestion(q)} className="flex-1 flex items-center gap-2 text-left">
                       <span className="w-6 h-6 rounded-full bg-[#e11d48] text-white text-[10px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
-                      <MarkerIcon type={q.marker.type} />
+                      {q.markers[0] && <MarkerIcon type={q.markers[0].type} />}
+                      {q.markers.length > 1 && <span className="text-[9px] font-black text-gray-400 shrink-0">×{q.markers.length}</span>}
                       <span className="text-xs font-bold text-[#003366] truncate">{q.answer}</span>
                     </button>
                     <button onClick={() => handleDeleteQuestion(q.id)} className="p-1 text-red-300 hover:text-red-500"><Trash2 size={14} /></button>
