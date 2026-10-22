@@ -14,7 +14,12 @@ import {
   accumulatePaintPoint,
   estimateDocBytes,
   PAINT_MAX_ALPHA,
+  questionMarkers,
+  addMarkerToList,
+  undoLastMarker,
+  paintStrokesOf,
 } from './anatomyMarkers';
+import type { AnatomyMarker } from '../types';
 import type { LabQuestion, LabSimulation } from '../types';
 
 const pinQuestion = (id: string, modelUrl: string): LabQuestion => ({
@@ -150,5 +155,44 @@ describe('marca-texto', () => {
 
   it('estimateDocBytes mede o tamanho em bytes do JSON (acentos contam 2)', () => {
     expect(estimateDocBytes({ a: 'é' })).toBe(10);
+  });
+});
+
+describe('várias marcas por questão', () => {
+  const pinA: AnatomyMarker = { type: 'pin', position: [0, 0, 0], direction: [0, 1, 0] };
+  const pinB: AnatomyMarker = { type: 'pin', position: [1, 0, 0], direction: [0, 1, 0] };
+  const line: AnatomyMarker = { type: 'line', points: [0, 0, 0, 1, 1, 1] };
+  const s1 = { radius: 0.01, points: [0, 0, 0], normals: [0, 1, 0] };
+  const s2 = { radius: 0.02, points: [1, 0, 0], normals: [0, 1, 0] };
+
+  it('questionMarkers entende o formato antigo (marker único) e o novo (lista)', () => {
+    expect(questionMarkers({ modelUrl: 'u', modelName: 'n', marker: pinA })).toEqual([pinA]);
+    const markers = [pinA, pinB];
+    expect(questionMarkers({ modelUrl: 'u', modelName: 'n', markers })).toBe(markers);
+    expect(questionMarkers(undefined)).toEqual([]);
+  });
+
+  it('alfinetes e linhas somam à lista', () => {
+    expect(addMarkerToList(addMarkerToList([pinA], pinB), line)).toEqual([pinA, pinB, line]);
+  });
+
+  it('marca-texto substitui a pintura anterior e vai para o fim', () => {
+    const withPaint = addMarkerToList([pinA], { type: 'paint', strokes: [s1] });
+    const next = addMarkerToList([...withPaint, pinB], { type: 'paint', strokes: [s1, s2] });
+    expect(next).toEqual([pinA, pinB, { type: 'paint', strokes: [s1, s2] }]);
+  });
+
+  it('desfazer tira o último traço da pintura, depois a pintura, depois a marca anterior', () => {
+    let list: AnatomyMarker[] = [pinA, { type: 'paint', strokes: [s1, s2] }];
+    list = undoLastMarker(list);
+    expect(list).toEqual([pinA, { type: 'paint', strokes: [s1] }]);
+    list = undoLastMarker(list);
+    expect(list).toEqual([pinA]);
+    expect(undoLastMarker(list)).toEqual([]);
+    expect(undoLastMarker([])).toEqual([]);
+  });
+
+  it('paintStrokesOf junta os traços de todas as pinturas da lista', () => {
+    expect(paintStrokesOf([pinA, { type: 'paint', strokes: [s1] }, { type: 'paint', strokes: [s2] }])).toEqual([s1, s2]);
   });
 });

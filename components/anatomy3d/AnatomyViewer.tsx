@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { AnatomyMarker, AnatomyCameraView, AnatomyPaintStroke } from '../../types';
 import {
   accumulatePaintPoint, appendStrokePoint, computePaintAlpha, flattenPoints, isValidCameraView, isValidMarker,
-  paintRadiusFor, roundVec, unflattenPoints, Vec3,
+  paintRadiusFor, paintStrokesOf, roundVec, unflattenPoints, Vec3,
 } from '../../utils/anatomyMarkers';
 
 export type AnatomyTool = 'orbit' | 'pin' | 'line' | 'straight' | 'paint';
@@ -17,7 +17,9 @@ export interface AnatomyViewerHandle {
 
 interface Props {
   modelUrl: string;
-  marker?: AnatomyMarker | null;
+  // Todas as marcas da questão (alfinetes, linhas, marca-texto). Cada marca nova desenhada é
+  // entregue em onMarkerDrawn; quem junta na lista é o editor (addMarkerToList).
+  markers?: AnatomyMarker[];
   camera?: AnatomyCameraView;
   tool?: AnatomyTool;
   onMarkerDrawn?: (marker: AnatomyMarker, camera: AnatomyCameraView) => void;
@@ -180,7 +182,7 @@ const buildMarkerObject = (marker: Exclude<AnatomyMarker, { type: 'paint' }>, di
 };
 
 const AnatomyViewer: React.FC<Props> = ({
-  modelUrl, marker, camera, tool = 'orbit', onMarkerDrawn, paintSize = 4, onModelLoaded, className, ref,
+  modelUrl, markers, camera, tool = 'orbit', onMarkerDrawn, paintSize = 4, onModelLoaded, className, ref,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -203,13 +205,13 @@ const AnatomyViewer: React.FC<Props> = ({
   const toolRef = useRef(tool);
   const onMarkerDrawnRef = useRef(onMarkerDrawn);
   const cameraPropRef = useRef(camera);
-  const markerRef = useRef(marker);
+  const markersRef = useRef(markers);
   const paintSizeRef = useRef(paintSize);
   const onModelLoadedRef = useRef(onModelLoaded);
   toolRef.current = tool;
   onMarkerDrawnRef.current = onMarkerDrawn;
   cameraPropRef.current = camera;
-  markerRef.current = marker;
+  markersRef.current = markers;
   paintSizeRef.current = paintSize;
   onModelLoadedRef.current = onModelLoaded;
 
@@ -291,8 +293,8 @@ const AnatomyViewer: React.FC<Props> = ({
     let frame = 0;
     const loop = () => {
       frame = requestAnimationFrame(loop);
-      // Linha à mão livre e marca-texto usam o arrasto para desenhar; os outros, para girar.
-      controls.enabled = toolRef.current !== 'line' && toolRef.current !== 'paint';
+      // Ferramentas de traço usam o arrasto para desenhar; Girar e Alfinete, para girar a peça.
+      controls.enabled = toolRef.current === 'orbit' || toolRef.current === 'pin';
       controls.update();
       renderer.render(scene, cam);
     };
@@ -355,6 +357,9 @@ const AnatomyViewer: React.FC<Props> = ({
     let paintStroke: { radius: number; points: Vec3[]; normals: Vec3[] } | null = null;
     let straightStart: SurfaceHit | null = null;
     let straightDot: THREE.Mesh | null = null;
+    let straightPreview: THREE.Line | null = null;
+    // A reta aceita os dois gestos: arrastar de A até B, ou clicar em A e depois em B.
+    let straightDragging = false;
 
     const updateStrokePreview = () => {
       if (strokeObjRef.current) {
@@ -373,8 +378,25 @@ const AnatomyViewer: React.FC<Props> = ({
     const liftedPoint = (hit: SurfaceHit): Vec3 =>
       toVec3(hit.point.clone().addScaledVector(hit.normal, (modelRef.current?.diag ?? 1) * 0.002));
 
+    const clearStraightPreview = () => {
+      if (!straightPreview) return;
+      scene.remove(straightPreview);
+      straightPreview.geometry.dispose();
+      straightPreview = null;
+    };
+
+    const updateStraightPreview = (to: THREE.Vector3) => {
+      clearStraightPreview();
+      if (!straightStart) return;
+      const geometry = new THREE.BufferGeometry().setFromPoints([straightStart.point, to]);
+      straightPreview = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: MARKER_COLOR }));
+      scene.add(straightPreview);
+    };
+
     const cancelStraight = () => {
       straightStart = null;
+      straightDragging = false;
+      clearStraightPreview();
       if (straightDot) {
         scene.remove(straightDot);
         disposeObject(straightDot);
@@ -399,15 +421,22 @@ const AnatomyViewer: React.FC<Props> = ({
       return points;
     };
 
+    const finishStraight = (end: SurfaceHit) => {
+      if (!straightStart) return;
+      const drawn: AnatomyMarker = { type: 'line', points: flattenPoints(straightLinePoints(straightStart.point, end.point)) };
+      cancelStraight();
+      const view = getCameraView();
+      if (view && isValidMarker(drawn)) onMarkerDrawnRef.current?.(drawn, view);
+    };
+
     const startPaintStroke = (hit: SurfaceHit) => {
       const model = modelRef.current;
       if (!model) return;
-      // Pintando sobre algo que não é pintura (alfinete, linha, nada): começa uma área nova.
+      // Primeira pintura da questão: cria a camada sem apagar alfinetes e linhas já marcados.
       if (!paintLayersRef.current) {
-        clearMarkerObjects();
         const layers = buildPaintLayers(model.root, []);
         paintLayersRef.current = layers;
-        markerObjsRef.current = layers.map((l) => l.overlay);
+        markerObjsRef.current = [...markerObjsRef.current, ...layers.map((l) => l.overlay)];
       }
       const radius = paintRadiusFor(model.diag, paintSizeRef.current);
       paintStroke = { radius, points: [toVec3(hit.point)], normals: [toVec3(hit.normal)] };
@@ -416,15 +445,29 @@ const AnatomyViewer: React.FC<Props> = ({
 
     const onPointerDown = (event: PointerEvent) => {
       downAt = { x: event.clientX, y: event.clientY };
-      if (toolRef.current !== 'line' && toolRef.current !== 'paint') return;
+      const current = toolRef.current;
+      if (current !== 'line' && current !== 'paint' && current !== 'straight') return;
       const hit = hitAt(event);
       if (!hit) return;
       renderer.domElement.setPointerCapture(event.pointerId);
-      if (toolRef.current === 'line') stroke = [liftedPoint(hit)];
-      else startPaintStroke(hit);
+      if (current === 'line') stroke = [liftedPoint(hit)];
+      else if (current === 'paint') startPaintStroke(hit);
+      else if (!straightStart) {
+        straightStart = hit;
+        straightDragging = true;
+        const diag = modelRef.current?.diag ?? 1;
+        straightDot = new THREE.Mesh(new THREE.SphereGeometry(diag * 0.006, 12, 10), new THREE.MeshBasicMaterial({ color: MARKER_COLOR }));
+        straightDot.position.copy(hit.point);
+        scene.add(straightDot);
+      }
     };
 
     const onPointerMove = (event: PointerEvent) => {
+      if (straightDragging && straightStart && toolRef.current === 'straight') {
+        const hit = hitAt(event);
+        if (hit) updateStraightPreview(hit.point);
+        return;
+      }
       if (paintStroke && toolRef.current === 'paint') {
         const hit = hitAt(event);
         if (!hit || !paintLayersRef.current) return;
@@ -459,22 +502,18 @@ const AnatomyViewer: React.FC<Props> = ({
           normals: paintStroke.normals.flatMap((n) => n.map((c) => Math.round(c * 100) / 100)),
         };
         paintStroke = null;
-        const current = markerRef.current;
-        const previous = current?.type === 'paint' ? current.strokes : [];
-        const drawn: AnatomyMarker = { type: 'paint', strokes: [...previous, finished] };
+        const drawn: AnatomyMarker = { type: 'paint', strokes: [...paintStrokesOf(markersRef.current ?? []), finished] };
         if (view && isValidMarker(drawn)) onMarkerDrawnRef.current?.(drawn, view);
-      } else if (toolRef.current === 'straight' && isClick(event)) {
+      } else if (toolRef.current === 'straight' && straightStart) {
         const hit = hitAt(event);
-        if (hit && !straightStart) {
-          straightStart = hit;
-          const diag = modelRef.current?.diag ?? 1;
-          straightDot = new THREE.Mesh(new THREE.SphereGeometry(diag * 0.006, 12, 10), new THREE.MeshBasicMaterial({ color: MARKER_COLOR }));
-          straightDot.position.copy(hit.point);
-          scene.add(straightDot);
-        } else if (hit && straightStart) {
-          const drawn: AnatomyMarker = { type: 'line', points: flattenPoints(straightLinePoints(straightStart.point, hit.point)) };
-          cancelStraight();
-          if (view && isValidMarker(drawn)) onMarkerDrawnRef.current?.(drawn, view);
+        if (straightDragging) {
+          straightDragging = false;
+          clearStraightPreview();
+          // Soltou longe de onde apertou: foi um arrasto A→B. Se foi só um clique, fica
+          // esperando o segundo clique em B.
+          if (!isClick(event) && hit) finishStraight(hit);
+        } else if (isClick(event) && hit) {
+          finishStraight(hit);
         }
       } else if (toolRef.current === 'line' && stroke) {
         const finished = stroke;
@@ -525,17 +564,22 @@ const AnatomyViewer: React.FC<Props> = ({
     const model = modelRef.current;
     if (!s || !model || status !== 'ready') return;
     clearMarkerObjects();
-    if (!isValidMarker(marker)) return;
-    if (marker.type === 'paint') {
-      const layers = buildPaintLayers(model.root, marker.strokes);
-      paintLayersRef.current = layers;
-      markerObjsRef.current = layers.map((l) => l.overlay);
-    } else {
-      const obj = buildMarkerObject(marker, model.diag);
+    const valid = (markers ?? []).filter(isValidMarker);
+    const objs: THREE.Object3D[] = [];
+    for (const m of valid) {
+      if (m.type === 'paint') continue;
+      const obj = buildMarkerObject(m, model.diag);
       s.scene.add(obj);
-      markerObjsRef.current = [obj];
+      objs.push(obj);
     }
-  }, [marker, status]);
+    const strokes = paintStrokesOf(valid);
+    if (strokes.length > 0) {
+      const layers = buildPaintLayers(model.root, strokes);
+      paintLayersRef.current = layers;
+      objs.push(...layers.map((l) => l.overlay));
+    }
+    markerObjsRef.current = objs;
+  }, [markers, status]);
 
   // Trocou de ferramenta com só o ponto A da reta marcado: descarta o ponto A.
   useEffect(() => {

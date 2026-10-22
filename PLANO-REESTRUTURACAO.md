@@ -168,6 +168,9 @@ verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 **➡️ Mesma sessão: item 6.21 — editor 3D ganhou reta e marca-texto.** No ar em 2026-10-22
 (merge `2e4ee8f`), verificações verdes. Ver seção 6.21.
 
+**➡️ Mesma sessão: item 6.22 — várias marcas por questão + reta por arrasto.** Branch
+`feat/editor-3d-varias-marcas`, verificações verdes. Ver seção 6.22.
+
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
 Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.
@@ -2222,6 +2225,34 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     maior ou dividir o Lab.
   - Verificado com Playwright no próprio editor (página de teste temporária, removida):
     pintura em 2 traços, desfazer, gravar questão, reta em 2 cliques — sem erros de console.
+
+
+- [~] **6.22 — Várias marcas por questão + reta que aceita arrasto** — implementado em
+  2026-10-22 (branch `feat/editor-3d-varias-marcas`).
+
+  **Pedido do usuário:** mais de um alfinete e mais de uma linha (livre ou reta) na mesma
+  questão — estruturas pares e estruturas em mais de um lugar. E: "a linha reta não está
+  funcionando".
+
+  **Diagnóstico da reta:** no 6.21 ela funcionava só com dois cliques separados, e no modo Reta
+  o arrasto girava a peça. Quem tenta traçar a reta arrastando de A até B (o gesto natural) via
+  a peça girar e nenhuma linha. Agora aceita os dois gestos (arrastar A→B com prévia, ou clicar
+  A e depois B); no modo Reta o arrasto desenha, como Linha livre e Marca-texto.
+
+  **Como ficou:**
+  - `LabModel3D.markers: AnatomyMarker[]`; `marker` (único) continua lido para as questões
+    salvas antes — sempre via `questionMarkers()`, que devolve a mesma lista quando já está no
+    formato novo (o visualizador refaz a cena quando a identidade muda; a tela do aluno ainda
+    usa `useMemo` para o formato antigo). Ao salvar, o editor grava só `markers`.
+  - Editor: cada marca SOMA às anteriores; marca-texto é uma área por questão (traço novo
+    substitui a pintura anterior com todos os traços, indo para o fim da lista). "Desfazer"
+    tira a última marca (no marca-texto, o último traço); "Limpar" apaga todas. Contador de
+    marcas embaixo da peça e no formulário; lista mostra "×N". Câmera da questão = ângulo da
+    última marca desenhada.
+  - Lógica pura em `utils/anatomyMarkers.ts` (`questionMarkers`, `addMarkerToList`,
+    `undoLastMarker`, `paintStrokesOf`) com testes (+5).
+  - Verificado com Playwright no editor (página temporária, removida): 2 alfinetes, reta por
+    arrasto, reta por 2 cliques, pintura + desfazer, questão salva reabre com as 4 marcas.
 
 
 ---

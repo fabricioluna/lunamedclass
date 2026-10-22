@@ -1,4 +1,4 @@
-import type { AnatomyMarker, AnatomyCameraView, AnatomyPaintStroke, LabQuestion, LabSimulation } from '../types';
+import type { AnatomyMarker, AnatomyCameraView, AnatomyPaintStroke, LabModel3D, LabQuestion, LabSimulation } from '../types';
 
 export type Vec3 = [number, number, number];
 
@@ -57,6 +57,39 @@ export const isValidCameraView = (view: AnatomyCameraView | null | undefined): v
   !!view && isFiniteVec3(view.position) && isFiniteVec3(view.target);
 
 export const is3DQuestion = (q: LabQuestion): boolean => !!q.model3d;
+
+// === VÁRIAS MARCAS POR QUESTÃO (item 6.22) ===
+
+const EMPTY_MARKERS: AnatomyMarker[] = [];
+
+// Lê as marcas de uma questão nos dois formatos (lista nova ou `marker` único das questões
+// antigas). Devolve a MESMA lista quando já está no formato novo — o visualizador refaz a
+// cena quando a identidade muda, e recalcular o marca-texto a cada render custa caro.
+export const questionMarkers = (model: LabModel3D | undefined): AnatomyMarker[] => {
+  if (!model) return EMPTY_MARKERS;
+  if (model.markers) return model.markers;
+  return model.marker ? [model.marker] : EMPTY_MARKERS;
+};
+
+// Alfinete/linha somam à lista. O marca-texto é uma área só por questão: o traço novo chega
+// já com todos os traços anteriores e substitui a pintura que existia, indo para o fim da
+// lista — assim "desfazer" sempre age sobre o que foi feito por último.
+export const addMarkerToList = (list: readonly AnatomyMarker[], marker: AnatomyMarker): AnatomyMarker[] => {
+  if (marker.type !== 'paint') return [...list, marker];
+  return [...list.filter((m) => m.type !== 'paint'), marker];
+};
+
+export const undoLastMarker = (list: readonly AnatomyMarker[]): AnatomyMarker[] => {
+  const last = list[list.length - 1];
+  if (!last) return [];
+  if (last.type === 'paint' && last.strokes.length > 1) {
+    return [...list.slice(0, -1), { type: 'paint', strokes: last.strokes.slice(0, -1) }];
+  }
+  return list.slice(0, -1);
+};
+
+export const paintStrokesOf = (list: readonly AnatomyMarker[]): AnatomyPaintStroke[] =>
+  list.flatMap((m) => (m.type === 'paint' ? m.strokes : []));
 
 export const hasAny3DQuestion = (sim: LabSimulation): boolean => sim.questions.some(is3DQuestion);
 
