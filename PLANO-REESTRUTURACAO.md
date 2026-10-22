@@ -151,11 +151,15 @@ técnica) → conteúdo RPG → **Fase 3** (opcional). Fonte única do conteúdo
 disciplina (Biossegurança — Profª Ingrid Cordeiro; Sinais Vitais — Prof. Michel Melo). Ver
 seção 6.17 na Etapa 6 para decisões, diagnóstico e especificação.
 
-**➡️ Sessão de 2026-10-21: item 6.18 — peças 3D escaneadas no Lab (Fase 1).** Código completo no
-branch `feat/lab-pecas-3d`; `typecheck`/`lint` (22 pré-existentes, nenhum novo)/`test`
-(380/380)/`test:rules`/`build` verdes. **Aguardando teste do usuário** (subir uma peça como admin
-e estudar como aluno) e duas checagens que só ele faz no console: regra do Storage para
-`lab_models/` e CORS do bucket. Ver seção 6.18 na Etapa 6.
+**➡️ Sessão de 2026-10-21: item 6.18 — peças 3D escaneadas no Lab (Fase 1).** No ar em produção
+(merge `3f4656f`); `typecheck`/`lint` (22 pré-existentes, nenhum novo)/`test`
+(380/380)/`test:rules`/`build` verdes. Upload como admin funcionou; a tela do aluno falhava por
+CORS do bucket, configurado pelo usuário no Cloud Shell no mesmo dia (ver lição na seção 6.18).
+Falta só a confirmação final do usuário abrindo a peça como aluno.
+
+**➡️ Mesma sessão: item 6.19 — abertura do app mais rápida.** Pacote inicial 254,7 → 210,6 KB
+gzip + arquivos do app em cache no navegador. Branch `perf/carregamento-inicial`, verificações
+verdes. Ver seção 6.19.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -2095,11 +2099,51 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     alfinete e linha gravam coordenadas válidas, visão do aluno reabre no ângulo salvo.
     **Não** testado: upload real para o Storage e leitura do `.glb` em produção.
 
-  **Pendências que só o usuário fecha:**
-  - Regras do **Storage** (não versionadas no repo): admin precisa poder gravar em
-    `lab_models/`. Se recusar, o editor mostra mensagem dizendo isso.
-  - **CORS do bucket:** `<img>` não precisa, mas o `.glb` é baixado via `fetch`. Se a peça não
-    abrir com erro de CORS no console, configurar o CORS do bucket.
+  **Implantação (2026-10-21):** mergeado no `main` (`3f4656f`) e no ar. Upload para
+  `lab_models/` funcionou de primeira (a regra do Storage já permitia). A peça **não abria na
+  tela do aluno**: erro de CORS. Resolvido pelo usuário no Cloud Shell — CORS do bucket
+  `monitor-virtual-fms.firebasestorage.app` = `[{"origin":["*"],"method":["GET","HEAD"],
+  "maxAgeSeconds":3600}]` (recomendação da documentação do Firebase; a leitura continua
+  exigindo o token do link). Confirmado com `curl` no objeto real: `Access-Control-Allow-Origin: *`.
+
+  🔴 **Lição — CORS do Storage não se testa com objeto inexistente.** O primeiro diagnóstico
+  checou CORS com `curl` num caminho que não existia e viu `Access-Control-Allow-Origin: *` —
+  falso positivo: a resposta **404** vem do front-end do Firebase (que sempre põe o cabeçalho),
+  mas o **conteúdo** de um objeto real vem do bucket do Google Cloud, que só manda o cabeçalho
+  com CORS configurado. Testar sempre com o link de um arquivo que existe. Também não dá para
+  contornar no código: `getBlob`/`getBytes` do SDK exigem o mesmo CORS. `<img>` (lâminas) nunca
+  precisou dele, por isso o problema só apareceu com o `.glb` (baixado via `fetch`).
+
+- [~] **6.19 — Abertura do app mais rápida** — implementado em 2026-10-21 (branch
+  `perf/carregamento-inicial`), aguardando ir para produção e medição depois.
+
+  **Origem:** usuário achou o app lento na primeira abertura. Medido em produção com Playwright
+  (cache vazio, tela de login): conteúdo visível em 2,4–4,7 s em rede rápida e ~3,7 s em 4G
+  simulado. Linha do tempo: ~1–1,9 s baixando o JS inicial (253 KB gzip) + ~0,5–1 s esperando o
+  Firestore antes da primeira tela. Na mesma investigação, confirmado que o 6.18 **não** pesou
+  no pacote inicial (254,1 → 254,7 KB gzip, comparado com o mesmo `.env` nos dois builds — sem
+  ele o Sentry some do build antigo e a comparação engana).
+
+  **Feito (opções A + B aprovadas pelo usuário):**
+  - `vercel.json`: `/assets/*` com `Cache-Control: public, max-age=31536000, immutable` (antes
+    `max-age=0, must-revalidate` — o navegador revalidava cada arquivo a cada visita). Os nomes
+    têm hash e mudam a cada deploy, então guardar para sempre é seguro; o `index.html` continua
+    sem cache. O rewrite da SPA passou a ignorar `/assets/` → arquivo de deploy antigo dá 404
+    de verdade, em vez do HTML com status 200.
+  - `index.html`: `preconnect` com `firestore.googleapis.com`.
+  - Storage (`storageService`) e Analytics (`firebase.ts`) carregados sob demanda; Sentry
+    (`sentry.ts` + `sentryClient.ts`) carregado após a primeira tela. **Custo aceito:**
+    `console.error` e erros globais dos primeiros segundos não chegam ao Sentry; erro de
+    renderização continua chegando (`reportReactError` força o carregamento).
+  - **Pegadinha:** `import('@sentry/react')` sob demanda traz o pacote inteiro (replay,
+    feedback: 494 KB / 163 KB gzip). A ponte `sentryClient.ts`, que reexporta só as 3 funções
+    usadas, devolve o tree-shaking (90 KB / 30 KB gzip).
+  - **Resultado:** pacote inicial 254,7 → 210,6 KB gzip (−17%). Visitante deslogado testado no
+    build de produção local: tela de login renderiza, nenhum erro.
+
+  **Fica para depois (opção C, risco médio):** cache local do Firestore (`persistentLocalCache`)
+  para a tela abrir com os dados da última visita. Mexe em `useAppConfig` — o lugar do
+  incidente do `isLoading` — então exige teste dedicado como visitante deslogado.
 
 
 ---

@@ -143,6 +143,10 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.domElement.style.touchAction = 'none';
     renderer.domElement.style.display = 'block';
+    // O canvas acompanha o contêiner em vez de ditar a largura: com largura fixa em px ele
+    // empurrava a página para fora da tela no celular (rolagem lateral no iPhone, 6.19).
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -164,7 +168,7 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
       const w = container.clientWidth;
       const h = container.clientHeight;
       if (w === 0 || h === 0) return;
-      renderer.setSize(w, h);
+      renderer.setSize(w, h, false);
       cam.aspect = w / h;
       cam.updateProjectionMatrix();
     };

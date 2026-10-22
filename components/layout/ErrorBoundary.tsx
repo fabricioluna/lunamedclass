@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { captureReactException } from '@sentry/react';
+import { reportReactError } from '../../sentry';
 
 interface ErrorBoundaryProps { children: ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
@@ -13,7 +13,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   static getDerivedStateFromError(error: Error): ErrorBoundaryState { return { hasError: true, error }; }
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Erro Crítico:", error, errorInfo);
-    captureReactException(error, errorInfo);
+    reportReactError(error, errorInfo);
   }
 
   render() {
