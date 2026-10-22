@@ -10,8 +10,6 @@ import {
   sendPasswordResetEmail
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA_1Yjc5ez_9movyA4sGPM8z-9BZ3oeiLU", 
@@ -26,8 +24,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
+// Analytics não ajuda a primeira tela a aparecer, mas custa ~14 KB e 2-3 conexões logo na
+// abertura. Fica para quando o navegador estiver ocioso (item 6.19).
 if (typeof window !== "undefined") {
-  getAnalytics(app);
+  const loadAnalytics = () => {
+    import("firebase/analytics")
+      .then(({ getAnalytics }) => getAnalytics(app))
+      .catch(() => {});
+  };
+  if ("requestIdleCallback" in window) window.requestIdleCallback(loadAnalytics, { timeout: 5000 });
+  else setTimeout(loadAnalytics, 3000);
 }
 
 export const auth = getAuth(app);
@@ -42,6 +48,5 @@ export {
 };
 
 export const firestoreDB = getFirestore(app);
-export const storage = getStorage(app);
 
 export default app;
