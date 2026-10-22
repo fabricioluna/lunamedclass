@@ -2,10 +2,13 @@ import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { AnatomyMarker, AnatomyCameraView } from '../../types';
-import { appendStrokePoint, flattenPoints, isValidCameraView, isValidMarker, roundVec, unflattenPoints, Vec3 } from '../../utils/anatomyMarkers';
+import type { AnatomyMarker, AnatomyCameraView, AnatomyPaintStroke } from '../../types';
+import {
+  accumulatePaintPoint, appendStrokePoint, computePaintAlpha, flattenPoints, isValidCameraView, isValidMarker,
+  paintRadiusFor, roundVec, unflattenPoints, Vec3,
+} from '../../utils/anatomyMarkers';
 
-export type AnatomyTool = 'orbit' | 'pin' | 'line';
+export type AnatomyTool = 'orbit' | 'pin' | 'line' | 'straight' | 'paint';
 
 export interface AnatomyViewerHandle {
   getCameraView: () => AnatomyCameraView | null;
@@ -18,6 +21,9 @@ interface Props {
   camera?: AnatomyCameraView;
   tool?: AnatomyTool;
   onMarkerDrawn?: (marker: AnatomyMarker, camera: AnatomyCameraView) => void;
+  // Espessura do marca-texto (1–10), ver paintRadiusFor.
+  paintSize?: number;
+  onModelLoaded?: (info: { diag: number }) => void;
   className?: string;
   ref?: React.Ref<AnatomyViewerHandle>;
 }
@@ -61,7 +67,93 @@ interface ModelInfo {
   diag: number;
 }
 
-const buildMarkerObject = (marker: AnatomyMarker, diag: number): THREE.Object3D => {
+type SurfaceHit = { point: THREE.Vector3; normal: THREE.Vector3 };
+
+// === MARCA-TEXTO ===
+// Camada translúcida: cópia da malha da peça com cor por vértice (RGBA), presa à própria malha
+// e desenhada por cima com polygonOffset para não "brigar" com a superfície.
+interface PaintLayer {
+  overlay: THREE.Mesh;
+  alpha: Float32Array;
+  colors: Float32Array;
+  positions: ArrayLike<number>;
+  normals: ArrayLike<number> | null;
+  toLocal: THREE.Matrix4;
+  normalToLocal: THREE.Matrix3;
+}
+
+const PAINT_RGB = new THREE.Color(MARKER_COLOR);
+
+const modelMeshes = (root: THREE.Object3D): THREE.Mesh[] => {
+  const meshes: THREE.Mesh[] = [];
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (mesh.isMesh && !mesh.userData.isMarker) meshes.push(mesh);
+  });
+  return meshes;
+};
+
+// Os traços são gravados em coordenadas da cena; o cálculo da tinta é feito no espaço da malha.
+const toLocalStroke = (stroke: AnatomyPaintStroke, layer: PaintLayer): AnatomyPaintStroke => {
+  const points: number[] = [];
+  const normals: number[] = [];
+  for (let i = 0; i + 2 < stroke.points.length; i += 3) {
+    const p = new THREE.Vector3(stroke.points[i], stroke.points[i + 1], stroke.points[i + 2]).applyMatrix4(layer.toLocal);
+    const n = new THREE.Vector3(stroke.normals[i], stroke.normals[i + 1], stroke.normals[i + 2]).applyMatrix3(layer.normalToLocal).normalize();
+    points.push(p.x, p.y, p.z);
+    normals.push(n.x, n.y, n.z);
+  }
+  return { radius: stroke.radius, points, normals };
+};
+
+const syncLayerColors = (layer: PaintLayer) => {
+  for (let v = 0; v < layer.alpha.length; v++) layer.colors[v * 4 + 3] = layer.alpha[v];
+  (layer.overlay.geometry.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
+};
+
+const buildPaintLayers = (root: THREE.Object3D, strokes: readonly AnatomyPaintStroke[]): PaintLayer[] =>
+  modelMeshes(root).map((mesh) => {
+    const geometry = mesh.geometry.clone();
+    const positions = geometry.getAttribute('position').array;
+    const normalAttr = geometry.getAttribute('normal');
+    const count = positions.length / 3;
+    const colors = new Float32Array(count * 4);
+    for (let v = 0; v < count; v++) {
+      colors[v * 4] = PAINT_RGB.r;
+      colors[v * 4 + 1] = PAINT_RGB.g;
+      colors[v * 4 + 2] = PAINT_RGB.b;
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+    const overlay = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+      vertexColors: true, transparent: true, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    }));
+    overlay.userData.isMarker = true;
+    overlay.renderOrder = 1;
+    mesh.updateWorldMatrix(true, false);
+    const toLocal = mesh.matrixWorld.clone().invert();
+    const layer: PaintLayer = {
+      overlay, colors, positions,
+      normals: normalAttr ? normalAttr.array : null,
+      alpha: new Float32Array(count),
+      toLocal,
+      normalToLocal: new THREE.Matrix3().getNormalMatrix(toLocal),
+    };
+    layer.alpha = computePaintAlpha(positions, layer.normals, strokes.map((s) => toLocalStroke(s, layer)));
+    syncLayerColors(layer);
+    mesh.add(overlay);
+    return layer;
+  });
+
+const paintPointOnLayers = (layers: PaintLayer[], point: Vec3, normal: Vec3, radius: number) => {
+  for (const layer of layers) {
+    const local = toLocalStroke({ radius, points: [...point], normals: [...normal] }, layer);
+    accumulatePaintPoint(layer.alpha, layer.positions, layer.normals, local.points, local.normals, radius);
+    syncLayerColors(layer);
+  }
+};
+
+const buildMarkerObject = (marker: Exclude<AnatomyMarker, { type: 'paint' }>, diag: number): THREE.Object3D => {
   const material = new THREE.MeshBasicMaterial({ color: MARKER_COLOR });
   const group = new THREE.Group();
 
@@ -87,7 +179,9 @@ const buildMarkerObject = (marker: AnatomyMarker, diag: number): THREE.Object3D 
   return group;
 };
 
-const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbit', onMarkerDrawn, className, ref }) => {
+const AnatomyViewer: React.FC<Props> = ({
+  modelUrl, marker, camera, tool = 'orbit', onMarkerDrawn, paintSize = 4, onModelLoaded, className, ref,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [progress, setProgress] = useState(0);
@@ -99,16 +193,34 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
     renderer: THREE.WebGLRenderer;
   } | null>(null);
   const modelRef = useRef<ModelInfo | null>(null);
-  const markerObjRef = useRef<THREE.Object3D | null>(null);
+  // Tudo que a marcação atual pôs na cena (alfinete, linha ou camadas do marca-texto).
+  const markerObjsRef = useRef<THREE.Object3D[]>([]);
+  const paintLayersRef = useRef<PaintLayer[] | null>(null);
   const strokeObjRef = useRef<THREE.Line | null>(null);
+  const cancelStraightRef = useRef<() => void>(() => {});
 
   // Os handlers de ponteiro são registrados uma vez por peça; leem sempre a versão atual das props.
   const toolRef = useRef(tool);
   const onMarkerDrawnRef = useRef(onMarkerDrawn);
   const cameraPropRef = useRef(camera);
+  const markerRef = useRef(marker);
+  const paintSizeRef = useRef(paintSize);
+  const onModelLoadedRef = useRef(onModelLoaded);
   toolRef.current = tool;
   onMarkerDrawnRef.current = onMarkerDrawn;
   cameraPropRef.current = camera;
+  markerRef.current = marker;
+  paintSizeRef.current = paintSize;
+  onModelLoadedRef.current = onModelLoaded;
+
+  const clearMarkerObjects = () => {
+    for (const obj of markerObjsRef.current) {
+      obj.removeFromParent();
+      disposeObject(obj);
+    }
+    markerObjsRef.current = [];
+    paintLayersRef.current = null;
+  };
 
   const applyView = (view: AnatomyCameraView | undefined) => {
     const s = sceneRef.current;
@@ -179,7 +291,8 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
     let frame = 0;
     const loop = () => {
       frame = requestAnimationFrame(loop);
-      controls.enabled = toolRef.current !== 'line';
+      // Linha à mão livre e marca-texto usam o arrasto para desenhar; os outros, para girar.
+      controls.enabled = toolRef.current !== 'line' && toolRef.current !== 'paint';
       controls.update();
       renderer.render(scene, cam);
     };
@@ -204,6 +317,7 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
         controls.minDistance = diag * 0.15;
         controls.maxDistance = diag * 5;
         applyView(cameraPropRef.current);
+        onModelLoadedRef.current?.({ diag });
         setStatus('ready');
       },
       (event) => {
@@ -218,20 +332,29 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
     // === MARCAÇÃO ===
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    const hitAt = (event: PointerEvent) => {
+
+    // A camada do marca-texto é cópia da malha: sem filtrar, o raio acertaria a tinta.
+    const firstModelHit = (): SurfaceHit | null => {
       const model = modelRef.current;
       if (!model) return null;
-      const rect = renderer.domElement.getBoundingClientRect();
-      pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
-      raycaster.setFromCamera(pointer, cam);
-      const hit = raycaster.intersectObject(model.root, true)[0];
+      const hit = raycaster.intersectObject(model.root, true).find((h) => !h.object.userData.isMarker);
       if (!hit || !hit.face) return null;
       const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
       return { point: hit.point.clone(), normal };
     };
 
+    const hitAt = (event: PointerEvent): SurfaceHit | null => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(pointer, cam);
+      return firstModelHit();
+    };
+
     let downAt: { x: number; y: number } | null = null;
     let stroke: Vec3[] | null = null;
+    let paintStroke: { radius: number; points: Vec3[]; normals: Vec3[] } | null = null;
+    let straightStart: SurfaceHit | null = null;
+    let straightDot: THREE.Mesh | null = null;
 
     const updateStrokePreview = () => {
       if (strokeObjRef.current) {
@@ -247,19 +370,72 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
     };
 
     // A linha fica um fio acima da superfície: rente demais, a textura "come" pedaços dela.
-    const liftedPoint = (hit: { point: THREE.Vector3; normal: THREE.Vector3 }): Vec3 =>
+    const liftedPoint = (hit: SurfaceHit): Vec3 =>
       toVec3(hit.point.clone().addScaledVector(hit.normal, (modelRef.current?.diag ?? 1) * 0.002));
+
+    const cancelStraight = () => {
+      straightStart = null;
+      if (straightDot) {
+        scene.remove(straightDot);
+        disposeObject(straightDot);
+        straightDot = null;
+      }
+    };
+    cancelStraightRef.current = cancelStraight;
+
+    // Reta: amostra o segmento A→B e projeta cada amostra na superfície pela linha de visão da
+    // câmera. Resultado: reta na tela de quem marcou, mas colada no osso (acompanha a curvatura).
+    const straightLinePoints = (a: THREE.Vector3, b: THREE.Vector3): Vec3[] => {
+      const diag = modelRef.current?.diag ?? 1;
+      const samples = Math.min(Math.max(Math.ceil(a.distanceTo(b) / (diag * 0.003)), 2), 400);
+      const origin = cam.position.clone();
+      const points: Vec3[] = [];
+      for (let i = 0; i <= samples; i++) {
+        const target = a.clone().lerp(b, i / samples);
+        raycaster.set(origin, target.clone().sub(origin).normalize());
+        const hit = firstModelHit();
+        points.push(hit ? liftedPoint(hit) : toVec3(target));
+      }
+      return points;
+    };
+
+    const startPaintStroke = (hit: SurfaceHit) => {
+      const model = modelRef.current;
+      if (!model) return;
+      // Pintando sobre algo que não é pintura (alfinete, linha, nada): começa uma área nova.
+      if (!paintLayersRef.current) {
+        clearMarkerObjects();
+        const layers = buildPaintLayers(model.root, []);
+        paintLayersRef.current = layers;
+        markerObjsRef.current = layers.map((l) => l.overlay);
+      }
+      const radius = paintRadiusFor(model.diag, paintSizeRef.current);
+      paintStroke = { radius, points: [toVec3(hit.point)], normals: [toVec3(hit.normal)] };
+      paintPointOnLayers(paintLayersRef.current, toVec3(hit.point), toVec3(hit.normal), radius);
+    };
 
     const onPointerDown = (event: PointerEvent) => {
       downAt = { x: event.clientX, y: event.clientY };
-      if (toolRef.current !== 'line') return;
+      if (toolRef.current !== 'line' && toolRef.current !== 'paint') return;
       const hit = hitAt(event);
       if (!hit) return;
       renderer.domElement.setPointerCapture(event.pointerId);
-      stroke = [liftedPoint(hit)];
+      if (toolRef.current === 'line') stroke = [liftedPoint(hit)];
+      else startPaintStroke(hit);
     };
 
     const onPointerMove = (event: PointerEvent) => {
+      if (paintStroke && toolRef.current === 'paint') {
+        const hit = hitAt(event);
+        if (!hit || !paintLayersRef.current) return;
+        // Espaçamento de meio raio: cobre sem falhas e não infla o documento no banco.
+        const next = appendStrokePoint(paintStroke.points, toVec3(hit.point), paintStroke.radius * 0.5);
+        if (next === paintStroke.points) return;
+        paintStroke.points = next;
+        paintStroke.normals.push(toVec3(hit.normal));
+        paintPointOnLayers(paintLayersRef.current, toVec3(hit.point), toVec3(hit.normal), paintStroke.radius);
+        return;
+      }
       if (!stroke || toolRef.current !== 'line') return;
       const hit = hitAt(event);
       if (!hit) return;
@@ -270,17 +446,44 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
       }
     };
 
+    const isClick = (event: PointerEvent) =>
+      !!downAt && Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y) <= CLICK_TOLERANCE_PX;
+
     const onPointerUp = (event: PointerEvent) => {
       const view = getCameraView();
-      if (toolRef.current === 'line' && stroke) {
+      if (toolRef.current === 'paint' && paintStroke) {
+        const finished: AnatomyPaintStroke = {
+          radius: Math.round(paintStroke.radius * 1e5) / 1e5,
+          points: flattenPoints(paintStroke.points),
+          // 2 casas bastam para uma normal: ela só decide de que lado do osso a tinta vale.
+          normals: paintStroke.normals.flatMap((n) => n.map((c) => Math.round(c * 100) / 100)),
+        };
+        paintStroke = null;
+        const current = markerRef.current;
+        const previous = current?.type === 'paint' ? current.strokes : [];
+        const drawn: AnatomyMarker = { type: 'paint', strokes: [...previous, finished] };
+        if (view && isValidMarker(drawn)) onMarkerDrawnRef.current?.(drawn, view);
+      } else if (toolRef.current === 'straight' && isClick(event)) {
+        const hit = hitAt(event);
+        if (hit && !straightStart) {
+          straightStart = hit;
+          const diag = modelRef.current?.diag ?? 1;
+          straightDot = new THREE.Mesh(new THREE.SphereGeometry(diag * 0.006, 12, 10), new THREE.MeshBasicMaterial({ color: MARKER_COLOR }));
+          straightDot.position.copy(hit.point);
+          scene.add(straightDot);
+        } else if (hit && straightStart) {
+          const drawn: AnatomyMarker = { type: 'line', points: flattenPoints(straightLinePoints(straightStart.point, hit.point)) };
+          cancelStraight();
+          if (view && isValidMarker(drawn)) onMarkerDrawnRef.current?.(drawn, view);
+        }
+      } else if (toolRef.current === 'line' && stroke) {
         const finished = stroke;
         stroke = null;
         updateStrokePreview();
         const drawn: AnatomyMarker = { type: 'line', points: flattenPoints(finished) };
         if (view && isValidMarker(drawn)) onMarkerDrawnRef.current?.(drawn, view);
-      } else if (toolRef.current === 'pin' && downAt) {
-        const moved = Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y);
-        const hit = moved <= CLICK_TOLERANCE_PX ? hitAt(event) : null;
+      } else if (toolRef.current === 'pin' && isClick(event)) {
+        const hit = hitAt(event);
         if (hit && view) {
           onMarkerDrawnRef.current?.(
             { type: 'pin', position: roundVec(toVec3(hit.point)), direction: roundVec(toVec3(pinDirection(hit.normal, cam))) },
@@ -309,26 +512,35 @@ const AnatomyViewer: React.FC<Props> = ({ modelUrl, marker, camera, tool = 'orbi
       container.removeChild(canvas);
       sceneRef.current = null;
       modelRef.current = null;
-      markerObjRef.current = null;
+      markerObjsRef.current = [];
+      paintLayersRef.current = null;
       strokeObjRef.current = null;
+      cancelStraightRef.current = () => {};
     };
-    // Recria a cena só quando a peça muda; tool, callback e câmera chegam por ref.
+    // Recria a cena só quando a peça muda; tool, callback, câmera e marcação chegam por ref.
   }, [modelUrl]);
 
   useEffect(() => {
     const s = sceneRef.current;
     const model = modelRef.current;
     if (!s || !model || status !== 'ready') return;
-    if (markerObjRef.current) {
-      s.scene.remove(markerObjRef.current);
-      disposeObject(markerObjRef.current);
-      markerObjRef.current = null;
-    }
-    if (isValidMarker(marker)) {
-      markerObjRef.current = buildMarkerObject(marker, model.diag);
-      s.scene.add(markerObjRef.current);
+    clearMarkerObjects();
+    if (!isValidMarker(marker)) return;
+    if (marker.type === 'paint') {
+      const layers = buildPaintLayers(model.root, marker.strokes);
+      paintLayersRef.current = layers;
+      markerObjsRef.current = layers.map((l) => l.overlay);
+    } else {
+      const obj = buildMarkerObject(marker, model.diag);
+      s.scene.add(obj);
+      markerObjsRef.current = [obj];
     }
   }, [marker, status]);
+
+  // Trocou de ferramenta com só o ponto A da reta marcado: descarta o ponto A.
+  useEffect(() => {
+    if (tool !== 'straight') cancelStraightRef.current();
+  }, [tool]);
 
   // Questão nova na mesma peça: a peça continua carregada, só a câmera volta ao ângulo da questão.
   useEffect(() => {

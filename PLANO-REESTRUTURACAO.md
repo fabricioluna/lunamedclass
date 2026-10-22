@@ -163,7 +163,10 @@ verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 
 **➡️ Mesma sessão: item 6.20 — aluno troca de período sozinho.** Branch
 `feat/aluno-troca-periodo`, verificações verdes. **Ordem de publicação: usuário publica o
-`firestore.rules` no console ANTES do merge.** Ver seção 6.20.
+`firestore.rules` no console ANTES do merge.** Ver seção 6.20. **Publicado em 2026-10-22** (regras publicadas pelo usuário antes do merge `bd0a7e3`).
+
+**➡️ Mesma sessão: item 6.21 — editor 3D ganhou reta e marca-texto.** Branch
+`feat/editor-3d-reta-marca-texto`, verificações verdes. Ver seção 6.21.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -2167,7 +2170,7 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   para a tela abrir com os dados da última visita. Mexe em `useAppConfig` — o lugar do
   incidente do `isLoading` — então exige teste dedicado como visitante deslogado.
 
-- [~] **6.20 — Aluno troca de período sozinho, sem aprovação** — implementado em 2026-10-22
+- [x] **6.20 — Aluno troca de período sozinho, sem aprovação** — no ar em 2026-10-22 (merge `bd0a7e3`, regras publicadas antes); implementado em 2026-10-22
   (branch `feat/aluno-troca-periodo`). **Depende de publicar o `firestore.rules` antes do
   código** (sem a regra nova, a troca falha com mensagem de erro e o aluno fica onde estava).
 
@@ -2193,6 +2196,32 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   - `Header` — modal "Mudar de Período": escolhe, botão "Ir para o Xº período", vai direto para
     `/periodo/{novo}`; erro aparece no modal (antes era só `console.error`).
   - `AdminView` — aba "Trocas de Período", selo "Feita pelo aluno" para `status: 'self'`.
+
+
+- [~] **6.21 — Editor 3D: reta e marca-texto** — implementado em 2026-10-22 (branch
+  `feat/editor-3d-reta-marca-texto`), aguardando publicação e teste do usuário.
+
+  **Pedido do usuário:** além do alfinete e da linha à mão livre, poder traçar **linha reta** e
+  usar um **marca-texto** que pinta a peça de forma translúcida, com espessura regulável.
+
+  **Como ficou:**
+  - **Reta** — dois cliques (A e B). O segmento é amostrado e cada amostra é projetada na
+    superfície pela linha de visão da câmera: reta na tela de quem marcou, colada no osso.
+    Gravada como `type: 'line'` comum → a tela do aluno não mudou.
+  - **Marca-texto** — novo marcador `{ type: 'paint', strokes: [{ radius, points, normals }] }`.
+    Renderizado como cópia da malha com cor RGBA por vértice (`polygonOffset`, sem escrever
+    profundidade). Tinta cheia até 60% do raio e esmaecendo até a borda; traços sobrepostos
+    usam o MAIOR valor (não escurecem); vértice com normal oposta à do pincel não recebe tinta
+    (não atravessa osso fino). Espessura 1–10 proporcional à diagonal da peça (≈ mm mostrado
+    no editor, assumindo metros do Object Capture). "Desfazer traço" remove o último.
+  - Lógica pura (`accumulatePaintPoint`, `computePaintAlpha`, `paintRadiusFor`,
+    `estimateDocBytes`) em `utils/anatomyMarkers.ts` com testes (+6). `paintRadiusFor` fica no
+    util, não no visualizador: importar do visualizador puxaria o three.js para o chunk do Admin.
+  - Antes de subir as peças, o editor estima o tamanho das marcações e recusa salvar acima de
+    ~900 KB (limite de 1 MB por documento — o Lab inteiro é um documento), sugerindo espessura
+    maior ou dividir o Lab.
+  - Verificado com Playwright no próprio editor (página de teste temporária, removida):
+    pintura em 2 traços, desfazer, gravar questão, reta em 2 cliques — sem erros de console.
 
 
 ---

@@ -320,9 +320,18 @@ export interface ReferenceMaterial {
 // (x1, y1, z1, x2, y2, z2, ...) em vez de uma lista de pontos [x, y, z].
 // `direction` é para onde a haste do alfinete sai: inclinada em relação à superfície, para a
 // cabeça não cobrir justamente a estrutura que ele aponta.
+// Marca-texto: cada traço guarda os pontos da superfície por onde o pincel passou (com a
+// normal de cada um, para a tinta não atravessar para o outro lado de um osso fino) e o raio.
+export interface AnatomyPaintStroke {
+  radius: number;
+  points: number[];
+  normals: number[];
+}
+
 export type AnatomyMarker =
   | { type: 'pin'; position: number[]; direction: number[] }
-  | { type: 'line'; points: number[] };
+  | { type: 'line'; points: number[] }
+  | { type: 'paint'; strokes: AnatomyPaintStroke[] };
 
 export interface AnatomyCameraView {
   position: number[];
