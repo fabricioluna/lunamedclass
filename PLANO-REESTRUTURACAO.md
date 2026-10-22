@@ -172,7 +172,7 @@ verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 `feat/editor-3d-varias-marcas` — **no ar em 2026-10-22** (merge `803647f`). Ver seção 6.22.
 
 **➡️ Mesma sessão: item 6.23 — editor 3D no computador (zoom, espessura da linha, atalhos).**
-Branch `feat/editor-3d-desktop`, verificações verdes. Ver seção 6.23.
+**No ar em 2026-10-22** (merge `fc1cfb8`), verificações verdes. Ver seção 6.23.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -2258,8 +2258,8 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     arrasto, reta por 2 cliques, pintura + desfazer, questão salva reabre com as 4 marcas.
 
 
-- [~] **6.23 — Editor 3D no computador: zoom, espessura da linha, atalhos** — implementado em
-  2026-10-22 (branch `feat/editor-3d-desktop`).
+- [x] **6.23 — Editor 3D no computador: zoom, espessura da linha, atalhos** — no ar em
+  2026-10-22 (merge `fc1cfb8`).
 
   **Pedido do usuário:** ele cadastra e edita as peças pelo computador — melhorar o uso com
   mouse e touchpad, barra de zoom à direita da peça e espessura regulável nas linhas (livre e
