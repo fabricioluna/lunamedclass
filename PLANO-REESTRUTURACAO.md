@@ -165,8 +165,8 @@ verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 `feat/aluno-troca-periodo`, verificações verdes. **Ordem de publicação: usuário publica o
 `firestore.rules` no console ANTES do merge.** Ver seção 6.20. **Publicado em 2026-10-22** (regras publicadas pelo usuário antes do merge `bd0a7e3`).
 
-**➡️ Mesma sessão: item 6.21 — editor 3D ganhou reta e marca-texto.** Branch
-`feat/editor-3d-reta-marca-texto`, verificações verdes. Ver seção 6.21.
+**➡️ Mesma sessão: item 6.21 — editor 3D ganhou reta e marca-texto.** No ar em 2026-10-22
+(merge `2e4ee8f`), verificações verdes. Ver seção 6.21.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -2198,8 +2198,8 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
   - `AdminView` — aba "Trocas de Período", selo "Feita pelo aluno" para `status: 'self'`.
 
 
-- [~] **6.21 — Editor 3D: reta e marca-texto** — implementado em 2026-10-22 (branch
-  `feat/editor-3d-reta-marca-texto`), aguardando publicação e teste do usuário.
+- [~] **6.21 — Editor 3D: reta e marca-texto** — no ar em 2026-10-22 (merge `2e4ee8f`),
+  aguardando teste do usuário em produção.
 
   **Pedido do usuário:** além do alfinete e da linha à mão livre, poder traçar **linha reta** e
   usar um **marca-texto** que pinta a peça de forma translúcida, com espessura regulável.
