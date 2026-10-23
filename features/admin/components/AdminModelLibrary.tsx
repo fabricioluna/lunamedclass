@@ -131,7 +131,7 @@ const AdminModelLibrary: React.FC<Props> = ({ models, labSimulations, discipline
                   </div>
                 </div>
                 {previewId === model.id && (
-                  <div className="mt-3 h-72 rounded-xl overflow-hidden bg-[#1b1d22]">
+                  <div className="mt-3 h-[60vh] min-h-[360px] max-h-[680px] rounded-xl overflow-hidden bg-[#1b1d22]">
                     <Suspense fallback={<div className="w-full h-full" />}>
                       <AnatomyViewer modelUrl={model.url} className="w-full h-full" />
                     </Suspense>
