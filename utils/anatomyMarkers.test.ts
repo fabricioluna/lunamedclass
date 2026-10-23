@@ -94,20 +94,19 @@ describe('isValidCameraView', () => {
 describe('collectStorageUrls / findOrphanUrls', () => {
   const imageQ: LabQuestion = { id: 'img', imageUrl: 'https://x/img.jpg', question: 'q', answer: 'a' };
 
-  it('lista cada arquivo uma vez, mesmo com várias questões na mesma peça', () => {
-    const urls = collectStorageUrls([pinQuestion('a', 'https://x/cranio.glb'), pinQuestion('b', 'https://x/cranio.glb'), imageQ]);
-    expect(urls.sort()).toEqual(['https://x/cranio.glb', 'https://x/img.jpg']);
+  it('lista só as imagens do Lab — peça 3D pertence ao banco de peças e nunca é apagada junto', () => {
+    const urls = collectStorageUrls([pinQuestion('a', 'https://x/cranio.glb'), imageQ, imageQ]);
+    expect(urls).toEqual(['https://x/img.jpg']);
   });
 
-  it('acha só a peça que saiu do Lab depois da edição', () => {
+  it('peça 3D que sai de um Lab editado não vira órfã (continua no banco)', () => {
     const before = [pinQuestion('a', 'https://x/cranio.glb'), pinQuestion('b', 'https://x/femur.glb')];
-    const after = [pinQuestion('a', 'https://x/cranio.glb')];
-    expect(findOrphanUrls(before, after)).toEqual(['https://x/femur.glb']);
+    expect(findOrphanUrls(before, [before[0]])).toEqual([]);
   });
 
-  it('peça ainda usada por outra questão não é órfã', () => {
-    const before = [pinQuestion('a', 'https://x/cranio.glb'), pinQuestion('b', 'https://x/cranio.glb')];
-    expect(findOrphanUrls(before, [before[0]])).toEqual([]);
+  it('imagem que sai de um Lab editado é órfã', () => {
+    const otherImage: LabQuestion = { ...imageQ, id: 'img2', imageUrl: 'https://x/img2.jpg' };
+    expect(findOrphanUrls([imageQ, otherImage], [imageQ])).toEqual(['https://x/img2.jpg']);
   });
 
   it('hasAny3DQuestion distingue Lab de imagens de Lab 3D', () => {

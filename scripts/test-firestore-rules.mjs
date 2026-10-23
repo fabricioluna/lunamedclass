@@ -294,6 +294,24 @@ await check('Aluno B NÃO troca o período do Aluno A', async () => {
   await assertFails(setDoc(doc(asStudentB, 'users', STUDENT_A), { periodId: 'p3' }, { merge: true }));
 });
 
+// === BANCO DE PEÇAS 3D (item 6.24) ===
+const modelAsset = { name: 'Crânio', url: 'https://x/cranio.glb', sizeBytes: 1, createdAt: 0 };
+await check('Admin cadastra peça no banco de peças 3D', async () => {
+  await assertSucceeds(setDoc(doc(asAdmin, 'anatomyModels', 'cranio'), modelAsset));
+});
+await check('Admin lê o banco de peças 3D', async () => {
+  await assertSucceeds(getDocs(collection(asAdmin, 'anatomyModels')));
+});
+await check('Aluno NÃO lê o banco de peças 3D', async () => {
+  await assertFails(getDocs(collection(asStudentA, 'anatomyModels')));
+});
+await check('Aluno NÃO cadastra nem altera peça no banco', async () => {
+  await assertFails(setDoc(doc(asStudentA, 'anatomyModels', 'cranio'), { ...modelAsset, name: 'Hackeado' }));
+});
+await check('Visitante anônimo NÃO lê o banco de peças 3D', async () => {
+  await assertFails(getDoc(doc(asAnon, 'anatomyModels', 'cranio')));
+});
+
 await testEnv.cleanup();
 
 console.log(`\n${failures === 0 ? '✅ Todos os testes passaram' : `❌ ${failures} teste(s) falharam`}`);

@@ -174,6 +174,9 @@ verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 **➡️ Mesma sessão: item 6.23 — editor 3D no computador (zoom, espessura da linha, atalhos).**
 **No ar em 2026-10-22** (merge `fc1cfb8`), verificações verdes. Ver seção 6.23.
 
+**➡️ Mesma sessão: item 6.24 — Banco de Peças 3D.** Branch `feat/banco-pecas-3d`, verificações
+verdes. **Ordem de publicação: usuário publica o `firestore.rules` ANTES do merge.** Ver seção 6.24.
+
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
 Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.
@@ -2283,6 +2286,42 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     captura do ponteiro durante um traço desarranjava esses eventos.
   - Espaço liga o giro na hora (não no próximo quadro): apertar e arrastar no mesmo instante
     deixava sem desenhar e sem girar.
+
+
+- [~] **6.24 — Banco de Peças 3D** — implementado em 2026-10-22 (branch `feat/banco-pecas-3d`).
+  **Depende de publicar o `firestore.rules` antes do código** (coleção nova `anatomyModels`).
+
+  **Pedido do usuário:** em vez de subir a mesma peça em cada disciplina (arquivo duplicado),
+  ter um banco de peças e importar em cada Lab.
+
+  **Avaliação dada ao usuário:** economia de espaço é pequena (~1,4 MB por peça convertida); o
+  ganho real é manutenção, organização, montar Lab sem upload e exclusão segura. E o momento
+  era bom: só existia o crânio cadastrado.
+
+  **Decisão: sem "trocar arquivo" (re-scan).** Um escaneamento novo da mesma peça física sai em
+  outro sistema de coordenadas (o Object Capture não sabe que é o "mesmo" crânio): todas as
+  marcas dos Labs ficariam fora do lugar. Peça escaneada de novo entra como peça nova.
+
+  **Como ficou:**
+  - Coleção `anatomyModels/{id}` `{ name, url, sizeBytes, createdAt }`, só admin lê/grava
+    (+5 casos em `test-firestore-rules.mjs`). Ligação com as questões = `model3d.modelUrl`
+    (cada upload tem URL única) — nenhuma mudança no que o aluno lê.
+  - `services/anatomyModelsService.ts`: subir (`lab_models/banco/…`), registrar peça antiga,
+    renomear (batch: banco + `modelName` em todos os Labs que usam), apagar (recusa se em uso).
+  - `utils/anatomyModels.ts` (+ teste): uso por Lab, peças fora do banco, renomear questões.
+  - **Mudança de dono:** apagar/editar um Lab não apaga mais peça 3D (`collectStorageUrls` só
+    devolve imagens de lâmina) — a peça pertence ao banco.
+  - Admin → Lab ganhou o modo **Banco de Peças 3D** (subir, ver em 3D, renomear, apagar só se
+    fora de uso, em quais Labs está). O editor do Lab 3D troca o upload por **"Adicionar peça
+    do banco"** (busca + subir peça nova ali mesmo); salvar o Lab não sobe arquivo nenhum. O
+    nome que o aluno vê vem do banco.
+  - Peças subidas antes do banco entram sozinhas ao abrir a aba Lab do Admin
+    (`unregisteredModels` + `registerExistingAnatomyModel`, tamanho via `HEAD`).
+  - Sem a regra publicada, o Admin mostra aviso vermelho em vez de "carregando" eterno.
+  - Verificado com Playwright (página temporária com dados de exemplo, removida): lista, uso,
+    apagar bloqueado quando em uso, prévia 3D, seletor com busca e "Já neste Lab". **Não**
+    testado contra o Firebase real: upload, renomear com propagação, apagar e o registro
+    automático do crânio — ficam para o teste do usuário depois de publicar as regras.
 
 
 ---

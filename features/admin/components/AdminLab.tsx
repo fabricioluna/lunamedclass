@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit } from '../../../types';
-import { Trash2, Microscope, Loader2, Box, Pencil, Image as ImageIcon } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit, AnatomyModelAsset } from '../../../types';
+import { Trash2, Microscope, Loader2, Box, Pencil, Image as ImageIcon, Library } from 'lucide-react';
 import { uploadFile } from '../../../services/storageService';
 import { parseResilientCSV } from '../../../utils/csvHelper';
 import { hasAny3DQuestion } from '../../../utils/anatomyMarkers';
 import AdminLab3DEditor from './AdminLab3DEditor';
+import AdminModelLibrary from './AdminModelLibrary';
+import { subscribeToAnatomyModels, registerExistingAnatomyModel } from '../../../services/anatomyModelsService';
+import { unregisteredModels } from '../../../utils/anatomyModels';
 
 interface AdminLabProps {
   disciplines: SimulationInfo[];
@@ -21,7 +24,35 @@ const AdminLab: React.FC<AdminLabProps> = ({
   onRemoveLabSimulation,
   onClearLab
 }) => {
-  const [mode, setMode] = useState<'csv' | '3d'>('csv');
+  const [mode, setMode] = useState<'csv' | '3d' | 'bank'>('csv');
+  // Banco de peças 3D (item 6.24): null enquanto o primeiro snapshot não chega.
+  const [models, setModels] = useState<AnatomyModelAsset[] | null>(null);
+  const [modelsError, setModelsError] = useState(false);
+  const registeringRef = useRef(new Set<string>());
+
+  useEffect(() => subscribeToAnatomyModels(
+    (data) => { setModels(data); setModelsError(false); },
+    (err) => {
+      // Quase sempre é a regra de anatomyModels ainda não publicada no console: sem o aviso, o
+      // banco e o seletor de peças ficariam "carregando" para sempre.
+      console.error('Erro ao carregar o banco de peças 3D:', err);
+      setModelsError(true);
+    },
+  ), []);
+
+  // Peças subidas antes do banco existir entram nele sozinhas, sem o admin refazer nada. O Set
+  // evita registrar a mesma peça duas vezes enquanto o snapshot do banco ainda não voltou.
+  useEffect(() => {
+    if (models === null) return;
+    for (const { url, name } of unregisteredModels(labSimulations, models)) {
+      if (registeringRef.current.has(url)) continue;
+      registeringRef.current.add(url);
+      registerExistingAnatomyModel(url, name).catch((err) => {
+        registeringRef.current.delete(url);
+        console.error('Erro ao registrar peça existente no banco:', err);
+      });
+    }
+  }, [labSimulations, models]);
   // undefined = editor fechado; null = criando Lab 3D novo; objeto = editando um existente.
   const [editing3D, setEditing3D] = useState<LabSimulation | null | undefined>(undefined);
   const [discFilterLab, setDiscFilterLab] = useState('');
@@ -171,7 +202,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
     if (onRemoveLabSimulation) onRemoveLabSimulation(simId);
   };
 
-  const modeButton = (value: 'csv' | '3d', icon: React.ReactNode, label: string) => (
+  const modeButton = (value: 'csv' | '3d' | 'bank', icon: React.ReactNode, label: string) => (
     <button
       onClick={() => { setMode(value); setEditing3D(undefined); }}
       className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === value ? 'bg-[#003366] text-white shadow' : 'text-gray-400 hover:text-[#003366]'}`}
@@ -182,10 +213,21 @@ const AdminLab: React.FC<AdminLabProps> = ({
 
   return (
     <div className="space-y-8 animate-in zoom-in duration-500">
-    <div className="flex p-1 bg-white rounded-2xl border shadow-sm max-w-md">
+    <div className="flex p-1 bg-white rounded-2xl border shadow-sm max-w-2xl">
       {modeButton('csv', <ImageIcon size={14} />, 'Lâminas (CSV)')}
-      {modeButton('3d', <Box size={14} />, 'Peças 3D')}
+      {modeButton('3d', <Box size={14} />, 'Labs 3D')}
+      {modeButton('bank', <Library size={14} />, 'Banco de Peças 3D')}
     </div>
+
+    {modelsError && mode !== 'csv' && (
+      <div className="bg-red-50 border-2 border-red-200 p-4 rounded-2xl text-xs font-bold text-red-800 leading-relaxed">
+        Não foi possível abrir o Banco de Peças 3D. Se as regras do Firestore ainda não foram publicadas no console do Firebase com a coleção anatomyModels, publique-as e recarregue a página.
+      </div>
+    )}
+
+    {mode === 'bank' && (
+      <AdminModelLibrary models={models} labSimulations={labSimulations} disciplines={disciplines} />
+    )}
 
     {mode === '3d' && editing3D !== undefined && (
       <AdminLab3DEditor
@@ -193,6 +235,8 @@ const AdminLab: React.FC<AdminLabProps> = ({
         disciplines={disciplines}
         initial={editing3D}
         onDone={() => setEditing3D(undefined)}
+        models={models}
+        labSimulations={labSimulations}
       />
     )}
 
@@ -202,6 +246,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
       </button>
     )}
 
+    {mode !== 'bank' && (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       {mode === 'csv' && (
       <div className="lg:col-span-5 bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
@@ -312,6 +357,7 @@ const AdminLab: React.FC<AdminLabProps> = ({
          </div>
       </div>
     </div>
+    )}
     </div>
   );
 };

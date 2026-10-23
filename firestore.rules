@@ -102,6 +102,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+    // Banco de peças 3D (item 6.24): ferramenta do admin. O aluno não precisa ler — a URL da
+    // peça já vem dentro da questão do Lab.
+    match /anatomyModels/{id} {
+      allow read, write: if isAdmin();
+    }
 
     // Materiais: alunos autenticados podem contribuir (upload próprio, sem dono explícito —
     // mesma política pública-para-a-turma que já rodava em produção antes desta etapa).
