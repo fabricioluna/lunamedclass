@@ -174,8 +174,8 @@ verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 **➡️ Mesma sessão: item 6.23 — editor 3D no computador (zoom, espessura da linha, atalhos).**
 **No ar em 2026-10-22** (merge `fc1cfb8`), verificações verdes. Ver seção 6.23.
 
-**➡️ Mesma sessão: item 6.24 — Banco de Peças 3D.** Branch `feat/banco-pecas-3d`, verificações
-verdes. **Ordem de publicação: usuário publica o `firestore.rules` ANTES do merge.** Ver seção 6.24.
+**➡️ Mesma sessão: item 6.24 — Banco de Peças 3D.** **No ar em 2026-10-22**
+(merge `8bfead2`, regras publicadas antes), verificações verdes. Ver seção 6.24.
 
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
@@ -2288,8 +2288,8 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     deixava sem desenhar e sem girar.
 
 
-- [~] **6.24 — Banco de Peças 3D** — implementado em 2026-10-22 (branch `feat/banco-pecas-3d`).
-  **Depende de publicar o `firestore.rules` antes do código** (coleção nova `anatomyModels`).
+- [~] **6.24 — Banco de Peças 3D** — no ar em 2026-10-22 (merge `8bfead2`, regras publicadas
+  pelo usuário antes), aguardando o teste dele no Firebase real.
 
   **Pedido do usuário:** em vez de subir a mesma peça em cada disciplina (arquivo duplicado),
   ter um banco de peças e importar em cada Lab.
