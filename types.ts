@@ -350,6 +350,16 @@ export interface LabModel3D {
   camera?: AnatomyCameraView;
 }
 
+// Peça do banco de peças 3D (item 6.24): o arquivo é subido uma vez e usado por quantos Labs
+// precisarem. As questões apontam para ela pela URL (`model3d.modelUrl`).
+export interface AnatomyModelAsset {
+  id: string;
+  name: string;
+  url: string;
+  sizeBytes: number;
+  createdAt: number;
+}
+
 // Questão do Lab é de imagem (imageUrl) OU de peça 3D (model3d) — item 6.18.
 export interface LabQuestion {
   id: string;

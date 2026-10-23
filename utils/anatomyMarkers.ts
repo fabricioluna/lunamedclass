@@ -94,17 +94,17 @@ export const paintStrokesOf = (list: readonly AnatomyMarker[]): AnatomyPaintStro
 
 export const hasAny3DQuestion = (sim: LabSimulation): boolean => sim.questions.some(is3DQuestion);
 
-// Várias questões apontam para a mesma peça: ao apagar o Lab, cada arquivo sai uma vez só.
+// Arquivos que PERTENCEM ao Lab: só as imagens das lâminas. As peças 3D pertencem ao banco de
+// peças (item 6.24) e podem estar em outros Labs — apagar ou editar um Lab nunca apaga peça.
 export const collectStorageUrls = (questions: readonly LabQuestion[]): string[] => {
   const urls = new Set<string>();
   for (const q of questions) {
     if (q.imageUrl) urls.add(q.imageUrl);
-    if (q.model3d?.modelUrl) urls.add(q.model3d.modelUrl);
   }
   return [...urls];
 };
 
-// Arquivos que deixaram de ser usados depois de editar um Lab (peça removida no editor).
+// Imagens que deixaram de ser usadas depois de editar um Lab.
 export const findOrphanUrls = (before: readonly LabQuestion[], after: readonly LabQuestion[]): string[] => {
   const kept = new Set(collectStorageUrls(after));
   return collectStorageUrls(before).filter((url) => !kept.has(url));

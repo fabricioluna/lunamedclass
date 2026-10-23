@@ -1,10 +1,11 @@
-import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Hand, MapPin, PenLine, Plus, Trash2, Loader2, Save, X, Upload, Slash, Highlighter, Undo2, Eraser } from 'lucide-react';
-import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit, AnatomyMarker, AnatomyCameraView } from '../../../types';
+import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Box, Hand, MapPin, PenLine, Plus, Trash2, Loader2, Save, X, Slash, Highlighter, Undo2, Eraser, Library } from 'lucide-react';
+import { SimulationInfo, LabSimulation, LabQuestion, AcademicUnit, AnatomyMarker, AnatomyCameraView, AnatomyModelAsset } from '../../../types';
 import type { AnatomyTool } from '../../../components/anatomy3d/AnatomyViewer';
-import { uploadFile } from '../../../services/storageService';
 import { addLabSimulation, updateLabSimulation } from '../../../services/labService';
 import { isTextEntryTarget } from '../../../utils/keyboard';
+import { formatMegabytes, modelUsage } from '../../../utils/anatomyModels';
+import ModelUploadForm from './ModelUploadForm';
 import {
   addMarkerToList, estimateDocBytes, FIRESTORE_DOC_SAFE_BYTES, LINE_SIZE_DEFAULT, lineRadiusFor, paintRadiusFor,
   PAINT_SIZE_MAX, PAINT_SIZE_MIN, questionMarkers, undoLastMarker,
@@ -16,13 +17,15 @@ interface Props {
   disciplines: SimulationInfo[];
   initial?: LabSimulation | null;
   onDone: () => void;
+  // Banco de peças 3D (item 6.24); null enquanto carrega.
+  models: AnatomyModelAsset[] | null;
+  labSimulations: LabSimulation[];
 }
 
 interface DraftPiece {
   key: string;
   name: string;
   url: string;
-  file?: File;
 }
 
 interface DraftQuestion {
@@ -69,9 +72,6 @@ const MarkerIcon: React.FC<{ type: AnatomyMarker['type'] }> = ({ type }) => {
   return <MapPin {...props} />;
 };
 
-// Peças acima disso pesam no 4G do aluno; o script de conversão deixa um crânio em ~3 MB.
-const LARGE_MODEL_BYTES = 25 * 1024 * 1024;
-
 const hintOrEmpty = (value: string | undefined) => (value && value !== 'N/A' ? value : '');
 
 const fromInitial = (sim: LabSimulation | null | undefined) => {
@@ -97,10 +97,7 @@ const fromInitial = (sim: LabSimulation | null | undefined) => {
   return { pieces, questions };
 };
 
-const isPermissionError = (err: unknown) =>
-  typeof err === 'object' && err !== null && String((err as { code?: string }).code).includes('unauthorized');
-
-const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => {
+const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone, models, labSimulations }) => {
   const initialDraft = useMemo(() => fromInitial(initial), [initial]);
 
   const [disc, setDisc] = useState(initial?.disciplineId ?? '');
@@ -126,8 +123,8 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
   const [isSaving, setIsSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState('');
 
-  const objectUrlsRef = useRef<string[]>([]);
-  useEffect(() => () => objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)), []);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
 
   const activePiece = pieces.find((p) => p.key === activePieceKey) ?? null;
   const pieceQuestions = questions.filter((q) => q.pieceKey === activePieceKey);
@@ -142,37 +139,25 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
     setForm((prev) => ({ ...EMPTY_FORM, question: DEFAULT_QUESTIONS.has(prev.question) ? prev.question : EMPTY_FORM.question }));
   };
 
-  const handleAddPiece = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.glb')) {
-      alert('Envie o arquivo .glb (convertido pelo script). O .usdz do iPhone precisa ser convertido antes.');
-      return;
+  const addPieceFromBank = (model: AnatomyModelAsset) => {
+    setIsPickerOpen(false);
+    setPickerSearch('');
+    if (!pieces.some((p) => p.key === model.url)) {
+      setPieces((prev) => [...prev, { key: model.url, name: model.name, url: model.url }]);
     }
-    if (file.size > LARGE_MODEL_BYTES && !confirm(`Esta peça tem ${(file.size / 1024 / 1024).toFixed(0)} MB e vai demorar a abrir no celular dos alunos. Usar mesmo assim?`)) {
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    objectUrlsRef.current.push(url);
-    const piece: DraftPiece = { key: url, name: file.name.replace(/\.glb$/i, ''), url, file };
-    setPieces((prev) => [...prev, piece]);
-    setActivePieceKey(piece.key);
+    setActivePieceKey(model.url);
     resetForm();
   };
 
   const handleRemovePiece = (key: string) => {
     const count = questions.filter((q) => q.pieceKey === key).length;
-    if (!confirm(count > 0 ? `Remover a peça e as ${count} questões marcadas nela?` : 'Remover esta peça?')) return;
+    if (!confirm(count > 0
+      ? `Tirar a peça deste Lab junto com as ${count} questões marcadas nela? A peça continua no Banco de Peças 3D.`
+      : 'Tirar esta peça do Lab? Ela continua no Banco de Peças 3D.')) return;
     setPieces((prev) => prev.filter((p) => p.key !== key));
     setQuestions((prev) => prev.filter((q) => q.pieceKey !== key));
     if (activePieceKey === key) setActivePieceKey(pieces.find((p) => p.key !== key)?.key ?? null);
     resetForm();
-  };
-
-  const renamePiece = (name: string) => {
-    if (!activePiece) return;
-    setPieces((prev) => prev.map((p) => (p.key === activePiece.key ? { ...p, name } : p)));
   };
 
   // Cada marca nova SOMA às da questão (estruturas pares, mais de um ponto) — item 6.22.
@@ -274,21 +259,10 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
     setIsSaving(true);
     try {
       const targetUnit: AcademicUnit = isUC ? 'N1' : unit;
-      const usedKeys = new Set(questions.map((q) => q.pieceKey));
-      const remoteUrl = new Map<string, string>();
-      const toUpload = pieces.filter((p) => usedKeys.has(p.key));
-      for (let i = 0; i < toUpload.length; i++) {
-        const piece = toUpload[i];
-        if (!piece.file) {
-          remoteUrl.set(piece.key, piece.url);
-          continue;
-        }
-        setSaveProgress(`Enviando peça ${i + 1} de ${toUpload.length}: ${piece.name}…`);
-        const safeName = piece.file.name.replace(/[^\w.-]+/g, '_');
-        remoteUrl.set(piece.key, await uploadFile(`lab_models/${disc}/${targetUnit}/${Date.now()}_${safeName}`, piece.file));
-      }
-
-      const pieceName = new Map(pieces.map((p) => [p.key, p.name.trim() || 'Peça 3D']));
+      // As peças já estão no banco (item 6.24): salvar o Lab não sobe arquivo nenhum. O nome
+      // vem do banco, que é onde a peça é renomeada.
+      const bankName = new Map((models ?? []).map((m) => [m.url, m.name]));
+      const pieceName = new Map(pieces.map((p) => [p.key, bankName.get(p.url) ?? (p.name.trim() || 'Peça 3D')]));
       const built: LabQuestion[] = questions.map((q) => ({
         id: q.id,
         question: q.question,
@@ -298,7 +272,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
         ...(q.hint2 ? { aiLocation: q.hint2 } : {}),
         ...(q.hint3 ? { aiFunctions: q.hint3 } : {}),
         model3d: {
-          modelUrl: remoteUrl.get(q.pieceKey)!,
+          modelUrl: q.pieceKey,
           modelName: pieceName.get(q.pieceKey)!,
           markers: q.markers,
           ...(q.camera ? { camera: q.camera } : {}),
@@ -327,9 +301,7 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
       onDone();
     } catch (err) {
       console.error('Erro ao salvar Lab 3D:', err);
-      alert(isPermissionError(err)
-        ? 'O Firebase recusou o envio da peça. A regra do Storage precisa liberar a pasta lab_models/ para o admin (console do Firebase → Storage → Regras).'
-        : `Erro ao salvar: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`Erro ao salvar: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsSaving(false);
       setSaveProgress('');
@@ -393,14 +365,64 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
               <Box size={14} /> {p.name || 'Peça 3D'}
               <span className="text-[10px] text-gray-400 font-bold">({questions.filter((q) => q.pieceKey === p.key).length})</span>
             </button>
-            <button onClick={() => handleRemovePiece(p.key)} disabled={isSaving} className="p-1 text-red-300 hover:text-red-500" title="Remover peça"><Trash2 size={14} /></button>
+            <button onClick={() => handleRemovePiece(p.key)} disabled={isSaving} className="p-1 text-red-300 hover:text-red-500" title="Tirar a peça deste Lab (continua no banco)"><Trash2 size={14} /></button>
           </div>
         ))}
-        <label className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50 text-emerald-700 text-xs font-black cursor-pointer hover:bg-emerald-100 ${isSaving ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Upload size={14} /> Adicionar peça (.glb)
-          <input type="file" accept=".glb,model/gltf-binary" onChange={handleAddPiece} className="hidden" />
-        </label>
+        <button
+          onClick={() => setIsPickerOpen(true)}
+          disabled={isSaving}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50 text-emerald-700 text-xs font-black hover:bg-emerald-100 disabled:opacity-50"
+        >
+          <Library size={14} /> Adicionar peça do banco
+        </button>
       </div>
+
+      {isPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#003366]/70 backdrop-blur-sm" onClick={() => setIsPickerOpen(false)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[85vh] flex flex-col gap-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h4 className="text-lg font-black text-[#003366] uppercase tracking-tighter flex items-center gap-2"><Library size={18} /> Banco de Peças 3D</h4>
+              <button onClick={() => setIsPickerOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full"><X size={16} /></button>
+            </div>
+            <input
+              value={pickerSearch}
+              onChange={(e) => setPickerSearch(e.target.value)}
+              placeholder="Buscar peça pelo nome..."
+              className="p-3 bg-gray-50 rounded-xl font-bold text-sm outline-none"
+            />
+            <div className="flex-1 overflow-y-auto space-y-2 min-h-[120px]">
+              {models === null && <p className="text-center py-8 text-xs text-gray-400 font-bold">Carregando o banco…</p>}
+              {models?.filter((m) => m.name.toLowerCase().includes(pickerSearch.trim().toLowerCase())).map((m) => {
+                const inThisLab = pieces.some((p) => p.key === m.url);
+                const usedIn = modelUsage(m.url, labSimulations).length;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => addPieceFromBank(m)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-[#003366] hover:bg-blue-50/50 text-left transition-all"
+                  >
+                    <Box size={18} className="text-emerald-600 shrink-0" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-black text-sm text-[#003366] truncate">{m.name}</span>
+                      <span className="block text-[10px] font-bold text-gray-400">
+                        {m.sizeBytes > 0 ? `${formatMegabytes(m.sizeBytes)} · ` : ''}{usedIn === 0 ? 'ainda não usada' : `em ${usedIn} Lab${usedIn > 1 ? 's' : ''}`}
+                      </span>
+                    </span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg ${inThisLab ? 'bg-gray-100 text-gray-400' : 'bg-[#003366] text-white'}`}>
+                      {inThisLab ? 'Já neste Lab' : 'Usar'}
+                    </span>
+                  </button>
+                );
+              })}
+              {models?.length === 0 && <p className="text-center py-8 text-xs text-gray-400 font-bold">O banco ainda está vazio. Suba a primeira peça abaixo.</p>}
+            </div>
+            <div className="border-t pt-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Peça nova? Suba para o banco e ela já entra neste Lab</p>
+              <ModelUploadForm onUploaded={addPieceFromBank} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {activePiece ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -471,14 +493,9 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone }) => 
               </Suspense>
             </div>
             <p className="text-[10px] font-bold text-gray-400 mt-2">{toolHint[tool]} Cada marca soma às anteriores na mesma questão (ex.: um alfinete de cada lado). O ângulo da última marca é o ângulo em que a questão abre para o aluno.</p>
-            <input
-              value={activePiece.name}
-              onChange={(e) => renamePiece(e.target.value)}
-              placeholder="Nome da peça (aparece para o aluno)"
-              maxLength={40}
-              disabled={isSaving}
-              className="mt-3 w-full p-3 bg-gray-50 rounded-xl font-bold text-sm outline-none"
-            />
+            <p className="mt-3 text-[10px] font-bold text-gray-400">
+              O aluno vê esta peça como <span className="text-[#003366]">"{(models ?? []).find((m) => m.url === activePiece.url)?.name ?? activePiece.name}"</span>. Para mudar o nome, use Admin → Lab → Banco de Peças 3D (vale para todos os Labs que usam a peça).
+            </p>
           </div>
 
           {/* FORMULÁRIO + LISTA */}

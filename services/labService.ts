@@ -41,7 +41,8 @@ export const removeLabSimulation = async (simulation: LabSimulation) => {
 };
 
 // Edição do Lab 3D (adicionar/remover alfinetes depois): regrava o documento inteiro e só
-// então apaga as peças que saíram — se a gravação falhar, nenhum arquivo em uso some.
+// então apaga imagens que saíram — se a gravação falhar, nenhum arquivo em uso some. Peças 3D
+// não entram nessa limpeza: pertencem ao banco de peças (item 6.24).
 export const updateLabSimulation = async (previous: LabSimulation, next: LabSimulation) => {
   if (!previous.firebaseId) throw new Error('Simulado sem identificador no banco.');
   const { firebaseId: _firebaseId, ...data } = next;
