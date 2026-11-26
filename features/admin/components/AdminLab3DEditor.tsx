@@ -510,9 +510,10 @@ const AdminLab3DEditor: React.FC<Props> = ({ disciplines, initial, onDone, model
                 <details className="text-xs">
                   <summary className="cursor-pointer text-[10px] font-black uppercase text-gray-500">Dicas (opcional)</summary>
                   <div className="space-y-2 mt-2">
-                    <input value={form.hint1} onChange={(e) => setForm({ ...form, hint1: e.target.value })} placeholder="Identificação" className="w-full p-2 bg-white rounded-lg text-xs outline-none border" />
-                    <input value={form.hint2} onChange={(e) => setForm({ ...form, hint2: e.target.value })} placeholder="Localização" className="w-full p-2 bg-white rounded-lg text-xs outline-none border" />
-                    <input value={form.hint3} onChange={(e) => setForm({ ...form, hint3: e.target.value })} placeholder="Funções" className="w-full p-2 bg-white rounded-lg text-xs outline-none border" />
+                    <p className="text-[10px] text-gray-500">Tipo antes da barra vira o título do card: <i>Origem | Epicôndilo medial</i></p>
+                    <input value={form.hint1} onChange={(e) => setForm({ ...form, hint1: e.target.value })} placeholder="Identificação | ..." className="w-full p-2 bg-white rounded-lg text-xs outline-none border" />
+                    <input value={form.hint2} onChange={(e) => setForm({ ...form, hint2: e.target.value })} placeholder="Localização | ..." className="w-full p-2 bg-white rounded-lg text-xs outline-none border" />
+                    <input value={form.hint3} onChange={(e) => setForm({ ...form, hint3: e.target.value })} placeholder="Função | ..." className="w-full p-2 bg-white rounded-lg text-xs outline-none border" />
                   </div>
                 </details>
                 <div className="flex gap-2 pt-1">
