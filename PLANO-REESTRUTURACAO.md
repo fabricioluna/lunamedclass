@@ -177,6 +177,9 @@ verdes. **No ar em 2026-10-22** (2ª visita ~0,8–0,9 s). Ver seção 6.19.
 **➡️ Mesma sessão: item 6.24 — Banco de Peças 3D.** **No ar em 2026-10-22**
 (merge `8bfead2`, regras publicadas antes), verificações verdes. Ver seção 6.24.
 
+**➡️ Sessão de 2026-11-26: item 6.25 — tipo da dica do Lab vira o título do card.** **No ar em
+2026-11-26** (PR #17, merge `289f53d`), verificações verdes. Ver seção 6.25.
+
 **Etapa 0 (Emergência) — ✅ CONCLUÍDA e implantada em produção em 2026-08-04**
 
 Commit `1271a2c`, push para `origin/main`, deploy automático da Vercel confirmado no ar.
@@ -2322,6 +2325,36 @@ Só aqui entram funcionalidades novas. Base tipada, testada e com fronteiras cla
     apagar bloqueado quando em uso, prévia 3D, seletor com busca e "Já neste Lab". **Não**
     testado contra o Firebase real: upload, renomear com propagação, apagar e o registro
     automático do crânio — ficam para o teste do usuário depois de publicar as regras.
+
+
+- [~] **6.25 — Tipo da dica do Lab vira o título do card** — no ar em 2026-11-26 (PR #17,
+  merge `289f53d`), aguardando o usuário conferir na tela com os simulados de Morfo da UC IX.
+
+  **Pedido do usuário:** os três cards "Dica Estratégica 1/2/3" deveriam dizer que tipo de
+  dica é (Localização, Função, Origem, Inserção...), conforme a imagem e a pergunta.
+
+  **Decisões (escolhidas pelo usuário):** o tipo **substitui** o título "Dica Estratégica N"
+  (não é subtítulo); no CSV ele vai **na própria célula**, antes de uma barra vertical:
+  `Localização | Fossa craniana anterior`.
+
+  **Como ficou:**
+  - Nenhum campo novo: o tipo fica dentro do texto da dica (`aiIdentification`, `aiLocation`,
+    `aiFunctions`) e é separado só na exibição. Assim o importador CSV e o editor 3D funcionam
+    sem mudança, e Firestore/regras ficam intactos. O separador do CSV é `;`, então a `|` passa.
+  - `utils/labHints.ts` (+ teste): `parseLabHint` — só a 1ª barra separa; rótulo vazio ou com
+    mais de 40 caracteres é tratado como texto comum (barra no meio de uma frase).
+  - `LabQuizView`: cards gerados de uma lista (cor e ícone por posição, como antes); sem
+    rótulo, volta "Dica Estratégica N" — Labs antigos não mudam.
+  - Instruções no Admin → Lab (importação CSV) e exemplos nos campos de dica do editor 3D.
+
+  **Achado:** `npm run test` falhava nos 31 arquivos com `Cannot read properties of undefined
+  (reading 'config')` — não era código nem dependência (`npm ci` não resolveu). O VS Code abre o
+  projeto como `c:\` minúsculo e o Vitest carrega a si mesmo duas vezes. Rodando a partir de
+  `C:\Users\...` (C maiúsculo), os 408 testes passam.
+
+  **Primeiro uso:** 3 simulados de Morfo da UC IX (19 + 12 + 11 questões) gerados a partir dos
+  slides, roteiros preenchidos e transcrições das aulas — imagens dos slides, com os rótulos que
+  entregavam a resposta recortados, e todas as dicas no formato `Tipo | texto`.
 
 
 ---
