@@ -255,7 +255,8 @@ const AdminLab: React.FC<AdminLabProps> = ({
           <b>ARQUITETURA DE DADOS DE ALTA VELOCIDADE:</b><br/>
           As dicas morfológicas agora são extraídas diretamente da sua planilha (Offline), eliminando tempo de carregamento e o uso da IA no painel.<br/><br/>
           <b>Padrão Exigido (6 Colunas):</b><br/>
-          Imagem ; Pergunta ; Resposta ; Identificação ; Localização ; Funções
+          Imagem ; Pergunta ; Resposta ; Dica 1 ; Dica 2 ; Dica 3<br/><br/>
+          <b>Tipo da dica (opcional):</b> escreva antes do texto, separado por <b>|</b> — ex.: <i>Localização | Fossa craniana anterior</i>. O tipo vira o título do card; sem ele, aparece "Dica Estratégica".
         </p>
         
         <form onSubmit={handleLabImport} className="space-y-4">

@@ -16,6 +16,7 @@ import {
   fetchFlashcardProgressDoc, upsertFlashcardCardState, clearActiveSession,
 } from '../../services/flashcardsService';
 import { questionMarkers } from '../../utils/anatomyMarkers';
+import { parseLabHint, isEmptyLabHint } from '../../utils/labHints';
 
 // three.js é pesado: só baixa quando o Lab tem peça 3D, não em todo Lab de lâminas.
 const AnatomyViewer = lazy(() => import('../../components/anatomy3d/AnatomyViewer'));
@@ -108,30 +109,30 @@ const AnswerReveal: React.FC<{ q: LabQuestion }> = ({ q }) => (
       <p className="text-2xl font-black text-green-800">{q.answer}</p>
     </div>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {q.aiIdentification && q.aiIdentification !== 'N/A' && (
-        <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col items-start shadow-sm">
-           <div className="bg-blue-100 p-2 rounded-lg text-blue-700 mb-4"><Lightbulb size={20}/></div>
-           <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-800 mb-2">Dica Estratégica 1</h4>
-           <p className="text-sm text-gray-700 font-medium leading-relaxed">{q.aiIdentification}</p>
-        </div>
-      )}
-      {q.aiLocation && q.aiLocation !== 'N/A' && (
-        <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100 flex flex-col items-start shadow-sm">
-           <div className="bg-amber-100 p-2 rounded-lg text-amber-700 mb-4"><Search size={20}/></div>
-           <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-800 mb-2">Dica Estratégica 2</h4>
-           <p className="text-sm text-gray-700 font-medium leading-relaxed">{q.aiLocation}</p>
-        </div>
-      )}
-      {q.aiFunctions && q.aiFunctions !== 'N/A' && (
-        <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 flex flex-col items-start shadow-sm">
-           <div className="bg-emerald-100 p-2 rounded-lg text-emerald-700 mb-4"><Target size={20}/></div>
-           <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-800 mb-2">Dica Estratégica 3</h4>
-           <p className="text-sm text-gray-700 font-medium leading-relaxed">{q.aiFunctions}</p>
-        </div>
-      )}
+      {HINT_SLOTS.map((slot, i) => {
+        const raw = q[slot.field];
+        if (!raw || isEmptyLabHint(raw)) return null;
+        const hint = parseLabHint(raw);
+        const Icon = slot.icon;
+        return (
+          <div key={slot.field} className={`${slot.card} p-6 rounded-2xl border flex flex-col items-start shadow-sm`}>
+            <div className={`${slot.iconBox} p-2 rounded-lg mb-4`}><Icon size={20}/></div>
+            <h4 className={`text-[10px] font-black uppercase tracking-widest ${slot.title} mb-2`}>
+              {hint.label ?? `Dica Estratégica ${i + 1}`}
+            </h4>
+            <p className="text-sm text-gray-700 font-medium leading-relaxed">{hint.text}</p>
+          </div>
+        );
+      })}
     </div>
   </>
 );
+
+const HINT_SLOTS = [
+  { field: 'aiIdentification', icon: Lightbulb, card: 'bg-blue-50/50 border-blue-100', iconBox: 'bg-blue-100 text-blue-700', title: 'text-blue-800' },
+  { field: 'aiLocation', icon: Search, card: 'bg-amber-50/50 border-amber-100', iconBox: 'bg-amber-100 text-amber-700', title: 'text-amber-800' },
+  { field: 'aiFunctions', icon: Target, card: 'bg-emerald-50/50 border-emerald-100', iconBox: 'bg-emerald-100 text-emerald-700', title: 'text-emerald-800' },
+] as const;
 
 // Widget genérico de 3 números. Usado tanto pro placar AO VIVO da sessão (restantes /
 // memorizados / não memorizados) quanto pra situação do baralho na tela de configuração.
